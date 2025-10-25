@@ -12,6 +12,9 @@ def get_pythonanywhere_settings():
     """PythonAnywhere uchun maxsus sozlamalar"""
     
     settings = {
+        # Allowed hosts
+        'ALLOWED_HOSTS': ['localhost', '127.0.0.1', 'logistika.pythonanywhere.com'],
+        
         # Static files
         'STATIC_URL': '/static/',
         'STATIC_ROOT': os.path.join(os.path.dirname(os.path.dirname(__file__)), 'staticfiles'),
