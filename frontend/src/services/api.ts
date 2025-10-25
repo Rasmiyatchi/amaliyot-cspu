@@ -26,10 +26,11 @@ class ApiService {
       defaultHeaders['Authorization'] = `Token ${token}`;
     }
       
-    const csrfToken = this.getCSRFToken();
-    if (csrfToken) {
-        defaultHeaders['X-CSRFToken'] = csrfToken;
-    }
+    // CSRF token o'chirildi - faqat token authentication ishlatiladi
+    // const csrfToken = this.getCSRFToken();
+    // if (csrfToken) {
+    //     defaultHeaders['X-CSRFToken'] = csrfToken;
+    // }
 
     const config: RequestInit = {
       ...options,
@@ -119,11 +120,10 @@ class ApiService {
 
   // Auth methods
   async login(username: string, password: string) {
-    // Avval CSRF token olish
-    await this.getCSRFTokenFromServer();
+    // CSRF token olish o'chirildi - faqat token authentication
+    // await this.getCSRFTokenFromServer();
     
     console.log('Login attempt:', { username, password });
-    console.log('CSRF token:', this.getCSRFToken());
     
     const response = await this.request('/auth/login/', {
       method: 'POST',

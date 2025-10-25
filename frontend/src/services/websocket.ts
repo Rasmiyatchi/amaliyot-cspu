@@ -17,7 +17,8 @@ class WebSocketService {
 
     // Connect to Django Channels WebSocket
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
+    // Backend hostname'ni ishlatish
+    const host = 'logistika.pythonanywhere.com';
     // Django WebSocket server port 8000 da ishlaydi
     const port = '8000';
     
