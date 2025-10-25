@@ -20,6 +20,12 @@ class ApiService {
       defaultHeaders['Content-Type'] = 'application/json';
     }
       
+    // Token-based authentication
+    const token = this.getAuthToken();
+    if (token) {
+      defaultHeaders['Authorization'] = `Token ${token}`;
+    }
+      
     const csrfToken = this.getCSRFToken();
     if (csrfToken) {
         defaultHeaders['X-CSRFToken'] = csrfToken;
@@ -76,6 +82,18 @@ class ApiService {
     return null;
   }
 
+  getAuthToken(): string | null {
+    return localStorage.getItem('auth_token');
+  }
+
+  setAuthToken(token: string): void {
+    localStorage.setItem('auth_token', token);
+  }
+
+  removeAuthToken(): void {
+    localStorage.removeItem('auth_token');
+  }
+
   private async getCSRFTokenFromServer() {
     try {
       console.log('Getting CSRF token from:', `${this.baseURL}/auth/csrf/`);
@@ -107,19 +125,31 @@ class ApiService {
     console.log('Login attempt:', { username, password });
     console.log('CSRF token:', this.getCSRFToken());
     
-    return this.request('/auth/login/', {
+    const response = await this.request('/auth/login/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ username, password }),
     });
+
+    // Token olish va saqlash
+    if (response && (response as any).token) {
+      this.setAuthToken((response as any).token);
+    }
+
+    return response;
   }
 
   async logout() {
-    return this.request('/auth/logout/', {
-      method: 'POST',
-    });
+    try {
+      await this.request('/auth/logout/', {
+        method: 'POST',
+      });
+    } finally {
+      // Token'ni o'chirish
+      this.removeAuthToken();
+    }
   }
 
   // Dashboard

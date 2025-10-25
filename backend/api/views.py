@@ -7,6 +7,7 @@ from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django.utils import timezone
+from rest_framework.authtoken.models import Token
 from .models import (
     User, Student, Supervisor, Company, Internship, 
     DailyReport, Document, Notification, Faculty, Department, DailyStatus
@@ -38,8 +39,13 @@ class LoginView(APIView):
         if serializer.is_valid():
             user = serializer.validated_data['user']
             login(request, user)
+            
+            # Token yaratish yoki olish
+            token, created = Token.objects.get_or_create(user=user)
+            
             return Response({
                 'user': UserSerializer(user).data,
+                'token': token.key,
                 'message': 'Muvaffaqiyatli kirildi'
             })
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -47,6 +53,13 @@ class LoginView(APIView):
 
 class LogoutView(APIView):
     def post(self, request):
+        # Token'ni o'chirish
+        try:
+            if hasattr(request, 'auth') and request.auth:
+                request.auth.delete()
+        except:
+            pass
+            
         logout(request)
         return Response({'message': 'Muvaffaqiyatli chiqildi'})
 

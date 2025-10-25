@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     
     # Third party apps
     "rest_framework",
+    "rest_framework.authtoken",
     "corsheaders",
     "channels",
     "drf_yasg",
@@ -124,6 +125,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'https://integrnship-platform.vercel.app',
+    'https://integrnship-platform-iw68ud79q-abudevs-projects-f1c20b15.vercel.app',
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -136,18 +138,19 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'https://integrnship-platform.vercel.app',
+    'https://integrnship-platform-iw68ud79q-abudevs-projects-f1c20b15.vercel.app',
 ]
 
-# Session settings - juda sodda
-SESSION_COOKIE_SECURE = False  # HTTP da ham ishlashi uchun
+# Session settings - cross-domain uchun
+SESSION_COOKIE_SECURE = True  # HTTPS uchun
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'None'  # Cross-domain uchun
 SESSION_SAVE_EVERY_REQUEST = True
 
-# CSRF settings - juda sodda
-CSRF_COOKIE_SECURE = False  # HTTP da ham ishlashi uchun
+# CSRF settings - cross-domain uchun
+CSRF_COOKIE_SECURE = True  # HTTPS uchun
 CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'None'  # Cross-domain uchun
 
 # Media files
 MEDIA_URL = '/media/'
