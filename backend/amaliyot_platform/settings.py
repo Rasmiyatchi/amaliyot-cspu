@@ -11,12 +11,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production'
 
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-# ALLOWED_HOSTS ni environment variable dan olish
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-
-# PythonAnywhere uchun qo'shimcha hostlar qo'shish
-ALLOWED_HOSTS.extend(['logistika.pythonanywhere.com', '*.pythonanywhere.com'])
-ALLOWED_HOSTS = list(set(ALLOWED_HOSTS))  # Duplikatlarni olib tashlash
+# ALLOWED_HOSTS - juda sodda
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'logistika.pythonanywhere.com', '*.pythonanywhere.com']
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -67,11 +63,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "amaliyot_platform.wsgi.application"
 ASGI_APPLICATION = "amaliyot_platform.asgi.application"
 
-
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-# PythonAnywhere uchun SQLite3 ishlatish
+# Database - SQLite3
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -79,23 +71,7 @@ DATABASES = {
     }
 }
 
-# Agar PostgreSQL kerak bo'lsa, environment variable orqali o'zgartirish mumkin
-if os.getenv('USE_POSTGRESQL', 'False').lower() == 'true':
-    DATABASES = {
-        "default": {
-            "ENGINE": os.getenv('DATABASE_ENGINE', 'django.db.backends.postgresql'),
-            "NAME": os.getenv('DATABASE_NAME', 'amaliyot_platform'),
-            "USER": os.getenv('DATABASE_USER', 'postgres'),
-            "PASSWORD": os.getenv('DATABASE_PASSWORD', ''),
-            "HOST": os.getenv('DATABASE_HOST', 'localhost'),
-            "PORT": os.getenv('DATABASE_PORT', '5432'),
-        }
-    }
-
-
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -113,16 +89,11 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "Asia/Tashkent"
-
 USE_I18N = True
-
 USE_TZ = True
 
 STATIC_URL = "static/"
-
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Custom User Model
@@ -146,49 +117,44 @@ REST_FRAMEWORK = {
     'MAX_PAGE_SIZE': 100,
 }
 
-
-# CORS settings
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://integrnship-platform.vercel.app').split(',')
+# CORS settings - juda sodda
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://integrnship-platform.vercel.app',
+]
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Faqat development da
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-    'cookie',
-    'set-cookie',
-]
-CORS_EXPOSE_HEADERS = [
-    'set-cookie',
-    'csrftoken',
-    'sessionid',
-]
-CORS_PREFLIGHT_MAX_AGE = 86400
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
+CORS_ALLOW_ALL_ORIGINS = DEBUG
+
+# CSRF settings - juda sodda
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://integrnship-platform.vercel.app',
 ]
 
-# CSRF settings
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://integrnship-platform.vercel.app').split(',')
+# Session settings - juda sodda
+SESSION_COOKIE_SECURE = False  # HTTP da ham ishlashi uchun
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_SAVE_EVERY_REQUEST = True
+
+# CSRF settings - juda sodda
+CSRF_COOKIE_SECURE = False  # HTTP da ham ishlashi uchun
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = 'Lax'
 
 # Media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR.parent, os.getenv('MEDIA_ROOT', 'files'))
+MEDIA_ROOT = os.path.join(BASE_DIR.parent, 'files')
 
 # Static files
-STATIC_ROOT = os.path.join(BASE_DIR, os.getenv('STATIC_ROOT', 'staticfiles'))
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Channels settings
 CHANNEL_LAYERS = {
@@ -236,84 +202,3 @@ REDOC_SETTINGS = {
     'EXPAND_RESPONSES': 'all',
     'PATH_IN_MIDDLE': True,
 }
-
-# PythonAnywhere uchun maxsus sozlamalar
-try:
-    from .pythonanywhere_settings import get_pythonanywhere_settings
-    pythonanywhere_settings = get_pythonanywhere_settings()
-    
-    # Agar PythonAnywhere da ishlayotgan bo'lsak
-    if 'pythonanywhere.com' in ALLOWED_HOSTS or any('pythonanywhere.com' in host for host in ALLOWED_HOSTS):
-        # PythonAnywhere sozlamalarini qo'llash
-        for key, value in pythonanywhere_settings.items():
-            globals()[key] = value
-        print(f"PythonAnywhere sozlamalari qo'llanildi. ALLOWED_HOSTS: {ALLOWED_HOSTS}")
-except ImportError:
-    pass
-
-# Session settings
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-SESSION_COOKIE_NAME = 'sessionid'
-SESSION_COOKIE_AGE = 1209600  # 2 hafta
-SESSION_COOKIE_SECURE = True  # HTTPS uchun zarur
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'  # Oddiy yechim
-SESSION_SAVE_EVERY_REQUEST = True
-SESSION_COOKIE_DOMAIN = None  # Barcha domainlar uchun
-
-# CSRF settings
-CSRF_COOKIE_NAME = 'csrftoken'
-CSRF_COOKIE_SECURE = True  # HTTPS uchun zarur
-CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'Lax'  # Oddiy yechim
-CSRF_USE_SESSIONS = False
-CSRF_COOKIE_DOMAIN = None  # Barcha domainlar uchun
-
-# Security settings for production
-if not DEBUG:
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_SSL_REDIRECT = False  # PythonAnywhere da avtomatik SSL
-    
-    # Additional security headers
-    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
-    
-    # Logging for production
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'verbose': {
-                'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-                'style': '{',
-            },
-        },
-        'handlers': {
-            'file': {
-                'level': 'INFO',
-                'class': 'logging.FileHandler',
-                'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
-                'formatter': 'verbose',
-            },
-            'console': {
-                'level': 'INFO',
-                'class': 'logging.StreamHandler',
-                'formatter': 'verbose',
-            },
-        },
-        'root': {
-            'handlers': ['file', 'console'],
-            'level': 'INFO',
-        },
-        'loggers': {
-            'django': {
-                'handlers': ['file', 'console'],
-                'level': 'INFO',
-                'propagate': False,
-            },
-        },
-    }
