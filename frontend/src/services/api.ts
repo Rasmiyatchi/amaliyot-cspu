@@ -95,28 +95,6 @@ class ApiService {
     localStorage.removeItem('auth_token');
   }
 
-  private async getCSRFTokenFromServer() {
-    try {
-      console.log('Getting CSRF token from:', `${this.baseURL}/auth/csrf/`);
-      const response = await fetch(`${this.baseURL}/auth/csrf/`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-      console.log('CSRF response status:', response.status);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('CSRF response data:', data);
-        if (data.csrfToken) {
-          document.cookie = `csrftoken=${data.csrfToken}; path=/`;
-          console.log('CSRF token set in cookie');
-        }
-      } else {
-        console.error('CSRF token request failed:', response.status, response.statusText);
-      }
-    } catch (error) {
-      console.error('CSRF token olishda xatolik:', error);
-    }
-  }
 
   // Auth methods
   async login(username: string, password: string) {
@@ -458,15 +436,20 @@ class ApiService {
     const formData = new FormData();
     formData.append('file', file);
 
+    // Token-based authentication
+    const token = this.getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Token ${token}`;
+    }
+
     // FormData uchun alohida request - Content-Type ni o'chirish kerak
     const url = `${this.baseURL}/hemis/import/`;
     const config: RequestInit = {
       method: 'POST',
       body: formData,
       credentials: 'include',
-      headers: {
-        'X-CSRFToken': this.getCSRFToken() || '',
-      },
+      headers,
     };
 
     const response = await fetch(url, config);
