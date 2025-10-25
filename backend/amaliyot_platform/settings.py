@@ -11,7 +11,12 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production'
 
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
+# ALLOWED_HOSTS ni environment variable dan olish
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# PythonAnywhere uchun qo'shimcha hostlar qo'shish
+ALLOWED_HOSTS.extend(['logistika.pythonanywhere.com', '*.pythonanywhere.com'])
+ALLOWED_HOSTS = list(set(ALLOWED_HOSTS))  # Duplikatlarni olib tashlash
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -228,6 +233,7 @@ try:
         # PythonAnywhere sozlamalarini qo'llash
         for key, value in pythonanywhere_settings.items():
             globals()[key] = value
+        print(f"PythonAnywhere sozlamalari qo'llanildi. ALLOWED_HOSTS: {ALLOWED_HOSTS}")
 except ImportError:
     pass
 
