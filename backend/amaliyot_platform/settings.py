@@ -71,16 +71,16 @@ ASGI_APPLICATION = "amaliyot_platform.asgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Development database (SQLite)
-if DEBUG:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
+# PythonAnywhere uchun SQLite3 ishlatish
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    # Production database (PostgreSQL)
+}
+
+# Agar PostgreSQL kerak bo'lsa, environment variable orqali o'zgartirish mumkin
+if os.getenv('USE_POSTGRESQL', 'False').lower() == 'true':
     DATABASES = {
         "default": {
             "ENGINE": os.getenv('DATABASE_ENGINE', 'django.db.backends.postgresql'),
