@@ -22,8 +22,12 @@ class ApiService {
       
     // Token-based authentication
     const token = this.getAuthToken();
+    console.log('Current token:', token);
     if (token) {
       defaultHeaders['Authorization'] = `Token ${token}`;
+      console.log('Authorization header set:', `Token ${token}`);
+    } else {
+      console.log('No token found, request will be unauthenticated');
     }
       
     // CSRF token o'chirildi - faqat token authentication ishlatiladi
@@ -113,7 +117,11 @@ class ApiService {
 
     // Token olish va saqlash
     if (response && (response as any).token) {
+      console.log('Token received from login:', (response as any).token);
       this.setAuthToken((response as any).token);
+      console.log('Token saved to localStorage');
+    } else {
+      console.log('No token in login response:', response);
     }
 
     return response;
