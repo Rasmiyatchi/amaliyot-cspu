@@ -168,8 +168,17 @@ CORS_ALLOW_HEADERS = [
 CORS_EXPOSE_HEADERS = [
     'set-cookie',
     'csrftoken',
+    'sessionid',
 ]
 CORS_PREFLIGHT_MAX_AGE = 86400
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 
 # CSRF settings
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://integrnship-platform.vercel.app').split(',')
@@ -248,15 +257,17 @@ SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_AGE = 1209600  # 2 hafta
 SESSION_COOKIE_SECURE = False  # PythonAnywhere da HTTP ham ishlashi uchun
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'None'  # Cross-origin uchun
 SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_DOMAIN = None  # Barcha domainlar uchun
 
 # CSRF settings
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_COOKIE_SECURE = False  # PythonAnywhere da HTTP ham ishlashi uchun
 CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'None'  # Cross-origin uchun
 CSRF_USE_SESSIONS = False
+CSRF_COOKIE_DOMAIN = None  # Barcha domainlar uchun
 
 # Security settings for production
 if not DEBUG:
