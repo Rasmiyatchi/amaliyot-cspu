@@ -102,15 +102,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        'OPTIONS': {'min_length': 8, 'message': 'Parol kamida 8 ta belgidan iborat bo\'lishi kerak'}
+        'OPTIONS': {'min_length': 8}
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-        'OPTIONS': {'message': 'Parol juda oddiy bo\'lishi mumkin emas'}
     },
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-        'OPTIONS': {'message': 'Parol faqat raqamlardan iborat bo\'lishi mumkin emas'}
     },
 ]
 
