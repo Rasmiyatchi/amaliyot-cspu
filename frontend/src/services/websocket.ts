@@ -19,12 +19,11 @@ class WebSocketService {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // Backend hostname'ni ishlatish
     const host = 'logistika.pythonanywhere.com';
-    // Django WebSocket server port 8000 da ishlaydi
-    const port = '8000';
     
     // Use provided internshipId or default to 'general' for admin/super_admin
     const wsPath = internshipId ? `ws/internship/${internshipId}/` : 'ws/general/';
-    const wsUrl = `${protocol}//${host}:${port}/${wsPath}`;
+    // PythonAnywhere'da port o'rniga path-based URL ishlatish
+    const wsUrl = `${protocol}//${host}/${wsPath}`;
     
     console.log('Connecting to WebSocket:', wsUrl);
     this.socket = new WebSocket(wsUrl);
