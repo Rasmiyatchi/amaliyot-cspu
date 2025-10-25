@@ -255,17 +255,17 @@ except ImportError:
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_AGE = 1209600  # 2 hafta
-SESSION_COOKIE_SECURE = False  # PythonAnywhere da HTTP ham ishlashi uchun
+SESSION_COOKIE_SECURE = True  # HTTPS uchun zarur
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'None'  # Cross-origin uchun
+SESSION_COOKIE_SAMESITE = 'Lax'  # Oddiy yechim
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_DOMAIN = None  # Barcha domainlar uchun
 
 # CSRF settings
 CSRF_COOKIE_NAME = 'csrftoken'
-CSRF_COOKIE_SECURE = False  # PythonAnywhere da HTTP ham ishlashi uchun
+CSRF_COOKIE_SECURE = True  # HTTPS uchun zarur
 CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'None'  # Cross-origin uchun
+CSRF_COOKIE_SAMESITE = 'Lax'  # Oddiy yechim
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_DOMAIN = None  # Barcha domainlar uchun
 

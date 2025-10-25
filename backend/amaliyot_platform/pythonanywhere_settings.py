@@ -25,11 +25,11 @@ def get_pythonanywhere_settings():
         
         # Security settings
         'SECURE_SSL_REDIRECT': False,  # PythonAnywhere da avtomatik SSL
-        'SESSION_COOKIE_SECURE': False,  # HTTP da ham ishlashi uchun
-        'SESSION_COOKIE_SAMESITE': 'None',  # Cross-origin uchun
+        'SESSION_COOKIE_SECURE': True,  # HTTPS uchun zarur
+        'SESSION_COOKIE_SAMESITE': 'Lax',  # Oddiy yechim
         'SESSION_COOKIE_DOMAIN': None,  # Barcha domainlar uchun
-        'CSRF_COOKIE_SECURE': False,
-        'CSRF_COOKIE_SAMESITE': 'None',  # Cross-origin uchun
+        'CSRF_COOKIE_SECURE': True,  # HTTPS uchun zarur
+        'CSRF_COOKIE_SAMESITE': 'Lax',  # Oddiy yechim
         'CSRF_COOKIE_DOMAIN': None,  # Barcha domainlar uchun
         
         # CORS settings
