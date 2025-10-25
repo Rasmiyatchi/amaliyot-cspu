@@ -27,14 +27,14 @@ def get_pythonanywhere_settings():
         
         # CORS settings
         'CORS_ALLOWED_ORIGINS': [
-            "https://amaliyot.vercel.app",
+            "https://integrnship-platform.vercel.app",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
         ],
         
         # CSRF trusted origins
         'CSRF_TRUSTED_ORIGINS': [
-            "https://amaliyot.vercel.app",
+            "https://integrnship-platform.vercel.app",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
         ],

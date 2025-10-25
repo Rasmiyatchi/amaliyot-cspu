@@ -69,7 +69,7 @@ npm run dev
 2. GitHub ga push qiling
 3. Vercel ga connect qiling
 4. Deploy tugmasini bosing
-5. URL: `https://amaliyot.vercel.app`
+5. URL: `https://integrnship-platform.vercel.app`
 
 ## API Endpoints
 

@@ -43,8 +43,8 @@ DEBUG=False
 ALLOWED_HOSTS=logistika.pythonanywhere.com
 DATABASE_ENGINE=django.db.backends.sqlite3
 DATABASE_NAME=db.sqlite3
-CORS_ALLOWED_ORIGINS=https://amaliyot.vercel.app,http://localhost:3000
-CSRF_TRUSTED_ORIGINS=https://amaliyot.vercel.app,http://localhost:3000
+CORS_ALLOWED_ORIGINS=https://integrnship-platform.vercel.app,http://localhost:3000
+CSRF_TRUSTED_ORIGINS=https://integrnship-platform.vercel.app,http://localhost:3000
 ```
 
 ## 4. Database sozlash
@@ -104,7 +104,7 @@ application = get_wsgi_application()
 Settings.py da CORS_ALLOWED_ORIGINS ga frontend URL ni qo'shing:
 ```python
 CORS_ALLOWED_ORIGINS = [
-    "https://amaliyot.vercel.app",
+    "https://integrnship-platform.vercel.app",
     "http://localhost:3000",  # Development uchun
 ]
 ```

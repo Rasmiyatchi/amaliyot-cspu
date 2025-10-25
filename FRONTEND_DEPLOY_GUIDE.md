@@ -181,15 +181,15 @@ git push origin main
 Backend da CORS_ALLOWED_ORIGINS ga frontend URL ni qo'shing:
 
 ```env
-CORS_ALLOWED_ORIGINS=https://amaliyot.vercel.app,http://localhost:3000
-CSRF_TRUSTED_ORIGINS=https://amaliyot.vercel.app,http://localhost:3000
+CORS_ALLOWED_ORIGINS=https://integrnship-platform.vercel.app,http://localhost:3000
+CSRF_TRUSTED_ORIGINS=https://integrnship-platform.vercel.app,http://localhost:3000
 ```
 
 ---
 
 ## Deploy Keyin Test Qilish
 
-1. **Frontend:** `https://amaliyot.vercel.app`
+1. **Frontend:** `https://integrnship-platform.vercel.app`
 2. **Backend:** `https://logistika.pythonanywhere.com`
 3. **API:** `https://logistika.pythonanywhere.com/api/`
 4. **Swagger:** `https://logistika.pythonanywhere.com/swagger/`
