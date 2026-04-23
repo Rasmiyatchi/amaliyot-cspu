@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { MapPicker } from "@/components/ui/map-picker";
 import { useCreateArea, useUpdateArea } from "@/lib/api/areas";
 import type { Area } from "@/lib/api/types";
 
@@ -32,8 +33,6 @@ const areaSchema = z.object({
   description: z.string().optional().or(z.literal("")),
   region: z.string().min(2).max(64),
   district: z.string().max(64).optional().or(z.literal("")),
-  geo_lat: z.coerce.number().min(-90).max(90).optional().or(z.literal(NaN as number)),
-  geo_lng: z.coerce.number().min(-180).max(180).optional().or(z.literal(NaN as number)),
   capacity: z.coerce.number().int().min(1).max(1000),
 });
 
@@ -49,6 +48,8 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
   const create = useCreateArea();
   const update = useUpdateArea();
   const isEdit = !!existing;
+
+  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
 
   const form = useForm<AreaForm>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,12 +70,16 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
         description: existing.description ?? "",
         region: existing.region,
         district: existing.district ?? "",
-        geo_lat: existing.geo_lat ?? undefined,
-        geo_lng: existing.geo_lng ?? undefined,
         capacity: existing.capacity,
       });
+      setGeo(
+        existing.geo_lat && existing.geo_lng
+          ? { lat: Number(existing.geo_lat), lng: Number(existing.geo_lng) }
+          : null,
+      );
     } else if (open) {
       form.reset();
+      setGeo(null);
     }
   }, [open, existing, form]);
 
@@ -84,8 +89,8 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
       description: values.description || null,
       region: values.region,
       district: values.district || null,
-      geo_lat: Number.isFinite(values.geo_lat) ? values.geo_lat : null,
-      geo_lng: Number.isFinite(values.geo_lng) ? values.geo_lng : null,
+      geo_lat: geo?.lat ?? null,
+      geo_lng: geo?.lng ?? null,
       capacity: values.capacity,
     };
     try {
@@ -106,7 +111,7 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Hududni tahrirlash" : "Yangi hudud"}</DialogTitle>
           <DialogDescription>
@@ -171,44 +176,6 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
               />
               <FormField
                 control={form.control}
-                name="geo_lat"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Lat</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.0000001"
-                        placeholder="41.2"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="geo_lng"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Lng</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.0000001"
-                        placeholder="70.3"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="capacity"
                 render={({ field }) => (
                   <FormItem className="col-span-2">
@@ -220,6 +187,11 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Xaritadagi joylashuv</label>
+              <MapPicker value={geo} onChange={setGeo} />
             </div>
 
             <DialogFooter>

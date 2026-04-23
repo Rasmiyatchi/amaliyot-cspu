@@ -3,6 +3,7 @@
 from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.area import Area
 from app.models.enums import (
+    AssignmentStatus,
     DegreeType,
     EducationForm,
     Gender,
@@ -12,6 +13,7 @@ from app.models.enums import (
     UserRole,
 )
 from app.models.organization import Organization
+from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
 from app.models.refresh_token import RefreshToken
 from app.models.student import Student
@@ -21,6 +23,7 @@ from app.models.user import User
 __all__ = [
     "AcademicYear",
     "Area",
+    "AssignmentStatus",
     "DegreeType",
     "Direction",
     "EducationForm",
@@ -30,6 +33,7 @@ __all__ = [
     "ObjectKind",
     "Organization",
     "OrganizationKind",
+    "PracticeAssignment",
     "PracticeType",
     "RefreshToken",
     "Student",

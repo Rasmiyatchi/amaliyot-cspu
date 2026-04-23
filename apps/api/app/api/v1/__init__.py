@@ -9,6 +9,7 @@ from app.api.v1 import (
     health,
     hemis,
     organizations,
+    practice_assignments,
     practice_types,
     students,
     supervisors,
@@ -24,3 +25,4 @@ api_router.include_router(practice_types.router)
 api_router.include_router(organizations.router)
 api_router.include_router(areas.router)
 api_router.include_router(supervisors.router)
+api_router.include_router(practice_assignments.router)

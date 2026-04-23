@@ -21,6 +21,8 @@ export type StudentStatus = "studying" | "graduated" | "expelled" | "academic_le
 
 export type ObjectKind = "organization" | "area" | "any";
 
+export type AssignmentStatus = "draft" | "active" | "completed" | "cancelled";
+
 export type OrganizationKind =
   | "school"
   | "mtt"
@@ -231,6 +233,66 @@ export type SupervisorCreate = {
   experience_years?: number | null;
   organization_id?: UUID | null;
   capacity: number;
+};
+
+// ─── Practice Assignment ──────────────────────────────────
+export type PracticeAssignment = {
+  id: UUID;
+  student_id: UUID;
+  student_full_name: string;
+  student_hemis_id: string;
+  student_group_name: string | null;
+  student_course: number | null;
+  practice_type_id: UUID;
+  practice_type_code: string;
+  practice_type_name: string;
+  requires_contract: boolean;
+  academic_year_id: UUID;
+  academic_year_name: string;
+  organization_id: UUID | null;
+  organization_name: string | null;
+  area_id: UUID | null;
+  area_name: string | null;
+  supervisor_id: UUID | null;
+  supervisor_full_name: string | null;
+  start_date: ISODate;
+  end_date: ISODate;
+  status: AssignmentStatus;
+  final_grade: number | null;
+  credit_earned: boolean;
+  cancelled_reason: string | null;
+  cancelled_at: ISODateTime | null;
+  notes: string | null;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+};
+
+export type PracticeAssignmentCreate = {
+  student_id: UUID;
+  practice_type_id: UUID;
+  academic_year_id: UUID;
+  organization_id?: UUID | null;
+  area_id?: UUID | null;
+  supervisor_id?: UUID | null;
+  start_date: ISODate;
+  end_date: ISODate;
+  notes?: string | null;
+};
+
+export type PracticeAssignmentBulkCreate = Omit<PracticeAssignmentCreate, "student_id"> & {
+  student_ids: UUID[];
+};
+
+export type BulkAssignmentError = {
+  student_id: UUID;
+  error: string;
+};
+
+export type BulkAssignmentResult = {
+  requested: number;
+  created: number;
+  failed: BulkAssignmentError[];
+  assignment_ids: UUID[];
 };
 
 // ─── Practice Types ──────────────────────────────────────

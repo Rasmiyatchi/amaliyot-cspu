@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { AcademicPage } from "@/routes/dashboard/admin/academic";
+import { AssignmentsPage } from "@/routes/dashboard/admin/assignments";
 import { AdminHome } from "@/routes/dashboard/admin/index";
 import { ObjectsPage } from "@/routes/dashboard/admin/objects";
 import { PracticeTypesPage } from "@/routes/dashboard/admin/practice-types";
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
           { path: "objects", Component: ObjectsPage },
           { path: "supervisors", Component: SupervisorsPage },
           { path: "students", Component: StudentsPage },
+          { path: "assignments", Component: AssignmentsPage },
         ],
       },
     ],

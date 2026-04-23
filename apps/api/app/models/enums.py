@@ -61,3 +61,12 @@ class OrganizationKind(StrEnum):
     COMPANY = "company"  # Ishlab chiqarish korxonasi
     UNIVERSITY = "university"  # Universitet/OTM
     OTHER = "other"
+
+
+class AssignmentStatus(StrEnum):
+    """Amaliyot biriktirish statusi."""
+
+    DRAFT = "draft"  # Yaratilgan, hali aktivlashmagan
+    ACTIVE = "active"  # Hozir davom etyapti
+    COMPLETED = "completed"  # Yakunlangan, baholash kutilmoqda
+    CANCELLED = "cancelled"  # Bekor qilingan

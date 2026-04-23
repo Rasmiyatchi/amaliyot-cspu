@@ -72,7 +72,9 @@ async def create_organization(db: AsyncSession, data: BaseModel) -> Organization
     return org
 
 
-async def update_organization(db: AsyncSession, id_: UUID, data: BaseModel) -> Organization:
+async def update_organization(
+    db: AsyncSession, id_: UUID, data: BaseModel
+) -> Organization:
     org = await get_organization(db, id_)
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(org, key, value)

@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { MapPicker } from "@/components/ui/map-picker";
 import {
   Select,
   SelectContent,
@@ -78,6 +79,8 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
   const update = useUpdateOrganization();
   const isEdit = !!existing;
 
+  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+
   const form = useForm<OrgForm>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(orgSchema) as any,
@@ -123,8 +126,14 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
         bank_mfo: existing.bank_mfo ?? "",
         capacity: existing.capacity,
       });
+      setGeo(
+        existing.geo_lat && existing.geo_lng
+          ? { lat: Number(existing.geo_lat), lng: Number(existing.geo_lng) }
+          : null,
+      );
     } else if (open && !existing) {
       form.reset();
+      setGeo(null);
     }
   }, [open, existing, form]);
 
@@ -133,6 +142,8 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
     const payload = Object.fromEntries(
       Object.entries(values).map(([k, v]) => [k, v === "" ? null : v]),
     ) as Partial<Organization>;
+    payload.geo_lat = geo?.lat ?? null;
+    payload.geo_lng = geo?.lng ?? null;
     try {
       if (isEdit && existing) {
         await update.mutateAsync({ id: existing.id, data: payload });
@@ -349,6 +360,16 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="mt-3 space-y-2">
+                <label className="text-sm font-medium">
+                  Xaritadagi joylashuv
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">
+                    (Phase 7 — davomat geo-fence uchun)
+                  </span>
+                </label>
+                <MapPicker value={geo} onChange={setGeo} height={280} />
               </div>
             </div>
 
