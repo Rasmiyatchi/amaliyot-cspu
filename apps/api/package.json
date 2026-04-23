@@ -1,0 +1,17 @@
+{
+  "name": "@chdpu/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "start": "uv run uvicorn app.main:app --host 0.0.0.0 --port 8000",
+    "test": "uv run pytest",
+    "lint": "uv run ruff check .",
+    "format": "uv run ruff format .",
+    "typecheck": "uv run mypy app",
+    "migrate": "uv run alembic upgrade head",
+    "migrate:down": "uv run alembic downgrade -1",
+    "migrate:new": "uv run alembic revision --autogenerate -m",
+    "migrate:status": "uv run alembic current && uv run alembic heads"
+  }
+}

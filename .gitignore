@@ -1,0 +1,76 @@
+# ─── Dependencies ─────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ─── Build outputs ────────────────────────────────────────
+dist/
+build/
+out/
+.next/
+.vite/
+.turbo/
+
+# ─── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+
+# ─── Env & secrets ────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+*.pem
+*.key
+# Keep example files
+!.env.example
+
+# ─── Logs ─────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── IDE / OS ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# ─── Claude / agent ───────────────────────────────────────
+.claude/settings.local.json
+
+# ─── Storage / uploads ────────────────────────────────────
+apps/api/storage/
+!apps/api/storage/.gitkeep
+
+# ─── Generated types ──────────────────────────────────────
+packages/types/generated/
+
+# ─── Docker ───────────────────────────────────────────────
+*.pid
+
+# ─── DB dumps ─────────────────────────────────────────────
+*.sql.gz
+*.dump
