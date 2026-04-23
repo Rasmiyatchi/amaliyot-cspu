@@ -11,12 +11,14 @@ from app import __version__
 from app.api.v1 import api_router
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.db.seed import run_seeds
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging()
     logger.info(f"🚀 {settings.APP_NAME} v{__version__} starting in {settings.APP_ENV}")
+    await run_seeds()
     yield
     logger.info("👋 Shutting down")
 

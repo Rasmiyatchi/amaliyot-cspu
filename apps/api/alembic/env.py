@@ -21,10 +21,9 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Autogenerate uchun target metadata — bizning Base.metadata
-# Bu yerga yangi modellar qo'shilganda Alembic avtomatik ko'rishi uchun import qilinadi
-# (Modellar register bo'lishi uchun import kerak)
-#
-# from app.models import *  # keyinroq User, Student va b.
+# Modellar register bo'lishi uchun import qilinadi
+import app.models  # noqa: F401, E402
+
 target_metadata = Base.metadata
 
 

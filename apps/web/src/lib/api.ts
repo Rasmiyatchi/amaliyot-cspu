@@ -1,16 +1,78 @@
-import ky from "ky";
+import ky, { HTTPError } from "ky";
+
+import { useAuthStore } from "@/stores/auth";
+
+const AUTH_PATH_PREFIX = "auth/"; // login/refresh/logout — retry cyclini oldini olish uchun
 
 /**
- * HTTP klient — ky bilan.
+ * HTTP klient — Authorization header va 401 da avto-refresh bilan.
  *
- * `prefixUrl: "/api"` — Vite dev server proxy orqali FastAPIga borayapti (vite.config.ts).
- * Production'da nginx shu path'ni backend'ga yo'naltiradi.
- *
- * Auth hook'lar (Bearer token, 401 refresh) Phase 1 — Auth da qo'shiladi.
+ * Oqim:
+ *  1. beforeRequest: store'dan accessToken olib, `Authorization: Bearer ...` qo'shiladi
+ *  2. 401 qaytsa va bu auth endpoint bo'lmasa → /auth/refresh chaqiriladi
+ *  3. Yangi access token bilan original so'rov qayta yuboriladi
+ *  4. Refresh ham 401 qaytarsa → auth store tozalanadi (foydalanuvchi login'ga yo'naltiriladi)
  */
 export const api = ky.create({
   prefixUrl: "/api",
-  credentials: "include", // refresh token HttpOnly cookie uchun
-  retry: { limit: 1, methods: ["get"] },
+  credentials: "include",
   timeout: 10_000,
+  retry: 0, // biz o'zimiz retry qilamiz
+  hooks: {
+    beforeRequest: [
+      (request) => {
+        const token = useAuthStore.getState().accessToken;
+        if (token) request.headers.set("Authorization", `Bearer ${token}`);
+      },
+    ],
+    beforeError: [
+      async (error) => {
+        try {
+          const body = (await error.response.clone().json()) as { detail?: string };
+          if (body.detail) error.message = body.detail;
+        } catch {
+          /* JSON emas */
+        }
+        return error;
+      },
+    ],
+    afterResponse: [
+      async (request, _options, response) => {
+        if (response.status !== 401) return;
+        // Auth endpoint'laridan 401 kelsa — retry qilmaymiz (cycle oldini olish)
+        const url = new URL(request.url);
+        if (url.pathname.includes(`/api/v1/${AUTH_PATH_PREFIX}`)) return;
+
+        // Refresh'ga urinish
+        const refreshed = await tryRefresh();
+        if (!refreshed) {
+          useAuthStore.getState().clear();
+          return;
+        }
+
+        // Yangi token bilan qayta urinish
+        const retryRequest = request.clone();
+        retryRequest.headers.set("Authorization", `Bearer ${refreshed}`);
+        return ky(retryRequest);
+      },
+    ],
+  },
 });
+
+/** /auth/refresh ga urinadi. Muvaffaqiyat → yangi access token. Xato → null. */
+async function tryRefresh(): Promise<string | null> {
+  try {
+    const res = await fetch("/api/v1/auth/refresh", {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { access_token: string };
+    useAuthStore.getState().setToken(data.access_token);
+    return data.access_token;
+  } catch {
+    return null;
+  }
+}
+
+export { HTTPError };
