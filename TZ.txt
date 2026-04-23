@@ -1,0 +1,67 @@
+TEXNIK TOPSHIRIQ: Universitet Amaliyot Platformasi
+
+1. Loyihaning maqsadi va qisqacha tavsifi
+Ushbu platforma universitet talabalarining barcha turdagi (4+2, malakaviy, pedagogik va h.k.) amaliyot jarayonlarini raqamlashtirish, nazorat qilish, baholash va hisobotlarni avtomatlashtirish uchun mo'ljallangan. Tizim HEMIS bilan to'g'ridan-to'g'ri integratsiya qilinadi hamda geolokatsiya va vaqtga asoslangan davomat tizimi, QR-kodli elektron shartnomalar kabi zamonaviy yechimlarni taklif etadi.
+2. Tizim rollari (Foydalanuvchilar)
+Super Admin (Tizim egasi/Texnik administrator/Amaliyot bo'limi boshlig'i)
+Admin (Fakultet dekani/mas'ul xodimi)
+Korxona Rahbari (Amaliyot o'tash joyidagi supervizor/rahbar/o'qituvchi)
+Talaba (Amaliyot o'tovchi)
+
+3. Rollar bo'yicha funksional talablar
+3.1. Super Admin imkoniyatlari
+Tizim sozlamalari: Saytning umumiy ma'lumotlarini o'zgartirish.
+Rol boshqaruvi: Adminlarni yaratish, tahrirlash va o'chirish (CRUD).
+Texnik boshqaruv: Tizimni "Dev Mode" (Texnik ishlar) rejimiga o'tkazish.
+Integratsiya boshqaruvi: Ma'lumotlar bazasi va API (jumladan HEMIS) ulanishlarini boshqarish.
+Davomat nazorati: "Qizil" (bormagan) statusdagi davomatlarni asosli sabablarga ko'ra (talaba murojaati asosida) "Yashil" (bordi) statusiga o'tkazish vakolati faqat Amaliyot bo'limida (Super Admin) bo'ladi.
+3.2. Admin imkoniyatlari
+Dashboard (Asosiy panel): Jami talabalar, amaliyotdagilar, tugatganlar va rahbarlarning o'rtacha reytingi.
+HEMIS Integratsiyasi: Talabalar ma'lumotlarini import qilish.
+Korxonalar/Obyektlar bo'limi: Yangi kompaniya, maktab yoki amaliyot obyektini (masalan, "Chimyon tog'i") yaratish. Rahbarlarni biriktirish.
+Talabalarni taqsimlash: Talabalarni guruhlab yoki yakka tartibda korxonalarga/rahbarlarga biriktirish (Merge).
+Hisobotlar va Statistika: Barcha ma'lumotlarni ko'rish va .zip/.pdf formatida yuklab olish. Davomat bo'yicha umumiy statistikani monitoring qilish.
+3.3. Korxona Rahbari (Supervizor) imkoniyatlari
+Dashboard: Biriktirilgan talabalar soni, davomat ko'rsatkichlari, reyting.
+Davomat nazorati: Talabalarning "Kelgan vaqti" va "Ketgan vaqti"ni kunlik bazada ko'rish va tasdiqlash.
+Topshiriq va Baholash: Talabalar yuklagan hisobot/fayllarni tekshirish. Baholash mezonlari (sillabusga muvofiq, masalan, 100 ballik tizim ) asosida baho qo'yish.
+Shartnoma tasdig'i: Elektron shartnomani o'z qismi uchun tasdiqlash (printerda chiqarib oddiy imzo qo’yadi va skaner qilib yuklaydi).
+3.4. Talaba imkoniyatlari
+Dashboard: Amaliyot jarayoni (Progress bar), davomat va baholar statistikasi.
+Davomat (Check-in / Check-out): Platforma orqali "Kelgan vaqt" va "Ketgan vaqt" ni belgilash (Geolokatsiya yoki obyekt hududidagi Wi-Fi tarmog'iga bog'lanish orqali ishlashi maqsadga muvofiq).
+Hujjatlar yuritilishi:
+Sillabus, nizom kabi me'yoriy hujjatlarni ko'rish.
+Elektron Shartnoma: Shartnomani to'ldirish va yuborish. Tasdiqlangan shartnoma QR-kodga ega bo'ladi.
+Hisobotlar: Dars tahlili, kundalik, sillabusda ko'rsatilgan taqdimotlar va .zip fayllarni (masalan, 3-kurslar uchun 1-chorakda 10 ta dars tahlili , dars ishlanmalari ) tizimga yuklash.
+
+
+4. Tizimdagi Amaliyot Turlari va Ularning Logikasi
+Tizim quyidagi 8 xil amaliyot turini o'ziga xos mantiqlari bilan qo'llab-quvvatlashi shart:
+4.1. "4+2" Tartibidagi Amaliyotlar
+1. "4+2" Amaliyoti (Umumiy):
+Davomiyligi: 30 hafta (O'quv yili davomida: Kuzgi semestr sentyabr-dekabr , Bahorgi semestr fevral-may ). Umumiy hajmi: 300 soat, 10 kredit.
+Shartlari: Talaba haftada 2 kun aniq bir maktab yoki o'quv markazida bo'lishi shart. Obyekt va rahbar (o'qituvchi) bo'lishi, shartnoma tuzilishi majburiy. Topshiriqlar tizim orqali beriladi (sillabus asosida: dars tahlili, ma'naviy-ma'rifiy tadbirlar va h.k.).
+2. "4+2" Amaliyoti (Maktabgacha va maxsus pedagoglar uchun):
+Yuqoridagi (1-band) logikasi bilan bir xil ishlaydi, faqat amaliyot obyektlari maktabgacha ta'lim tashkilotlari (MTT) bo'ladi.
+4.2. Dala va Ochiq Hudud Amaliyotlari (Tabiiy yo'nalishlar, 1-2 kurslar)
+Bu turdagi amaliyotlarning asosiy farqi shundaki, ularga shartnoma tuzish talab etilmaydi va aniq bir yopiq bino (tashkilot) o'rniga hudud/obyekt biriktiriladi (masalan, "Chimyon tog'i"). Davomat tizimi shunga moslashgan bo'lishi kerak.
+3. Malakaviy amaliyot (Dala amaliyoti): Davomiyligi 1-2 hafta. Tabiiy yo'nalishlar uchun.
+4. Malakaviy amaliyot (Zoologiya amaliyoti): Davomiyligi 1-2 hafta.
+5. Malakaviy amaliyot (Botanika amaliyoti): Davomiyligi 1-2 hafta.
+6. Malakaviy (Plener) amaliyot: Davomiyligi 1-4 hafta.
+4.3. Pedagogik va Umumiy Malakaviy Amaliyotlar
+7. Pedagogik amaliyot: Bitiruvchi kurslar uchun mo'ljallangan. Davomiyligi: 2 haftadan 15 haftagacha. Obyekt: Maktab va tashkilotlar. Shartnoma majburiy.
+8. Malakaviy amaliyot (Umumiy): Barcha kurslarda mavjud. Davomiyligi: 1 haftadan 8 haftagacha. Obyekt: Maktab va tashkilotlar. Shartnoma majburiy.
+
+
+5. Asosiy Logik Jarayonlar
+QR-Kodli Shartnoma Jarayoni:
+Talaba ma'lumotlarni to'ldiradi -> Rahbar (tashkilot) tizim orqali tasdiqlaydi -> Universitet (Admin) tasdiqlaydi -> PDF hujjat generatsiya qilinadi -> Hujjatga unikal QR kod bosiladi. QR kod skaner qilinganda ochiq URL orqali hujjatning statusi (Yaroqli/Yaroqsiz) ko'rinadi.
+Davomat Logikasi:
+Talaba obyektga borganda "Kelish" tugmasini bosadi (tizim vaqtni fiksatsiya qiladi).
+Ketishda "Ketish" tugmasini bosadi.
+Rahbar ushbu vaqtlarni ko'radi va tasdiqlaydi.
+Agar talaba dars qoldirsa, tizim avtomatik "Qizil" (bormadi) statusiga o'tkazadi. "Qizil" ni faqat Super Admin (Amaliyot bo'limi o'rganib chiqib) "Yashil" ga aylantira oladi.
+Baholash Logikasi (Sillabus asosida): Platforma talabani sillabusdagi aniq mezonlar asosida baholashga moslashgan bo'lishi kerak (masalan, 100 ballik tizim: Davomat - 10 ballgacha , Tadbirlarda ishtirok - 20 ballgacha , O'quv topshiriqlar - 60 ball , Hisobot - 10 ball ). Tizim hisoboti yakunda kredit yig'ish (minimum 60 ball ) logikasiga bog'lanadi.
+Tizimdan hujjat yuklab olish logikasi: Hisobot himoyasi uchun talabaning yig'ma jildidagi hujjatlar (kundalik, tahlil daftari, dars ishlanmalari ) tizimdan arxiv (.zip) yoki yagona PDF shaklida shakllantirilishi tizimning yakuniy maqsadi hisoblanadi.
+
