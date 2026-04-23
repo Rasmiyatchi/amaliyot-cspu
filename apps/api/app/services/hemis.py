@@ -257,9 +257,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
             direction_code = str(rec.get("direction_code", "")).strip()
             if direction_code not in direction_cache:
                 d = (
-                    await db.execute(
-                        select(Direction).where(Direction.code == direction_code)
-                    )
+                    await db.execute(select(Direction).where(Direction.code == direction_code))
                 ).scalar_one_or_none()
                 direction_cache[direction_code] = d
             direction = direction_cache[direction_code]
@@ -293,9 +291,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                     )
                     db.add(g)
                     await db.flush()
-                    logger.info(
-                        f"👥 Guruh avto-yaratildi: {group_name} (kurs {course})"
-                    )
+                    logger.info(f"👥 Guruh avto-yaratildi: {group_name} (kurs {course})")
                 group_cache[cache_key] = g
             group = group_cache[cache_key]
 
@@ -362,9 +358,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
             direction_cache.clear()
             group_cache.clear()
             ay = (
-                await db.execute(
-                    select(AcademicYear).where(AcademicYear.is_active.is_(True))
-                )
+                await db.execute(select(AcademicYear).where(AcademicYear.is_active.is_(True)))
             ).scalar_one()
             continue
 

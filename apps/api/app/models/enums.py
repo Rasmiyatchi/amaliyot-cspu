@@ -41,3 +41,11 @@ class DegreeType(StrEnum):
     BACHELOR = "bachelor"  # Bakalavr
     MASTER = "master"  # Magistr
     PHD = "phd"  # Doktorantura/PhD
+
+
+class ObjectKind(StrEnum):
+    """Amaliyot obyekti turi."""
+
+    ORGANIZATION = "organization"  # maktab, MTT, korxona (shartnomali)
+    AREA = "area"  # hudud (Chimyon tog' kabi, shartnomasiz)
+    ANY = "any"  # ikkalasi ham mumkin

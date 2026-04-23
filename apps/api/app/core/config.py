@@ -54,9 +54,7 @@ class Settings(BaseSettings):
 
     # ─── Super Admin seed ─────────────────────────────────
     SUPERADMIN_USERNAME: str = "superadmin"
-    SUPERADMIN_PASSWORD: str = (
-        "SuperSecret123!"  # noqa: S105  # dev default; prod .env da override qilinadi
-    )
+    SUPERADMIN_PASSWORD: str = "SuperSecret123!"  # noqa: S105  # dev default; prod .env da override qilinadi
     SUPERADMIN_EMAIL: str = "admin@chdpu.uz"
 
 

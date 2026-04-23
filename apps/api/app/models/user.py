@@ -33,19 +33,13 @@ class User(UUIDMixin, TimestampMixin, Base):
 
     # RBAC
     role: Mapped[UserRole] = mapped_column(
-        SAEnum(
-            UserRole, name="user_role", values_callable=lambda e: [m.value for m in e]
-        ),
+        SAEnum(UserRole, name="user_role", values_callable=lambda e: [m.value for m in e]),
         index=True,
     )
 
     # Status
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, default=True, server_default="true"
-    )
-    last_login_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Profile (umumiy maydonlar — rol-specific detallari Student/Supervisor da)
     first_name: Mapped[str] = mapped_column(String(100))

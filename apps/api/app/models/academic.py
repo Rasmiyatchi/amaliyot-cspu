@@ -43,14 +43,10 @@ class Direction(UUIDMixin, TimestampMixin, Base):
 class AcademicYear(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "academic_years"
 
-    name: Mapped[str] = mapped_column(
-        String(16), unique=True, comment="Masalan '2025-2026'"
-    )
+    name: Mapped[str] = mapped_column(String(16), unique=True, comment="Masalan '2025-2026'")
     start_date: Mapped[date] = mapped_column(Date)
     end_date: Mapped[date] = mapped_column(Date)
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     # Faqat bitta active AY bo'lishi kerak — partial index migration'da qo'shiladi
 

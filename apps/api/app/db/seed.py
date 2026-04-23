@@ -156,7 +156,10 @@ async def ensure_sample_academic(db: AsyncSession) -> None:
 
 
 async def run_seeds() -> None:
+    from app.db.seed_practice_types import ensure_practice_types
+
     async with SessionLocal() as db:
         await ensure_super_admin(db)
+        await ensure_practice_types(db)  # barcha muhit — reference data
         if settings.APP_ENV == "development":
             await ensure_sample_academic(db)

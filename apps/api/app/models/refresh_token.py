@@ -19,9 +19,7 @@ class RefreshToken(UUIDMixin, TimestampMixin, Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
 
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    revoked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Rotation chain — qaysi tokenga almashtirildi
     replaced_by_id: Mapped[UUID | None] = mapped_column(
@@ -31,9 +29,7 @@ class RefreshToken(UUIDMixin, TimestampMixin, Base):
 
     # Audit
     user_agent: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    ip_address: Mapped[str | None] = mapped_column(
-        String(45), nullable=True
-    )  # IPv6 = 45 max
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)  # IPv6 = 45 max
 
     @property
     def is_active(self) -> bool:

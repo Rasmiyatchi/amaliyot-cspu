@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { AcademicPage } from "@/routes/dashboard/admin/academic";
 import { AdminHome } from "@/routes/dashboard/admin/index";
+import { PracticeTypesPage } from "@/routes/dashboard/admin/practice-types";
 import { StudentsPage } from "@/routes/dashboard/admin/students";
 import { StudentDashboard } from "@/routes/dashboard/student";
 import { SupervisorDashboard } from "@/routes/dashboard/supervisor";
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, Component: AdminHome },
           { path: "academic", Component: AcademicPage },
+          { path: "practice-types", Component: PracticeTypesPage },
           { path: "students", Component: StudentsPage },
         ],
       },

@@ -5,9 +5,11 @@ from app.models.enums import (
     DegreeType,
     EducationForm,
     Gender,
+    ObjectKind,
     StudentStatus,
     UserRole,
 )
+from app.models.practice_type import PracticeType
 from app.models.refresh_token import RefreshToken
 from app.models.student import Student
 from app.models.user import User
@@ -20,6 +22,8 @@ __all__ = [
     "Faculty",
     "Gender",
     "Group",
+    "ObjectKind",
+    "PracticeType",
     "RefreshToken",
     "Student",
     "StudentStatus",

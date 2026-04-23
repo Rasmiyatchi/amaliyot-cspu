@@ -19,6 +19,8 @@ export type DegreeType = "bachelor" | "master" | "phd";
 
 export type StudentStatus = "studying" | "graduated" | "expelled" | "academic_leave";
 
+export type ObjectKind = "organization" | "area" | "any";
+
 export type Paginated<T> = {
   items: T[];
   total: number;
@@ -129,6 +131,40 @@ export type Student = {
 
   status: StudentStatus;
   created_at: ISODateTime;
+};
+
+// ─── Practice Types ──────────────────────────────────────
+export type GradingCriterion = {
+  key: string;
+  name: string;
+  max: number;
+  grader: string; // "system" | "supervisor" | "organization" | "department_head"
+};
+
+export type GradingRules = {
+  min_total: number;
+  criteria: GradingCriterion[];
+};
+
+export type PracticeType = {
+  id: UUID;
+  code: string;
+  name: string;
+  description: string | null;
+  requires_contract: boolean;
+  contract_template_ref: string | null;
+  object_kind: ObjectKind;
+  min_weeks: number;
+  max_weeks: number;
+  days_per_week: number | null;
+  hours_per_day: number | null;
+  allowed_courses: number[];
+  grading_rules: GradingRules;
+  syllabus_md: string | null;
+  is_active: boolean;
+  display_order: number;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
 };
 
 // ─── HEMIS Import ────────────────────────────────────────

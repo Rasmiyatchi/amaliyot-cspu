@@ -33,12 +33,8 @@ class Student(UUIDMixin, TimestampMixin, Base):
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # PII — TODO: encrypted at rest (Phase 14 security audit)
-    jshshir: Mapped[str | None] = mapped_column(
-        String(14), nullable=True, comment="PII"
-    )
-    passport_number: Mapped[str | None] = mapped_column(
-        String(16), nullable=True, comment="PII"
-    )
+    jshshir: Mapped[str | None] = mapped_column(String(14), nullable=True, comment="PII")
+    passport_number: Mapped[str | None] = mapped_column(String(16), nullable=True, comment="PII")
 
     # ─── Manzil ────────────────────────────────────────────
     region: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -50,12 +46,8 @@ class Student(UUIDMixin, TimestampMixin, Base):
         index=True,
         nullable=True,
     )
-    current_semester: Mapped[int | None] = mapped_column(
-        Integer, nullable=True, comment="1-8"
-    )
-    is_graduating: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
+    current_semester: Mapped[int | None] = mapped_column(Integer, nullable=True, comment="1-8")
+    is_graduating: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     enrollment_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # ─── Ta'lim ────────────────────────────────────────────

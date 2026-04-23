@@ -1,4 +1,4 @@
-import { GraduationCap, LayoutDashboard, LogOut, School, Users } from "lucide-react";
+import { BookOpen, GraduationCap, LayoutDashboard, LogOut, School, Users } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -11,6 +11,7 @@ import { useAuthStore } from "@/stores/auth";
 const navItems: { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean }[] = [
   { to: "/admin", label: "Bosh sahifa", icon: LayoutDashboard, end: true },
   { to: "/admin/academic", label: "Akademik", icon: School },
+  { to: "/admin/practice-types", label: "Amaliyot turlari", icon: BookOpen },
   { to: "/admin/students", label: "Talabalar", icon: Users },
 ];
 

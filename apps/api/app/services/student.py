@@ -117,9 +117,7 @@ async def list_students(
     rows = (
         (
             await db.execute(
-                base.order_by(User.last_name, User.first_name)
-                .offset(offset)
-                .limit(limit)
+                base.order_by(User.last_name, User.first_name).offset(offset).limit(limit)
             )
         )
         .mappings()

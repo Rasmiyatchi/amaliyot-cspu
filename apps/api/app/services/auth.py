@@ -28,9 +28,7 @@ def _client_meta(request: Request) -> tuple[str | None, str | None]:
 
 async def authenticate(db: AsyncSession, username: str, password: str) -> User:
     """Login + parolni tekshiradi. Xato yoki bloklangan hisob → HTTPException."""
-    user = (
-        await db.execute(select(User).where(User.username == username))
-    ).scalar_one_or_none()
+    user = (await db.execute(select(User).where(User.username == username))).scalar_one_or_none()
 
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(
@@ -45,9 +43,7 @@ async def authenticate(db: AsyncSession, username: str, password: str) -> User:
     return user
 
 
-async def issue_tokens_for(
-    db: AsyncSession, user: User, request: Request
-) -> tuple[str, str, int]:
+async def issue_tokens_for(db: AsyncSession, user: User, request: Request) -> tuple[str, str, int]:
     """Yangi access + refresh yaratib, refresh'ni DB'ga yozadi.
 
     `(access_token, refresh_token, access_ttl_seconds)` qaytaradi.
@@ -87,9 +83,7 @@ async def refresh_tokens(
 
     token_hash = hash_refresh_token(refresh_token)
     db_token = (
-        await db.execute(
-            select(RefreshToken).where(RefreshToken.token_hash == token_hash)
-        )
+        await db.execute(select(RefreshToken).where(RefreshToken.token_hash == token_hash))
     ).scalar_one_or_none()
 
     if not db_token or not db_token.is_active:
@@ -129,9 +123,7 @@ async def logout(db: AsyncSession, refresh_token: str | None) -> None:
 
     token_hash = hash_refresh_token(refresh_token)
     db_token = (
-        await db.execute(
-            select(RefreshToken).where(RefreshToken.token_hash == token_hash)
-        )
+        await db.execute(select(RefreshToken).where(RefreshToken.token_hash == token_hash))
     ).scalar_one_or_none()
 
     if db_token and db_token.revoked_at is None:

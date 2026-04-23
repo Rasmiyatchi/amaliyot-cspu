@@ -42,9 +42,7 @@ async def get_current_user(
     except ValueError as e:
         raise credentials_exc from e
 
-    user = (
-        await db.execute(select(User).where(User.id == user_id))
-    ).scalar_one_or_none()
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if not user or not user.is_active:
         raise credentials_exc
 
@@ -80,8 +78,6 @@ def require_role(
 
 # Tez-tez ishlatiladigan kombinatsiyalar
 RequireSuperAdmin = Annotated[User, Depends(require_role([UserRole.SUPER_ADMIN]))]
-RequireAdmin = Annotated[
-    User, Depends(require_role([UserRole.SUPER_ADMIN, UserRole.ADMIN]))
-]
+RequireAdmin = Annotated[User, Depends(require_role([UserRole.SUPER_ADMIN, UserRole.ADMIN]))]
 RequireSupervisor = Annotated[User, Depends(require_role([UserRole.SUPERVISOR]))]
 RequireStudent = Annotated[User, Depends(require_role([UserRole.STUDENT]))]

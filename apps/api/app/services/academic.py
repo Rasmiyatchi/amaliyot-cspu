@@ -23,9 +23,7 @@ def _409(msg: str) -> HTTPException:
     return HTTPException(status.HTTP_409_CONFLICT, msg)
 
 
-async def _get_or_404(
-    db: AsyncSession, model: type[M], id_: UUID, entity_name: str
-) -> M:
+async def _get_or_404(db: AsyncSession, model: type[M], id_: UUID, entity_name: str) -> M:
     obj = await db.get(model, id_)
     if not obj:
         raise _404(entity_name, id_)
@@ -38,16 +36,10 @@ def _apply_updates(obj: Base, data: BaseModel) -> None:
 
 
 # ─── Faculty ──────────────────────────────────────────────
-async def list_faculties(
-    db: AsyncSession, offset: int, limit: int
-) -> tuple[list[Faculty], int]:
+async def list_faculties(db: AsyncSession, offset: int, limit: int) -> tuple[list[Faculty], int]:
     total = (await db.execute(select(func.count(Faculty.id)))).scalar_one()
     items = (
-        (
-            await db.execute(
-                select(Faculty).order_by(Faculty.name).offset(offset).limit(limit)
-            )
-        )
+        (await db.execute(select(Faculty).order_by(Faculty.name).offset(offset).limit(limit)))
         .scalars()
         .all()
     )
@@ -85,9 +77,7 @@ async def delete_faculty(db: AsyncSession, id_: UUID) -> None:
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise _409(
-            "Fakultetga bog'langan yo'nalishlar bor — avval ularni o'chiring"
-        ) from e
+        raise _409("Fakultetga bog'langan yo'nalishlar bor — avval ularni o'chiring") from e
 
 
 # ─── Direction ────────────────────────────────────────────
@@ -146,11 +136,7 @@ async def delete_direction(db: AsyncSession, id_: UUID) -> None:
 async def list_academic_years(db: AsyncSession) -> list[AcademicYear]:
     """AY'lar odatda kam bo'ladi — paginationsiz."""
     items = (
-        (
-            await db.execute(
-                select(AcademicYear).order_by(AcademicYear.start_date.desc())
-            )
-        )
+        (await db.execute(select(AcademicYear).order_by(AcademicYear.start_date.desc())))
         .scalars()
         .all()
     )
@@ -173,15 +159,11 @@ async def create_academic_year(db: AsyncSession, data: BaseModel) -> AcademicYea
     return ay
 
 
-async def update_academic_year(
-    db: AsyncSession, id_: UUID, data: BaseModel
-) -> AcademicYear:
+async def update_academic_year(db: AsyncSession, id_: UUID, data: BaseModel) -> AcademicYear:
     ay = await _get_or_404(db, AcademicYear, id_, "Akademik yil")
     payload = data.model_dump(exclude_unset=True)
     if payload.get("is_active") is True:
-        await db.execute(
-            update(AcademicYear).where(AcademicYear.id != id_).values(is_active=False)
-        )
+        await db.execute(update(AcademicYear).where(AcademicYear.id != id_).values(is_active=False))
     for key, value in payload.items():
         setattr(ay, key, value)
     try:
@@ -226,11 +208,7 @@ async def list_groups(
 
     total = (await db.execute(count_stmt)).scalar_one()
     items = (
-        (
-            await db.execute(
-                stmt.order_by(Group.course, Group.name).offset(offset).limit(limit)
-            )
-        )
+        (await db.execute(stmt.order_by(Group.course, Group.name).offset(offset).limit(limit)))
         .scalars()
         .all()
     )
@@ -244,9 +222,7 @@ async def create_group(db: AsyncSession, data: BaseModel) -> Group:
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise _409(
-            "Shu akademik yilda, shu yo'nalishda xuddi shunday nomli guruh mavjud"
-        ) from e
+        raise _409("Shu akademik yilda, shu yo'nalishda xuddi shunday nomli guruh mavjud") from e
     await db.refresh(g)
     return g
 
@@ -270,6 +246,4 @@ async def delete_group(db: AsyncSession, id_: UUID) -> None:
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise _409(
-            "Guruhda talabalar bor — avval ularni boshqa guruhga ko'chiring"
-        ) from e
+        raise _409("Guruhda talabalar bor — avval ularni boshqa guruhga ko'chiring") from e

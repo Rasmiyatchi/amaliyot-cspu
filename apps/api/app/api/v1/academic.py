@@ -44,12 +44,8 @@ async def list_faculties(
     )
 
 
-@router.post(
-    "/faculties", response_model=FacultyRead, status_code=status.HTTP_201_CREATED
-)
-async def create_faculty(
-    data: FacultyCreate, db: SessionDep, _: RequireAdmin
-) -> FacultyRead:
+@router.post("/faculties", response_model=FacultyRead, status_code=status.HTTP_201_CREATED)
+async def create_faculty(data: FacultyCreate, db: SessionDep, _: RequireAdmin) -> FacultyRead:
     return FacultyRead.model_validate(await svc.create_faculty(db, data))
 
 
@@ -84,12 +80,8 @@ async def list_directions(
     )
 
 
-@router.post(
-    "/directions", response_model=DirectionRead, status_code=status.HTTP_201_CREATED
-)
-async def create_direction(
-    data: DirectionCreate, db: SessionDep, _: RequireAdmin
-) -> DirectionRead:
+@router.post("/directions", response_model=DirectionRead, status_code=status.HTTP_201_CREATED)
+async def create_direction(data: DirectionCreate, db: SessionDep, _: RequireAdmin) -> DirectionRead:
     return DirectionRead.model_validate(await svc.create_direction(db, data))
 
 
@@ -107,9 +99,7 @@ async def delete_direction(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
 
 # ─── AcademicYear ─────────────────────────────────────────
 @router.get("/academic-years", response_model=list[AcademicYearRead])
-async def list_academic_years(
-    db: SessionDep, _: RequireAdmin
-) -> list[AcademicYearRead]:
+async def list_academic_years(db: SessionDep, _: RequireAdmin) -> list[AcademicYearRead]:
     items = await svc.list_academic_years(db)
     return [AcademicYearRead.model_validate(i) for i in items]
 
@@ -129,9 +119,7 @@ async def create_academic_year(
 async def update_academic_year(
     id_: UUID, data: AcademicYearUpdate, db: SessionDep, _: RequireAdmin
 ) -> AcademicYearRead:
-    return AcademicYearRead.model_validate(
-        await svc.update_academic_year(db, id_, data)
-    )
+    return AcademicYearRead.model_validate(await svc.update_academic_year(db, id_, data))
 
 
 @router.delete("/academic-years/{id_}", status_code=status.HTTP_204_NO_CONTENT)
@@ -168,9 +156,7 @@ async def create_group(data: GroupCreate, db: SessionDep, _: RequireAdmin) -> Gr
 
 
 @router.patch("/groups/{id_}", response_model=GroupRead)
-async def update_group(
-    id_: UUID, data: GroupUpdate, db: SessionDep, _: RequireAdmin
-) -> GroupRead:
+async def update_group(id_: UUID, data: GroupUpdate, db: SessionDep, _: RequireAdmin) -> GroupRead:
     return GroupRead.model_validate(await svc.update_group(db, id_, data))
 
 
