@@ -21,6 +21,15 @@ export type StudentStatus = "studying" | "graduated" | "expelled" | "academic_le
 
 export type ObjectKind = "organization" | "area" | "any";
 
+export type OrganizationKind =
+  | "school"
+  | "mtt"
+  | "lyceum"
+  | "college"
+  | "company"
+  | "university"
+  | "other";
+
 export type Paginated<T> = {
   items: T[];
   total: number;
@@ -131,6 +140,97 @@ export type Student = {
 
   status: StudentStatus;
   created_at: ISODateTime;
+};
+
+// ─── Organization ─────────────────────────────────────────
+export type Organization = {
+  id: UUID;
+  name: string;
+  legal_name: string | null;
+  kind: OrganizationKind;
+  director_full_name: string;
+  director_position: string | null;
+  region: string;
+  district: string | null;
+  address_line: string;
+  phone: string;
+  email: string | null;
+  website: string | null;
+  fax: string | null;
+  inn: string | null;
+  bank_name: string | null;
+  bank_account: string | null;
+  bank_correspondent: string | null;
+  bank_mfo: string | null;
+  capacity: number;
+  work_days: number[];
+  work_hours: Record<string, unknown>;
+  geo_lat: number | null;
+  geo_lng: number | null;
+  geo_radius_m: number;
+  wifi_ssids: string[];
+  notes: string | null;
+  is_active: boolean;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+};
+
+export type OrganizationCreate = Omit<Organization, "id" | "created_at" | "updated_at">;
+
+// ─── Area ─────────────────────────────────────────────────
+export type Area = {
+  id: UUID;
+  name: string;
+  description: string | null;
+  region: string;
+  district: string | null;
+  geo_lat: number | null;
+  geo_lng: number | null;
+  geo_bounds: Record<string, unknown> | null;
+  capacity: number;
+  is_active: boolean;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+};
+
+export type AreaCreate = Omit<Area, "id" | "created_at" | "updated_at">;
+
+// ─── Supervisor ───────────────────────────────────────────
+export type Supervisor = {
+  id: UUID;
+  user_id: UUID;
+  username: string;
+  first_name: string;
+  last_name: string;
+  middle_name: string | null;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  is_active: boolean;
+  last_login_at: ISODateTime | null;
+  position: string;
+  specialty: string | null;
+  experience_years: number | null;
+  capacity: number;
+  rating: number;
+  organization_id: UUID | null;
+  organization_name: string | null;
+  created_at: ISODateTime;
+};
+
+export type SupervisorCreate = {
+  username: string;
+  password: string;
+  email?: string | null;
+  phone?: string | null;
+  first_name: string;
+  last_name: string;
+  middle_name?: string | null;
+  position: string;
+  specialty?: string | null;
+  experience_years?: number | null;
+  organization_id?: UUID | null;
+  capacity: number;
 };
 
 // ─── Practice Types ──────────────────────────────────────

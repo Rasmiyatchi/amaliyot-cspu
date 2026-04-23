@@ -1,4 +1,13 @@
-import { BookOpen, GraduationCap, LayoutDashboard, LogOut, School, Users } from "lucide-react";
+import {
+  BookOpen,
+  Building2,
+  GraduationCap,
+  LayoutDashboard,
+  LogOut,
+  School,
+  UserCog,
+  Users,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -12,6 +21,8 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; end?:
   { to: "/admin", label: "Bosh sahifa", icon: LayoutDashboard, end: true },
   { to: "/admin/academic", label: "Akademik", icon: School },
   { to: "/admin/practice-types", label: "Amaliyot turlari", icon: BookOpen },
+  { to: "/admin/objects", label: "Obyektlar", icon: Building2 },
+  { to: "/admin/supervisors", label: "Rahbarlar", icon: UserCog },
   { to: "/admin/students", label: "Talabalar", icon: Users },
 ];
 

@@ -49,3 +49,15 @@ class ObjectKind(StrEnum):
     ORGANIZATION = "organization"  # maktab, MTT, korxona (shartnomali)
     AREA = "area"  # hudud (Chimyon tog' kabi, shartnomasiz)
     ANY = "any"  # ikkalasi ham mumkin
+
+
+class OrganizationKind(StrEnum):
+    """Tashkilot turi."""
+
+    SCHOOL = "school"  # Umumiy o'rta ta'lim maktabi
+    MTT = "mtt"  # Maktabgacha ta'lim tashkiloti
+    LYCEUM = "lyceum"  # Akademik litsey
+    COLLEGE = "college"  # Kasb-hunar kolleji
+    COMPANY = "company"  # Ishlab chiqarish korxonasi
+    UNIVERSITY = "university"  # Universitet/OTM
+    OTHER = "other"
