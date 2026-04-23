@@ -75,18 +75,14 @@ def _base_read_select() -> Any:
     )
 
 
-def _row_with_supervisor_name(
-    r: dict[str, Any], supervisor_map: dict[UUID, str]
-) -> dict[str, Any]:
+def _row_with_supervisor_name(r: dict[str, Any], supervisor_map: dict[UUID, str]) -> dict[str, Any]:
     out = dict(r)
     sid = out.get("supervisor_id")
     out["supervisor_full_name"] = supervisor_map.get(sid) if sid else None
     return out
 
 
-async def _load_supervisor_names(
-    db: AsyncSession, supervisor_ids: set[UUID]
-) -> dict[UUID, str]:
+async def _load_supervisor_names(db: AsyncSession, supervisor_ids: set[UUID]) -> dict[UUID, str]:
     if not supervisor_ids:
         return {}
     rows = (
@@ -138,19 +134,13 @@ async def _validate_and_resolve(
 
     # XOR
     if bool(organization_id) == bool(area_id):
-        raise ValidationError(
-            "organization_id yoki area_id — faqat bittasi ko'rsatilishi kerak"
-        )
+        raise ValidationError("organization_id yoki area_id — faqat bittasi ko'rsatilishi kerak")
 
     # Object kind compatibility
     if pt.object_kind == ObjectKind.ORGANIZATION and not organization_id:
-        raise ValidationError(
-            f"'{pt.name}' amaliyot turi tashkilot talab qiladi, hudud emas"
-        )
+        raise ValidationError(f"'{pt.name}' amaliyot turi tashkilot talab qiladi, hudud emas")
     if pt.object_kind == ObjectKind.AREA and not area_id:
-        raise ValidationError(
-            f"'{pt.name}' amaliyot turi hudud talab qiladi, tashkilot emas"
-        )
+        raise ValidationError(f"'{pt.name}' amaliyot turi hudud talab qiladi, tashkilot emas")
 
     organization = None
     if organization_id:
@@ -189,9 +179,7 @@ async def _validate_and_resolve(
     duration_days = (end_date - start_date).days
     weeks = duration_days / 7
     if weeks + 0.01 < pt.min_weeks:
-        raise ValidationError(
-            f"Davomiylik juda qisqa: {weeks:.1f} hafta (min: {pt.min_weeks})"
-        )
+        raise ValidationError(f"Davomiylik juda qisqa: {weeks:.1f} hafta (min: {pt.min_weeks})")
     # max check — 4+2 kabi uzoq amaliyotlar qish ta'tili orqali o'tadi, shuning uchun slack
     max_allowed = pt.max_weeks * 1.5 + 2
     if weeks > max_allowed:
@@ -233,27 +221,19 @@ async def _validate_and_resolve(
         return (await db.execute(stmt)).scalar_one()
 
     if organization and organization.capacity:
-        current = await count_active(
-            PracticeAssignment.organization_id == organization.id
-        )
+        current = await count_active(PracticeAssignment.organization_id == organization.id)
         if current >= organization.capacity:
-            raise ValidationError(
-                f"Tashkilot sig'imi to'la ({current}/{organization.capacity})"
-            )
+            raise ValidationError(f"Tashkilot sig'imi to'la ({current}/{organization.capacity})")
 
     if area and area.capacity:
         current = await count_active(PracticeAssignment.area_id == area.id)
         if current >= area.capacity:
-            raise ValidationError(
-                f"'{area.name}' hududi sig'imi to'la ({current}/{area.capacity})"
-            )
+            raise ValidationError(f"'{area.name}' hududi sig'imi to'la ({current}/{area.capacity})")
 
     if supervisor and supervisor.capacity:
         current = await count_active(PracticeAssignment.supervisor_id == supervisor.id)
         if current >= supervisor.capacity:
-            raise ValidationError(
-                f"Supervizor sig'imi to'la ({current}/{supervisor.capacity})"
-            )
+            raise ValidationError(f"Supervizor sig'imi to'la ({current}/{supervisor.capacity})")
 
     return {
         "student": student,
@@ -268,9 +248,7 @@ async def _validate_and_resolve(
 # ─── CRUD ─────────────────────────────────────────────────
 
 
-async def _hydrate_reads(
-    db: AsyncSession, items: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+async def _hydrate_reads(db: AsyncSession, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     sup_ids = {r["supervisor_id"] for r in items if r.get("supervisor_id")}
     sup_map = await _load_supervisor_names(db, sup_ids)
     return [_row_with_supervisor_name(r, sup_map) for r in items]
@@ -330,9 +308,7 @@ async def list_assignments(
     rows = (
         (
             await db.execute(
-                base.order_by(PracticeAssignment.created_at.desc())
-                .offset(offset)
-                .limit(limit)
+                base.order_by(PracticeAssignment.created_at.desc()).offset(offset).limit(limit)
             )
         )
         .mappings()
@@ -386,9 +362,7 @@ async def create_assignment(db: AsyncSession, data: BaseModel) -> dict[str, Any]
     return await get_assignment(db, assignment.id)
 
 
-async def bulk_create_assignments(
-    db: AsyncSession, data: BaseModel
-) -> BulkAssignmentResult:
+async def bulk_create_assignments(db: AsyncSession, data: BaseModel) -> BulkAssignmentResult:
     payload = data.model_dump()
     student_ids: list[UUID] = payload.pop("student_ids")
 
@@ -429,9 +403,7 @@ async def bulk_create_assignments(
     )
 
 
-async def update_assignment(
-    db: AsyncSession, id_: UUID, data: BaseModel
-) -> dict[str, Any]:
+async def update_assignment(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[str, Any]:
     assignment = await db.get(PracticeAssignment, id_)
     if not assignment:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Biriktirish topilmadi: {id_}")
@@ -452,9 +424,7 @@ async def update_assignment(
             "student_id": assignment.student_id,
             "practice_type_id": assignment.practice_type_id,
             "academic_year_id": assignment.academic_year_id,
-            "organization_id": payload.get(
-                "organization_id", assignment.organization_id
-            ),
+            "organization_id": payload.get("organization_id", assignment.organization_id),
             "area_id": payload.get("area_id", assignment.area_id),
             "supervisor_id": payload.get("supervisor_id", assignment.supervisor_id),
             "start_date": payload.get("start_date", assignment.start_date),

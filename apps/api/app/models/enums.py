@@ -70,3 +70,26 @@ class AssignmentStatus(StrEnum):
     ACTIVE = "active"  # Hozir davom etyapti
     COMPLETED = "completed"  # Yakunlangan, baholash kutilmoqda
     CANCELLED = "cancelled"  # Bekor qilingan
+
+
+class ContractStatus(StrEnum):
+    """Shartnoma statusi.
+
+    DRAFT → GENERATED (PDF+QR) → ACTIVE (imzolangan skan) → EXPIRED yoki REVOKED
+    """
+
+    DRAFT = "draft"  # admin yaratdi, hali PDF generatsiya qilinmagan
+    GENERATED = "generated"  # PDF + QR yaratildi, imzo kutilmoqda
+    ACTIVE = "active"  # supervizor imzolangan skanni yukladi
+    EXPIRED = "expired"  # end_date o'tdi
+    REVOKED = "revoked"  # qo'lda bekor qilindi
+
+
+class ContractTemplate(StrEnum):
+    """Shartnoma PDF shabloni — 3 asosiy template + hamkorlik."""
+
+    FOUR_PLUS_TWO = "4_plus_2"
+    PEDAGOGICAL = "pedagogical"
+    QUALIFYING = "qualifying"
+    INTERNSHIP_PRODUCTION = "internship_production"
+    PARTNERSHIP = "partnership"  # Dastlabki hamkorlik (№8490 kabi)

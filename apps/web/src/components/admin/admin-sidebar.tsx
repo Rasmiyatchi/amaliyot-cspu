@@ -2,6 +2,7 @@ import {
   BookOpen,
   Building2,
   ClipboardList,
+  FileCheck2,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -26,6 +27,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; end?:
   { to: "/admin/supervisors", label: "Rahbarlar", icon: UserCog },
   { to: "/admin/students", label: "Talabalar", icon: Users },
   { to: "/admin/assignments", label: "Biriktirish", icon: ClipboardList },
+  { to: "/admin/contracts", label: "Shartnomalar", icon: FileCheck2 },
 ];
 
 export function AdminSidebar() {

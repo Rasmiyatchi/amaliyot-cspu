@@ -6,6 +6,7 @@ from app.api.v1 import (
     academic,
     areas,
     auth,
+    contracts,
     health,
     hemis,
     organizations,
@@ -26,3 +27,4 @@ api_router.include_router(organizations.router)
 api_router.include_router(areas.router)
 api_router.include_router(supervisors.router)
 api_router.include_router(practice_assignments.router)
+api_router.include_router(contracts.router)

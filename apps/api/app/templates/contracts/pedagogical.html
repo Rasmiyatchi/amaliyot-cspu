@@ -1,0 +1,109 @@
+{% extends "contracts/base.html" %}
+
+{% block content %}
+<div class="header">
+  <div><strong>Talabalarning o'quv pedagogika amaliyotini o'tkazish</strong></div>
+  <div>yuzasidan ikki tomonlama</div>
+</div>
+
+<div class="number">{{ contract.number }}-sonli SHARTNOMA</div>
+
+<div class="meta">
+  <span>{{ contract.start_date.strftime('%Y yil %d-%B') }}</span>
+  <span>Chirchiq shahri</span>
+</div>
+
+<div class="intro">
+  Chirchiq davlat pedagogika universiteti (<strong>Universitet</strong>) nomidan rektor
+  Muxamedov G'afurjon Isroilovich bir tomondan va
+  <strong>{{ org.name }}</strong> ({{ org.region }}{% if org.district %}, {{ org.district }}{% endif %})
+  direktori <strong>{{ org.director_full_name }}</strong> tomonidan o'zaro kelishuv asosida
+  pedagogik amaliyot o'tkazish bo'yicha shartnoma tuzildi.
+</div>
+
+<section>
+  <h2>Shartnoma mazmuni</h2>
+  <p>{{ contract.start_date.strftime('%Y-%m-%d') }} — {{ contract.end_date.strftime('%Y-%m-%d') }} kunlari
+  oralig'ida talabalar o'quv pedagogik amaliyotini o'tkazish.</p>
+</section>
+
+<section>
+  <h2>Amaliyotchi talabalar ro'yxati</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 5%;">T/r</th>
+        <th style="width: 40%;">F.I.SH.</th>
+        <th style="width: 30%;">Yo'nalish</th>
+        <th style="width: 10%;">Kurs</th>
+        <th style="width: 15%;">Guruh</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in contract.students %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ s.full_name }}</td>
+        <td>{{ s.direction_code }} — {{ s.direction_name }}</td>
+        <td>{{ s.course }}</td>
+        <td>{{ s.group_name or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Amaliyot o'tkaziladigan ta'lim muassasasining majburiyatlari</h2>
+  <ul>
+    <li>Talabalarni ta'lim muassasasi o'quv fanlari dasturlari bilan tanishtirish;</li>
+    <li>Malakali mutaxassislarni biriktirish;</li>
+    <li>Tarbiyaviy ishlarni o'tkazishga tayyorlash va o'z tajribalarini o'rgatish.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Universitet majburiyatlari</h2>
+  <ul>
+    <li>Amaliyot boshlanishidan bir hafta avval muassasaga xabar berish;</li>
+    <li>Talabalarning ichki tartib qoidalariga rioya qilishini ta'minlash;</li>
+    <li>Amaliyot tadbirlarida faol ishtirok etishni ta'minlash.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Tomonlarning yuridik manzillari</h2>
+  <table>
+    <tr>
+      <th>Universitet</th>
+      <th>Ta'lim muassasasi</th>
+    </tr>
+    <tr>
+      <td>
+        <strong>Chirchiq davlat pedagogika universiteti</strong><br>
+        Toshkent viloyati, Chirchiq shahri, A.Temur ko'chasi, 104<br>
+        Tel: (370) 716-68-11
+      </td>
+      <td>
+        <strong>{{ org.name }}</strong><br>
+        {{ org.region }}{% if org.district %}, {{ org.district }}{% endif %}<br>
+        {{ org.address_line }}<br>
+        {% if org.phone %}Tel: {{ org.phone }}{% endif %}
+      </td>
+    </tr>
+  </table>
+</section>
+
+<div class="signatures">
+  <div class="signature-block">
+    <div>Rektor</div>
+    <div class="signature-line">Muxamedov G'afurjon Isroilovich</div>
+    <div class="small">M.O'.</div>
+  </div>
+  <div class="signature-block">
+    <div>{{ org.director_position or 'Direktor' }}</div>
+    <div class="signature-line">{{ org.director_full_name }}</div>
+    <div class="small">M.O'.</div>
+  </div>
+</div>
+{% endblock %}

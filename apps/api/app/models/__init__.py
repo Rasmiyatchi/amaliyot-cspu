@@ -2,8 +2,11 @@
 
 from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.area import Area
+from app.models.contract import Contract
 from app.models.enums import (
     AssignmentStatus,
+    ContractStatus,
+    ContractTemplate,
     DegreeType,
     EducationForm,
     Gender,
@@ -24,6 +27,9 @@ __all__ = [
     "AcademicYear",
     "Area",
     "AssignmentStatus",
+    "Contract",
+    "ContractStatus",
+    "ContractTemplate",
     "DegreeType",
     "Direction",
     "EducationForm",

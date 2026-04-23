@@ -23,6 +23,15 @@ export type ObjectKind = "organization" | "area" | "any";
 
 export type AssignmentStatus = "draft" | "active" | "completed" | "cancelled";
 
+export type ContractStatus = "draft" | "generated" | "active" | "expired" | "revoked";
+
+export type ContractTemplate =
+  | "4_plus_2"
+  | "pedagogical"
+  | "qualifying"
+  | "internship_production"
+  | "partnership";
+
 export type OrganizationKind =
   | "school"
   | "mtt"
@@ -293,6 +302,75 @@ export type BulkAssignmentResult = {
   created: number;
   failed: BulkAssignmentError[];
   assignment_ids: UUID[];
+};
+
+// ─── Contracts ────────────────────────────────────────────
+export type ContractStudent = {
+  assignment_id?: string | null;
+  hemis_id: string;
+  full_name: string;
+  direction_code: string;
+  direction_name: string;
+  course: number;
+  group_name: string | null;
+  start_date: string;
+  end_date: string;
+};
+
+export type Contract = {
+  id: UUID;
+  number: string;
+  template_ref: ContractTemplate;
+  status: ContractStatus;
+  organization_id: UUID;
+  organization_name: string;
+  academic_year_id: UUID;
+  academic_year_name: string;
+  practice_type_id: UUID;
+  practice_type_name: string;
+  students: ContractStudent[];
+  students_count: number;
+  start_date: ISODate;
+  end_date: ISODate;
+  pdf_path: string | null;
+  scan_path: string | null;
+  qr_token: string;
+  generated_at: ISODateTime | null;
+  signed_at_org: ISODateTime | null;
+  revoked_reason: string | null;
+  revoked_at: ISODateTime | null;
+  created_by_id: UUID;
+  created_by_name: string | null;
+  notes: string | null;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+};
+
+export type ContractCreate = {
+  template_ref: ContractTemplate;
+  organization_id: UUID;
+  academic_year_id: UUID;
+  practice_type_id: UUID;
+  assignment_ids: UUID[];
+  start_date: ISODate;
+  end_date: ISODate;
+  notes?: string | null;
+};
+
+export type ContractVerifyResponse = {
+  number: string;
+  template_ref: ContractTemplate;
+  status: ContractStatus;
+  organization_name: string;
+  practice_type_name: string;
+  start_date: ISODate;
+  end_date: ISODate;
+  students_count: number;
+  generated_at: ISODateTime | null;
+  signed_at_org: ISODateTime | null;
+  revoked_reason: string | null;
+  revoked_at: ISODateTime | null;
+  is_valid: boolean;
 };
 
 // ─── Practice Types ──────────────────────────────────────

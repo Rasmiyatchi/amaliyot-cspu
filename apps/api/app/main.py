@@ -9,6 +9,7 @@ from loguru import logger
 
 from app import __version__
 from app.api.v1 import api_router
+from app.api.v1.contracts import public_router as contracts_public_router
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.db.seed import run_seeds
@@ -43,6 +44,8 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router, prefix="/api")
+    # Public (no /api prefix) — QR verify, auth talab qilmaydi
+    app.include_router(contracts_public_router)
 
     @app.get("/", include_in_schema=False)
     async def root() -> dict[str, str]:

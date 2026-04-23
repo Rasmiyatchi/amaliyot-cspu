@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ contract.number }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm 2cm 2cm 2cm;
+      @bottom-center {
+        content: counter(page) " / " counter(pages);
+        font-size: 9pt;
+        color: #666;
+      }
+    }
+    body {
+      font-family: "DejaVu Serif", "Times New Roman", serif;
+      font-size: 11pt;
+      line-height: 1.4;
+      color: #000;
+    }
+    h1, h2, h3 { font-weight: bold; text-align: center; margin: 0 0 0.5em 0; }
+    h1 { font-size: 14pt; text-transform: uppercase; }
+    h2 { font-size: 12pt; margin-top: 1em; }
+    h3 { font-size: 11pt; }
+    .header { text-align: center; margin-bottom: 1.5em; }
+    .number { font-weight: bold; text-align: center; margin: 0.5em 0 1em 0; }
+    .meta { display: flex; justify-content: space-between; margin: 0.5em 0 1em 0; font-size: 10pt; }
+    .intro { text-align: justify; margin-bottom: 1em; }
+    section { margin: 1em 0; }
+    section h2 { text-align: left; border-bottom: 1px solid #333; padding-bottom: 2px; }
+    table { border-collapse: collapse; width: 100%; margin: 0.5em 0; font-size: 10pt; }
+    th, td { border: 1px solid #333; padding: 4px 6px; text-align: left; vertical-align: top; }
+    th { background: #f0f0f0; font-weight: bold; }
+    .signatures { display: flex; justify-content: space-between; margin-top: 3em; }
+    .signature-block { width: 45%; text-align: center; }
+    .signature-line { border-top: 1px solid #333; margin-top: 3em; padding-top: 3px; font-size: 10pt; }
+    .qr-block {
+      position: fixed;
+      bottom: 1cm;
+      right: 1cm;
+      text-align: center;
+      font-size: 8pt;
+    }
+    .qr-block img { width: 80px; height: 80px; }
+    .qr-note { margin-top: 3px; color: #666; }
+    .small { font-size: 9pt; color: #444; }
+    ul { margin: 0.5em 0; padding-left: 1.5em; }
+    li { margin: 0.2em 0; text-align: justify; }
+  </style>
+</head>
+<body>
+  {% block content %}{% endblock %}
+
+  <div class="qr-block">
+    <img src="data:image/png;base64,{{ qr_data_uri }}" alt="QR">
+    <div class="qr-note">№ {{ contract.number }}</div>
+    <div class="qr-note">{{ verify_url }}</div>
+  </div>
+</body>
+</html>

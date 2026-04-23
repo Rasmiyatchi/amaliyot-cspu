@@ -28,6 +28,10 @@ dependencies = [
   # HTTP client
   "httpx>=0.27.2",
   "openpyxl>=3.1.5",
+  "weasyprint>=68.1",
+  "qrcode>=8.2",
+  "pillow>=12.2.0",
+  "jinja2>=3.1.6",
 ]
 
 [dependency-groups]
@@ -94,7 +98,7 @@ disallow_any_unimported = false
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["passlib.*", "jose.*", "openpyxl.*"]
+module = ["passlib.*", "jose.*", "openpyxl.*", "weasyprint.*", "qrcode.*"]
 ignore_missing_imports = true
 
 # ─── Pyright / basedpyright (IDE) ─────────────────────────
