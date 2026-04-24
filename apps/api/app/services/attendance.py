@@ -22,13 +22,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area import Area
 from app.models.attendance import AttendanceDay, AttendanceEvent, AttendanceOverride
-from app.models.enums import AttendanceDayStatus, AttendanceEventKind
+from app.models.enums import AttendanceDayStatus, AttendanceEventKind, NotificationType
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.student import Student
 from app.models.supervisor import Supervisor
 from app.models.user import User
-
+from app.services import notification as notification_svc
 
 # ─── Geo-fence ────────────────────────────────────────────
 
@@ -127,6 +127,17 @@ async def _get_assignment_for_supervisor(
             "Biriktirish topilmadi yoki siz supervizor emassiz",
         )
     return assignment
+
+
+async def _student_user_id_for_assignment(
+    db: AsyncSession, assignment_id: UUID
+) -> UUID | None:
+    stmt = (
+        select(Student.user_id)
+        .join(PracticeAssignment, PracticeAssignment.student_id == Student.id)
+        .where(PracticeAssignment.id == assignment_id)
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()
 
 
 async def _get_or_create_day(
@@ -328,6 +339,20 @@ async def supervisor_reject(
     attendance_day.approved_at = datetime.now(UTC)
     attendance_day.note = data["note"]
 
+    student_uid = await _student_user_id_for_assignment(db, attendance_day.assignment_id)
+    if student_uid:
+        await notification_svc.create(
+            db,
+            user_id=student_uid,
+            type=NotificationType.ATTENDANCE_REJECTED,
+            title="Davomat rad etildi",
+            body=f"{attendance_day.date}: {data['note']}",
+            data={
+                "assignment_id": str(attendance_day.assignment_id),
+                "day_id": str(attendance_day.id),
+            },
+        )
+
     await db.commit()
     return await get_day(db, attendance_day.id)
 
@@ -377,6 +402,7 @@ async def super_admin_override(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kun topilmadi")
 
     data = payload.model_dump()
+    _prev_status_for_notify = attendance_day.status
     new_status = AttendanceDayStatus(data["new_status"])
 
     if attendance_day.status == new_status:
@@ -394,7 +420,23 @@ async def super_admin_override(
     db.add(override)
 
     attendance_day.status = new_status
-    # Override'da izoh qo'yilgan bo'lsa — note ga yozish
+
+    student_uid = await _student_user_id_for_assignment(db, attendance_day.assignment_id)
+    if student_uid:
+        await notification_svc.create(
+            db,
+            user_id=student_uid,
+            type=NotificationType.ATTENDANCE_OVERRIDE,
+            title="Davomat super admin tomonidan o'zgartirildi",
+            body=(
+                f"{attendance_day.date}: {_prev_status_for_notify.value} → "
+                f"{new_status.value}. Sabab: {data['reason']}"
+            ),
+            data={
+                "assignment_id": str(attendance_day.assignment_id),
+                "day_id": str(attendance_day.id),
+            },
+        )
 
     await db.commit()
     return await get_day(db, attendance_day.id)

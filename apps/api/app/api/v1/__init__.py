@@ -11,6 +11,7 @@ from app.api.v1 import (
     contracts,
     health,
     hemis,
+    notifications,
     organizations,
     practice_assignments,
     practice_types,
@@ -36,3 +37,4 @@ api_router.include_router(attendance.router)
 api_router.include_router(tasks.router)
 api_router.include_router(archive.router)
 api_router.include_router(stats.router)
+api_router.include_router(notifications.router)

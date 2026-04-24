@@ -14,6 +14,7 @@ from app.models.enums import (
     EducationForm,
     Gender,
     JournalStatus,
+    NotificationType,
     ObjectKind,
     OrganizationKind,
     Semester,
@@ -23,6 +24,7 @@ from app.models.enums import (
     TaskType,
     UserRole,
 )
+from app.models.notification import Notification
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
@@ -53,6 +55,8 @@ __all__ = [
     "JournalEntry",
     "JournalStatus",
     "LessonAnalysis",
+    "Notification",
+    "NotificationType",
     "ObjectKind",
     "Organization",
     "OrganizationKind",

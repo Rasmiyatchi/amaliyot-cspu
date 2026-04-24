@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
+import { NotificationsBell } from "@/components/notifications-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -74,7 +75,8 @@ export function AdminSidebar() {
 
       {/* Footer — theme + user */}
       <div className="border-t border-border p-3">
-        <div className="mb-3 flex justify-center">
+        <div className="mb-3 flex justify-center gap-2">
+          <NotificationsBell />
           <ThemeToggle />
         </div>
         <Separator className="my-2" />

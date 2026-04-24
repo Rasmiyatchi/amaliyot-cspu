@@ -172,3 +172,19 @@ class JournalStatus(StrEnum):
     SUBMITTED = "submitted"
     APPROVED = "approved"
     REJECTED = "rejected"
+
+
+class NotificationType(StrEnum):
+    """Xabar kategoriyasi — UI'da icon/rang tanlash uchun."""
+
+    TASK_APPROVED = "task_approved"
+    TASK_REJECTED = "task_rejected"
+    JOURNAL_APPROVED = "journal_approved"
+    JOURNAL_REJECTED = "journal_rejected"
+    ANALYSIS_APPROVED = "analysis_approved"
+    ANALYSIS_REJECTED = "analysis_rejected"
+    ATTENDANCE_REJECTED = "attendance_rejected"
+    ATTENDANCE_OVERRIDE = "attendance_override"
+    CONTRACT_GENERATED = "contract_generated"
+    CONTRACT_ACTIVATED = "contract_activated"
+    GENERIC = "generic"

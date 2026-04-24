@@ -17,6 +17,7 @@ import { toast } from "sonner";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { StatCard } from "@/components/admin/stat-card";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { SupervisorReviewPanel } from "@/components/supervisor/review-panel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -181,12 +182,13 @@ export function SupervisorDashboard() {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-info/10">
             <Users className="h-5 w-5 text-info" />
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-semibold">Salom, {user?.first_name}</h2>
             <p className="text-sm text-muted-foreground">
               Sizga biriktirilgan talabalar davomati
             </p>
           </div>
+          <NotificationsBell />
         </div>
 
         {assignmentsPending && (

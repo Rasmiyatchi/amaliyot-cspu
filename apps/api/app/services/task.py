@@ -18,12 +18,19 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.academic import Group
-from app.models.enums import JournalStatus, Semester, TaskStatus, UserRole
+from app.models.enums import (
+    JournalStatus,
+    NotificationType,
+    Semester,
+    TaskStatus,
+    UserRole,
+)
 from app.models.practice_assignment import PracticeAssignment
 from app.models.student import Student
 from app.models.supervisor import Supervisor
 from app.models.task import JournalEntry, LessonAnalysis, Task, TaskTemplate
 from app.models.user import User
+from app.services import notification as notification_svc
 
 # ─── Access helpers ─────────────────────────────────────
 
@@ -71,6 +78,17 @@ async def _check_supervisor_owns(
             status.HTTP_404_NOT_FOUND, "Siz bu biriktirishga supervizor emassiz"
         )
     return assignment
+
+
+async def _student_user_id_for_assignment(
+    db: AsyncSession, assignment_id: UUID
+) -> UUID | None:
+    stmt = (
+        select(Student.user_id)
+        .join(PracticeAssignment, PracticeAssignment.student_id == Student.id)
+        .where(PracticeAssignment.id == assignment_id)
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()
 
 
 async def _assignment_course(db: AsyncSession, assignment: PracticeAssignment) -> int | None:
@@ -456,6 +474,22 @@ async def supervisor_approve_task(
     if data.get("points_earned") is not None:
         task.points_earned = data["points_earned"]
 
+    # Notification — talabaga
+    student_uid = await _student_user_id_for_assignment(db, task.assignment_id)
+    if student_uid:
+        tmpl = await db.get(TaskTemplate, task.template_id)
+        points_note = (
+            f" ({task.points_earned} ball)" if task.points_earned is not None else ""
+        )
+        await notification_svc.create(
+            db,
+            user_id=student_uid,
+            type=NotificationType.TASK_APPROVED,
+            title="Topshiriq tasdiqlandi",
+            body=f"{tmpl.title if tmpl else ''}{points_note}",
+            data={"assignment_id": str(task.assignment_id), "task_id": str(task.id)},
+        )
+
     await db.commit()
     return await get_task(db, task.id)
 
@@ -475,6 +509,18 @@ async def supervisor_reject_task(
     task.rejection_reason = data["rejection_reason"]
     task.graded_by_id = user.id
     task.graded_at = datetime.now(UTC)
+
+    student_uid = await _student_user_id_for_assignment(db, task.assignment_id)
+    if student_uid:
+        tmpl = await db.get(TaskTemplate, task.template_id)
+        await notification_svc.create(
+            db,
+            user_id=student_uid,
+            type=NotificationType.TASK_REJECTED,
+            title="Topshiriq rad etildi",
+            body=f"{tmpl.title if tmpl else ''}: {data['rejection_reason']}",
+            data={"assignment_id": str(task.assignment_id), "task_id": str(task.id)},
+        )
 
     await db.commit()
     return await get_task(db, task.id)
@@ -602,6 +648,21 @@ async def supervisor_approve_journal(
     entry.status = JournalStatus.APPROVED
     entry.approved_by_id = user.id
     entry.approved_at = datetime.now(UTC)
+
+    student_uid = await _student_user_id_for_assignment(db, entry.assignment_id)
+    if student_uid:
+        await notification_svc.create(
+            db,
+            user_id=student_uid,
+            type=NotificationType.JOURNAL_APPROVED,
+            title="Kundalik tasdiqlandi",
+            body=f"{entry.date.strftime('%Y-%m-%d')} sanadagi yozuv tasdiqlandi",
+            data={
+                "assignment_id": str(entry.assignment_id),
+                "journal_id": str(entry.id),
+            },
+        )
+
     await db.commit()
     items = [_journal_to_dict(entry)]
     await _hydrate_approver_name(db, items)
@@ -621,6 +682,21 @@ async def supervisor_reject_journal(
     entry.rejection_reason = data["rejection_reason"]
     entry.approved_by_id = user.id
     entry.approved_at = datetime.now(UTC)
+
+    student_uid = await _student_user_id_for_assignment(db, entry.assignment_id)
+    if student_uid:
+        await notification_svc.create(
+            db,
+            user_id=student_uid,
+            type=NotificationType.JOURNAL_REJECTED,
+            title="Kundalik rad etildi",
+            body=data["rejection_reason"],
+            data={
+                "assignment_id": str(entry.assignment_id),
+                "journal_id": str(entry.id),
+            },
+        )
+
     await db.commit()
     items = [_journal_to_dict(entry)]
     await _hydrate_approver_name(db, items)
@@ -742,6 +818,21 @@ async def supervisor_approve_lesson_analysis(
     analysis.status = JournalStatus.APPROVED
     analysis.approved_by_id = user.id
     analysis.approved_at = datetime.now(UTC)
+
+    student_uid = await _student_user_id_for_assignment(db, analysis.assignment_id)
+    if student_uid:
+        await notification_svc.create(
+            db,
+            user_id=student_uid,
+            type=NotificationType.ANALYSIS_APPROVED,
+            title="Dars tahlili tasdiqlandi",
+            body=f"{analysis.subject} — {analysis.teacher_name}",
+            data={
+                "assignment_id": str(analysis.assignment_id),
+                "analysis_id": str(analysis.id),
+            },
+        )
+
     await db.commit()
     items = [_analysis_to_dict(analysis)]
     await _hydrate_approver_name(db, items)
@@ -761,6 +852,21 @@ async def supervisor_reject_lesson_analysis(
     analysis.rejection_reason = data["rejection_reason"]
     analysis.approved_by_id = user.id
     analysis.approved_at = datetime.now(UTC)
+
+    student_uid = await _student_user_id_for_assignment(db, analysis.assignment_id)
+    if student_uid:
+        await notification_svc.create(
+            db,
+            user_id=student_uid,
+            type=NotificationType.ANALYSIS_REJECTED,
+            title="Dars tahlili rad etildi",
+            body=data["rejection_reason"],
+            data={
+                "assignment_id": str(analysis.assignment_id),
+                "analysis_id": str(analysis.id),
+            },
+        )
+
     await db.commit()
     items = [_analysis_to_dict(analysis)]
     await _hydrate_approver_name(db, items)

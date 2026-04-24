@@ -2,6 +2,7 @@ import { CalendarDays, GraduationCap, Loader2 } from "lucide-react";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { ArchiveCard } from "@/components/archive-card";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { StudentAcademicPanel } from "@/components/student/academic-panel";
 import { CheckInButton } from "@/components/student/check-in-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +34,7 @@ export function StudentDashboard() {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
             <GraduationCap className="h-5 w-5 text-success" />
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-semibold">Salom, {user?.first_name}</h2>
             <p className="text-sm text-muted-foreground">
               {activeAssignment
@@ -43,6 +44,7 @@ export function StudentDashboard() {
                 : "Amaliyotga biriktirilmagansiz"}
             </p>
           </div>
+          <NotificationsBell />
         </div>
 
         {assignmentsPending && (

@@ -357,6 +357,33 @@ export type ContractCreate = {
   notes?: string | null;
 };
 
+// ─── Notifications ───────────────────────────────────────
+export type NotificationType =
+  | "task_approved"
+  | "task_rejected"
+  | "journal_approved"
+  | "journal_rejected"
+  | "analysis_approved"
+  | "analysis_rejected"
+  | "attendance_rejected"
+  | "attendance_override"
+  | "contract_generated"
+  | "contract_activated"
+  | "generic";
+
+export type Notification = {
+  id: UUID;
+  user_id: UUID;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  data: Record<string, unknown>;
+  read_at: ISODateTime | null;
+  created_at: ISODateTime;
+};
+
+export type NotificationUnreadCount = { unread: number };
+
 // ─── Tasks / Journal / LessonAnalysis ────────────────────
 export type Semester = "fall" | "spring";
 
