@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { CredentialsSection } from "@/components/admin/credentials-section";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,7 +34,11 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useOrganizations } from "@/lib/api/organizations";
-import { useCreateSupervisor, useUpdateSupervisor } from "@/lib/api/supervisors";
+import {
+  useCreateSupervisor,
+  useUpdateSupervisor,
+  useUpdateSupervisorCredentials,
+} from "@/lib/api/supervisors";
 import type { Supervisor } from "@/lib/api/types";
 
 const NONE_VALUE = "__none__";
@@ -66,6 +71,7 @@ type Props = {
 export function SupervisorFormDialog({ open, existing, onClose }: Props) {
   const create = useCreateSupervisor();
   const update = useUpdateSupervisor();
+  const updateCreds = useUpdateSupervisorCredentials();
   const orgs = useOrganizations({}, 1, 100);
   const isEdit = !!existing;
 
@@ -154,6 +160,19 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
               : "User (login + parol) va supervizor profili bir vaqtda yaratiladi"}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Edit rejimida — credentials alohida section */}
+        {isEdit && existing && (
+          <>
+            <CredentialsSection
+              currentUsername={existing.username}
+              isPending={updateCreds.isPending}
+              onSave={(payload) =>
+                updateCreds.mutateAsync({ id: existing.id, data: payload })
+              }
+            />
+          </>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import RequireAdmin
+from app.api.deps import CurrentUser, RequireAdmin
 from app.db.session import SessionDep
 from app.models.enums import AssignmentStatus
 from app.schemas.common import Paginated
@@ -55,6 +55,18 @@ async def list_assignments(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get(
+    "/my",
+    response_model=list[PracticeAssignmentRead],
+    summary="Joriy foydalanuvchiga tegishli biriktirishlar",
+)
+async def my_assignments(
+    db: SessionDep, user: CurrentUser
+) -> list[PracticeAssignmentRead]:
+    items = await svc.list_my_assignments(db, user)
+    return [PracticeAssignmentRead.model_validate(i) for i in items]
 
 
 @router.get("/{id_}", response_model=PracticeAssignmentRead)

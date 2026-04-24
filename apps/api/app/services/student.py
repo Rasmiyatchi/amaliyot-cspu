@@ -4,9 +4,12 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import hash_password
 from app.models.academic import Direction, Faculty, Group
 from app.models.enums import StudentStatus
 from app.models.student import Student
@@ -133,3 +136,40 @@ async def get_student(db: AsyncSession, id_: UUID) -> dict[str, Any]:
     if not row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Talaba topilmadi: {id_}")
     return _row_to_dict(dict(row))
+
+
+async def update_credentials(
+    db: AsyncSession, id_: UUID, data: BaseModel
+) -> dict[str, Any]:
+    """Admin orqali talaba login/parolini yangilash."""
+    student = await db.get(Student, id_)
+    if not student:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Talaba topilmadi: {id_}")
+    user = await db.get(User, student.user_id)
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Foydalanuvchi topilmadi")
+
+    payload = data.model_dump(exclude_unset=True)
+    new_username = payload.get("username")
+    new_password = payload.get("password")
+
+    if not new_username and not new_password:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Kamida username yoki parolni kiriting",
+        )
+
+    if new_username and new_username != user.username:
+        user.username = new_username
+    if new_password:
+        user.password_hash = hash_password(new_password)
+
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Bu username allaqachon band"
+        ) from e
+
+    return await get_student(db, id_)

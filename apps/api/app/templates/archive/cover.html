@@ -1,0 +1,55 @@
+{% extends "archive/base.html" %}
+{% block content %}
+  <h2>Umumiy hisobot</h2>
+
+  <table>
+    <tr>
+      <th style="width: 60%">Ko'rsatkich</th>
+      <th>Qiymat</th>
+    </tr>
+    <tr>
+      <td>Amaliyot kunlari (umumiy)</td>
+      <td>{{ stats.total_days }}</td>
+    </tr>
+    <tr>
+      <td>Davomat yozuvlari (jami)</td>
+      <td>{{ stats.attendance_total }} (yashil: {{ stats.attendance_green }}, qizil: {{ stats.attendance_red }})</td>
+    </tr>
+    <tr>
+      <td>Davomat foizi</td>
+      <td>
+        {% if stats.attendance_percent is not none %}
+          {{ stats.attendance_percent }}%
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td>O'quv topshiriqlari</td>
+      <td>{{ stats.tasks_total }} ta (tasdiqlangan: {{ stats.tasks_approved }})</td>
+    </tr>
+    <tr>
+      <td>To'plangan ball / jami</td>
+      <td><strong>{{ stats.tasks_earned_points }} / {{ stats.tasks_max_points }}</strong></td>
+    </tr>
+    <tr>
+      <td>Kundalik yozuvlari</td>
+      <td>{{ stats.journal_total }} ta (tasdiqlangan: {{ stats.journal_approved }})</td>
+    </tr>
+    <tr>
+      <td>Dars tahlillari</td>
+      <td>{{ stats.analysis_total }} ta (tasdiqlangan: {{ stats.analysis_approved }})</td>
+    </tr>
+    <tr>
+      <td>Shartnoma</td>
+      <td>
+        {% if stats.contract_number %}
+          № {{ stats.contract_number }} · status: {{ stats.contract_status }}
+        {% else %}Yo'q{% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <p class="small muted" style="margin-top: 2em;">
+    Ushbu hisobot avtomatik ravishda {{ generated_at }} da tuzildi.
+  </p>
+{% endblock %}

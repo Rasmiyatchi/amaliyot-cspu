@@ -450,6 +450,36 @@ async def update_assignment(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
     return await get_assignment(db, assignment.id)
 
 
+async def list_my_assignments(
+    db: AsyncSession, user: User
+) -> list[dict[str, Any]]:
+    """Joriy foydalanuvchiga tegishli amaliyot biriktirishlari.
+
+    - student → o'z assignmentlari
+    - supervisor → rahbarlik qilayotgan assignmentlar
+    - admin / super_admin → bo'sh ro'yxat (ular umumiy list'dan foydalanadi)
+    """
+    from app.models.enums import UserRole
+
+    stmt = _base_read_select()
+    if user.role == UserRole.STUDENT:
+        stmt = stmt.where(Student.user_id == user.id)
+    elif user.role == UserRole.SUPERVISOR:
+        stmt = stmt.join(
+            Supervisor, Supervisor.id == PracticeAssignment.supervisor_id
+        ).where(Supervisor.user_id == user.id)
+    else:
+        return []
+
+    rows = (
+        (await db.execute(stmt.order_by(PracticeAssignment.start_date.desc())))
+        .mappings()
+        .all()
+    )
+    items = [dict(r) for r in rows]
+    return await _hydrate_reads(db, items)
+
+
 async def delete_assignment(db: AsyncSession, id_: UUID) -> None:
     assignment = await db.get(PracticeAssignment, id_)
     if not assignment:

@@ -357,6 +357,241 @@ export type ContractCreate = {
   notes?: string | null;
 };
 
+// ─── Tasks / Journal / LessonAnalysis ────────────────────
+export type Semester = "fall" | "spring";
+
+export type TaskCategory = "spiritual" | "academic" | "report";
+
+export type TaskType =
+  | "essay"
+  | "event_scenario"
+  | "event_participation"
+  | "analytical_note"
+  | "plan"
+  | "protocol"
+  | "presentation"
+  | "open_lesson"
+  | "test_lesson"
+  | "lesson_analysis_batch"
+  | "interactive_pack"
+  | "other";
+
+export type TaskStatus = "not_started" | "submitted" | "approved" | "rejected";
+
+export type JournalStatus = "draft" | "submitted" | "approved" | "rejected";
+
+export type TaskTemplate = {
+  id: UUID;
+  practice_type_id: UUID;
+  course: number;
+  semester: Semester;
+  category: TaskCategory;
+  type: TaskType;
+  title: string;
+  description: string | null;
+  points: number;
+  quantity: number;
+  month_hint: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+};
+
+export type TaskAttachment = { path: string; name: string; mime?: string; size?: number };
+
+export type Task = {
+  id: UUID;
+  assignment_id: UUID;
+  template_id: UUID;
+  template_title: string;
+  template_type: TaskType;
+  template_category: TaskCategory;
+  template_course: number;
+  template_semester: Semester;
+  template_points: number;
+  template_quantity: number;
+  template_month_hint: string | null;
+  template_description: string | null;
+  status: TaskStatus;
+  submission_md: string | null;
+  attachments: TaskAttachment[];
+  submitted_at: ISODateTime | null;
+  points_earned: number | null;
+  graded_by_id: UUID | null;
+  graded_by_name: string | null;
+  graded_at: ISODateTime | null;
+  rejection_reason: string | null;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+};
+
+export type JournalEntry = {
+  id: UUID;
+  assignment_id: UUID;
+  date: ISODateTime;
+  content_md: string;
+  attachments: TaskAttachment[];
+  status: JournalStatus;
+  approved_by_id: UUID | null;
+  approved_by_name: string | null;
+  approved_at: ISODateTime | null;
+  rejection_reason: string | null;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+};
+
+export type LessonAnalysis = {
+  id: UUID;
+  assignment_id: UUID;
+  date: ISODateTime;
+  subject: string;
+  teacher_name: string;
+  grade_level: string | null;
+  quarter: number;
+  analysis_md: string;
+  attachments: TaskAttachment[];
+  status: JournalStatus;
+  approved_by_id: UUID | null;
+  approved_by_name: string | null;
+  approved_at: ISODateTime | null;
+  rejection_reason: string | null;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+};
+
+export type AssignmentProgress = {
+  assignment_id: UUID;
+  tasks_total: number;
+  tasks_by_status: Record<TaskStatus, number>;
+  tasks_max_points: number;
+  tasks_earned_points: number;
+  journal_by_status: Record<JournalStatus, number>;
+  analysis_by_status: Record<JournalStatus, number>;
+};
+
+export type TaskSubmitRequest = {
+  submission_md: string;
+  attachments?: TaskAttachment[];
+};
+
+export type TaskGradeRequest = {
+  points_earned?: number | null;
+};
+
+export type TaskRejectRequest = {
+  rejection_reason: string;
+};
+
+export type JournalCreateRequest = {
+  date: ISODateTime;
+  content_md: string;
+  attachments?: TaskAttachment[];
+};
+
+export type JournalUpdateRequest = {
+  content_md?: string;
+  attachments?: TaskAttachment[];
+};
+
+export type JournalRejectRequest = { rejection_reason: string };
+
+export type LessonAnalysisCreateRequest = {
+  date: ISODateTime;
+  subject: string;
+  teacher_name: string;
+  grade_level?: string | null;
+  quarter: number;
+  analysis_md: string;
+  attachments?: TaskAttachment[];
+};
+
+export type LessonAnalysisUpdateRequest = Partial<LessonAnalysisCreateRequest>;
+
+// ─── Attendance ──────────────────────────────────────────
+export type AttendanceDayStatus = "pending" | "green" | "red";
+
+export type AttendanceEventKind = "check_in" | "check_out";
+
+export type AttendanceEvent = {
+  id: UUID;
+  attendance_day_id: UUID;
+  assignment_id: UUID;
+  kind: AttendanceEventKind;
+  event_at: ISODateTime;
+  lat: string | number | null;
+  lng: string | number | null;
+  accuracy_m: string | number | null;
+  distance_m: string | number | null;
+  is_within_fence: boolean;
+  wifi_ssid: string | null;
+  device_id: string | null;
+  note: string | null;
+  created_at: ISODateTime;
+};
+
+export type AttendanceDay = {
+  id: UUID;
+  assignment_id: UUID;
+  date: ISODate;
+  status: AttendanceDayStatus;
+  check_in_at: ISODateTime | null;
+  check_out_at: ISODateTime | null;
+  approved_by_id: UUID | null;
+  approved_by_name: string | null;
+  approved_at: ISODateTime | null;
+  note: string | null;
+  student_id: UUID | null;
+  student_full_name: string | null;
+  student_hemis_id: string | null;
+  organization_name: string | null;
+  area_name: string | null;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+};
+
+export type AttendanceDayDetail = AttendanceDay & {
+  events: AttendanceEvent[];
+};
+
+export type AttendanceOverride = {
+  id: UUID;
+  attendance_day_id: UUID;
+  super_admin_id: UUID;
+  super_admin_name: string | null;
+  previous_status: AttendanceDayStatus;
+  new_status: AttendanceDayStatus;
+  reason: string;
+  created_at: ISODateTime;
+};
+
+export type AttendanceMarkRedRequest = {
+  date: ISODate;
+  note?: string | null;
+};
+
+export type AttendanceApproveRequest = {
+  note?: string | null;
+};
+
+export type AttendanceRejectRequest = {
+  note: string;
+};
+
+export type AttendanceOverrideRequest = {
+  new_status: AttendanceDayStatus;
+  reason: string;
+};
+
+export type CheckInRequest = {
+  lat?: number | null;
+  lng?: number | null;
+  accuracy_m?: number | null;
+  wifi_ssid?: string | null;
+  device_id?: string | null;
+  note?: string | null;
+};
+
 export type ContractVerifyResponse = {
   number: string;
   template_ref: ContractTemplate;

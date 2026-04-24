@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
+import type { CredentialsUpdate } from "@/lib/api/students";
 import type { Paginated, Supervisor, SupervisorCreate, UUID } from "@/lib/api/types";
 
 export type SupervisorFilters = {
@@ -48,6 +49,15 @@ export function useUpdateSupervisor() {
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: Partial<SupervisorCreate> & { is_active?: boolean } }) =>
       api.patch(`v1/supervisors/${id}`, { json: data }).json<Supervisor>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
+  });
+}
+
+export function useUpdateSupervisorCredentials() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: UUID; data: CredentialsUpdate }) =>
+      api.patch(`v1/supervisors/${id}/credentials`, { json: data }).json<Supervisor>(),
     onSuccess: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
   });
 }

@@ -7,10 +7,11 @@ from fastapi import APIRouter, Query
 from app.api.deps import RequireAdmin
 from app.db.session import SessionDep
 from app.models.enums import StudentStatus
-from app.schemas.common import Paginated
+from app.schemas.common import CredentialsUpdate, Paginated
 from app.schemas.student import StudentRead
 from app.services.student import get_student as svc_get_student
 from app.services.student import list_students as svc_list_students
+from app.services.student import update_credentials as svc_update_credentials
 
 router = APIRouter(prefix="/students", tags=["students"])
 
@@ -51,3 +52,14 @@ async def list_students(
 @router.get("/{id_}", response_model=StudentRead)
 async def get_student(id_: UUID, db: SessionDep, _: RequireAdmin) -> StudentRead:
     return StudentRead.model_validate(await svc_get_student(db, id_))
+
+
+@router.patch(
+    "/{id_}/credentials",
+    response_model=StudentRead,
+    summary="Admin: talaba login/parolini yangilash",
+)
+async def update_student_credentials(
+    id_: UUID, data: CredentialsUpdate, db: SessionDep, _: RequireAdmin
+) -> StudentRead:
+    return StudentRead.model_validate(await svc_update_credentials(db, id_, data))

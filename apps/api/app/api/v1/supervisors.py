@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query, status
 
 from app.api.deps import RequireAdmin
 from app.db.session import SessionDep
-from app.schemas.common import Paginated
+from app.schemas.common import CredentialsUpdate, Paginated
 from app.schemas.supervisor import SupervisorCreate, SupervisorRead, SupervisorUpdate
 from app.services import supervisor as svc
 
@@ -52,6 +52,17 @@ async def update_supervisor(
     id_: UUID, data: SupervisorUpdate, db: SessionDep, _: RequireAdmin
 ) -> SupervisorRead:
     return SupervisorRead.model_validate(await svc.update_supervisor(db, id_, data))
+
+
+@router.patch(
+    "/{id_}/credentials",
+    response_model=SupervisorRead,
+    summary="Admin: supervizor login/parolini yangilash",
+)
+async def update_supervisor_credentials(
+    id_: UUID, data: CredentialsUpdate, db: SessionDep, _: RequireAdmin
+) -> SupervisorRead:
+    return SupervisorRead.model_validate(await svc.update_credentials(db, id_, data))
 
 
 @router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)

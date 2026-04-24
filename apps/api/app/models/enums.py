@@ -93,3 +93,82 @@ class ContractTemplate(StrEnum):
     QUALIFYING = "qualifying"
     INTERNSHIP_PRODUCTION = "internship_production"
     PARTNERSHIP = "partnership"  # Dastlabki hamkorlik (№8490 kabi)
+
+
+class AttendanceDayStatus(StrEnum):
+    """Kunlik davomat statusi.
+
+    PENDING → talaba check-in qildi, supervizor tasdiqi kutilyapti
+    GREEN → supervizor tasdiqladi yoki super admin override bilan yashilga o'tkazdi
+    RED → supervizor rad etdi yoki kun yakunida check-in bo'lmadi (avto)
+    """
+
+    PENDING = "pending"
+    GREEN = "green"
+    RED = "red"
+
+
+class AttendanceEventKind(StrEnum):
+    """Event turi."""
+
+    CHECK_IN = "check_in"
+    CHECK_OUT = "check_out"
+
+
+class Semester(StrEnum):
+    """Semestr — kuzgi yoki bahorgi."""
+
+    FALL = "fall"
+    SPRING = "spring"
+
+
+class TaskCategory(StrEnum):
+    """Topshiriq kategoriyasi — sillabusdagi guruhlash.
+
+    - SPIRITUAL: Ma'naviy ishlari (tadbirlar, ssenariylar, essela)
+    - ACADEMIC: O'quv ishlari (dars tahlili, sinov darsi, prezentatsiyalar)
+    - REPORT: Hisobot (yakuniy jild)
+    """
+
+    SPIRITUAL = "spiritual"
+    ACADEMIC = "academic"
+    REPORT = "report"
+
+
+class TaskType(StrEnum):
+    """Topshiriq turi — UI/validatsiya uchun."""
+
+    ESSAY = "essay"  # 100 so'zli insho
+    EVENT_SCENARIO = "event_scenario"  # tadbir ssenariysi
+    EVENT_PARTICIPATION = "event_participation"  # tadbirda ishtirok etish
+    ANALYTICAL_NOTE = "analytical_note"  # tahliliy ma'lumotnoma
+    PLAN = "plan"  # reja (shaxsiy, to'garak rejasi)
+    PROTOCOL = "protocol"  # bayonnoma (yig'ilish, konferensiya)
+    PRESENTATION = "presentation"  # prezentatsiya
+    OPEN_LESSON = "open_lesson"  # ochiq dars
+    TEST_LESSON = "test_lesson"  # sinov dars
+    LESSON_ANALYSIS_BATCH = "lesson_analysis_batch"  # N ta dars tahlili (quantity)
+    INTERACTIVE_PACK = "interactive_pack"  # interfaol topshiriqlar to'plami
+    OTHER = "other"
+
+
+class TaskStatus(StrEnum):
+    """Topshiriq holati — talaba bajarish oqimi.
+
+    NOT_STARTED → SUBMITTED (talaba yubordi) → APPROVED yoki REJECTED (supervizor)
+    REJECTED'dan keyin qayta yuborish: SUBMITTED ga o'tadi (revision loop).
+    """
+
+    NOT_STARTED = "not_started"
+    SUBMITTED = "submitted"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class JournalStatus(StrEnum):
+    """Kundalik yozuvi yoki dars tahlili holati."""
+
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    APPROVED = "approved"
+    REJECTED = "rejected"

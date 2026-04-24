@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, ClipboardList, Loader2, Plus } from "lucide-react";
 import { useState } from "react";
 
+import { AssignmentDetailDialog } from "@/components/admin/assignments/assignment-detail-dialog";
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
 import { AssignmentWizard } from "@/components/admin/assignments/assignment-wizard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -27,7 +28,7 @@ import {
   type AssignmentFilters,
 } from "@/lib/api/assignments";
 import { usePracticeTypes } from "@/lib/api/practice-types";
-import type { AssignmentStatus } from "@/lib/api/types";
+import type { AssignmentStatus, PracticeAssignment } from "@/lib/api/types";
 
 const ALL = "__all__";
 
@@ -35,6 +36,7 @@ export function AssignmentsPage() {
   const [filters, setFilters] = useState<AssignmentFilters>({});
   const [page, setPage] = useState(1);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [selected, setSelected] = useState<PracticeAssignment | null>(null);
   const pageSize = 20;
 
   const { data, isPending, error, isFetching } = useAssignments(filters, page, pageSize);
@@ -144,7 +146,11 @@ export function AssignmentsPage() {
                   </TableRow>
                 )}
                 {data.items.map((a) => (
-                  <TableRow key={a.id}>
+                  <TableRow
+                    key={a.id}
+                    onClick={() => setSelected(a)}
+                    className="cursor-pointer"
+                  >
                     <TableCell>
                       <div className="font-medium">{a.student_full_name}</div>
                       <div className="text-xs text-muted-foreground">
@@ -217,6 +223,10 @@ export function AssignmentsPage() {
       )}
 
       <AssignmentWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
+      <AssignmentDetailDialog
+        assignment={selected}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }

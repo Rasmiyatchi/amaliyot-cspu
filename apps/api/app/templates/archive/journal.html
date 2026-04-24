@@ -1,0 +1,24 @@
+{% extends "archive/base.html" %}
+{% block content %}
+  {% if entries %}
+    {% for e in entries %}
+      <div class="entry">
+        <div class="entry-head">
+          <span><strong>{{ e.date }}</strong></span>
+          <span class="badge badge-{{ 'green' if e.status == 'approved' else ('red' if e.status == 'rejected' else 'info') }}">
+            {{ e.status_label }}
+          </span>
+        </div>
+        <div class="entry-body">{{ e.content_md }}</div>
+        {% if e.approved_by_name %}
+          <div class="entry-meta">Tasdiqlagan: {{ e.approved_by_name }} · {{ e.approved_at }}</div>
+        {% endif %}
+        {% if e.rejection_reason %}
+          <div class="entry-meta">Rad etish sababi: {{ e.rejection_reason }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">Kundalik yozuvlari yo'q</div>
+  {% endif %}
+{% endblock %}

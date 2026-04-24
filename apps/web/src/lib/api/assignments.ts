@@ -55,6 +55,14 @@ export function useAssignments(filters: AssignmentFilters = {}, page = 1, pageSi
   });
 }
 
+export function useMyAssignments() {
+  return useQuery({
+    queryKey: [...assignmentKeys.all, "my"] as const,
+    queryFn: () =>
+      api.get("v1/practice-assignments/my").json<PracticeAssignment[]>(),
+  });
+}
+
 export function useAssignment(id: UUID | null) {
   return useQuery({
     queryKey: id ? assignmentKeys.detail(id) : [],

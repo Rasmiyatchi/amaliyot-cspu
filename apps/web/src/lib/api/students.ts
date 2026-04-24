@@ -1,7 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import type { Paginated, Student, StudentStatus, UUID } from "@/lib/api/types";
+
+export type CredentialsUpdate = {
+  username?: string;
+  password?: string;
+};
 
 export type StudentFilters = {
   faculty_id?: UUID;
@@ -46,5 +51,14 @@ export function useStudent(id: UUID | null) {
     queryKey: id ? studentKeys.detail(id) : [],
     enabled: !!id,
     queryFn: () => api.get(`v1/students/${id}`).json<Student>(),
+  });
+}
+
+export function useUpdateStudentCredentials() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: UUID; data: CredentialsUpdate }) =>
+      api.patch(`v1/students/${id}/credentials`, { json: data }).json<Student>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
   });
 }

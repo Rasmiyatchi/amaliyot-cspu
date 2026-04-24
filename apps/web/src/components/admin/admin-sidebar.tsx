@@ -1,10 +1,12 @@
 import {
   BookOpen,
   Building2,
+  CalendarCheck,
   ClipboardList,
   FileCheck2,
   GraduationCap,
   LayoutDashboard,
+  LibraryBig,
   LogOut,
   School,
   UserCog,
@@ -28,6 +30,8 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; end?:
   { to: "/admin/students", label: "Talabalar", icon: Users },
   { to: "/admin/assignments", label: "Biriktirish", icon: ClipboardList },
   { to: "/admin/contracts", label: "Shartnomalar", icon: FileCheck2 },
+  { to: "/admin/attendance", label: "Davomat", icon: CalendarCheck },
+  { to: "/admin/task-templates", label: "Topshiriqlar", icon: LibraryBig },
 ];
 
 export function AdminSidebar() {

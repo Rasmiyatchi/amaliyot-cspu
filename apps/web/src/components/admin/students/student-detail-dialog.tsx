@@ -1,3 +1,5 @@
+import { CredentialsSection } from "@/components/admin/credentials-section";
+import { StudentStatusBadge } from "@/components/admin/students/students-status-badge";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -7,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { StudentStatusBadge } from "@/components/admin/students/students-status-badge";
+import { useUpdateStudentCredentials } from "@/lib/api/students";
 import type { Student } from "@/lib/api/types";
 
 const EDUCATION_FORM_LABEL = {
@@ -47,6 +49,8 @@ type Props = {
 };
 
 export function StudentDetailDialog({ student, onClose }: Props) {
+  const updateCreds = useUpdateStudentCredentials();
+
   return (
     <Dialog open={!!student} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
@@ -131,6 +135,14 @@ export function StudentDetailDialog({ student, onClose }: Props) {
             </div>
 
             <Separator />
+
+            <CredentialsSection
+              currentUsername={student.username}
+              isPending={updateCreds.isPending}
+              onSave={(payload) =>
+                updateCreds.mutateAsync({ id: student.id, data: payload })
+              }
+            />
 
             <div className="text-xs text-muted-foreground">
               Yaratilgan: {new Date(student.created_at).toLocaleString("uz-UZ")}

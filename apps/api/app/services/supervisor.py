@@ -185,6 +185,43 @@ async def update_supervisor(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
     return await get_supervisor(db, supervisor.id)
 
 
+async def update_credentials(
+    db: AsyncSession, id_: UUID, data: BaseModel
+) -> dict[str, Any]:
+    """Admin orqali supervizor login/parolini yangilash."""
+    supervisor = await db.get(Supervisor, id_)
+    if not supervisor:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Supervizor topilmadi: {id_}")
+    user = await db.get(User, supervisor.user_id)
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Foydalanuvchi topilmadi")
+
+    payload = data.model_dump(exclude_unset=True)
+    new_username = payload.get("username")
+    new_password = payload.get("password")
+
+    if not new_username and not new_password:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Kamida username yoki parolni kiriting",
+        )
+
+    if new_username and new_username != user.username:
+        user.username = new_username
+    if new_password:
+        user.password_hash = hash_password(new_password)
+
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Bu username allaqachon band"
+        ) from e
+
+    return await get_supervisor(db, id_)
+
+
 async def delete_supervisor(db: AsyncSession, id_: UUID) -> None:
     """Supervisor profile va bog'langan User'ni ham o'chiradi (CASCADE)."""
     supervisor = await db.get(Supervisor, id_)
