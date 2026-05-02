@@ -19,6 +19,7 @@ import { Home } from "@/routes/home";
 import { Login } from "@/routes/login";
 import { NotFound } from "@/routes/not-found";
 import { Protected } from "@/routes/protected";
+import { RescuePage } from "@/routes/rescue";
 import { RootLayout } from "@/routes/root-layout";
 import { VerifyPage } from "@/routes/verify";
 
@@ -50,6 +51,9 @@ export const router = createBrowserRouter([
 
   // Public QR verify — auth yo'q, layout yo'q
   { path: "/verify/:token", Component: VerifyPage },
+
+  // Super Admin rescue — MaintenanceGuard'siz, faqat super_admin uchun
+  { path: "/rescue", Component: RescuePage },
 
   // Public + boshqa rollar
   {

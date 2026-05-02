@@ -135,6 +135,12 @@
   animation: gradient-shift 18s ease infinite;
 }
 
+.rescue-bg {
+  background: linear-gradient(135deg, #0f172a, #451a03, #7c2d12, #451a03, #0f172a);
+  background-size: 400% 400%;
+  animation: gradient-shift 22s ease infinite;
+}
+
 .float-slow {
   animation: float-slow 8s ease-in-out infinite;
 }
