@@ -7,7 +7,9 @@ import {
   ShieldCheck,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { useDebounce } from "@/hooks/use-debounce";
 import { toast } from "sonner";
 
 import { AdminFormDialog } from "@/components/admin/admins/admin-form-dialog";
@@ -42,8 +44,15 @@ const ALL = "__all__";
 export function AdminsPage() {
   const me = useAuthStore((s) => s.user);
   const [filters, setFilters] = useState<AdminFilters>({});
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 300);
   const [page, setPage] = useState(1);
   const pageSize = 50;
+
+  useEffect(() => {
+    setFilters((f) => ({ ...f, search: debouncedSearch || undefined }));
+    setPage(1);
+  }, [debouncedSearch]);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Admin | null>(null);
   const [deleting, setDeleting] = useState<Admin | null>(null);
@@ -100,11 +109,8 @@ export function AdminsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
           placeholder="Qidiruv (username yoki F.I.SH.)"
-          value={filters.search ?? ""}
-          onChange={(e) => {
-            setFilters({ ...filters, search: e.target.value || undefined });
-            setPage(1);
-          }}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[240px] flex-1 max-w-xs"
         />
         <Select

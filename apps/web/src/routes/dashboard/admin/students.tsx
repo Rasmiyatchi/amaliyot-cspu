@@ -1,11 +1,13 @@
-import { Upload, Users } from "lucide-react";
+import { Download, Loader2, Upload, Users } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { HemisImportDialog } from "@/components/admin/students/hemis-import-dialog";
 import { StudentDetailDialog } from "@/components/admin/students/student-detail-dialog";
 import { StudentsFilters } from "@/components/admin/students/students-filters";
 import { StudentsTable } from "@/components/admin/students/students-table";
 import { Button } from "@/components/ui/button";
+import { downloadExport } from "@/lib/api/exports";
 import type { StudentFilters } from "@/lib/api/students";
 import type { Student } from "@/lib/api/types";
 
@@ -14,10 +16,30 @@ export function StudentsPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Student | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const handleFilterChange = (f: StudentFilters) => {
     setFilters(f);
     setPage(1); // filter o'zgarganda birinchi page'ga
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await downloadExport("students", {
+        faculty_id: filters.faculty_id,
+        direction_id: filters.direction_id,
+        group_id: filters.group_id,
+        course: filters.course,
+        status: filters.status,
+        search: filters.search,
+      });
+      toast.success("CSV yuklab olindi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Xatolik");
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -35,10 +57,20 @@ export function StudentsPage() {
           </div>
         </div>
 
-        <Button onClick={() => setImportOpen(true)}>
-          <Upload className="h-4 w-4" />
-          HEMIS Import
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            CSV eksport
+          </Button>
+          <Button onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" />
+            HEMIS Import
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4">

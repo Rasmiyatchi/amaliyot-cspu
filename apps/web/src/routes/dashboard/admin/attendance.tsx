@@ -2,8 +2,13 @@ import {
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
+  Download,
+  Loader2,
   XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
+
+import { downloadExport } from "@/lib/api/exports";
 import { useState } from "react";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
@@ -61,6 +66,23 @@ export function AttendancePage() {
     ? activeAssignments.find((a) => a.id === filters.assignment_id) ?? null
     : null;
 
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await downloadExport("attendance", {
+        assignment_id: filters.assignment_id,
+        student_id: filters.student_id,
+        status: filters.status,
+      });
+      toast.success("CSV yuklab olindi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Xatolik");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="container max-w-7xl py-8">
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -75,15 +97,25 @@ export function AttendancePage() {
             </p>
           </div>
         </div>
-        {selectedAssignment && (
-          <Button
-            variant="destructive"
-            onClick={() => setMarkRedFor(selectedAssignment)}
-          >
-            <XCircle className="h-4 w-4" />
-            Qizilga belgilash
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            CSV eksport
           </Button>
-        )}
+          {selectedAssignment && (
+            <Button
+              variant="destructive"
+              onClick={() => setMarkRedFor(selectedAssignment)}
+            >
+              <XCircle className="h-4 w-4" />
+              Qizilga belgilash
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filtrlar */}

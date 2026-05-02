@@ -1,5 +1,7 @@
 import { ChevronLeft, ChevronRight, FileCheck2, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { useDebounce } from "@/hooks/use-debounce";
 
 import { ContractDetailDialog } from "@/components/admin/contracts/contract-detail-dialog";
 import { ContractFormDialog } from "@/components/admin/contracts/contract-form-dialog";
@@ -31,10 +33,17 @@ const ALL = "__all__";
 
 export function ContractsPage() {
   const [filters, setFilters] = useState<ContractFilters>({});
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 300);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Contract | null>(null);
   const [creating, setCreating] = useState(false);
   const pageSize = 20;
+
+  useEffect(() => {
+    setFilters((f) => ({ ...f, search: debouncedSearch || undefined }));
+    setPage(1);
+  }, [debouncedSearch]);
 
   const { data, isPending, error, isFetching } = useContracts(filters, page, pageSize);
 
@@ -63,11 +72,8 @@ export function ContractsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
           placeholder="Qidiruv (raqam yoki tashkilot)"
-          value={filters.search ?? ""}
-          onChange={(e) => {
-            setFilters({ ...filters, search: e.target.value || undefined });
-            setPage(1);
-          }}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[220px] flex-1 max-w-xs"
         />
         <Select

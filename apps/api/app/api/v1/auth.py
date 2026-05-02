@@ -1,13 +1,30 @@
-"""Auth endpoints: /login, /refresh, /logout, /me."""
+"""Auth endpoints: /login, /refresh, /logout, /me + profile + password + avatar."""
 
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, HTTPException, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Cookie,
+    File,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import CurrentUser
 from app.core.config import settings
+from app.core.security import hash_password, verify_password
 from app.db.session import SessionDep
-from app.schemas.auth import LoginRequest, TokenResponse, UserMeResponse
+from app.schemas.auth import (
+    ChangePasswordRequest,
+    LoginRequest,
+    ProfileUpdateRequest,
+    TokenResponse,
+    UserMeResponse,
+)
 from app.services.auth import (
     authenticate,
     issue_tokens_for,
@@ -81,4 +98,64 @@ async def logout(
 
 @router.get("/me", response_model=UserMeResponse, summary="Current user info")
 async def me(user: CurrentUser) -> CurrentUser:
+    return user
+
+
+@router.patch(
+    "/me",
+    response_model=UserMeResponse,
+    summary="O'z profilini tahrirlash (ism, email, telefon)",
+)
+async def update_me(
+    data: ProfileUpdateRequest, db: SessionDep, user: CurrentUser
+) -> CurrentUser:
+    payload = data.model_dump(exclude_unset=True)
+    for key, value in payload.items():
+        setattr(user, key, value)
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "Email allaqachon band") from e
+    await db.refresh(user)
+    return user
+
+
+@router.post(
+    "/me/change-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="O'z parolini o'zgartirish",
+)
+async def change_my_password(
+    data: ChangePasswordRequest, db: SessionDep, user: CurrentUser
+) -> None:
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Joriy parol noto'g'ri"
+        )
+    user.password_hash = hash_password(data.new_password)
+    await db.commit()
+
+
+@router.post(
+    "/me/avatar",
+    response_model=UserMeResponse,
+    summary="Avatar yuklash",
+)
+async def upload_avatar(
+    db: SessionDep,
+    user: CurrentUser,
+    file: UploadFile = File(...),
+) -> CurrentUser:
+    from app.services import uploads as uploads_svc
+
+    if not (file.content_type or "").startswith("image/"):
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Faqat rasm fayllari (jpg, png, webp)",
+        )
+    attachment = await uploads_svc.save_file(db, file, user)
+    user.avatar_url = f"/api/v1/uploads/file/{attachment['path']}"
+    await db.commit()
+    await db.refresh(user)
     return user

@@ -3,9 +3,11 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  CircleCheck,
   ClipboardList,
   Loader2,
   NotebookPen,
+  Play,
   Plus,
   Sparkles,
   Trash2,
@@ -41,6 +43,7 @@ import { Progress } from "@/components/ui/progress";
 import { PromptDialog } from "@/components/ui/prompt-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUpdateAssignment } from "@/lib/api/assignments";
 import {
   useApproveJournal,
   useApproveLessonAnalysis,
@@ -70,6 +73,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
 
   const ensureTasks = useEnsureTasks();
   const deleteTask = useDeleteTask();
+  const updateAssignment = useUpdateAssignment();
   const approveJournal = useApproveJournal();
   const rejectJournal = useRejectJournal();
   const approveAnalysis = useApproveLessonAnalysis();
@@ -80,6 +84,11 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [journalRejectId, setJournalRejectId] = useState<string | null>(null);
   const [analysisRejectId, setAnalysisRejectId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    status: "active" | "completed" | "cancelled";
+    reason?: string;
+  } | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   const tasksByGroup = useMemo(() => {
     if (!tasks) return new Map<string, Task[]>();
@@ -147,6 +156,31 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
     }
   };
 
+  const handleStatusChange = async () => {
+    if (!confirmAction || !assignment) return;
+    try {
+      await updateAssignment.mutateAsync({
+        id: assignment.id,
+        data: {
+          status: confirmAction.status,
+          ...(confirmAction.status === "cancelled"
+            ? { cancelled_reason: cancelReason.trim() || "Bekor qilindi" }
+            : {}),
+        },
+      });
+      const labels = {
+        active: "boshlandi",
+        completed: "yakunlandi",
+        cancelled: "bekor qilindi",
+      };
+      toast.success(`Amaliyot ${labels[confirmAction.status]}`);
+      setConfirmAction(null);
+      setCancelReason("");
+    } catch (e) {
+      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+    }
+  };
+
   const handleAnalysisRejectSubmit = async (reason: string) => {
     if (!analysisRejectId) return;
     try {
@@ -192,6 +226,48 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
               {new Date(assignment.end_date).toLocaleDateString("uz-UZ")}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Lifecycle actions */}
+          <div className="flex flex-wrap gap-2">
+            {assignment.status === "draft" && (
+              <Button
+                size="sm"
+                onClick={() => setConfirmAction({ status: "active" })}
+                disabled={updateAssignment.isPending}
+              >
+                <Play className="h-3.5 w-3.5" />
+                Amaliyotni boshlash
+              </Button>
+            )}
+            {assignment.status === "active" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirmAction({ status: "completed" })}
+                disabled={updateAssignment.isPending}
+              >
+                <CircleCheck className="h-3.5 w-3.5" />
+                Yakunlash
+              </Button>
+            )}
+            {(assignment.status === "draft" || assignment.status === "active") && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:bg-destructive/10"
+                onClick={() => setConfirmAction({ status: "cancelled" })}
+                disabled={updateAssignment.isPending}
+              >
+                <XCircle className="h-3.5 w-3.5" />
+                Bekor qilish
+              </Button>
+            )}
+            {assignment.status === "cancelled" && assignment.cancelled_reason && (
+              <div className="rounded-md bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
+                Sabab: {assignment.cancelled_reason}
+              </div>
+            )}
+          </div>
 
           {/* Progress summary */}
           {progress && (
@@ -525,6 +601,52 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
         isPending={rejectAnalysis.isPending}
         onConfirm={handleAnalysisRejectSubmit}
         onClose={() => setAnalysisRejectId(null)}
+      />
+
+      {confirmAction && confirmAction.status !== "cancelled" && (
+        <ConfirmDialog
+          open={true}
+          title={
+            confirmAction.status === "active"
+              ? "Amaliyotni boshlash?"
+              : "Amaliyotni yakunlash?"
+          }
+          description={
+            confirmAction.status === "active" ? (
+              <>
+                Status DRAFT'dan ACTIVE'ga o'tadi. Talaba check-in qila boshlashi
+                mumkin.
+              </>
+            ) : (
+              <>
+                Status ACTIVE'dan COMPLETED'ga o'tadi. Yakuniy baholash kutiladi.
+              </>
+            )
+          }
+          confirmText={confirmAction.status === "active" ? "Boshlash" : "Yakunlash"}
+          isPending={updateAssignment.isPending}
+          onConfirm={handleStatusChange}
+          onClose={() => setConfirmAction(null)}
+        />
+      )}
+
+      <PromptDialog
+        open={confirmAction?.status === "cancelled"}
+        title="Amaliyotni bekor qilish"
+        description="Bekor qilish sababini yozing — talabaga ko'rsatiladi"
+        label="Sabab"
+        placeholder="Masalan: tashkilot rad etdi, yoki..."
+        confirmText="Bekor qilish"
+        variant="destructive"
+        isPending={updateAssignment.isPending}
+        onConfirm={(reason) => {
+          setCancelReason(reason);
+          handleStatusChange();
+        }}
+        onClose={() => {
+          setConfirmAction(null);
+          setCancelReason("");
+        }}
       />
     </>
   );

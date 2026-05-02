@@ -1,8 +1,10 @@
 import { LogOut } from "lucide-react";
+import { useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { MaintenanceGuard } from "@/components/maintenance-guard";
+import { ProfileDialog } from "@/components/profile-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useBootstrap } from "@/hooks/use-bootstrap";
@@ -14,6 +16,7 @@ export function RootLayout() {
   useBootstrap(); // sahifa yuklanishi bilan sessiya tiklash
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   async function handleLogout() {
     await logout();
@@ -36,10 +39,23 @@ export function RootLayout() {
           <div className="flex items-center gap-3">
             {user && (
               <>
-                <div className="hidden text-right sm:block">
-                  <div className="text-sm font-medium leading-tight">{user.full_name}</div>
-                  <div className="text-xs text-muted-foreground">{user.role}</div>
-                </div>
+                <button
+                  onClick={() => setProfileOpen(true)}
+                  className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted"
+                  title="Profilim"
+                >
+                  <div className="hidden text-right sm:block">
+                    <div className="text-sm font-medium leading-tight">{user.full_name}</div>
+                    <div className="text-xs text-muted-foreground">{user.role}</div>
+                  </div>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      user.first_name[0]
+                    )}
+                  </div>
+                </button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -57,6 +73,7 @@ export function RootLayout() {
       </header>
 
       <Outlet />
+      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
     </MaintenanceGuard>
   );

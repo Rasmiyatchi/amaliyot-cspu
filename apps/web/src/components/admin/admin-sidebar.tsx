@@ -17,11 +17,13 @@ import {
 import { NavLink } from "react-router-dom";
 
 import { NotificationsBell } from "@/components/notifications-bell";
+import { ProfileDialog } from "@/components/profile-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { logout } from "@/lib/auth-api";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 import { useAuthStore } from "@/stores/auth";
 
 type NavItem = {
@@ -49,6 +51,7 @@ const navItems: NavItem[] = [
 
 export function AdminSidebar() {
   const user = useAuthStore((s) => s.user);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -95,13 +98,24 @@ export function AdminSidebar() {
         </div>
         <Separator className="my-2" />
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-            {user?.first_name[0] ?? "?"}
-          </div>
-          <div className="flex-1 overflow-hidden">
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary transition-opacity hover:opacity-80"
+            title="Profilim"
+          >
+            {user?.avatar_url ? (
+              <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              user?.first_name[0] ?? "?"
+            )}
+          </button>
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="flex-1 overflow-hidden text-left transition-opacity hover:opacity-80"
+          >
             <div className="truncate text-sm font-medium">{user?.full_name ?? "—"}</div>
             <div className="truncate text-xs text-muted-foreground">{user?.role}</div>
-          </div>
+          </button>
           <Button
             variant="ghost"
             size="icon"
@@ -113,6 +127,7 @@ export function AdminSidebar() {
           </Button>
         </div>
       </div>
+      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
     </aside>
   );
 }

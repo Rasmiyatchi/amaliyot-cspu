@@ -1,5 +1,9 @@
-import { ChevronLeft, ChevronRight, ClipboardList, Plus } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, ChevronRight, ClipboardList, Download, Loader2, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
+import { downloadExport } from "@/lib/api/exports";
+import { useDebounce } from "@/hooks/use-debounce";
 
 import { AssignmentDetailDialog } from "@/components/admin/assignments/assignment-detail-dialog";
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
@@ -35,10 +39,30 @@ const ALL = "__all__";
 
 export function AssignmentsPage() {
   const [filters, setFilters] = useState<AssignmentFilters>({});
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 300);
   const [page, setPage] = useState(1);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [selected, setSelected] = useState<PracticeAssignment | null>(null);
   const pageSize = 20;
+
+  useEffect(() => {
+    setFilters((f) => ({ ...f, search: debouncedSearch || undefined }));
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await downloadExport("assignments");
+      toast.success("CSV yuklab olindi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Xatolik");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const { data, isPending, error, isFetching } = useAssignments(filters, page, pageSize);
   const practiceTypes = usePracticeTypes();
@@ -64,18 +88,28 @@ export function AssignmentsPage() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setWizardOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Yangi biriktirish
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            CSV eksport
+          </Button>
+          <Button onClick={() => setWizardOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Yangi biriktirish
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
           placeholder="Qidiruv (F.I.SH. yoki HEMIS ID)"
-          value={filters.search ?? ""}
-          onChange={(e) => setFilter({ search: e.target.value || undefined })}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[240px] flex-1 max-w-xs"
         />
         <Select

@@ -37,4 +37,12 @@ class UserMeResponse(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(..., min_length=1, max_length=128)
-    new_password: str = Field(..., min_length=8, max_length=128)
+    new_password: str = Field(..., min_length=4, max_length=128)
+
+
+class ProfileUpdateRequest(BaseModel):
+    first_name: str | None = Field(None, min_length=1, max_length=100)
+    last_name: str | None = Field(None, min_length=1, max_length=100)
+    middle_name: str | None = Field(None, max_length=100)
+    email: EmailStr | None = None
+    phone: str | None = Field(None, max_length=32)
