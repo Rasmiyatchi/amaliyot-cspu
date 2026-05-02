@@ -19,6 +19,7 @@ from app.api.v1 import (
     stats,
     students,
     supervisors,
+    system_settings,
     tasks,
 )
 
@@ -40,3 +41,4 @@ api_router.include_router(archive.router)
 api_router.include_router(stats.router)
 api_router.include_router(notifications.router)
 api_router.include_router(admins.router)
+api_router.include_router(system_settings.router)

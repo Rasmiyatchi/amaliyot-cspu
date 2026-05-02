@@ -12,6 +12,7 @@ from app.api.v1 import api_router
 from app.api.v1.contracts import public_router as contracts_public_router
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.core.maintenance import MaintenanceMiddleware
 from app.db.seed import run_seeds
 
 
@@ -42,6 +43,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Maintenance — eng oxiri qo'shilgani uchun eng birinchi tekshiriladi.
+    # super_admin va public path'lar (auth, health, verify) o'tib ketadi.
+    app.add_middleware(MaintenanceMiddleware)
 
     app.include_router(api_router, prefix="/api")
     # Public (no /api prefix) — QR verify, auth talab qilmaydi

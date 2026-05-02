@@ -31,6 +31,7 @@ from app.models.practice_type import PracticeType
 from app.models.refresh_token import RefreshToken
 from app.models.student import Student
 from app.models.supervisor import Supervisor
+from app.models.system_settings import SystemSettings
 from app.models.task import JournalEntry, LessonAnalysis, Task, TaskTemplate
 from app.models.user import User
 
@@ -67,6 +68,7 @@ __all__ = [
     "Student",
     "StudentStatus",
     "Supervisor",
+    "SystemSettings",
     "Task",
     "TaskCategory",
     "TaskStatus",

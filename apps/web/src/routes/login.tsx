@@ -1,20 +1,23 @@
 import { HTTPError } from "ky";
-import { Loader2, LockKeyhole } from "lucide-react";
+import { AlertTriangle, Loader2, LockKeyhole } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login } from "@/lib/auth-api";
 import { landingPathFor } from "@/lib/routing";
+import { usePublicSettings } from "@/lib/api/system-settings";
 import { useAuthStore } from "@/stores/auth";
 
 export function Login() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const { data: settings } = usePublicSettings();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,7 +40,17 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-background p-4">
+    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-4 bg-background p-4">
+      {settings?.maintenance_mode && (
+        <Alert variant="destructive" className="w-full max-w-sm">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Profilaktika rejimi</AlertTitle>
+          <AlertDescription>
+            {settings.maintenance_message ||
+              "Tizim vaqtincha mavjud emas. Faqat super admin kira oladi."}
+          </AlertDescription>
+        </Alert>
+      )}
       <Card className="w-full max-w-sm">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">

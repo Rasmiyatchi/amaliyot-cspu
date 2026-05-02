@@ -9,6 +9,7 @@ import {
   LibraryBig,
   LogOut,
   School,
+  Settings,
   ShieldCheck,
   UserCog,
   Users,
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { to: "/admin/attendance", label: "Davomat", icon: CalendarCheck },
   { to: "/admin/task-templates", label: "Topshiriqlar", icon: LibraryBig },
   { to: "/admin/admins", label: "Adminlar", icon: ShieldCheck, superAdminOnly: true },
+  { to: "/admin/system-settings", label: "Sozlamalar", icon: Settings, superAdminOnly: true },
 ];
 
 export function AdminSidebar() {

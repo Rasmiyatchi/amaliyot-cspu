@@ -11,6 +11,7 @@ import { ObjectsPage } from "@/routes/dashboard/admin/objects";
 import { PracticeTypesPage } from "@/routes/dashboard/admin/practice-types";
 import { StudentsPage } from "@/routes/dashboard/admin/students";
 import { SupervisorsPage } from "@/routes/dashboard/admin/supervisors";
+import { SystemSettingsPage } from "@/routes/dashboard/admin/system-settings";
 import { TaskTemplatesPage } from "@/routes/dashboard/admin/task-templates";
 import { StudentDashboard } from "@/routes/dashboard/student";
 import { SupervisorDashboard } from "@/routes/dashboard/supervisor";
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
           { path: "attendance", Component: AttendancePage },
           { path: "task-templates", Component: TaskTemplatesPage },
           { path: "admins", Component: AdminsPage },
+          { path: "system-settings", Component: SystemSettingsPage },
         ],
       },
     ],

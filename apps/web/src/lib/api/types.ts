@@ -357,6 +357,38 @@ export type ContractCreate = {
   notes?: string | null;
 };
 
+// ─── System Settings ─────────────────────────────────────
+export type SystemSettings = {
+  id: UUID;
+  site_name: string;
+  site_description: string | null;
+  max_file_size_mb: number;
+  allowed_file_types: string[];
+  email_notifications_enabled: boolean;
+  maintenance_mode: boolean;
+  maintenance_message: string | null;
+  extra: Record<string, unknown>;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+};
+
+export type SystemSettingsPublic = {
+  site_name: string;
+  site_description: string | null;
+  maintenance_mode: boolean;
+  maintenance_message: string | null;
+};
+
+export type SystemSettingsUpdate = Partial<{
+  site_name: string;
+  site_description: string | null;
+  max_file_size_mb: number;
+  allowed_file_types: string[];
+  email_notifications_enabled: boolean;
+  maintenance_mode: boolean;
+  maintenance_message: string | null;
+}>;
+
 // ─── Admins (admin + super_admin users) ──────────────────
 export type Admin = {
   id: UUID;
