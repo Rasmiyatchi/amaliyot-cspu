@@ -1,0 +1,56 @@
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.turbo
+**/.vite
+**/dist
+**/build
+**/.next
+
+# Git
+.git
+.gitignore
+.github
+
+# Env (har bir build o'z ENV/argsini ishlatadi)
+.env
+.env.*
+!.env.example
+!.env.prod.example
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# Old reference code
+backend_old/
+frontend_old/
+resourses/
+
+# Docs (not needed in image)
+docs/
+*.md
+!apps/api/README.md
+!apps/web/README.md
+
+# Tests
+**/tests/
+**/test_*.py
+
+# Storage (volumes will mount fresh)
+apps/api/storage/uploads/*
+apps/api/storage/contracts/*
+!apps/api/storage/.gitkeep
+
+# Build artifacts
+**/tsconfig.tsbuildinfo
+**/tsconfig.*.tsbuildinfo

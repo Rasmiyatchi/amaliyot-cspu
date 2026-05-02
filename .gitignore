@@ -34,10 +34,13 @@ htmlcov/
 .env.*.local
 .env.development
 .env.production
+.env.prod
+.env.staging
 *.pem
 *.key
 # Keep example files
 !.env.example
+!.env.prod.example
 
 # ─── Logs ─────────────────────────────────────────────────
 *.log
