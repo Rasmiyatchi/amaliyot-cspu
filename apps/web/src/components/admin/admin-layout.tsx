@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { CommandPalette } from "@/components/admin/command-palette";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { RouteTransition } from "@/components/route-transition";
 
@@ -14,6 +15,7 @@ export function AdminLayout() {
             <Outlet />
           </RouteTransition>
         </main>
+        <CommandPalette />
       </div>
     </MaintenanceGuard>
   );

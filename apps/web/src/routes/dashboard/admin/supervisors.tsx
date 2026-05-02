@@ -1,4 +1,4 @@
-import { Loader2, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Pencil, Plus, Trash2, UserCog, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -6,7 +6,9 @@ import { SupervisorFormDialog } from "@/components/admin/supervisors/supervisor-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { TableSkeleton } from "@/components/ui/loading-skeletons";
 import {
   Table,
   TableBody,
@@ -63,11 +65,7 @@ export function SupervisorsPage() {
         />
       </div>
 
-      {isPending && !data && (
-        <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
+      {isPending && !data && <TableSkeleton rows={6} columns={7} />}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error.message}</AlertDescription>
@@ -91,8 +89,14 @@ export function SupervisorsPage() {
             <TableBody>
               {data.items.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Supervizorlar topilmadi
+                  <TableCell colSpan={7} className="p-0">
+                    <EmptyState
+                      icon={UserCog}
+                      title="Supervizorlar topilmadi"
+                      description="Yangi supervizor qo'shing yoki filtrlarni o'zgartiring"
+                      accent="info"
+                      compact
+                    />
                   </TableCell>
                 </TableRow>
               )}

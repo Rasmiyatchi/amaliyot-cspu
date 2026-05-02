@@ -19,7 +19,6 @@ import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-
 import { StatCard } from "@/components/admin/stat-card";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { SupervisorReviewPanel } from "@/components/supervisor/review-panel";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -298,11 +297,13 @@ export function SupervisorDashboard() {
                   </div>
                 )}
                 {!daysPending && pendingDays.length === 0 && (
-                  <Alert>
-                    <AlertDescription>
-                      Tasdiqlash kutilayotgan davomat yo'q
-                    </AlertDescription>
-                  </Alert>
+                  <EmptyState
+                    icon={CheckCircle2}
+                    title="Hammasi tasdiqlangan"
+                    description="Yangi davomat yozuvlari paydo bo'lganda bu yerda ko'rinadi"
+                    accent="success"
+                    compact
+                  />
                 )}
                 {!daysPending && pendingDays.length > 0 && (
                   <div className="space-y-2">

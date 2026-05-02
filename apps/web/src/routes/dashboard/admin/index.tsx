@@ -15,6 +15,7 @@ import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-
 import { StatCard } from "@/components/admin/stat-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   CardSkeleton,
   StatCardsSkeleton,
@@ -309,9 +310,13 @@ export function AdminHome() {
               </CardHeader>
               <CardContent>
                 {superAdmin.data.recent_overrides.length === 0 ? (
-                  <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                    Override yozuvlari yo'q
-                  </div>
+                  <EmptyState
+                    icon={History}
+                    title="Override yozuvlari yo'q"
+                    description="Hech qanday avto-belgilangan davomat o'zgartirilmagan"
+                    accent="muted"
+                    compact
+                  />
                 ) : (
                   <div className="space-y-2">
                     {superAdmin.data.recent_overrides.map((ov) => (

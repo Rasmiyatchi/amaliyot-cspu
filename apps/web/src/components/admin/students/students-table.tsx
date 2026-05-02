@@ -1,8 +1,9 @@
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { TableSkeleton } from "@/components/ui/loading-skeletons";
 import {
   Table,
   TableBody,
@@ -27,11 +28,7 @@ export function StudentsTable({ filters, page, onPageChange, onRowClick, pageSiz
   const q = useStudents(filters, page, pageSize);
 
   if (q.isPending && !q.data) {
-    return (
-      <div className="flex h-32 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <TableSkeleton rows={8} columns={6} />;
   }
   if (q.error) {
     return (

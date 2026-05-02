@@ -98,9 +98,13 @@ export function StudentDashboard() {
               </CardHeader>
               <CardContent>
                 {recent && recent.items.length === 0 && (
-                  <div className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-                    Hali davomat yozuvi yo'q
-                  </div>
+                  <EmptyState
+                    icon={CalendarDays}
+                    title="Hali davomat yozuvi yo'q"
+                    description="Birinchi kelishingizdan so'ng bu yerda paydo bo'ladi"
+                    accent="info"
+                    compact
+                  />
                 )}
                 {recent && recent.items.length > 0 && (
                   <div className="space-y-2">

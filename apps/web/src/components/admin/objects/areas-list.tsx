@@ -1,4 +1,4 @@
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -6,6 +6,7 @@ import { AreaFormDialog } from "@/components/admin/objects/area-form-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { TableSkeleton } from "@/components/ui/loading-skeletons";
 import {
   Table,
   TableBody,
@@ -42,11 +43,7 @@ export function AreasList() {
         </Button>
       </div>
 
-      {isPending && (
-        <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
+      {isPending && <TableSkeleton rows={5} columns={4} />}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error.message}</AlertDescription>
