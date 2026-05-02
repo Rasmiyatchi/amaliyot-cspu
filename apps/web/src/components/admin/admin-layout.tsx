@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
+import { RouteTransition } from "@/components/route-transition";
 
 export function AdminLayout() {
   return (
@@ -9,7 +10,9 @@ export function AdminLayout() {
       <div className="flex h-screen bg-background">
         <AdminSidebar />
         <main className="flex-1 overflow-auto">
-          <Outlet />
+          <RouteTransition>
+            <Outlet />
+          </RouteTransition>
         </main>
       </div>
     </MaintenanceGuard>

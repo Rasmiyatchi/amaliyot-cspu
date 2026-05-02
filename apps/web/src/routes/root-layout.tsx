@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { ProfileDialog } from "@/components/profile-dialog";
+import { RouteTransition } from "@/components/route-transition";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useBootstrap } from "@/hooks/use-bootstrap";
@@ -72,7 +73,9 @@ export function RootLayout() {
         </div>
       </header>
 
-      <Outlet />
+      <RouteTransition>
+        <Outlet />
+      </RouteTransition>
       <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
     </MaintenanceGuard>

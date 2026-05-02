@@ -199,6 +199,86 @@
   animation: shimmer 2s linear infinite;
 }
 
+/* ─── Global polish: hover & transitions ───────────────────── */
+
+/* Page route transition — har sahifa fade-in bilan kiradi */
+@keyframes route-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.route-enter {
+  animation: route-fade 0.35s ease-out;
+}
+
+/* Smooth interactive elements — buttons, links, table rows */
+button,
+a,
+[role="button"] {
+  transition-property: background-color, border-color, color, opacity, transform, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Subtle press feedback */
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.98);
+}
+
+/* Card lift on hover */
+.card-hover {
+  transition:
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 200ms;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -10px rgb(0 0 0 / 0.15);
+}
+
+/* Table row pleasant hover */
+tbody tr {
+  transition: background-color 120ms ease-out;
+}
+
+/* Dialog content — slight zoom-in is more pleasant than dropdown */
+[data-state="open"][role="dialog"] > [class*="DialogContent"],
+[data-radix-dialog-content] {
+  animation: dialog-in 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes dialog-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Focus ring polish — softer than default */
+:focus-visible {
+  outline: none;
+}
+[data-focus-visible-added],
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.3);
+}
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Soft animated landing background */
 .landing-bg {
   background:
