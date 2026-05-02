@@ -19,6 +19,16 @@ export type PendingReviews = {
   total: number;
 };
 
+export type CapacityAlert = {
+  kind: "organization" | "supervisor";
+  id: UUID;
+  name: string;
+  used: number;
+  capacity: number;
+  percent: number;
+  severity: "near_full" | "full";
+};
+
 export type AdminStats = {
   students: { total: number; by_status: Record<StudentStatus, number> };
   assignments: { total: number; by_status: Record<AssignmentStatus, number> };
@@ -34,6 +44,7 @@ export type AdminStats = {
   };
   tasks: { total: number; by_status: Record<TaskStatus, number> };
   pending_reviews: PendingReviews;
+  capacity_alerts: CapacityAlert[];
 };
 
 export type SuperAdminStats = AdminStats & {

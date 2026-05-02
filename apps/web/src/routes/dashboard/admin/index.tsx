@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  AlertTriangle,
   Building2,
   CalendarCheck,
   ClipboardList,
@@ -31,15 +32,27 @@ export function AdminHome() {
 
   return (
     <div className="container max-w-7xl py-8">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <ShieldCheck className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {isSuperAdmin ? "Super admin paneli" : "Admin paneli"}
-          </h1>
-          <p className="text-sm text-muted-foreground">Salom, {user?.full_name}</p>
+      <div
+        className={
+          "mb-6 overflow-hidden rounded-xl p-6 text-white shadow-lg " +
+          (isSuperAdmin
+            ? "bg-gradient-to-br from-purple-600 to-indigo-700 dark:from-purple-800 dark:to-indigo-900"
+            : "bg-gradient-to-br from-indigo-600 to-blue-700 dark:from-indigo-800 dark:to-blue-900")
+        }
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+          <div className="flex-1">
+            <h1 className="text-2xl font-semibold">
+              {isSuperAdmin ? "Super admin paneli" : "Admin paneli"}
+            </h1>
+            <p className="mt-0.5 text-sm text-indigo-50">
+              Xush kelibsiz, {user?.full_name}
+              {isSuperAdmin && " — siz tizimni to'liq boshqarasiz"}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -74,6 +87,53 @@ export function AdminHome() {
                 )}
               </AlertDescription>
             </Alert>
+          )}
+
+          {stats.capacity_alerts.length > 0 && (
+            <Card className="border-amber-500/40">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  Sig'im to'lib qoldi ({stats.capacity_alerts.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {stats.capacity_alerts.map((a) => (
+                    <div
+                      key={`${a.kind}-${a.id}`}
+                      className="flex items-center gap-3 rounded-md border border-border p-3 text-sm"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
+                        {a.kind === "organization" ? (
+                          <Building2 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        ) : (
+                          <UserCog className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium">{a.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {a.kind === "organization" ? "Tashkilot" : "Supervizor"}
+                          {" · "}
+                          {a.used} / {a.capacity} talaba
+                        </div>
+                      </div>
+                      <div
+                        className={
+                          a.severity === "full"
+                            ? "rounded-md bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive"
+                            : "rounded-md bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400"
+                        }
+                      >
+                        {a.percent}%
+                        {a.severity === "full" ? " · to'la" : ""}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

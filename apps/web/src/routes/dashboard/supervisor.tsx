@@ -177,18 +177,24 @@ export function SupervisorDashboard() {
   return (
     <main className="container py-8">
       <div className="mx-auto max-w-4xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-info/10">
-            <Users className="h-5 w-5 text-info" />
+        {/* Hero banner */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-lg dark:from-blue-800 dark:to-indigo-900">
+          <div className="relative flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+              <Users className="h-6 w-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl font-semibold">
+                Xush kelibsiz, {user?.first_name}!
+              </h2>
+              <p className="mt-0.5 text-sm text-blue-50">
+                Sizga biriktirilgan talabalar davomati va topshiriqlari
+              </p>
+            </div>
+            <div className="shrink-0 [&_button]:text-white [&_button]:hover:bg-white/10">
+              <NotificationsBell />
+            </div>
           </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold">Salom, {user?.first_name}</h2>
-            <p className="text-sm text-muted-foreground">
-              Sizga biriktirilgan talabalar davomati
-            </p>
-          </div>
-          <NotificationsBell />
         </div>
 
         {assignmentsPending && (

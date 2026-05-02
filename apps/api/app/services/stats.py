@@ -26,6 +26,97 @@ from app.models.task import JournalEntry, LessonAnalysis, Task, TaskTemplate
 from app.models.user import User
 
 
+async def _capacity_alerts(db: AsyncSession) -> list[dict[str, Any]]:
+    """Sig'imi yaqin yoki to'lib ketgan obyektlarni topadi.
+
+    Threshold: capacity ning 80%+ band bo'lgan obyektlar alert sifatida qaytariladi.
+    """
+    from app.models.organization import Organization
+
+    active_statuses = (AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE)
+
+    org_rows = (
+        await db.execute(
+            select(
+                Organization.id,
+                Organization.name,
+                Organization.capacity,
+                func.count(PracticeAssignment.id).label("used"),
+            )
+            .outerjoin(
+                PracticeAssignment,
+                (PracticeAssignment.organization_id == Organization.id)
+                & PracticeAssignment.status.in_(active_statuses),
+            )
+            .where(Organization.is_active.is_(True))
+            .group_by(Organization.id, Organization.name, Organization.capacity)
+        )
+    ).mappings().all()
+
+    sup_rows = (
+        await db.execute(
+            select(
+                Supervisor.id,
+                User.last_name,
+                User.first_name,
+                Supervisor.capacity,
+                func.count(PracticeAssignment.id).label("used"),
+            )
+            .join(User, User.id == Supervisor.user_id)
+            .outerjoin(
+                PracticeAssignment,
+                (PracticeAssignment.supervisor_id == Supervisor.id)
+                & PracticeAssignment.status.in_(active_statuses),
+            )
+            .where(Supervisor.is_active.is_(True))
+            .group_by(
+                Supervisor.id, User.last_name, User.first_name, Supervisor.capacity
+            )
+        )
+    ).mappings().all()
+
+    alerts: list[dict[str, Any]] = []
+    for r in org_rows:
+        cap = r["capacity"] or 0
+        used = r["used"] or 0
+        if cap <= 0:
+            continue
+        ratio = used / cap
+        if ratio >= 0.8:
+            alerts.append(
+                {
+                    "kind": "organization",
+                    "id": str(r["id"]),
+                    "name": r["name"],
+                    "used": used,
+                    "capacity": cap,
+                    "percent": round(ratio * 100),
+                    "severity": "full" if ratio >= 1.0 else "near_full",
+                }
+            )
+    for r in sup_rows:
+        cap = r["capacity"] or 0
+        used = r["used"] or 0
+        if cap <= 0:
+            continue
+        ratio = used / cap
+        if ratio >= 0.8:
+            alerts.append(
+                {
+                    "kind": "supervisor",
+                    "id": str(r["id"]),
+                    "name": f"{r['last_name']} {r['first_name']}".strip(),
+                    "used": used,
+                    "capacity": cap,
+                    "percent": round(ratio * 100),
+                    "severity": "full" if ratio >= 1.0 else "near_full",
+                }
+            )
+
+    alerts.sort(key=lambda a: -a["percent"])
+    return alerts
+
+
 async def admin_overview(db: AsyncSession) -> dict[str, Any]:
     """Admin bosh sahifasi uchun KPI'lar.
 
@@ -151,6 +242,7 @@ async def admin_overview(db: AsyncSession) -> dict[str, Any]:
             "analyses": pending_analyses,
             "total": pending_tasks + pending_journals + pending_analyses,
         },
+        "capacity_alerts": await _capacity_alerts(db),
     }
 
 

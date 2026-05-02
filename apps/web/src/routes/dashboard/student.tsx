@@ -29,22 +29,29 @@ export function StudentDashboard() {
   return (
     <main className="container py-8">
       <div className="mx-auto max-w-3xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-            <GraduationCap className="h-5 w-5 text-success" />
+        {/* Hero banner */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white shadow-lg dark:from-emerald-700 dark:to-teal-900">
+          <div className="relative flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+              <GraduationCap className="h-6 w-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl font-semibold">
+                Xush kelibsiz, {user?.first_name}!
+              </h2>
+              <p className="mt-0.5 text-sm text-emerald-50">
+                {activeAssignment
+                  ? `${activeAssignment.practice_type_name} · ${
+                      activeAssignment.organization_name ??
+                      activeAssignment.area_name
+                    }`
+                  : "Amaliyotga biriktirilmagansiz"}
+              </p>
+            </div>
+            <div className="shrink-0 [&_button]:text-white [&_button]:hover:bg-white/10">
+              <NotificationsBell />
+            </div>
           </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold">Salom, {user?.first_name}</h2>
-            <p className="text-sm text-muted-foreground">
-              {activeAssignment
-                ? `${activeAssignment.practice_type_name} · ${
-                    activeAssignment.organization_name ?? activeAssignment.area_name
-                  }`
-                : "Amaliyotga biriktirilmagansiz"}
-            </p>
-          </div>
-          <NotificationsBell />
         </div>
 
         {assignmentsPending && (
