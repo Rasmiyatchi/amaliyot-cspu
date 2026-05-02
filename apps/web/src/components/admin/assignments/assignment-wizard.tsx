@@ -113,7 +113,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
   );
 
   // Guruhlarni ruxsat etilgan kurslar bo'yicha filter
-  const allGroupsQuery = useGroups({}, 1, 200);
+  const allGroupsQuery = useGroups({}, 1, 100);
   const filteredGroups = useMemo(() => {
     const items = allGroupsQuery.data?.items ?? [];
     if (!allowedCourses.length) return items;

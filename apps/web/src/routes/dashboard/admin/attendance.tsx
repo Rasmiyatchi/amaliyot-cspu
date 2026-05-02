@@ -49,9 +49,11 @@ export function AttendancePage() {
 
   const { data, isPending, error, isFetching } = useAttendanceDays(filters, page, pageSize);
 
-  // Qidiruv menyusi uchun aktiv biriktirishlar
-  const { data: assignmentsData } = useAssignments({ status: "active" }, 1, 200);
-  const activeAssignments = assignmentsData?.items ?? [];
+  // Qidiruv menyusi uchun biriktirishlar (draft + active)
+  const { data: assignmentsData } = useAssignments({}, 1, 100);
+  const activeAssignments = (assignmentsData?.items ?? []).filter(
+    (a) => a.status === "active" || a.status === "draft",
+  );
 
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / pageSize));
 

@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     academic,
+    admins,
     archive,
     areas,
     attendance,
@@ -38,3 +39,4 @@ api_router.include_router(tasks.router)
 api_router.include_router(archive.router)
 api_router.include_router(stats.router)
 api_router.include_router(notifications.router)
+api_router.include_router(admins.router)

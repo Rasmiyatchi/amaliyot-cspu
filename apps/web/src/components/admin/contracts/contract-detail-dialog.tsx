@@ -28,6 +28,7 @@ import {
   useUploadContractScan,
 } from "@/lib/api/contracts";
 import type { Contract } from "@/lib/api/types";
+import { useAuthStore } from "@/stores/auth";
 
 type Props = { contract: Contract | null; onClose: () => void };
 
@@ -51,7 +52,11 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
   };
 
   const handleDownloadPdf = async () => {
-    const token = localStorage.getItem("access_token");
+    const token = useAuthStore.getState().accessToken;
+    if (!token) {
+      toast.error("Sessiya tugagan, qayta kiring");
+      return;
+    }
     const res = await fetch(`/api/v1/contracts/${contract.id}/pdf`, {
       headers: { Authorization: `Bearer ${token}` },
     });

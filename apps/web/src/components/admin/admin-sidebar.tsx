@@ -9,6 +9,7 @@ import {
   LibraryBig,
   LogOut,
   School,
+  ShieldCheck,
   UserCog,
   Users,
 } from "lucide-react";
@@ -22,7 +23,15 @@ import { logout } from "@/lib/auth-api";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
 
-const navItems: { to: string; label: string; icon: typeof LayoutDashboard; end?: boolean }[] = [
+type NavItem = {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  end?: boolean;
+  superAdminOnly?: boolean;
+};
+
+const navItems: NavItem[] = [
   { to: "/admin", label: "Bosh sahifa", icon: LayoutDashboard, end: true },
   { to: "/admin/academic", label: "Akademik", icon: School },
   { to: "/admin/practice-types", label: "Amaliyot turlari", icon: BookOpen },
@@ -33,6 +42,7 @@ const navItems: { to: string; label: string; icon: typeof LayoutDashboard; end?:
   { to: "/admin/contracts", label: "Shartnomalar", icon: FileCheck2 },
   { to: "/admin/attendance", label: "Davomat", icon: CalendarCheck },
   { to: "/admin/task-templates", label: "Topshiriqlar", icon: LibraryBig },
+  { to: "/admin/admins", label: "Adminlar", icon: ShieldCheck, superAdminOnly: true },
 ];
 
 export function AdminSidebar() {
@@ -53,24 +63,26 @@ export function AdminSidebar() {
 
       {/* Menu */}
       <nav className="flex-1 space-y-1 p-3">
-        {navItems.map(({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )
-            }
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </NavLink>
-        ))}
+        {navItems
+          .filter((item) => !item.superAdminOnly || user?.role === "super_admin")
+          .map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )
+              }
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </NavLink>
+          ))}
       </nav>
 
       {/* Footer — theme + user */}

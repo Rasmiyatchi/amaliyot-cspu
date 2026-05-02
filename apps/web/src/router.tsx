@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { AcademicPage } from "@/routes/dashboard/admin/academic";
+import { AdminsPage } from "@/routes/dashboard/admin/admins";
 import { AssignmentsPage } from "@/routes/dashboard/admin/assignments";
 import { AttendancePage } from "@/routes/dashboard/admin/attendance";
 import { ContractsPage } from "@/routes/dashboard/admin/contracts";
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
           { path: "contracts", Component: ContractsPage },
           { path: "attendance", Component: AttendancePage },
           { path: "task-templates", Component: TaskTemplatesPage },
+          { path: "admins", Component: AdminsPage },
         ],
       },
     ],

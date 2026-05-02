@@ -357,6 +357,43 @@ export type ContractCreate = {
   notes?: string | null;
 };
 
+// ─── Admins (admin + super_admin users) ──────────────────
+export type Admin = {
+  id: UUID;
+  username: string;
+  email: string | null;
+  phone: string | null;
+  first_name: string;
+  last_name: string;
+  middle_name: string | null;
+  full_name: string;
+  role: "admin" | "super_admin";
+  is_active: boolean;
+  last_login_at: ISODateTime | null;
+  created_at: ISODateTime;
+};
+
+export type AdminCreate = {
+  username: string;
+  password: string;
+  email?: string | null;
+  phone?: string | null;
+  first_name: string;
+  last_name: string;
+  middle_name?: string | null;
+  role?: "admin" | "super_admin";
+};
+
+export type AdminUpdate = {
+  email?: string | null;
+  phone?: string | null;
+  first_name?: string;
+  last_name?: string;
+  middle_name?: string | null;
+  role?: "admin" | "super_admin";
+  is_active?: boolean;
+};
+
 // ─── Notifications ───────────────────────────────────────
 export type NotificationType =
   | "task_approved"
