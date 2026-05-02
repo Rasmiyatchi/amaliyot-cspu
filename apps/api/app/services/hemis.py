@@ -303,10 +303,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
 
             # Parol — pasport seriyasi (AB1234567). Pasport yo'q bo'lsa avto-generatsiya.
             passport_for_password = str(rec.get("passport_number") or "").strip()
-            if passport_for_password:
-                password = passport_for_password
-            else:
-                password = _generate_password()
+            password = passport_for_password or _generate_password()
 
             user = User(
                 username=hemis_id,

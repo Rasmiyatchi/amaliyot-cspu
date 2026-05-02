@@ -1,6 +1,4 @@
-{% extends "contracts/base.html" %}
-
-{% block content %}
+{% extends "contracts/base.html" %} {% block content %}
 <div class="header">
   <div><strong>Talabalarning o'quv malakaviy amaliyotini o'tkazish</strong></div>
   <div>yuzasidan ikki tomonlama</div>
@@ -14,15 +12,18 @@
 </div>
 
 <div class="intro">
-  Biz quyida imzo chekuvchilar, Chirchiq davlat pedagogika universiteti rektori G.I.Muxamedov bir tomondan va
-  <strong>{{ org.name }}</strong> direktori <strong>{{ org.director_full_name }}</strong> ikkinchi tomondan
-  quyidagi shartlar ko'rsatilgan shartnomani tuzishdi.
+  Biz quyida imzo chekuvchilar, Chirchiq davlat pedagogika universiteti rektori G.I.Muxamedov bir
+  tomondan va
+  <strong>{{ org.name }}</strong> direktori <strong>{{ org.director_full_name }}</strong> ikkinchi
+  tomondan quyidagi shartlar ko'rsatilgan shartnomani tuzishdi.
 </div>
 
 <section>
   <h2>1. Shartnoma maqsadi</h2>
-  <p>{{ contract.start_date.strftime('%Y-%m-%d') }} — {{ contract.end_date.strftime('%Y-%m-%d') }}
-  kunlari oralig'ida talabalarning malakaviy amaliyotini o'tkazish.</p>
+  <p>
+    {{ contract.start_date.strftime('%Y-%m-%d') }} — {{ contract.end_date.strftime('%Y-%m-%d') }}
+    kunlari oralig'ida talabalarning malakaviy amaliyotini o'tkazish.
+  </p>
 </section>
 
 <section>
@@ -30,11 +31,11 @@
   <table>
     <thead>
       <tr>
-        <th style="width: 5%;">T/r</th>
-        <th style="width: 40%;">F.I.SH.</th>
-        <th style="width: 35%;">Yo'nalish</th>
-        <th style="width: 10%;">Kurs</th>
-        <th style="width: 10%;">Guruh</th>
+        <th style="width: 5%">T/r</th>
+        <th style="width: 40%">F.I.SH.</th>
+        <th style="width: 35%">Yo'nalish</th>
+        <th style="width: 10%">Kurs</th>
+        <th style="width: 10%">Guruh</th>
       </tr>
     </thead>
     <tbody>
@@ -80,17 +81,17 @@
     </tr>
     <tr>
       <td>
-        <strong>Chirchiq davlat pedagogika universiteti</strong><br>
-        Toshkent viloyati, Chirchiq shahri, A.Temur ko'chasi, 104<br>
+        <strong>Chirchiq davlat pedagogika universiteti</strong><br />
+        Toshkent viloyati, Chirchiq shahri, A.Temur ko'chasi, 104<br />
         Tel: (370) 716-68-11
       </td>
       <td>
-        <strong>{{ org.legal_name or org.name }}</strong><br>
-        {{ org.region }}{% if org.district %}, {{ org.district }}{% endif %}<br>
-        {{ org.address_line }}<br>
-        {% if org.phone %}Tel: {{ org.phone }}<br>{% endif %}
-        {% if org.inn %}INN: {{ org.inn }}<br>{% endif %}
-        {% if org.bank_account %}H/R: {{ org.bank_account }}, MFO: {{ org.bank_mfo }}{% endif %}
+        <strong>{{ org.legal_name or org.name }}</strong><br />
+        {{ org.region }}{% if org.district %}, {{ org.district }}{% endif %}<br />
+        {{ org.address_line }}<br />
+        {% if org.phone %}Tel: {{ org.phone }}<br />{% endif %} {% if org.inn %}INN: {{ org.inn
+        }}<br />{% endif %} {% if org.bank_account %}H/R: {{ org.bank_account }}, MFO: {{
+        org.bank_mfo }}{% endif %}
       </td>
     </tr>
   </table>

@@ -1,36 +1,30 @@
-{% extends "archive/base.html" %}
-{% block content %}
-  {% if sections %}
-    {% for s in sections %}
-      <h2>{{ s.title }}</h2>
-      {% for t in s.tasks %}
-        <div class="entry">
-          <div class="entry-head">
-            <span class="entry-title">{{ t.template_title }}</span>
-            <span class="badge badge-{{ 'green' if t.status == 'approved' else ('red' if t.status == 'rejected' else ('info' if t.status == 'submitted' else 'outline')) }}">
-              {{ t.status_label }}
-            </span>
-          </div>
-          <div class="entry-meta">
-            Max {{ t.template_points }} ball
-            {% if t.points_earned is not none %} · olingan: <strong>{{ t.points_earned }}</strong>{% endif %}
-            {% if t.template_month_hint %} · {{ t.template_month_hint }}{% endif %}
-          </div>
-          {% if t.submission_md %}
-            <div class="entry-body">{{ t.submission_md }}</div>
-          {% else %}
-            <div class="entry-meta">— Topshirilmagan —</div>
-          {% endif %}
-          {% if t.rejection_reason %}
-            <div class="entry-meta">Rad etish sababi: {{ t.rejection_reason }}</div>
-          {% endif %}
-          {% if t.graded_by_name %}
-            <div class="entry-meta">Baholagan: {{ t.graded_by_name }} · {{ t.graded_at }}</div>
-          {% endif %}
-        </div>
-      {% endfor %}
-    {% endfor %}
+{% extends "archive/base.html" %} {% block content %} {% if sections %} {% for s in sections %}
+<h2>{{ s.title }}</h2>
+{% for t in s.tasks %}
+<div class="entry">
+  <div class="entry-head">
+    <span class="entry-title">{{ t.template_title }}</span>
+    <span
+      class="badge badge-{{ 'green' if t.status == 'approved' else ('red' if t.status == 'rejected' else ('info' if t.status == 'submitted' else 'outline')) }}"
+    >
+      {{ t.status_label }}
+    </span>
+  </div>
+  <div class="entry-meta">
+    Max {{ t.template_points }} ball {% if t.points_earned is not none %} · olingan:
+    <strong>{{ t.points_earned }}</strong>{% endif %} {% if t.template_month_hint %} · {{
+    t.template_month_hint }}{% endif %}
+  </div>
+  {% if t.submission_md %}
+  <div class="entry-body">{{ t.submission_md }}</div>
   {% else %}
-    <div class="empty">Topshiriqlar yo'q</div>
+  <div class="entry-meta">— Topshirilmagan —</div>
+  {% endif %} {% if t.rejection_reason %}
+  <div class="entry-meta">Rad etish sababi: {{ t.rejection_reason }}</div>
+  {% endif %} {% if t.graded_by_name %}
+  <div class="entry-meta">Baholagan: {{ t.graded_by_name }} · {{ t.graded_at }}</div>
   {% endif %}
-{% endblock %}
+</div>
+{% endfor %} {% endfor %} {% else %}
+<div class="empty">Topshiriqlar yo'q</div>
+{% endif %} {% endblock %}

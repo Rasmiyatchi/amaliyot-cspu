@@ -13,7 +13,6 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
-    Integer,
     Numeric,
     String,
     Text,
@@ -133,4 +132,7 @@ class AttendanceOverride(UUIDMixin, TimestampMixin, Base):
     reason: Mapped[str] = mapped_column(Text)
 
     def __repr__(self) -> str:
-        return f"<AttendanceOverride day={self.attendance_day_id} {self.previous_status}→{self.new_status}>"
+        return (
+            f"<AttendanceOverride day={self.attendance_day_id} "
+            f"{self.previous_status}→{self.new_status}>"
+        )

@@ -21,6 +21,7 @@ Attachment metadata (JSONB ichidagi obyekt):
 
 from __future__ import annotations
 
+import contextlib
 import secrets
 from datetime import UTC, datetime
 from pathlib import Path
@@ -178,8 +179,8 @@ async def attach_to_entity(
     entity_id: UUID,
     attachment: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    Model = _entity_model(kind)
-    entity = await db.get(Model, entity_id)
+    model = _entity_model(kind)
+    entity = await db.get(model, entity_id)
     if not entity:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Yozuv topilmadi")
     current = list(entity.attachments or [])
@@ -195,8 +196,8 @@ async def detach_from_entity(
     entity_id: UUID,
     attachment_id: str,
 ) -> list[dict[str, Any]]:
-    Model = _entity_model(kind)
-    entity = await db.get(Model, entity_id)
+    model = _entity_model(kind)
+    entity = await db.get(model, entity_id)
     if not entity:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Yozuv topilmadi")
     current = list(entity.attachments or [])
@@ -209,11 +210,9 @@ async def detach_from_entity(
     await db.commit()
 
     # Faylni diskdan ham o'chiramiz (best effort)
-    try:
+    with contextlib.suppress(Exception):
         path = absolute_path(removed.get("path", ""))
         if path.exists():
             path.unlink()
-    except Exception:  # noqa: BLE001
-        pass
 
     return current

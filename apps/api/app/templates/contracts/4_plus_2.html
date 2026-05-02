@@ -1,6 +1,4 @@
-{% extends "contracts/base.html" %}
-
-{% block content %}
+{% extends "contracts/base.html" %} {% block content %}
 <div class="header">
   <div><strong>CHIRCHIQ DAVLAT PEDAGOGIKA UNIVERSITETI TALABALARINING</strong></div>
   <div><strong>"4+2" TARTIBI BO'YICHA MALAKAVIY AMALIYOT O'TASH TO'G'RISIDA</strong></div>
@@ -14,20 +12,36 @@
 </div>
 
 <div class="intro">
-  O'zbekiston Respublikasi Prezidentining 2022-yil 11-maydagi "2022-2026 yillarda xalq ta'limini rivojlantirish bo'yicha milliy
-  dasturni tasdiqlash to'g'risida"gi PF-134-son Farmoni hamda 2022 yil 21 iyundagi "Pedagogik ta'lim sifatini oshirish va pedagog kadrlar
-  tayyorlovchi oliy ta'lim muassasalari faoliyatini yanada rivojlantirish chora-tadbirlari to'g'risida"gi PQ-289-son qaroriga muvofiq
-  Chirchiq davlat pedagogika universiteti (keyingi o'rinlarda <strong>Universitet</strong>, deb yuritiladi) nomidan rektor
-  Muxamedov G'afurjon Isroilovich bir tomondan va <strong>{{ org.name }}</strong> nomidan tashkilot rahbari
-  <strong>{{ org.director_full_name }}</strong> (keyingi o'rinlarda <strong>Qabul qiluvchi muassasa</strong>, deb yuritiladi)
-  ikkinchi tomondan ushbu shartnomani quyidagilar haqida tuzdilar.
+  O'zbekiston Respublikasi Prezidentining 2022-yil 11-maydagi "2022-2026 yillarda xalq ta'limini
+  rivojlantirish bo'yicha milliy dasturni tasdiqlash to'g'risida"gi PF-134-son Farmoni hamda 2022
+  yil 21 iyundagi "Pedagogik ta'lim sifatini oshirish va pedagog kadrlar tayyorlovchi oliy ta'lim
+  muassasalari faoliyatini yanada rivojlantirish chora-tadbirlari to'g'risida"gi PQ-289-son qaroriga
+  muvofiq Chirchiq davlat pedagogika universiteti (keyingi o'rinlarda <strong>Universitet</strong>,
+  deb yuritiladi) nomidan rektor Muxamedov G'afurjon Isroilovich bir tomondan va
+  <strong>{{ org.name }}</strong> nomidan tashkilot rahbari
+  <strong>{{ org.director_full_name }}</strong> (keyingi o'rinlarda
+  <strong>Qabul qiluvchi muassasa</strong>, deb yuritiladi) ikkinchi tomondan ushbu shartnomani
+  quyidagilar haqida tuzdilar.
 </div>
 
 <section>
   <h2>I. Shartnomaning predmeti</h2>
-  <p>1.1. Ushbu shartnoma "4+2" tartibidagi amaliyotni tashkil etish va o'tkazish tartibini belgilaydi.</p>
-  <p>1.2. Amaliyot davri: <strong>{{ contract.start_date.strftime('%Y-%m-%d') }} — {{ contract.end_date.strftime('%Y-%m-%d') }}</strong> (30 hafta, haftasiga 2 kun).</p>
-  <p>1.3. Amaliyot obyekti: <strong>{{ org.name }}</strong>, {{ org.region }}{% if org.district %}, {{ org.district }}{% endif %}, {{ org.address_line }}.</p>
+  <p>
+    1.1. Ushbu shartnoma "4+2" tartibidagi amaliyotni tashkil etish va o'tkazish tartibini
+    belgilaydi.
+  </p>
+  <p>
+    1.2. Amaliyot davri:
+    <strong
+      >{{ contract.start_date.strftime('%Y-%m-%d') }} — {{ contract.end_date.strftime('%Y-%m-%d')
+      }}</strong
+    >
+    (30 hafta, haftasiga 2 kun).
+  </p>
+  <p>
+    1.3. Amaliyot obyekti: <strong>{{ org.name }}</strong>, {{ org.region }}{% if org.district %},
+    {{ org.district }}{% endif %}, {{ org.address_line }}.
+  </p>
 </section>
 
 <section>
@@ -35,12 +49,12 @@
   <table>
     <thead>
       <tr>
-        <th style="width: 5%;">T/r</th>
-        <th style="width: 35%;">Talabaning F.I.SH.</th>
-        <th style="width: 30%;">Yo'nalish (kodi va nomi)</th>
-        <th style="width: 10%;">Bosqich</th>
-        <th style="width: 10%;">Boshlanishi</th>
-        <th style="width: 10%;">Tugashi</th>
+        <th style="width: 5%">T/r</th>
+        <th style="width: 35%">Talabaning F.I.SH.</th>
+        <th style="width: 30%">Yo'nalish (kodi va nomi)</th>
+        <th style="width: 10%">Bosqich</th>
+        <th style="width: 10%">Boshlanishi</th>
+        <th style="width: 10%">Tugashi</th>
       </tr>
     </thead>
     <tbody>
@@ -62,7 +76,9 @@
   <h2>III. Tomonlarning majburiyatlari</h2>
   <h3>Universitet majburiyatlari:</h3>
   <ul>
-    <li>Amaliyotga ketayotgan talabalarga oldindan zarur ko'rsatmalar va yo'l-yo'riqlar ko'rsatish;</li>
+    <li>
+      Amaliyotga ketayotgan talabalarga oldindan zarur ko'rsatmalar va yo'l-yo'riqlar ko'rsatish;
+    </li>
     <li>Amaliyot reja-jadvali, dasturi va kundalik bilan ta'minlash;</li>
     <li>Amaliyot muddatlariga rioya qilinishi bo'yicha muntazam nazorat;</li>
     <li>Amaliyot hisobotini yozish bo'yicha ko'rsatma va tavsiyalar berish;</li>
@@ -87,20 +103,19 @@
     </tr>
     <tr>
       <td>
-        <strong>Chirchiq davlat pedagogika universiteti</strong><br>
-        Toshkent viloyati, Chirchiq shahri, A.Temur ko'chasi, 104<br>
-        Tel: (370) 716-68-11<br>
+        <strong>Chirchiq davlat pedagogika universiteti</strong><br />
+        Toshkent viloyati, Chirchiq shahri, A.Temur ko'chasi, 104<br />
+        Tel: (370) 716-68-11<br />
         E-mail: info@cspu.uz
       </td>
       <td>
-        <strong>{{ org.legal_name or org.name }}</strong><br>
-        {{ org.region }}{% if org.district %}, {{ org.district }}{% endif %}<br>
-        {{ org.address_line }}<br>
-        {% if org.phone %}Tel: {{ org.phone }}<br>{% endif %}
-        {% if org.email %}E-mail: {{ org.email }}<br>{% endif %}
-        {% if org.inn %}INN: {{ org.inn }}<br>{% endif %}
-        {% if org.bank_account %}H/R: {{ org.bank_account }}<br>{% endif %}
-        {% if org.bank_mfo %}MFO: {{ org.bank_mfo }}{% endif %}
+        <strong>{{ org.legal_name or org.name }}</strong><br />
+        {{ org.region }}{% if org.district %}, {{ org.district }}{% endif %}<br />
+        {{ org.address_line }}<br />
+        {% if org.phone %}Tel: {{ org.phone }}<br />{% endif %} {% if org.email %}E-mail: {{
+        org.email }}<br />{% endif %} {% if org.inn %}INN: {{ org.inn }}<br />{% endif %} {% if
+        org.bank_account %}H/R: {{ org.bank_account }}<br />{% endif %} {% if org.bank_mfo %}MFO: {{
+        org.bank_mfo }}{% endif %}
       </td>
     </tr>
   </table>

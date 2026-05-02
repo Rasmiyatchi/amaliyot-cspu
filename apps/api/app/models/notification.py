@@ -38,4 +38,7 @@ class Notification(UUIDMixin, TimestampMixin, Base):
     )
 
     def __repr__(self) -> str:
-        return f"<Notification user={self.user_id} type={self.type} read={self.read_at is not None}>"
+        return (
+            f"<Notification user={self.user_id} type={self.type} "
+            f"read={self.read_at is not None}>"
+        )

@@ -8,7 +8,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import AttendanceDayStatus, AttendanceEventKind
 
-
 # ─── Events ──────────────────────────────────────────────
 
 

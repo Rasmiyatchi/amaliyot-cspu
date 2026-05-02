@@ -16,7 +16,8 @@ RBAC:
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, File, HTTPException, Path as FPath, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import Path as FPath
 from fastapi.responses import FileResponse
 
 from app.api.deps import CurrentUser
@@ -95,22 +96,6 @@ async def delete_attachment(
         )
     await _check_entity_access(db, kind, entity_id, user)
     await svc.detach_from_entity(db, kind, entity_id, attachment_id)
-
-
-@router.get(
-    "/assignments/{assignment_id}/all",
-    summary="Assignment bo'yicha barcha biriktirilgan fayllar (task/journal/analysis)",
-)
-async def list_all_attachments(
-    assignment_id: UUID, db: SessionDep, user: CurrentUser
-) -> list[dict]:
-    if user.role == UserRole.STUDENT:
-        await _check_student_owns(db, assignment_id, user.id)
-    elif user.role == UserRole.SUPERVISOR:
-        await _check_supervisor_owns(db, assignment_id, user.id)
-    elif user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
-        raise HTTPException(status.HTTP_403_FORBIDDEN)
-    return await svc.list_all_for_assignment(db, assignment_id)
 
 
 @router.get(

@@ -26,7 +26,11 @@ TEMPLATES_4PLUS2: list[dict[str, Any]] = [
         "title": "Konferensiyada ishtirok va amaliyot guruhi bayonnomasi",
         "points": 2,
         "month_hint": "oktyabr",
-        "description": "O'quv amaliyotini o'tkazish bo'yicha konferensiyada ishtirok etish. Biriktirilgan amaliyot rahbari, bajariladigan ishlarning umumiy rejasi bilan tanishish. Bayonnoma tayyorlash.",
+        "description": (
+            "O'quv amaliyotini o'tkazish bo'yicha konferensiyada ishtirok etish. "
+            "Biriktirilgan amaliyot rahbari, bajariladigan ishlarning umumiy "
+            "rejasi bilan tanishish. Bayonnoma tayyorlash."
+        ),
     },
     {
         "course": 3,
@@ -37,7 +41,10 @@ TEMPLATES_4PLUS2: list[dict[str, Any]] = [
         "title": "100 so'zli ESSE — ta'lim muassasasi bilan tanishish",
         "points": 4,
         "month_hint": "oktyabr",
-        "description": "Ta'lim muassasasi va pedagogik jamoa bilan tanishish, ichki tartib qoidalari bilan tanishish. 100 so'zdan iborat ESSE yozish.",
+        "description": (
+            "Ta'lim muassasasi va pedagogik jamoa bilan tanishish, ichki tartib qoidalari "
+            "bilan tanishish. 100 so'zdan iborat ESSE yozish."
+        ),
     },
     {
         "course": 3,
@@ -48,7 +55,10 @@ TEMPLATES_4PLUS2: list[dict[str, Any]] = [
         "title": "Shaxsiy tadbir rejasi",
         "points": 4,
         "month_hint": "oktyabr",
-        "description": "Maktabning ma'naviy-ma'rifiy ishlari bo'yicha tadbirlar rejasi bilan tanishish va nusxalarini olish. Shaxsiy tadbir rejasini tuzish.",
+        "description": (
+            "Maktabning ma'naviy-ma'rifiy ishlari bo'yicha tadbirlar rejasi bilan tanishish "
+            "va nusxalarini olish. Shaxsiy tadbir rejasini tuzish."
+        ),
     },
     {
         "course": 3,
@@ -59,7 +69,10 @@ TEMPLATES_4PLUS2: list[dict[str, Any]] = [
         "title": "8-dekabr Konstitutsiya kuni tadbiri ssenariysi",
         "points": 5,
         "month_hint": "dekabr",
-        "description": "8-dekabr Konstitutsiya kuniga bag'ishlangan tadbirda ishtirok etish. Tadbir ssenariysini tuzish, biriktirilgan sinflarda ishlash.",
+        "description": (
+            "8-dekabr Konstitutsiya kuniga bag'ishlangan tadbirda ishtirok etish. "
+            "Tadbir ssenariysini tuzish, biriktirilgan sinflarda ishlash."
+        ),
     },
     {
         "course": 3,
@@ -70,7 +83,10 @@ TEMPLATES_4PLUS2: list[dict[str, Any]] = [
         "title": "Ota-onalar yig'ilishi bayonnomasi",
         "points": 5,
         "month_hint": "noyabr",
-        "description": "Ota-onalar yig'ilishida qatnashish (sinf rahbari ishtirokida). Yig'ilish bayonnomasini tayyorlash.",
+        "description": (
+            "Ota-onalar yig'ilishida qatnashish (sinf rahbari ishtirokida). "
+            "Yig'ilish bayonnomasini tayyorlash."
+        ),
     },
     # ─── 3-KURS · KUZGI · O'quv ishlari (60 ball) ────────────
     {
@@ -83,7 +99,10 @@ TEMPLATES_4PLUS2: list[dict[str, Any]] = [
         "points": 24,
         "quantity": 12,
         "month_hint": "oktyabr-dekabr",
-        "description": "Fan o'qituvchisining darsini kuzatish, tahlil qilish. Har chorakda 6 ta (jami 12 ta) dars tahlili.",
+        "description": (
+            "Fan o'qituvchisining darsini kuzatish, tahlil qilish. "
+            "Har chorakda 6 ta (jami 12 ta) dars tahlili."
+        ),
     },
     {
         "course": 3,
@@ -106,7 +125,10 @@ TEMPLATES_4PLUS2: list[dict[str, Any]] = [
         "title": "Maktab oshxonasida gigiyena me'yorlari — tahliliy ma'lumotnoma",
         "points": 5,
         "month_hint": "noyabr",
-        "description": "Maktab oshxonasida gigiyena me'yorlarini o'rganish. Tanqidiy-tahliliy ma'lumotnoma tayyorlash.",
+        "description": (
+            "Maktab oshxonasida gigiyena me'yorlarini o'rganish. "
+            "Tanqidiy-tahliliy ma'lumotnoma tayyorlash."
+        ),
     },
     {
         "course": 3,
@@ -117,7 +139,10 @@ TEMPLATES_4PLUS2: list[dict[str, Any]] = [
         "title": "Maktab dars jadvali tuzilishi — tahliliy ma'lumot",
         "points": 5,
         "month_hint": "dekabr",
-        "description": "Maktab dars jadvali va uning tuzilishi, unga qo'yiladigan talablarini o'rganish.",
+        "description": (
+            "Maktab dars jadvali va uning tuzilishi, "
+            "unga qo'yiladigan talablarini o'rganish."
+        ),
     },
     {
         "course": 3,
@@ -128,7 +153,10 @@ TEMPLATES_4PLUS2: list[dict[str, Any]] = [
         "title": "Sinf xonalarida sanitariya-gigiyena me'yorlari",
         "points": 4,
         "month_hint": "noyabr",
-        "description": "Maktab sinf xonalarida sanitariya-gigiyena me'yorlarini o'rganish. Tahliliy ma'lumotnoma.",
+        "description": (
+            "Maktab sinf xonalarida sanitariya-gigiyena me'yorlarini o'rganish. "
+            "Tahliliy ma'lumotnoma."
+        ),
     },
     {
         "course": 3,
@@ -139,7 +167,10 @@ TEMPLATES_4PLUS2: list[dict[str, Any]] = [
         "title": "Past o'zlashtiruvchi o'quvchilar bilan ish jarayoni",
         "points": 10,
         "month_hint": "dekabr",
-        "description": "Biriktirilgan sinfda fanlarni o'zlashtirishi past bo'lgan o'quvchilar bilan o'qituvchining ish jarayonini o'rganish.",
+        "description": (
+            "Biriktirilgan sinfda fanlarni o'zlashtirishi past bo'lgan "
+            "o'quvchilar bilan o'qituvchining ish jarayonini o'rganish."
+        ),
     },
     # ─── 3-KURS · BAHORGI · Ma'naviy (20 ball) ───────────────
     {
@@ -492,7 +523,10 @@ async def ensure_task_templates(db: AsyncSession) -> None:
         )
     ).scalar_one_or_none()
     if not pt:
-        logger.warning("PracticeType '4_plus_2_school' topilmadi — task template seed o'tkazilmaydi")
+        logger.warning(
+            "PracticeType '4_plus_2_school' topilmadi — "
+            "task template seed o'tkazilmaydi"
+        )
         return
 
     existing_slots = {

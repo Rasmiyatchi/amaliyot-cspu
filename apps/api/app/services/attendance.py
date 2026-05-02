@@ -35,7 +35,7 @@ from app.services import notification as notification_svc
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Ikki nuqta orasidagi masofa (metrda)."""
-    R = 6371000.0  # Yer radiusi (m)
+    r = 6371000.0  # Yer radiusi (m)
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     d_phi = math.radians(lat2 - lat1)
     d_lambda = math.radians(lng2 - lng1)
@@ -43,7 +43,7 @@ def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
         math.sin(d_phi / 2) ** 2
         + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
     )
-    return 2 * R * math.asin(math.sqrt(a))
+    return 2 * r * math.asin(math.sqrt(a))
 
 
 def _evaluate_geo(
@@ -165,7 +165,8 @@ def _verify_day_in_range(assignment: PracticeAssignment, day: date) -> None:
     if day < assignment.start_date or day > assignment.end_date:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            f"Sana amaliyot diapazonidan tashqarida ({assignment.start_date} – {assignment.end_date})",
+            f"Sana amaliyot diapazonidan tashqarida "
+            f"({assignment.start_date} – {assignment.end_date})",
         )
 
 
@@ -563,7 +564,7 @@ async def get_day(db: AsyncSession, day_id: UUID) -> dict[str, Any]:
             .order_by(AttendanceEvent.event_at.asc())
         )
     ).scalars().all()
-    day_dict["events"] = [e for e in events]
+    day_dict["events"] = list(events)
 
     return day_dict
 

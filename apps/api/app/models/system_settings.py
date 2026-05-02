@@ -17,7 +17,9 @@ class SystemSettings(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "system_settings"
 
     site_name: Mapped[str] = mapped_column(
-        String(200), default="CHDPU Amaliyot Platformasi", server_default="CHDPU Amaliyot Platformasi"
+        String(200),
+        default="CHDPU Amaliyot Platformasi",
+        server_default="CHDPU Amaliyot Platformasi",
     )
     site_description: Mapped[str | None] = mapped_column(Text, nullable=True)
 

@@ -14,7 +14,6 @@ from app.models.enums import (
     TaskType,
 )
 
-
 # ─── TaskTemplate ────────────────────────────────────────
 
 

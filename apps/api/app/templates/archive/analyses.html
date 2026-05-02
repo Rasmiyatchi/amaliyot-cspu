@@ -1,31 +1,27 @@
-{% extends "archive/base.html" %}
-{% block content %}
-  {% if analyses %}
-    {% for a in analyses %}
-      <div class="entry">
-        <div class="entry-head">
-          <span>
-            <span class="entry-title">{{ a.subject }}</span>
-            <span class="muted"> — {{ a.teacher_name }}</span>
-          </span>
-          <span class="badge badge-{{ 'green' if a.status == 'approved' else ('red' if a.status == 'rejected' else 'info') }}">
-            {{ a.status_label }}
-          </span>
-        </div>
-        <div class="entry-meta">
-          {{ a.date }} · {{ a.quarter }}-chorak
-          {% if a.grade_level %} · sinf: {{ a.grade_level }}{% endif %}
-        </div>
-        <div class="entry-body">{{ a.analysis_md }}</div>
-        {% if a.approved_by_name %}
-          <div class="entry-meta">Tasdiqlagan: {{ a.approved_by_name }} · {{ a.approved_at }}</div>
-        {% endif %}
-        {% if a.rejection_reason %}
-          <div class="entry-meta">Rad etish sababi: {{ a.rejection_reason }}</div>
-        {% endif %}
-      </div>
-    {% endfor %}
-  {% else %}
-    <div class="empty">Dars tahlillari yo'q</div>
+{% extends "archive/base.html" %} {% block content %} {% if analyses %} {% for a in analyses %}
+<div class="entry">
+  <div class="entry-head">
+    <span>
+      <span class="entry-title">{{ a.subject }}</span>
+      <span class="muted"> — {{ a.teacher_name }}</span>
+    </span>
+    <span
+      class="badge badge-{{ 'green' if a.status == 'approved' else ('red' if a.status == 'rejected' else 'info') }}"
+    >
+      {{ a.status_label }}
+    </span>
+  </div>
+  <div class="entry-meta">
+    {{ a.date }} · {{ a.quarter }}-chorak {% if a.grade_level %} · sinf: {{ a.grade_level }}{% endif
+    %}
+  </div>
+  <div class="entry-body">{{ a.analysis_md }}</div>
+  {% if a.approved_by_name %}
+  <div class="entry-meta">Tasdiqlagan: {{ a.approved_by_name }} · {{ a.approved_at }}</div>
+  {% endif %} {% if a.rejection_reason %}
+  <div class="entry-meta">Rad etish sababi: {{ a.rejection_reason }}</div>
   {% endif %}
-{% endblock %}
+</div>
+{% endfor %} {% else %}
+<div class="empty">Dars tahlillari yo'q</div>
+{% endif %} {% endblock %}
