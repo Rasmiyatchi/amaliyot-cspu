@@ -6,7 +6,6 @@ import {
   ClipboardList,
   FileCheck2,
   History,
-  Loader2,
   ShieldCheck,
   UserCog,
   Users,
@@ -16,6 +15,10 @@ import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-
 import { StatCard } from "@/components/admin/stat-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  CardSkeleton,
+  StatCardsSkeleton,
+} from "@/components/ui/loading-skeletons";
 import { Progress } from "@/components/ui/progress";
 import { useAdminStats, useSuperAdminStats } from "@/lib/api/stats";
 import { useAuthStore } from "@/stores/auth";
@@ -57,8 +60,10 @@ export function AdminHome() {
       </div>
 
       {isPending && (
-        <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <div className="space-y-6">
+          <StatCardsSkeleton count={4} />
+          <StatCardsSkeleton count={4} />
+          <CardSkeleton rows={5} />
         </div>
       )}
       {error && (

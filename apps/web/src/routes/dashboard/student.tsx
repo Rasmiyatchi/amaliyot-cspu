@@ -5,6 +5,7 @@ import { ArchiveCard } from "@/components/archive-card";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { StudentAcademicPanel } from "@/components/student/academic-panel";
 import { CheckInButton } from "@/components/student/check-in-button";
+import { StudentDocumentsCard } from "@/components/student/documents-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useAttendanceDays, useTodayStatus } from "@/lib/api/attendance";
@@ -159,6 +160,9 @@ export function StudentDashboard() {
 
             {/* Academic panel — tasks/journal/analyses */}
             <StudentAcademicPanel assignmentId={activeAssignment.id} />
+
+            {/* Hujjatlarim — barcha attachments */}
+            <StudentDocumentsCard assignmentId={activeAssignment.id} />
 
             {/* Yig'ma jild */}
             <ArchiveCard assignmentId={activeAssignment.id} />

@@ -2,7 +2,6 @@ import {
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
-  Loader2,
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
@@ -15,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TableSkeleton } from "@/components/ui/loading-skeletons";
 import {
   Select,
   SelectContent,
@@ -182,11 +182,7 @@ export function AttendancePage() {
         </div>
       </div>
 
-      {isPending && !data && (
-        <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
+      {isPending && !data && <TableSkeleton columns={6} rows={8} />}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error.message}</AlertDescription>

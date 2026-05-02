@@ -21,6 +21,7 @@ from app.api.v1 import (
     supervisors,
     system_settings,
     tasks,
+    uploads,
 )
 
 api_router = APIRouter(prefix="/v1")
@@ -42,3 +43,4 @@ api_router.include_router(stats.router)
 api_router.include_router(notifications.router)
 api_router.include_router(admins.router)
 api_router.include_router(system_settings.router)
+api_router.include_router(uploads.router)

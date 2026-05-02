@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, FileCheck2, Loader2, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileCheck2, Plus } from "lucide-react";
 import { useState } from "react";
 
 import { ContractDetailDialog } from "@/components/admin/contracts/contract-detail-dialog";
@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { TableSkeleton } from "@/components/ui/loading-skeletons";
 import {
   Select,
   SelectContent,
@@ -93,11 +94,7 @@ export function ContractsPage() {
         </Select>
       </div>
 
-      {isPending && !data && (
-        <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
+      {isPending && !data && <TableSkeleton columns={6} rows={6} />}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error.message}</AlertDescription>

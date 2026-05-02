@@ -3,6 +3,7 @@ import { Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { AttachmentsSection } from "@/components/attachments-section";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -203,6 +204,15 @@ export function LessonAnalysisFormDialog({
             placeholder="Dars metodikasi, ishlatilgan texnologiyalar, kuchli va zaif tomonlari..."
           />
         </div>
+
+        {isEdit && analysis && (
+          <AttachmentsSection
+            kind="analysis"
+            entityId={analysis.id}
+            attachments={(analysis.attachments ?? []) as never}
+            canEdit={!isApproved}
+          />
+        )}
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>

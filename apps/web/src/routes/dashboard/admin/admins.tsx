@@ -2,7 +2,6 @@ import { HTTPError } from "ky";
 import {
   ChevronLeft,
   ChevronRight,
-  Loader2,
   Plus,
   Shield,
   ShieldCheck,
@@ -18,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { TableSkeleton } from "@/components/ui/loading-skeletons";
 import {
   Select,
   SelectContent,
@@ -134,11 +134,7 @@ export function AdminsPage() {
         </Select>
       </div>
 
-      {isPending && !data && (
-        <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
+      {isPending && !data && <TableSkeleton columns={6} rows={4} />}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error.message}</AlertDescription>

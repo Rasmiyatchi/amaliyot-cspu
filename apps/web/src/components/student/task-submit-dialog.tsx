@@ -10,6 +10,7 @@ import {
   TaskCategoryBadge,
   TaskTypeLabel,
 } from "@/components/admin/tasks/task-type-badge";
+import { AttachmentsSection } from "@/components/attachments-section";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,15 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
               ` · Oxirgi yuborilgan: ${new Date(task.submitted_at).toLocaleString("uz-UZ")}`}
           </div>
         </div>
+
+        <Separator />
+
+        <AttachmentsSection
+          kind="task"
+          entityId={task.id}
+          attachments={(task.attachments ?? []) as never}
+          canEdit={!isApproved}
+        />
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>

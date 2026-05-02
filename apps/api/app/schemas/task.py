@@ -1,6 +1,7 @@
 """Task, Journal, LessonAnalysis schemas."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -42,7 +43,7 @@ class TaskTemplateRead(BaseModel):
 
 class TaskSubmitRequest(BaseModel):
     submission_md: str = Field(..., min_length=1, max_length=50_000)
-    attachments: list[dict[str, str]] = Field(default_factory=list)
+    attachments: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class TaskGradeRequest(BaseModel):
@@ -72,7 +73,7 @@ class TaskRead(BaseModel):
 
     status: TaskStatus
     submission_md: str | None
-    attachments: list[dict[str, str]] = []
+    attachments: list[dict[str, Any]] = []
     submitted_at: datetime | None
     points_earned: int | None
     graded_by_id: UUID | None
@@ -92,12 +93,12 @@ class TaskRead(BaseModel):
 class JournalCreateRequest(BaseModel):
     date: datetime
     content_md: str = Field(..., min_length=1, max_length=20_000)
-    attachments: list[dict[str, str]] = Field(default_factory=list)
+    attachments: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class JournalUpdateRequest(BaseModel):
     content_md: str | None = Field(None, min_length=1, max_length=20_000)
-    attachments: list[dict[str, str]] | None = None
+    attachments: list[dict[str, Any]] | None = None
 
 
 class JournalRejectRequest(BaseModel):
@@ -109,7 +110,7 @@ class JournalRead(BaseModel):
     assignment_id: UUID
     date: datetime
     content_md: str
-    attachments: list[dict[str, str]] = []
+    attachments: list[dict[str, Any]] = []
     status: JournalStatus
     approved_by_id: UUID | None
     approved_by_name: str | None = None
@@ -131,7 +132,7 @@ class LessonAnalysisCreateRequest(BaseModel):
     grade_level: str | None = Field(None, max_length=32)
     quarter: int = Field(..., ge=1, le=4)
     analysis_md: str = Field(..., min_length=1, max_length=30_000)
-    attachments: list[dict[str, str]] = Field(default_factory=list)
+    attachments: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class LessonAnalysisUpdateRequest(BaseModel):
@@ -141,7 +142,7 @@ class LessonAnalysisUpdateRequest(BaseModel):
     grade_level: str | None = Field(None, max_length=32)
     quarter: int | None = Field(None, ge=1, le=4)
     analysis_md: str | None = Field(None, min_length=1, max_length=30_000)
-    attachments: list[dict[str, str]] | None = None
+    attachments: list[dict[str, Any]] | None = None
 
 
 class LessonAnalysisRejectRequest(BaseModel):
@@ -157,7 +158,7 @@ class LessonAnalysisRead(BaseModel):
     grade_level: str | None
     quarter: int
     analysis_md: str
-    attachments: list[dict[str, str]] = []
+    attachments: list[dict[str, Any]] = []
     status: JournalStatus
     approved_by_id: UUID | None
     approved_by_name: str | None = None

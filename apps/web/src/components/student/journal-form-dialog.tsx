@@ -3,6 +3,7 @@ import { Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { AttachmentsSection } from "@/components/attachments-section";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -127,6 +128,15 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
             </div>
           </div>
         </div>
+
+        {isEdit && entry && (
+          <AttachmentsSection
+            kind="journal"
+            entityId={entry.id}
+            attachments={(entry.attachments ?? []) as never}
+            canEdit={!isApproved}
+          />
+        )}
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>

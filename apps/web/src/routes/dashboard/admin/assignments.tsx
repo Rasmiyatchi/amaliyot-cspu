@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ClipboardList, Loader2, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardList, Plus } from "lucide-react";
 import { useState } from "react";
 
 import { AssignmentDetailDialog } from "@/components/admin/assignments/assignment-detail-dialog";
@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TableSkeleton } from "@/components/ui/loading-skeletons";
 import {
   Select,
   SelectContent,
@@ -112,11 +113,7 @@ export function AssignmentsPage() {
         </Select>
       </div>
 
-      {isPending && !data && (
-        <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
+      {isPending && !data && <TableSkeleton columns={6} rows={8} />}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error.message}</AlertDescription>
