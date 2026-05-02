@@ -100,3 +100,61 @@
       "calt" 1;
   }
 }
+
+/* ─── Maintenance page animations ─────────────────────────── */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  33% { transform: translateY(-20px) translateX(10px); }
+  66% { transform: translateY(15px) translateX(-15px); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(0.95); opacity: 0; }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes wobble {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-10deg); }
+  50% { transform: translate(-50%, -50%) rotate(10deg); }
+}
+
+.maintenance-bg {
+  background: linear-gradient(135deg, #0f172a, #1e1b4b, #312e81, #1e1b4b, #0f172a);
+  background-size: 400% 400%;
+  animation: gradient-shift 18s ease infinite;
+}
+
+.float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.pulse-ring {
+  animation: pulse-ring 3s ease-out infinite;
+}
+
+.fade-up {
+  animation: fade-up 0.7s ease-out backwards;
+}
+
+.spin-slow {
+  animation: spin 12s linear infinite;
+}
+
+.spin-reverse-slow {
+  animation: spin 16s linear infinite reverse;
+}
+
+.wobble {
+  animation: wobble 4s ease-in-out infinite;
+}

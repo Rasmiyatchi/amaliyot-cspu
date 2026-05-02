@@ -2,6 +2,7 @@ import { LogOut } from "lucide-react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useBootstrap } from "@/hooks/use-bootstrap";
@@ -21,6 +22,7 @@ export function RootLayout() {
   }
 
   return (
+    <MaintenanceGuard>
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="container flex h-14 items-center justify-between">
@@ -56,5 +58,6 @@ export function RootLayout() {
 
       <Outlet />
     </div>
+    </MaintenanceGuard>
   );
 }
