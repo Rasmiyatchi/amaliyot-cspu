@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first (cached layer)
-COPY apps/api/pyproject.toml apps/api/uv.lock ./
+COPY apps/api/pyproject.toml apps/api/uv.lock apps/api/README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-dev
 
