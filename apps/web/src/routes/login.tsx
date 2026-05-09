@@ -35,7 +35,12 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  if (user) return <Navigate to={landingPathFor(user.role)} replace />;
+  if (user) {
+    if (user.must_change_password) {
+      return <Navigate to="/change-password" replace />;
+    }
+    return <Navigate to={landingPathFor(user.role)} replace />;
+  }
 
   if (settings?.maintenance_mode) {
     return (
@@ -52,7 +57,11 @@ export function Login() {
     try {
       const u = await login(username, password);
       toast.success(`Xush kelibsiz, ${u.full_name}!`);
-      navigate(landingPathFor(u.role), { replace: true });
+      if (u.must_change_password) {
+        navigate("/change-password", { replace: true });
+      } else {
+        navigate(landingPathFor(u.role), { replace: true });
+      }
     } catch (err) {
       const msg = err instanceof HTTPError ? err.message : "Kutilmagan xatolik";
       toast.error(msg);

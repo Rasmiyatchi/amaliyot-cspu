@@ -20,6 +20,7 @@ from app.core.security import hash_password, verify_password
 from app.db.session import SessionDep
 from app.schemas.auth import (
     ChangePasswordRequest,
+    ForceChangePasswordRequest,
     LoginRequest,
     ProfileUpdateRequest,
     TokenResponse,
@@ -66,7 +67,11 @@ async def login(
     user = await authenticate(db, data.username, data.password)
     access, refresh, ttl = await issue_tokens_for(db, user, request)
     _set_refresh_cookie(response, refresh)
-    return TokenResponse(access_token=access, expires_in=ttl)
+    return TokenResponse(
+        access_token=access,
+        expires_in=ttl,
+        must_change_password=user.must_change_password,
+    )
 
 
 @router.post("/refresh", response_model=TokenResponse, summary="Refresh access token")
@@ -134,6 +139,25 @@ async def change_my_password(
             status.HTTP_400_BAD_REQUEST, "Joriy parol noto'g'ri"
         )
     user.password_hash = hash_password(data.new_password)
+    user.must_change_password = False
+    await db.commit()
+
+
+@router.post(
+    "/me/force-change-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Birinchi kirishda majburiy parol almashtirish (joriy parolsiz)",
+)
+async def force_change_my_password(
+    data: ForceChangePasswordRequest, db: SessionDep, user: CurrentUser
+) -> None:
+    if not user.must_change_password:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Sizdan parol almashtirish talab qilinmaydi — oddiy /me/change-password ishlatilsin",
+        )
+    user.password_hash = hash_password(data.new_password)
+    user.must_change_password = False
     await db.commit()
 
 

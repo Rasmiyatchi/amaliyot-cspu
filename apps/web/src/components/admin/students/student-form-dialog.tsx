@@ -1,8 +1,9 @@
 import { HTTPError } from "ky";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Info, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -38,8 +39,6 @@ type Props = {
 
 type FormState = {
   hemis_id: string;
-  username: string;
-  password: string;
   first_name: string;
   last_name: string;
   middle_name: string;
@@ -58,8 +57,6 @@ type FormState = {
 
 const EMPTY: FormState = {
   hemis_id: "",
-  username: "",
-  password: "",
   first_name: "",
   last_name: "",
   middle_name: "",
@@ -75,13 +72,6 @@ const EMPTY: FormState = {
   direction_id: "",
   group_id: "",
 };
-
-function generatePassword(): string {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let p = "";
-  for (let i = 0; i < 8; i++) p += chars[Math.floor(Math.random() * chars.length)];
-  return p;
-}
 
 export function StudentFormDialog({ open, student, onClose }: Props) {
   const isEdit = !!student;
@@ -100,8 +90,6 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
     if (student) {
       setForm({
         hemis_id: student.hemis_id,
-        username: student.username,
-        password: "",
         first_name: student.first_name,
         last_name: student.last_name,
         middle_name: student.middle_name ?? "",
@@ -135,8 +123,6 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
       return next;
     });
 
-  const handleGeneratePassword = () => set("password", generatePassword());
-
   const validate = (): string | null => {
     if (!form.first_name.trim()) return "Ism majburiy";
     if (!form.last_name.trim()) return "Familiya majburiy";
@@ -144,8 +130,6 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
     if (!isEdit) {
       if (!form.hemis_id.trim()) return "Talaba ID majburiy";
       if (form.hemis_id.length < 4) return "Talaba ID kamida 4 ta belgi";
-      if (!form.password.trim()) return "Parol majburiy";
-      if (form.password.length < 4) return "Parol kamida 4 ta belgi";
     }
     return null;
   };
@@ -179,8 +163,6 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
       } else {
         const payload: StudentCreatePayload = {
           hemis_id: form.hemis_id.trim(),
-          username: form.username.trim() || null,
-          password: form.password,
           first_name: form.first_name.trim(),
           last_name: form.last_name.trim(),
           middle_name: form.middle_name.trim() || null,
@@ -194,8 +176,11 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
           district: form.district.trim() || null,
           group_id: form.group_id as UUID,
         };
-        await create.mutateAsync(payload);
-        toast.success(`Talaba qo'shildi. Login: ${payload.username || payload.hemis_id} · Parol: ${payload.password}`);
+        const created = await create.mutateAsync(payload);
+        toast.success(
+          `Talaba qo'shildi. Login = parol: ${created.username} (birinchi kirishda almashtiriladi)`,
+          { duration: 12000 },
+        );
       }
       onClose();
     } catch (e) {
@@ -218,42 +203,24 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
         </DialogHeader>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* IDs / login */}
           {!isEdit && (
             <>
-              <div>
+              <div className="sm:col-span-2">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Login va parol avtomatik generatsiya qilinadi (12 raqamli, "2500" bilan
+                    boshlanadi). Talaba birinchi kirishda parolni o'zgartiradi.
+                  </AlertDescription>
+                </Alert>
+              </div>
+              <div className="sm:col-span-2">
                 <Label>Talaba ID *</Label>
                 <Input
                   value={form.hemis_id}
                   onChange={(e) => set("hemis_id", e.target.value)}
-                  placeholder="354231100489"
+                  placeholder="354231100489 (HEMIS ID yoki o'z raqamingiz)"
                 />
-              </div>
-              <div>
-                <Label>Username (ixtiyoriy)</Label>
-                <Input
-                  value={form.username}
-                  onChange={(e) => set("username", e.target.value)}
-                  placeholder="Bo'sh bo'lsa Talaba ID ishlatiladi"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Label>Parol *</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={form.password}
-                    onChange={(e) => set("password", e.target.value)}
-                    placeholder="Pasport seriyasi yoki avto-generatsiya"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGeneratePassword}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Avto
-                  </Button>
-                </div>
               </div>
             </>
           )}

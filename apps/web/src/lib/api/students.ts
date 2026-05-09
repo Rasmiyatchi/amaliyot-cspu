@@ -65,8 +65,6 @@ export function useUpdateStudentCredentials() {
 
 export type StudentCreatePayload = {
   hemis_id: string;
-  username?: string | null;
-  password: string;
   first_name: string;
   last_name: string;
   middle_name?: string | null;
@@ -86,7 +84,7 @@ export type StudentCreatePayload = {
   degree_type?: string | null;
 };
 
-export type StudentUpdatePayload = Partial<Omit<StudentCreatePayload, "hemis_id" | "username" | "password">> & {
+export type StudentUpdatePayload = Partial<Omit<StudentCreatePayload, "hemis_id">> & {
   status?: StudentStatus;
 };
 

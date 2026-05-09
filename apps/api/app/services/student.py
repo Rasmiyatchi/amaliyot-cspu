@@ -141,7 +141,11 @@ async def get_student(db: AsyncSession, id_: UUID) -> dict[str, Any]:
 async def update_credentials(
     db: AsyncSession, id_: UUID, data: BaseModel
 ) -> dict[str, Any]:
-    """Admin orqali talaba login/parolini yangilash."""
+    """Admin orqali talaba login/parolini yangilash.
+
+    Agar parol o'zgartirilsa — `must_change_password=True` flag qo'yiladi
+    (talaba keyingi kirishda yangi parolni qo'yadi).
+    """
     student = await db.get(Student, id_)
     if not student:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Talaba topilmadi: {id_}")
@@ -163,6 +167,7 @@ async def update_credentials(
         user.username = new_username
     if new_password:
         user.password_hash = hash_password(new_password)
+        user.must_change_password = True  # admin reset → talaba o'zgartirsin
 
     try:
         await db.commit()
@@ -176,12 +181,19 @@ async def update_credentials(
 
 
 async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
-    """Admin orqali bitta talaba qo'shish (Excel import alternativasi)."""
+    """Admin orqali bitta talaba qo'shish (Excel import alternativasi).
+
+    Username/parol avto-generatsiya qilinadi (LOGIN_YEAR_PREFIX bilan).
+    Birinchi kirishda parol almashtirish majburiy.
+    """
+    import secrets
+    import string
+
+    from app.core.config import settings as app_settings
+
     payload = data.model_dump(exclude_unset=True)
 
     hemis_id: str = payload["hemis_id"]
-    username: str = payload.get("username") or hemis_id
-    password: str = payload["password"]
     first_name: str = payload["first_name"]
     last_name: str = payload["last_name"]
     middle_name: str | None = payload.get("middle_name")
@@ -192,7 +204,7 @@ async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
     if not group:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Guruh topilmadi")
 
-    # Hemis_id va username unique ekanligini tekshirish
+    # Hemis_id unique ekanligini tekshirish
     existing_hemis = (
         await db.execute(select(Student).where(Student.hemis_id == hemis_id))
     ).scalar_one_or_none()
@@ -200,6 +212,25 @@ async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
         raise HTTPException(
             status.HTTP_409_CONFLICT, f"Bu Talaba ID allaqachon mavjud: {hemis_id}"
         )
+
+    # Avto-generatsiya: 2500 + 8 raqam. login=parol.
+    prefix = app_settings.LOGIN_YEAR_PREFIX
+    username: str | None = None
+    for _ in range(10):
+        suffix = "".join(secrets.choice(string.digits) for _ in range(8))
+        candidate = f"{prefix}{suffix}"
+        existing = (
+            await db.execute(select(User.id).where(User.username == candidate))
+        ).scalar_one_or_none()
+        if not existing:
+            username = candidate
+            break
+    if not username:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "Login generatsiya qila olmadim",
+        )
+    password = username
 
     user = User(
         username=username,
@@ -211,6 +242,7 @@ async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
         middle_name=middle_name,
         email=payload.get("email"),
         phone=payload.get("phone"),
+        must_change_password=True,
     )
     db.add(user)
     await db.flush()

@@ -61,6 +61,23 @@ def _generate_password(length: int = 10) -> str:
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
+async def _generate_unique_login(db: AsyncSession, prefix: str) -> str:
+    """{prefix}{8 random digits} formatida unikal login generatsiya qiladi.
+
+    Masalan prefix='2500' → '250012345678'.
+    Konflikt bo'lsa qayta urinadi (10 marta), keyin RuntimeError tashlaydi.
+    """
+    for _ in range(10):
+        suffix = "".join(secrets.choice(string.digits) for _ in range(8))
+        candidate = f"{prefix}{suffix}"
+        existing = (
+            await db.execute(select(User.id).where(User.username == candidate))
+        ).scalar_one_or_none()
+        if not existing:
+            return candidate
+    raise RuntimeError("Unique login generatsiya qila olmadim — qayta urinib ko'ring")
+
+
 def _parse_full_name(full: str) -> tuple[str, str, str | None]:
     """'ALIYEVA SHAXZODA AXTAM QIZI' → ('ALIYEVA', 'SHAXZODA', 'AXTAM QIZI')"""
     parts = full.strip().split()
@@ -301,18 +318,24 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                 raise ValueError("To'liq ismi bo'sh")
             last_name, first_name, middle_name = _parse_full_name(full_name_raw)
 
-            # Parol — pasport seriyasi (AB1234567). Pasport yo'q bo'lsa avto-generatsiya.
-            passport_for_password = str(rec.get("passport_number") or "").strip()
-            password = passport_for_password or _generate_password()
+            # Avtomatik login: "{2500}{8 raqam}" — birinchi kirishda parol almashtiriladi.
+            # login = parol (bir xil), majburiy o'zgartirish flag bilan.
+            from app.core.config import settings as app_settings
+
+            generated_login = await _generate_unique_login(
+                db, app_settings.LOGIN_YEAR_PREFIX
+            )
+            password = generated_login  # login va parol bir xil
 
             user = User(
-                username=hemis_id,
+                username=generated_login,
                 password_hash=hash_password(password),
                 role=UserRole.STUDENT,
                 is_active=True,
                 first_name=first_name,
                 last_name=last_name,
                 middle_name=middle_name,
+                must_change_password=True,
             )
             db.add(user)
             await db.flush()
@@ -341,7 +364,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                 HemisCredentials(
                     hemis_id=hemis_id,
                     full_name=full_name_raw,
-                    username=hemis_id,
+                    username=generated_login,
                     password=password,
                 )
             )

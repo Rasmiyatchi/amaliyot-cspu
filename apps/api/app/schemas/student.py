@@ -64,11 +64,12 @@ class StudentRead(BaseModel):
 
 
 class StudentCreate(BaseModel):
-    """Admin orqali bitta talaba qo'shish."""
+    """Admin orqali bitta talaba qo'shish.
+
+    Username va parol avto-generatsiya qilinadi (LOGIN_YEAR_PREFIX bilan).
+    """
 
     hemis_id: str = Field(..., min_length=4, max_length=20)
-    username: str | None = Field(None, max_length=50, description="Bo'sh bo'lsa hemis_id ishlatiladi")
-    password: str = Field(..., min_length=4, max_length=128)
 
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)

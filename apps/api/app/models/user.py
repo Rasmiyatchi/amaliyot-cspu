@@ -41,6 +41,11 @@ class User(UUIDMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Force change password on next login (avto-generatsiyalangan parol uchun)
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", index=True
+    )
+
     # Profile (umumiy maydonlar — rol-specific detallari Student/Supervisor da)
     first_name: Mapped[str] = mapped_column(String(100))
     last_name: Mapped[str] = mapped_column(String(100))

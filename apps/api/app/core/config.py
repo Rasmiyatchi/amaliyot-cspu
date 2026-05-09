@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     SUPERADMIN_PASSWORD: str = "SuperSecret123!"  # noqa: S105  # dev default; prod .env da override qilinadi
     SUPERADMIN_EMAIL: str = "admin@chdpu.uz"
 
+    # ─── Auto-generated student login ─────────────────────
+    # Excel import paytida talabalarga avtomatik login beriladi: "{prefix}{8 raqam}"
+    # Masalan 2025-2026 o'quv yili uchun prefiks "2500" → "250012345678"
+    LOGIN_YEAR_PREFIX: str = "2500"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -10,13 +10,14 @@ from app.models.enums import UserRole
 
 class LoginRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=64)
-    password: str = Field(..., min_length=8, max_length=128)
+    password: str = Field(..., min_length=4, max_length=128)
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"  # noqa: S105  # OAuth2 token_type, parol emas
     expires_in: int  # sekund
+    must_change_password: bool = False
 
 
 class UserMeResponse(BaseModel):
@@ -31,12 +32,22 @@ class UserMeResponse(BaseModel):
     avatar_url: str | None
     is_active: bool
     last_login_at: datetime | None
+    must_change_password: bool = False
 
     model_config = {"from_attributes": True}
 
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=4, max_length=128)
+
+
+class ForceChangePasswordRequest(BaseModel):
+    """must_change_password=True bo'lgan foydalanuvchi uchun parolni almashtirish.
+
+    Joriy parolni tekshirmaydi (chunki bu avto-generatsiyalangan login=parol).
+    """
+
     new_password: str = Field(..., min_length=4, max_length=128)
 
 

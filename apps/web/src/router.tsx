@@ -23,6 +23,7 @@ import {
   SupervisorProgramsPage,
   SupervisorRegulationsPage,
 } from "@/routes/dashboard/supervisor/documents";
+import { ChangePasswordPage } from "@/routes/change-password";
 import { Home } from "@/routes/home";
 import { Login } from "@/routes/login";
 import { NotFound } from "@/routes/not-found";
@@ -65,6 +66,9 @@ export const router = createBrowserRouter([
 
   // Super Admin rescue — MaintenanceGuard'siz, faqat super_admin uchun
   { path: "/rescue", Component: RescuePage },
+
+  // Force change password — must_change_password=true bo'lganda
+  { path: "/change-password", Component: ChangePasswordPage },
 
   // Supervisor — sidebar layout
   {
