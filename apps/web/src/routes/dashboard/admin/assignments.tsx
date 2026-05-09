@@ -108,7 +108,7 @@ export function AssignmentsPage() {
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Qidiruv (F.I.SH. yoki HEMIS ID)"
+          placeholder="Qidiruv (F.I.SH. yoki Talaba ID)"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[240px] flex-1 max-w-xs"

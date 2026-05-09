@@ -219,7 +219,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
               <AssignmentStatusBadge status={assignment.status} />
             </DialogTitle>
             <DialogDescription>
-              HEMIS: {assignment.student_hemis_id}
+              ID: {assignment.student_hemis_id}
               {assignment.student_group_name && ` · ${assignment.student_group_name}`}
               {" · "}
               {new Date(assignment.start_date).toLocaleDateString("uz-UZ")} —{" "}

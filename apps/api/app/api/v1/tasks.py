@@ -1,5 +1,6 @@
 """Task, Journal, LessonAnalysis endpoints."""
 
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -29,8 +30,14 @@ from app.services import task as svc
 router = APIRouter(tags=["tasks"])
 
 
+class TaskAssignItem(BaseModel):
+    template_id: UUID
+    due_date: date = Field(..., description="Topshiriq deadline'i — majburiy")
+    notes: str | None = Field(None, max_length=2000)
+
+
 class AddTasksRequest(BaseModel):
-    template_ids: list[UUID] = Field(..., min_length=1, max_length=100)
+    items: list[TaskAssignItem] = Field(..., min_length=1, max_length=100)
 
 
 def _require_student(user_role: UserRole) -> None:
@@ -87,7 +94,7 @@ async def add_tasks(
     _: RequireAdmin,
 ) -> dict[str, Any]:
     created_ids = await svc.add_tasks_by_template_ids(
-        db, assignment_id, payload.template_ids
+        db, assignment_id, payload.items
     )
     return {
         "assignment_id": str(assignment_id),

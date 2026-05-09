@@ -148,13 +148,31 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                               >
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium leading-snug">{t.template_title}</div>
-                                  <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                     <TaskTypeLabel type={t.template_type} />
                                     {t.template_quantity > 1 && (
                                       <Badge variant="outline">{t.template_quantity} ta</Badge>
                                     )}
                                     {t.template_month_hint && <span>{t.template_month_hint}</span>}
+                                    {t.due_date && (
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          new Date(t.due_date) < new Date() &&
+                                          t.status !== "approved"
+                                            ? "border-destructive/50 text-destructive"
+                                            : ""
+                                        }
+                                      >
+                                        Deadline: {t.due_date}
+                                      </Badge>
+                                    )}
                                   </div>
+                                  {t.notes && (
+                                    <div className="mt-1 text-xs text-muted-foreground">
+                                      {t.notes}
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex shrink-0 flex-col items-end gap-1">
                                   <TaskStatusBadge status={t.status} />

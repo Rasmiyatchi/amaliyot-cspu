@@ -103,19 +103,25 @@ export function useAvailableTemplates(assignmentId: UUID | null) {
   });
 }
 
+export type TaskAssignItem = {
+  template_id: UUID;
+  due_date: string; // YYYY-MM-DD
+  notes?: string | null;
+};
+
 export function useAddTasks() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({
       assignmentId,
-      templateIds,
+      items,
     }: {
       assignmentId: UUID;
-      templateIds: UUID[];
+      items: TaskAssignItem[];
     }) =>
       api
         .post(`v1/assignments/${assignmentId}/tasks`, {
-          json: { template_ids: templateIds },
+          json: { items },
         })
         .json<{ assignment_id: UUID; created: number; task_ids: UUID[] }>(),
     onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),

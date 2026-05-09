@@ -52,7 +52,7 @@ export function StudentsPage() {
           <div>
             <h1 className="text-2xl font-semibold">Talabalar</h1>
             <p className="text-sm text-muted-foreground">
-              HEMIS'dan import, ro'yxat va tafsilotlar
+              Excel'dan import, ro'yxat va tafsilotlar
             </p>
           </div>
         </div>
@@ -68,7 +68,7 @@ export function StudentsPage() {
           </Button>
           <Button onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" />
-            HEMIS Import
+            Excel Import
           </Button>
         </div>
       </div>

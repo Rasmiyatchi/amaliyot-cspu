@@ -1,6 +1,6 @@
 """Task, Journal, LessonAnalysis schemas."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -73,6 +73,8 @@ class TaskRead(BaseModel):
     status: TaskStatus
     submission_md: str | None
     attachments: list[dict[str, Any]] = []
+    due_date: date | None = None
+    notes: str | None = None
     submitted_at: datetime | None
     points_earned: int | None
     graded_by_id: UUID | None

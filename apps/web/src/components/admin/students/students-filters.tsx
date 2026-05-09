@@ -49,7 +49,7 @@ export function StudentsFilters({ filters, onChange }: Props) {
       <div className="relative min-w-[220px] flex-1">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Qidiruv (F.I.SH., HEMIS ID)"
+          placeholder="Qidiruv (F.I.SH., Talaba ID)"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="pl-8"

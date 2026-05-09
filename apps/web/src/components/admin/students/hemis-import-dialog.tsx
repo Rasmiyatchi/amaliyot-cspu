@@ -94,9 +94,9 @@ export function HemisImportDialog({ open, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>HEMIS Excel import</DialogTitle>
+          <DialogTitle>Talabalar Excel import</DialogTitle>
           <DialogDescription>
-            HEMIS'dan eksport qilingan .xlsx faylni yuklang. Mavjud talabalar o'tkazib yuboriladi.
+            .xlsx faylni yuklang (HEMIS yoki o'zingiz tayyorlagan). Mavjud talabalar o'tkazib yuboriladi.
           </DialogDescription>
         </DialogHeader>
 
@@ -144,7 +144,7 @@ export function HemisImportDialog({ open, onClose }: Props) {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>HEMIS ID</TableHead>
+                        <TableHead>Talaba ID</TableHead>
                         <TableHead>F.I.SH.</TableHead>
                         <TableHead className="w-[130px] font-mono">Parol</TableHead>
                       </TableRow>

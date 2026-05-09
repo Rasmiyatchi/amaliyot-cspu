@@ -512,6 +512,8 @@ export type Task = {
   status: TaskStatus;
   submission_md: string | null;
   attachments: TaskAttachment[];
+  due_date: string | null;
+  notes: string | null;
   submitted_at: ISODateTime | null;
   points_earned: number | null;
   graded_by_id: UUID | null;

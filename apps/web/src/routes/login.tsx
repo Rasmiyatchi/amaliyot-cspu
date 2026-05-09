@@ -176,7 +176,7 @@ export function Login() {
                     required
                     minLength={3}
                     disabled={loading}
-                    placeholder="HEMIS ID yoki username"
+                    placeholder="Talaba ID yoki username"
                     className="h-11 pl-10"
                   />
                 </div>
@@ -229,10 +229,8 @@ export function Login() {
               </Button>
 
               <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
-                <strong className="text-foreground">Talaba</strong>: HEMIS ID + pasport
-                seriyasi (masalan{" "}
-                <code className="rounded bg-muted px-1 font-mono">354231100489</code> /{" "}
-                <code className="rounded bg-muted px-1 font-mono">AD0193680</code>)
+                <strong className="text-foreground">Talaba</strong>: import qilinganida
+                berilgan login va parol bilan kiring. Birinchi kirishda parol o'zgartiriladi.
               </div>
             </form>
           </div>

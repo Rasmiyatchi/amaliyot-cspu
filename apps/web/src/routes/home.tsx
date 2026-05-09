@@ -155,7 +155,7 @@ export function Home() {
 
           {/* Stats */}
           <div className="fade-in mt-16 grid grid-cols-2 gap-6 sm:grid-cols-4" style={{ animationDelay: "0.45s" }}>
-            <Stat value="123" label="Talaba HEMIS'dan" />
+            <Stat value="123" label="Faol talaba" />
             <Stat value="8" label="Amaliyot turi" />
             <Stat value="43" label="Sillabus topshiriqlar" />
             <Stat value="4" label="Foydalanuvchi roli" />

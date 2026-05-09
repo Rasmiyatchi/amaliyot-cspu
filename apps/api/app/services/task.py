@@ -223,17 +223,21 @@ async def ensure_tasks_for_assignment(
 
 
 async def add_tasks_by_template_ids(
-    db: AsyncSession, assignment_id: UUID, template_ids: list[UUID]
+    db: AsyncSession, assignment_id: UUID, items: list[Any]
 ) -> list[UUID]:
-    """Ko'rsatilgan template_id'lar bo'yicha tanlab task instance'lar yaratadi.
+    """Tanlangan template'lar bo'yicha task instance'lar yaratadi.
 
+    `items` har bir element: `template_id`, `due_date` (majburiy), `notes` (ixtiyoriy).
     Validatsiya: template'lar assignment.practice_type_id va student.course ga mos bo'lishi
     kerak. Allaqachon mavjud template'lar skip qilinadi.
 
     Qaytaradi: yaratilgan task'larning id'lari.
     """
-    if not template_ids:
+    if not items:
         return []
+    template_ids = [it.template_id for it in items]
+    by_template = {it.template_id: it for it in items}
+
     assignment = await _get_assignment(db, assignment_id)
     course = await _assignment_course(db, assignment)
     if course is None:
@@ -276,10 +280,13 @@ async def add_tasks_by_template_ids(
     for t in tmpl_rows:
         if t.id in existing_template_ids:
             continue
+        item = by_template[t.id]
         task = Task(
             assignment_id=assignment_id,
             template_id=t.id,
             status=TaskStatus.NOT_STARTED,
+            due_date=item.due_date,
+            notes=item.notes,
         )
         db.add(task)
         await db.flush()

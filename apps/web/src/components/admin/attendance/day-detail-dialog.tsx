@@ -105,7 +105,7 @@ export function DayDetailDialog({ day, onClose }: Props) {
               </div>
               <AttendanceStatusBadge status={day.status} />
             </DialogTitle>
-            <DialogDescription>HEMIS: {day.student_hemis_id ?? "—"}</DialogDescription>
+            <DialogDescription>ID: {day.student_hemis_id ?? "—"}</DialogDescription>
           </DialogHeader>
 
           {/* Actions */}

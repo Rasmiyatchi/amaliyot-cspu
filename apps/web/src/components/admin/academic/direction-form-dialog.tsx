@@ -24,7 +24,7 @@ import type { Direction } from "@/lib/api/types";
 
 const schema = z.object({
   faculty_id: z.string().uuid("Fakultet tanlang"),
-  code: z.string().regex(/^\d{8}$/, "8 raqamli HEMIS kod"),
+  code: z.string().regex(/^\d{8}$/, "8 raqamli yo'nalish kodi"),
   name: z.string().min(2).max(200),
 });
 
@@ -80,7 +80,7 @@ export function DirectionFormDialog({ open, existing, onClose }: Props) {
           <DialogTitle>
             {isEdit ? "Yo'nalishni tahrirlash" : "Yangi yo'nalish"}
           </DialogTitle>
-          <DialogDescription>HEMIS yo'nalish kodi va nomi</DialogDescription>
+          <DialogDescription>Yo'nalish kodi va nomi</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
@@ -117,7 +117,7 @@ export function DirectionFormDialog({ open, existing, onClose }: Props) {
               name="code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>HEMIS kod *</FormLabel>
+                  <FormLabel>Yo'nalish kodi *</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="60110900"

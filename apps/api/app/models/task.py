@@ -6,10 +6,11 @@ JournalEntry: kundalik yozuvlari.
 LessonAnalysis: dars tahlili.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from sqlalchemy import (
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -130,6 +131,9 @@ class Task(UUIDMixin, TimestampMixin, Base):
     attachments: Mapped[list[dict[str, str]]] = mapped_column(
         JSONB, default=list, server_default="[]"
     )
+
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

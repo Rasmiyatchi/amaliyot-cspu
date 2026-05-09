@@ -55,7 +55,7 @@ export function DirectionList() {
           <EmptyState
             icon={GraduationCap}
             title="Yo'nalishlar yo'q"
-            description="HEMIS yo'nalish kodi bilan yo'nalish qo'shing"
+            description="Yo'nalish kodi bilan yo'nalish qo'shing"
           />
         </div>
       )}

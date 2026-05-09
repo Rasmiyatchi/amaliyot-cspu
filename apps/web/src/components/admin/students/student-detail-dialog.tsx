@@ -65,7 +65,7 @@ export function StudentDetailDialog({ student, onClose }: Props) {
                 <div className="flex-1">
                   <div>{student.full_name}</div>
                   <div className="mt-0.5 text-xs font-normal text-muted-foreground">
-                    HEMIS: {student.hemis_id} · {student.username}
+                    ID: {student.hemis_id} · {student.username}
                   </div>
                 </div>
                 <StudentStatusBadge status={student.status} />

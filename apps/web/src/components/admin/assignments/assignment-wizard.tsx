@@ -300,7 +300,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Guruhda talaba yo'q</AlertTitle>
               <AlertDescription>
-                HEMIS import orqali talabalarni qo'shing yoki boshqa guruh tanlang.
+                Excel import orqali talabalarni qo'shing yoki boshqa guruh tanlang.
               </AlertDescription>
             </Alert>
           )}
