@@ -12,6 +12,7 @@ from app.api.v1 import (
     contracts,
     documents,
     exports,
+    final_reports,
     health,
     hemis,
     notifications,
@@ -48,3 +49,4 @@ api_router.include_router(system_settings.router)
 api_router.include_router(uploads.router)
 api_router.include_router(exports.router)
 api_router.include_router(documents.router)
+api_router.include_router(final_reports.router)

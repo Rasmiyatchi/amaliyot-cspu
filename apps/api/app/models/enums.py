@@ -195,3 +195,12 @@ class DocumentKind(StrEnum):
 
     REGULATION = "regulation"  # Normativ hujjatlar (umumiy)
     PROGRAM = "program"  # Amaliyot dasturlari (har turga)
+
+
+class FinalReportStatus(StrEnum):
+    """Yakuniy hisobot status oqimi."""
+
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    APPROVED = "approved"
+    REJECTED = "rejected"

@@ -4,6 +4,7 @@ import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-
 import { ArchiveCard } from "@/components/archive-card";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { StudentAcademicPanel } from "@/components/student/academic-panel";
+import { FinalReportCard } from "@/components/student/final-report-card";
 import { CheckInButton } from "@/components/student/check-in-button";
 import { StudentDocumentsCard } from "@/components/student/documents-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -167,6 +168,9 @@ export function StudentDashboard() {
 
             {/* Hujjatlarim — barcha attachments */}
             <StudentDocumentsCard assignmentId={activeAssignment.id} />
+
+            {/* Yakuniy hisobot — arxivga yo'l */}
+            <FinalReportCard assignmentId={activeAssignment.id} />
 
             {/* Yig'ma jild */}
             <ArchiveCard assignmentId={activeAssignment.id} />

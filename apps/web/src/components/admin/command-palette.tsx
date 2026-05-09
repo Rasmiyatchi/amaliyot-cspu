@@ -49,6 +49,7 @@ const COMMANDS: Cmd[] = [
   { id: "attendance", label: "Davomat", to: "/admin/attendance", icon: CalendarCheck, keywords: ["kelish", "ketish"], group: "Sahifalar" },
   { id: "tasks", label: "Topshiriqlar", to: "/admin/task-templates", icon: LibraryBig, keywords: ["task", "shablon"], group: "Sahifalar" },
   { id: "documents", label: "Hujjatlar", to: "/admin/documents", icon: BookOpen, keywords: ["normativ", "dastur", "regulation", "program", "pdf"], group: "Sahifalar" },
+  { id: "reports", label: "Yakuniy hisobotlar", to: "/admin/reports", icon: FileCheck2, keywords: ["report", "yakuniy", "tasdiq"], group: "Sahifalar" },
   { id: "admins", label: "Adminlar", to: "/admin/admins", icon: ShieldCheck, superAdminOnly: true, group: "Sahifalar" },
   { id: "settings", label: "Sozlamalar", to: "/admin/system-settings", icon: Cog, superAdminOnly: true, keywords: ["maintenance", "profilaktika"], group: "Sahifalar" },
 

@@ -5,6 +5,7 @@ from app.models.area import Area
 from app.models.attendance import AttendanceDay, AttendanceEvent, AttendanceOverride
 from app.models.contract import Contract
 from app.models.document import Document
+from app.models.final_report import FinalReport
 from app.models.enums import (
     AssignmentStatus,
     AttendanceDayStatus,
@@ -14,6 +15,7 @@ from app.models.enums import (
     DegreeType,
     DocumentKind,
     EducationForm,
+    FinalReportStatus,
     Gender,
     JournalStatus,
     NotificationType,
@@ -55,6 +57,8 @@ __all__ = [
     "DocumentKind",
     "EducationForm",
     "Faculty",
+    "FinalReport",
+    "FinalReportStatus",
     "Gender",
     "Group",
     "JournalEntry",

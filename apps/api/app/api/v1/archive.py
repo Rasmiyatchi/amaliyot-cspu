@@ -45,7 +45,21 @@ def _pdf_response(pdf_bytes: bytes, filename: str) -> Response:
 async def download_archive(
     assignment_id: UUID, db: SessionDep, user: CurrentUser
 ) -> Response:
+    from app.services import final_report as fr_svc
+
     await _rbac_check(db, assignment_id, user)
+
+    # Gate: yakuniy hisobot tasdiqlanmagan bo'lsa — talaba va supervisor uchun bloklangan.
+    # Admin va Super admin har doim yuklab olishi mumkin (tasdiqdan oldin ham audit/tekshirish).
+    if user.role in (UserRole.STUDENT, UserRole.SUPERVISOR):
+        unlocked = await fr_svc.is_archive_unlocked(db, assignment_id)
+        if not unlocked:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "Yig'ma jildni olishdan oldin yakuniy hisobotni topshirib, "
+                "kafedra mudiri tasdiqlashi kerak",
+            )
+
     zip_bytes, filename = await svc.build_archive_zip(db, assignment_id)
     return Response(
         content=zip_bytes,

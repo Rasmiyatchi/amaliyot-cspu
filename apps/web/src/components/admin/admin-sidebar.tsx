@@ -73,6 +73,7 @@ const navSections: NavSection[] = [
     items: [
       { to: "/admin/task-templates", label: "Topshiriqlar", icon: LibraryBig },
       { to: "/admin/documents", label: "Hujjatlar", icon: FileText },
+      { to: "/admin/reports", label: "Yakuniy hisobotlar", icon: FileCheck2 },
     ],
   },
   {
