@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useDirections, useFaculties } from "@/lib/api/academic";
+import { useDirections, useFaculties, useGroups } from "@/lib/api/academic";
 import type { StudentFilters } from "@/lib/api/students";
-import type { StudentStatus } from "@/lib/api/types";
+import type { StudentStatus, UUID } from "@/lib/api/types";
 
 type Props = {
   filters: StudentFilters;
@@ -18,6 +18,14 @@ const ALL_VALUE = "__all__";
 export function StudentsFilters({ filters, onChange }: Props) {
   const faculties = useFaculties();
   const directions = useDirections(filters.faculty_id);
+  const groups = useGroups(
+    {
+      directionId: filters.direction_id,
+      course: filters.course,
+    },
+    1,
+    200,
+  );
   const [searchInput, setSearchInput] = useState(filters.search ?? "");
 
   // Debounce search
@@ -35,6 +43,7 @@ export function StudentsFilters({ filters, onChange }: Props) {
     !!filters.search ||
     !!filters.faculty_id ||
     !!filters.direction_id ||
+    !!filters.group_id ||
     filters.course !== undefined ||
     !!filters.status;
 
@@ -77,7 +86,12 @@ export function StudentsFilters({ filters, onChange }: Props) {
 
       <Select
         value={filters.direction_id ?? ALL_VALUE}
-        onValueChange={(v) => set({ direction_id: v === ALL_VALUE ? undefined : v })}
+        onValueChange={(v) =>
+          set({
+            direction_id: v === ALL_VALUE ? undefined : (v as UUID),
+            group_id: undefined,
+          })
+        }
       >
         <SelectTrigger className="w-[220px]">
           <SelectValue placeholder="Yo'nalish" />
@@ -87,6 +101,23 @@ export function StudentsFilters({ filters, onChange }: Props) {
           {(directions.data?.items ?? []).map((d) => (
             <SelectItem key={d.id} value={d.id}>
               {d.code} — {d.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={filters.group_id ?? ALL_VALUE}
+        onValueChange={(v) => set({ group_id: v === ALL_VALUE ? undefined : (v as UUID) })}
+      >
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Guruh" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL_VALUE}>Barcha guruhlar</SelectItem>
+          {(groups.data?.items ?? []).map((g) => (
+            <SelectItem key={g.id} value={g.id}>
+              {g.name}
             </SelectItem>
           ))}
         </SelectContent>

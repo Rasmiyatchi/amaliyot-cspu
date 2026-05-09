@@ -33,8 +33,10 @@ import {
   useAssignments,
   type AssignmentFilters,
 } from "@/lib/api/assignments";
+import { useOrganizations } from "@/lib/api/organizations";
 import { usePracticeTypes } from "@/lib/api/practice-types";
-import type { AssignmentStatus, PracticeAssignment } from "@/lib/api/types";
+import { useSupervisors } from "@/lib/api/supervisors";
+import type { AssignmentStatus, PracticeAssignment, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
 
@@ -46,6 +48,8 @@ export function AssignmentsPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [selected, setSelected] = useState<PracticeAssignment | null>(null);
   const pageSize = 20;
+  const orgs = useOrganizations({}, 1, 200);
+  const supervisorsQ = useSupervisors({}, 1, 200);
 
   useEffect(() => {
     setFilters((f) => ({ ...f, search: debouncedSearch || undefined }));
@@ -144,6 +148,42 @@ export function AssignmentsPage() {
             <SelectItem value="active">Aktiv</SelectItem>
             <SelectItem value="completed">Tugagan</SelectItem>
             <SelectItem value="cancelled">Bekor qilingan</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.organization_id ?? ALL}
+          onValueChange={(v) =>
+            setFilter({ organization_id: v === ALL ? undefined : (v as UUID) })
+          }
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Tashkilot" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha tashkilotlar</SelectItem>
+            {(orgs.data?.items ?? []).map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                {o.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.supervisor_id ?? ALL}
+          onValueChange={(v) =>
+            setFilter({ supervisor_id: v === ALL ? undefined : (v as UUID) })
+          }
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Supervizor" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha supervizorlar</SelectItem>
+            {(supervisorsQ.data?.items ?? []).map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.full_name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
