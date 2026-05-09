@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ClipboardList,
   FileCheck2,
+  FileText,
   GraduationCap,
   LayoutDashboard,
   LibraryBig,
@@ -49,6 +50,7 @@ const navItems: NavItem[] = [
   { to: "/admin/contracts", label: "Shartnomalar", icon: FileCheck2 },
   { to: "/admin/attendance", label: "Davomat", icon: CalendarCheck },
   { to: "/admin/task-templates", label: "Topshiriqlar", icon: LibraryBig },
+  { to: "/admin/documents", label: "Hujjatlar", icon: FileText },
   { to: "/admin/admins", label: "Adminlar", icon: ShieldCheck, superAdminOnly: true },
   { to: "/admin/system-settings", label: "Sozlamalar", icon: Settings, superAdminOnly: true },
 ];

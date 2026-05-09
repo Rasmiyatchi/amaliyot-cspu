@@ -58,6 +58,23 @@ async def _check_entity_access(  # type: ignore[no-untyped-def]
 
 
 @router.post(
+    "/standalone",
+    summary="Mustaqil fayl yuklash (Document yoki Avatar uchun)",
+)
+async def upload_standalone(
+    db: SessionDep,
+    user: CurrentUser,
+    file: UploadFile = File(...),
+) -> dict:
+    """Faylni saqlaydi va attachment metadata qaytaradi.
+
+    Document yoki har qanday entity'ga keyinchalik biriktirish uchun ishlatiladi.
+    """
+    attachment = await svc.save_file(db, file, user)
+    return {"attachment": attachment}
+
+
+@router.post(
     "/entity/{kind}/{entity_id}",
     summary="Fayl yuklash va task/journal/analysis ga biriktirish",
 )

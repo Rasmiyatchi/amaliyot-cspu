@@ -158,7 +158,7 @@ class JournalEntry(UUIDMixin, TimestampMixin, Base):
     )
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
 
-    content_md: Mapped[str] = mapped_column(Text)
+    content_md: Mapped[str | None] = mapped_column(Text, nullable=True)
     attachments: Mapped[list[dict[str, str]]] = mapped_column(
         JSONB, default=list, server_default="[]"
     )
@@ -201,7 +201,7 @@ class LessonAnalysis(UUIDMixin, TimestampMixin, Base):
     )
     quarter: Mapped[int] = mapped_column(Integer, index=True, comment="1-4 chorak")
 
-    analysis_md: Mapped[str] = mapped_column(Text)
+    analysis_md: Mapped[str | None] = mapped_column(Text, nullable=True)
     attachments: Mapped[list[dict[str, str]]] = mapped_column(
         JSONB, default=list, server_default="[]"
     )

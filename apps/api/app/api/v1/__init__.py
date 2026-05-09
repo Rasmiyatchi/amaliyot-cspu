@@ -10,6 +10,7 @@ from app.api.v1 import (
     attendance,
     auth,
     contracts,
+    documents,
     exports,
     health,
     hemis,
@@ -46,3 +47,4 @@ api_router.include_router(admins.router)
 api_router.include_router(system_settings.router)
 api_router.include_router(uploads.router)
 api_router.include_router(exports.router)
+api_router.include_router(documents.router)

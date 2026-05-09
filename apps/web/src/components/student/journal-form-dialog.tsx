@@ -1,9 +1,8 @@
 import { HTTPError } from "ky";
-import { Loader2, Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { FileText, Loader2, Save, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { AttachmentsSection } from "@/components/attachments-section";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { uploadStandaloneFile } from "@/lib/api/documents";
 import { useCreateJournal, useUpdateJournal } from "@/lib/api/tasks";
+import type { Attachment } from "@/lib/api/uploads";
 import type { JournalEntry, UUID } from "@/lib/api/types";
 
 type Props = {
@@ -33,7 +34,9 @@ function defaultDate(): string {
 
 export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props) {
   const [date, setDate] = useState<string>(defaultDate());
-  const [content, setContent] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const create = useCreateJournal();
   const update = useUpdateJournal();
 
@@ -41,27 +44,43 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
   const isApproved = entry?.status === "approved";
 
   useEffect(() => {
-    if (open) {
-      if (entry) {
-        setDate(entry.date.slice(0, 10));
-        setContent(entry.content_md);
-      } else {
-        setDate(defaultDate());
-        setContent("");
-      }
+    if (!open) return;
+    if (entry) {
+      setDate(entry.date.slice(0, 10));
+      setAttachments((entry.attachments ?? []) as Attachment[]);
+    } else {
+      setDate(defaultDate());
+      setAttachments([]);
     }
   }, [open, entry]);
 
+  const handleFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const att = await uploadStandaloneFile(file);
+      setAttachments((prev) => [...prev, att]);
+      toast.success("PDF yuklandi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Yuklashda xato");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
   const handleSave = async () => {
-    if (content.trim().length < 3) {
-      toast.error("Matn juda qisqa");
+    if (attachments.length === 0) {
+      toast.error("Kundalik PDF faylini yuklang");
       return;
     }
     try {
       if (isEdit && entry) {
         await update.mutateAsync({
           id: entry.id,
-          data: { content_md: content.trim() },
+          data: { attachments },
         });
         toast.success("Yangilandi");
       } else {
@@ -69,7 +88,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
           assignmentId,
           data: {
             date: new Date(date + "T12:00:00Z").toISOString(),
-            content_md: content.trim(),
+            attachments,
           },
         });
         toast.success("Yuborildi");
@@ -80,15 +99,15 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
     }
   };
 
-  const busy = create.isPending || update.isPending;
+  const busy = create.isPending || update.isPending || uploading;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-h-[92vh] max-w-xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Kundalikni tahrirlash" : "Yangi kundalik"}</DialogTitle>
           <DialogDescription>
-            Bugungi amaliyot kuni nima qildingiz?
+            Sana belgilang va kundalik faylini PDF ko'rinishida yuklang.
           </DialogDescription>
         </DialogHeader>
 
@@ -103,48 +122,99 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
 
         <div className="space-y-3">
           <div>
-            <Label htmlFor="journal-date">Sana</Label>
+            <Label htmlFor="journal-date">
+              Sana <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="journal-date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               disabled={isEdit || isApproved}
+              max={defaultDate()}
             />
           </div>
+
           <div>
-            <Label htmlFor="journal-content">Matn</Label>
-            <textarea
-              id="journal-content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              disabled={isApproved}
-              rows={10}
-              className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm disabled:opacity-60"
-              placeholder="Masalan: Bugun 7-B sinfida biologiya darsida ishtirok etdim. Karimova Oygul darsi yuzasidan tahlil o'tkazdim..."
+            <Label>
+              Kundalik fayli <span className="text-destructive">*</span>
+            </Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFile(f);
+                e.target.value = "";
+              }}
             />
-            <div className="mt-1 text-xs text-muted-foreground">
-              {content.length} belgi
-            </div>
+
+            {attachments.length > 0 && (
+              <div className="mb-2 space-y-1.5">
+                {attachments.map((att) => (
+                  <div
+                    key={att.id}
+                    className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2"
+                  >
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate text-sm">{att.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {(att.size / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                    {!isApproved && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeAttachment(att.id)}
+                      >
+                        Olib tashlash
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!isApproved && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-20 w-full border-dashed"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={busy}
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Yuklanmoqda...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-5 w-5" />
+                    PDF tanlash
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
-
-        {isEdit && entry && (
-          <AttachmentsSection
-            kind="journal"
-            entityId={entry.id}
-            attachments={(entry.attachments ?? []) as never}
-            canEdit={!isApproved}
-          />
-        )}
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
             Yopish
           </Button>
           {!isApproved && (
-            <Button onClick={handleSave} disabled={busy || content.trim().length < 3}>
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Button
+              onClick={handleSave}
+              disabled={busy || attachments.length === 0}
+            >
+              {(create.isPending || update.isPending) && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
               <Save className="h-4 w-4" />
               {isEdit ? "Saqlash" : "Yuborish"}
             </Button>

@@ -4,6 +4,7 @@ from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.area import Area
 from app.models.attendance import AttendanceDay, AttendanceEvent, AttendanceOverride
 from app.models.contract import Contract
+from app.models.document import Document
 from app.models.enums import (
     AssignmentStatus,
     AttendanceDayStatus,
@@ -11,6 +12,7 @@ from app.models.enums import (
     ContractStatus,
     ContractTemplate,
     DegreeType,
+    DocumentKind,
     EducationForm,
     Gender,
     JournalStatus,
@@ -49,6 +51,8 @@ __all__ = [
     "ContractTemplate",
     "DegreeType",
     "Direction",
+    "Document",
+    "DocumentKind",
     "EducationForm",
     "Faculty",
     "Gender",

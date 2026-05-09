@@ -188,3 +188,10 @@ class NotificationType(StrEnum):
     CONTRACT_GENERATED = "contract_generated"
     CONTRACT_ACTIVATED = "contract_activated"
     GENERIC = "generic"
+
+
+class DocumentKind(StrEnum):
+    """Hujjat turi — admin yuklaydigan amaliyot bo'yicha hujjatlar."""
+
+    REGULATION = "regulation"  # Normativ hujjatlar (umumiy)
+    PROGRAM = "program"  # Amaliyot dasturlari (har turga)

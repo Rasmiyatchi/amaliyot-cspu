@@ -122,12 +122,12 @@ class TaskRead(BaseModel):
 
 class JournalCreateRequest(BaseModel):
     date: datetime
-    content_md: str = Field(..., min_length=1, max_length=20_000)
+    content_md: str | None = Field(None, max_length=20_000)
     attachments: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class JournalUpdateRequest(BaseModel):
-    content_md: str | None = Field(None, min_length=1, max_length=20_000)
+    content_md: str | None = Field(None, max_length=20_000)
     attachments: list[dict[str, Any]] | None = None
 
 
@@ -139,7 +139,7 @@ class JournalRead(BaseModel):
     id: UUID
     assignment_id: UUID
     date: datetime
-    content_md: str
+    content_md: str | None = None
     attachments: list[dict[str, Any]] = []
     status: JournalStatus
     approved_by_id: UUID | None
@@ -161,7 +161,7 @@ class LessonAnalysisCreateRequest(BaseModel):
     teacher_name: str = Field(..., min_length=1, max_length=200)
     grade_level: str | None = Field(None, max_length=32)
     quarter: int = Field(..., ge=1, le=4)
-    analysis_md: str = Field(..., min_length=1, max_length=30_000)
+    analysis_md: str | None = Field(None, max_length=30_000)
     attachments: list[dict[str, Any]] = Field(default_factory=list)
 
 
@@ -171,7 +171,7 @@ class LessonAnalysisUpdateRequest(BaseModel):
     teacher_name: str | None = Field(None, min_length=1, max_length=200)
     grade_level: str | None = Field(None, max_length=32)
     quarter: int | None = Field(None, ge=1, le=4)
-    analysis_md: str | None = Field(None, min_length=1, max_length=30_000)
+    analysis_md: str | None = Field(None, max_length=30_000)
     attachments: list[dict[str, Any]] | None = None
 
 
@@ -187,7 +187,7 @@ class LessonAnalysisRead(BaseModel):
     teacher_name: str
     grade_level: str | None
     quarter: int
-    analysis_md: str
+    analysis_md: str | None = None
     attachments: list[dict[str, Any]] = []
     status: JournalStatus
     approved_by_id: UUID | None

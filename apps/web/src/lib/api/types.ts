@@ -494,7 +494,15 @@ export type TaskTemplate = {
   updated_at: ISODateTime;
 };
 
-export type TaskAttachment = { path: string; name: string; mime?: string; size?: number };
+export type TaskAttachment = {
+  path: string;
+  name: string;
+  mime?: string;
+  size?: number;
+  id?: string;
+  uploaded_at?: string;
+  uploaded_by_id?: string;
+};
 
 export type Task = {
   id: UUID;
@@ -528,7 +536,7 @@ export type JournalEntry = {
   id: UUID;
   assignment_id: UUID;
   date: ISODateTime;
-  content_md: string;
+  content_md: string | null;
   attachments: TaskAttachment[];
   status: JournalStatus;
   approved_by_id: UUID | null;
@@ -547,7 +555,7 @@ export type LessonAnalysis = {
   teacher_name: string;
   grade_level: string | null;
   quarter: number;
-  analysis_md: string;
+  analysis_md: string | null;
   attachments: TaskAttachment[];
   status: JournalStatus;
   approved_by_id: UUID | null;
@@ -583,12 +591,12 @@ export type TaskRejectRequest = {
 
 export type JournalCreateRequest = {
   date: ISODateTime;
-  content_md: string;
+  content_md?: string | null;
   attachments?: TaskAttachment[];
 };
 
 export type JournalUpdateRequest = {
-  content_md?: string;
+  content_md?: string | null;
   attachments?: TaskAttachment[];
 };
 
@@ -600,7 +608,7 @@ export type LessonAnalysisCreateRequest = {
   teacher_name: string;
   grade_level?: string | null;
   quarter: number;
-  analysis_md: string;
+  analysis_md?: string | null;
   attachments?: TaskAttachment[];
 };
 
