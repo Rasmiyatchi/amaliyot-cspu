@@ -62,3 +62,56 @@ export function useUpdateStudentCredentials() {
     onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
   });
 }
+
+export type StudentCreatePayload = {
+  hemis_id: string;
+  username?: string | null;
+  password: string;
+  first_name: string;
+  last_name: string;
+  middle_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  gender?: "male" | "female" | null;
+  birth_date?: string | null;
+  jshshir?: string | null;
+  passport_number?: string | null;
+  region?: string | null;
+  district?: string | null;
+  group_id: UUID;
+  current_semester?: number | null;
+  is_graduating?: boolean;
+  education_language?: string | null;
+  education_form?: string | null;
+  degree_type?: string | null;
+};
+
+export type StudentUpdatePayload = Partial<Omit<StudentCreatePayload, "hemis_id" | "username" | "password">> & {
+  status?: StudentStatus;
+};
+
+export function useCreateStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: StudentCreatePayload) =>
+      api.post("v1/students", { json: data }).json<Student>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+  });
+}
+
+export function useUpdateStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: UUID; data: StudentUpdatePayload }) =>
+      api.patch(`v1/students/${id}`, { json: data }).json<Student>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+  });
+}
+
+export function useDeleteStudent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) => api.delete(`v1/students/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+  });
+}

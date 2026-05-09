@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
 from app.models.academic import Direction, Faculty, Group
-from app.models.enums import StudentStatus
+from app.models.enums import StudentStatus, UserRole
 from app.models.student import Student
 from app.models.user import User
 
@@ -173,3 +173,130 @@ async def update_credentials(
         ) from e
 
     return await get_student(db, id_)
+
+
+async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
+    """Admin orqali bitta talaba qo'shish (Excel import alternativasi)."""
+    payload = data.model_dump(exclude_unset=True)
+
+    hemis_id: str = payload["hemis_id"]
+    username: str = payload.get("username") or hemis_id
+    password: str = payload["password"]
+    first_name: str = payload["first_name"]
+    last_name: str = payload["last_name"]
+    middle_name: str | None = payload.get("middle_name")
+    group_id: UUID = payload["group_id"]
+
+    # Group mavjudligini tekshirish
+    group = await db.get(Group, group_id)
+    if not group:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Guruh topilmadi")
+
+    # Hemis_id va username unique ekanligini tekshirish
+    existing_hemis = (
+        await db.execute(select(Student).where(Student.hemis_id == hemis_id))
+    ).scalar_one_or_none()
+    if existing_hemis:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, f"Bu Talaba ID allaqachon mavjud: {hemis_id}"
+        )
+
+    user = User(
+        username=username,
+        password_hash=hash_password(password),
+        role=UserRole.STUDENT,
+        is_active=True,
+        first_name=first_name,
+        last_name=last_name,
+        middle_name=middle_name,
+        email=payload.get("email"),
+        phone=payload.get("phone"),
+    )
+    db.add(user)
+    await db.flush()
+
+    student = Student(
+        user_id=user.id,
+        hemis_id=hemis_id,
+        gender=payload.get("gender"),
+        birth_date=payload.get("birth_date"),
+        jshshir=payload.get("jshshir"),
+        passport_number=payload.get("passport_number"),
+        region=payload.get("region"),
+        district=payload.get("district"),
+        group_id=group_id,
+        current_semester=payload.get("current_semester"),
+        is_graduating=payload.get("is_graduating", False),
+        education_language=payload.get("education_language"),
+        education_form=payload.get("education_form"),
+        degree_type=payload.get("degree_type"),
+        status=StudentStatus.STUDYING,
+    )
+    db.add(student)
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Username yoki Talaba ID band"
+        ) from e
+
+    return await get_student(db, student.id)
+
+
+async def update_student(
+    db: AsyncSession, id_: UUID, data: BaseModel
+) -> dict[str, Any]:
+    """Admin orqali talaba ma'lumotlarini tahrirlash."""
+    student = await db.get(Student, id_)
+    if not student:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Talaba topilmadi: {id_}")
+    user = await db.get(User, student.user_id)
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Foydalanuvchi topilmadi")
+
+    payload = data.model_dump(exclude_unset=True)
+
+    # User maydonlari
+    for key in ("first_name", "last_name", "middle_name", "email", "phone"):
+        if key in payload:
+            setattr(user, key, payload[key])
+
+    # Student maydonlari
+    student_keys = (
+        "gender", "birth_date", "jshshir", "passport_number",
+        "region", "district", "group_id", "current_semester",
+        "is_graduating", "education_language", "education_form",
+        "degree_type", "status",
+    )
+    for key in student_keys:
+        if key in payload:
+            setattr(student, key, payload[key])
+
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "Konflikt") from e
+
+    return await get_student(db, id_)
+
+
+async def delete_student(db: AsyncSession, id_: UUID) -> None:
+    """Admin: talaba va u bilan bog'liq User'ni o'chirish."""
+    student = await db.get(Student, id_)
+    if not student:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Talaba topilmadi: {id_}")
+    user_id = student.user_id
+    await db.delete(student)
+    user = await db.get(User, user_id)
+    if user:
+        await db.delete(user)
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Talabaning amaliyot/topshiriq yozuvlari bor — avval ularni o'chiring",
+        ) from e

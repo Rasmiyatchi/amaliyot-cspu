@@ -1,13 +1,18 @@
-import { BookOpen, Loader2 } from "lucide-react";
+import { HTTPError } from "ky";
+import { BookOpen, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
+import { TaskTemplateFormDialog } from "@/components/admin/task-templates/task-template-form-dialog";
 import {
   TaskCategoryBadge,
   TaskTypeLabel,
 } from "@/components/admin/tasks/task-type-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Label } from "@/components/ui/label";
 import {
@@ -18,8 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePracticeTypes } from "@/lib/api/practice-types";
-import { useTaskTemplates } from "@/lib/api/tasks";
-import type { Semester, TaskCategory, TaskTemplate } from "@/lib/api/types";
+import {
+  useDeleteTaskTemplate,
+  useTaskTemplates,
+} from "@/lib/api/tasks";
+import type { Semester, TaskCategory, TaskTemplate, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
 
@@ -47,6 +55,22 @@ export function TaskTemplatesPage() {
     semester: semester !== ALL ? (semester as Semester) : undefined,
   });
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<TaskTemplate | null>(null);
+  const [deletingId, setDeletingId] = useState<UUID | null>(null);
+  const deleteTemplate = useDeleteTaskTemplate();
+
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    try {
+      await deleteTemplate.mutateAsync(deletingId);
+      toast.success("Shablon o'chirildi");
+      setDeletingId(null);
+    } catch (e) {
+      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+    }
+  };
+
   // Grouping: course → semester → category
   const grouped = useMemo(() => {
     if (!templates) return new Map<string, TaskTemplate[]>();
@@ -67,16 +91,22 @@ export function TaskTemplatesPage() {
 
   return (
     <div className="container max-w-7xl py-8">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <BookOpen className="h-5 w-5 text-primary" />
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <BookOpen className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold">Topshiriqlar katalogi</h1>
+            <p className="text-sm text-muted-foreground">
+              Sillabus asosida amaliyot turlari uchun topshiriqlar
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold">Topshiriqlar katalogi</h1>
-          <p className="text-sm text-muted-foreground">
-            Sillabus asosida amaliyot turlari uchun topshiriqlar
-          </p>
-        </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Yangi shablon
+        </Button>
       </div>
 
       {/* Filtrlar */}
@@ -148,6 +178,27 @@ export function TaskTemplatesPage() {
         </div>
       )}
 
+      <TaskTemplateFormDialog
+        open={createOpen}
+        defaultPracticeTypeId={effectivePracticeTypeId as UUID | undefined}
+        onClose={() => setCreateOpen(false)}
+      />
+      <TaskTemplateFormDialog
+        open={!!editing}
+        template={editing}
+        onClose={() => setEditing(null)}
+      />
+      <ConfirmDialog
+        open={!!deletingId}
+        title="Shablonni o'chirish"
+        description="Bu amal qaytarilmaydi. Agar bu shablonga biriktirilgan topshiriqlar bo'lsa, xato beradi."
+        confirmText="Ha, o'chirish"
+        variant="destructive"
+        onConfirm={handleDelete}
+        onClose={() => setDeletingId(null)}
+        isPending={deleteTemplate.isPending}
+      />
+
       {templates && templates.length > 0 && (
         <div className="space-y-4">
           {groupKeys.map((key) => {
@@ -199,6 +250,25 @@ export function TaskTemplatesPage() {
                         <Badge variant="secondary" className="shrink-0 font-mono">
                           {t.points} ball
                         </Badge>
+                        <div className="flex shrink-0 gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setEditing(t)}
+                            title="Tahrirlash"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setDeletingId(t.id)}
+                            title="O'chirish"
+                            className="text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

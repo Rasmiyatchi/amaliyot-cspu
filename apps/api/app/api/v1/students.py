@@ -1,17 +1,20 @@
-"""Students endpoints — list + get by id (admin-only for Phase 2)."""
+"""Students endpoints — list/get/create/update/delete (admin-only)."""
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, status
 
 from app.api.deps import RequireAdmin
 from app.db.session import SessionDep
 from app.models.enums import StudentStatus
 from app.schemas.common import CredentialsUpdate, Paginated
-from app.schemas.student import StudentRead
+from app.schemas.student import StudentCreate, StudentRead, StudentUpdate
+from app.services.student import create_student as svc_create_student
+from app.services.student import delete_student as svc_delete_student
 from app.services.student import get_student as svc_get_student
 from app.services.student import list_students as svc_list_students
 from app.services.student import update_credentials as svc_update_credentials
+from app.services.student import update_student as svc_update_student
 
 router = APIRouter(prefix="/students", tags=["students"])
 
@@ -52,6 +55,38 @@ async def list_students(
 @router.get("/{id_}", response_model=StudentRead)
 async def get_student(id_: UUID, db: SessionDep, _: RequireAdmin) -> StudentRead:
     return StudentRead.model_validate(await svc_get_student(db, id_))
+
+
+@router.post(
+    "",
+    response_model=StudentRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Admin: yakka talaba qo'shish",
+)
+async def create_student(
+    data: StudentCreate, db: SessionDep, _: RequireAdmin
+) -> StudentRead:
+    return StudentRead.model_validate(await svc_create_student(db, data))
+
+
+@router.patch(
+    "/{id_}",
+    response_model=StudentRead,
+    summary="Admin: talaba ma'lumotlarini tahrirlash",
+)
+async def update_student(
+    id_: UUID, data: StudentUpdate, db: SessionDep, _: RequireAdmin
+) -> StudentRead:
+    return StudentRead.model_validate(await svc_update_student(db, id_, data))
+
+
+@router.delete(
+    "/{id_}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Admin: talabani o'chirish",
+)
+async def delete_student(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
+    await svc_delete_student(db, id_)
 
 
 @router.patch(

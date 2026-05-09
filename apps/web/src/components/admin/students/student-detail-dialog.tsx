@@ -1,6 +1,14 @@
+import { HTTPError } from "ky";
+import { Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
 import { CredentialsSection } from "@/components/admin/credentials-section";
+import { StudentFormDialog } from "@/components/admin/students/student-form-dialog";
 import { StudentStatusBadge } from "@/components/admin/students/students-status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +17,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { useUpdateStudentCredentials } from "@/lib/api/students";
+import {
+  useDeleteStudent,
+  useUpdateStudentCredentials,
+} from "@/lib/api/students";
 import type { Student } from "@/lib/api/types";
 
 const EDUCATION_FORM_LABEL = {
@@ -50,6 +61,21 @@ type Props = {
 
 export function StudentDetailDialog({ student, onClose }: Props) {
   const updateCreds = useUpdateStudentCredentials();
+  const deleteStudent = useDeleteStudent();
+  const [editOpen, setEditOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleDelete = async () => {
+    if (!student) return;
+    try {
+      await deleteStudent.mutateAsync(student.id);
+      toast.success("Talaba o'chirildi");
+      setConfirmDelete(false);
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+    }
+  };
 
   return (
     <Dialog open={!!student} onOpenChange={(o) => !o && onClose()}>
@@ -71,6 +97,21 @@ export function StudentDetailDialog({ student, onClose }: Props) {
                 <StudentStatusBadge status={student.status} />
               </DialogTitle>
               <DialogDescription>To'liq talaba ma'lumoti</DialogDescription>
+              <div className="flex gap-2 pt-2">
+                <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+                  <Pencil className="h-4 w-4" />
+                  Tahrirlash
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive hover:bg-destructive/10"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  O'chirish
+                </Button>
+              </div>
             </DialogHeader>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -153,6 +194,25 @@ export function StudentDetailDialog({ student, onClose }: Props) {
           </>
         )}
       </DialogContent>
+      {student && (
+        <>
+          <StudentFormDialog
+            open={editOpen}
+            student={student}
+            onClose={() => setEditOpen(false)}
+          />
+          <ConfirmDialog
+            open={confirmDelete}
+            title="Talabani o'chirish"
+            description={`${student.full_name} ni va u bilan bog'liq foydalanuvchi yozuvini o'chirishni tasdiqlang. Bu amal qaytarilmaydi.`}
+            confirmText="Ha, o'chirish"
+            variant="destructive"
+            onConfirm={handleDelete}
+            onClose={() => setConfirmDelete(false)}
+            isPending={deleteStudent.isPending}
+          />
+        </>
+      )}
     </Dialog>
   );
 }

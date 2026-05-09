@@ -23,7 +23,9 @@ from app.schemas.task import (
     TaskRead,
     TaskRejectRequest,
     TaskSubmitRequest,
+    TaskTemplateCreate,
     TaskTemplateRead,
+    TaskTemplateUpdate,
 )
 from app.services import task as svc
 
@@ -60,11 +62,55 @@ async def list_templates(
     practice_type_id: UUID | None = None,
     course: int | None = Query(None, ge=1, le=4),
     semester: Semester | None = None,
+    include_inactive: bool = False,
 ) -> list[TaskTemplateRead]:
     items = await svc.list_templates(
-        db, practice_type_id=practice_type_id, course=course, semester=semester
+        db,
+        practice_type_id=practice_type_id,
+        course=course,
+        semester=semester,
+        include_inactive=include_inactive,
     )
     return [TaskTemplateRead.model_validate(i) for i in items]
+
+
+@router.post(
+    "/task-templates",
+    response_model=TaskTemplateRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Admin: yangi topshiriq shabloni",
+)
+async def create_template(
+    data: TaskTemplateCreate, db: SessionDep, _: RequireAdmin
+) -> TaskTemplateRead:
+    return TaskTemplateRead.model_validate(await svc.create_template(db, data))
+
+
+@router.patch(
+    "/task-templates/{template_id}",
+    response_model=TaskTemplateRead,
+    summary="Admin: topshiriq shablonini tahrirlash",
+)
+async def update_template(
+    template_id: UUID,
+    data: TaskTemplateUpdate,
+    db: SessionDep,
+    _: RequireAdmin,
+) -> TaskTemplateRead:
+    return TaskTemplateRead.model_validate(
+        await svc.update_template(db, template_id, data)
+    )
+
+
+@router.delete(
+    "/task-templates/{template_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Admin: topshiriq shablonini o'chirish",
+)
+async def delete_template(
+    template_id: UUID, db: SessionDep, _: RequireAdmin
+) -> None:
+    await svc.delete_template(db, template_id)
 
 
 # ─── Task — per assignment ──────────────────────────────

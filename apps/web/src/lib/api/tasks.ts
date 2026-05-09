@@ -279,3 +279,46 @@ export function useRejectLessonAnalysis() {
     onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
   });
 }
+
+export type TaskTemplateCreatePayload = {
+  practice_type_id: UUID;
+  course: number;
+  semester: "fall" | "spring";
+  category: "spiritual" | "academic" | "report";
+  type: string;
+  title: string;
+  description?: string | null;
+  points: number;
+  quantity?: number;
+  month_hint?: string | null;
+  display_order?: number;
+  is_active?: boolean;
+};
+
+export type TaskTemplateUpdatePayload = Partial<Omit<TaskTemplateCreatePayload, "practice_type_id">>;
+
+export function useCreateTaskTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: TaskTemplateCreatePayload) =>
+      api.post("v1/task-templates", { json: data }).json<TaskTemplate>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+  });
+}
+
+export function useUpdateTaskTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: UUID; data: TaskTemplateUpdatePayload }) =>
+      api.patch(`v1/task-templates/${id}`, { json: data }).json<TaskTemplate>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+  });
+}
+
+export function useDeleteTaskTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) => api.delete(`v1/task-templates/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+  });
+}

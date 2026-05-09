@@ -15,6 +15,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.academic import Group
@@ -117,8 +118,11 @@ async def list_templates(
     practice_type_id: UUID | None = None,
     course: int | None = None,
     semester: Semester | None = None,
+    include_inactive: bool = False,
 ) -> list[dict[str, Any]]:
-    stmt = select(TaskTemplate).where(TaskTemplate.is_active.is_(True))
+    stmt = select(TaskTemplate)
+    if not include_inactive:
+        stmt = stmt.where(TaskTemplate.is_active.is_(True))
     if practice_type_id:
         stmt = stmt.where(TaskTemplate.practice_type_id == practice_type_id)
     if course:
@@ -161,6 +165,62 @@ def _template_to_dict(t: TaskTemplate) -> dict[str, Any]:
         "created_at": t.created_at,
         "updated_at": t.updated_at,
     }
+
+
+async def create_template(db: AsyncSession, data: Any) -> dict[str, Any]:
+    payload = data.model_dump(exclude_unset=True)
+    tmpl = TaskTemplate(**payload)
+    db.add(tmpl)
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Mazkur kontekstda (kurs/semestr/kategoriya/tartib) shunday template mavjud",
+        ) from e
+    await db.refresh(tmpl)
+    return _template_to_dict(tmpl)
+
+
+async def update_template(
+    db: AsyncSession, template_id: UUID, data: Any
+) -> dict[str, Any]:
+    tmpl = await db.get(TaskTemplate, template_id)
+    if not tmpl:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Topshiriq shabloni topilmadi")
+    payload = data.model_dump(exclude_unset=True)
+    for k, v in payload.items():
+        setattr(tmpl, k, v)
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Konflikt"
+        ) from e
+    await db.refresh(tmpl)
+    return _template_to_dict(tmpl)
+
+
+async def delete_template(db: AsyncSession, template_id: UUID) -> None:
+    tmpl = await db.get(TaskTemplate, template_id)
+    if not tmpl:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Topshiriq shabloni topilmadi")
+    # Talabaga berilgan task'lar bormi
+    in_use = (
+        await db.execute(
+            select(func.count(Task.id)).where(Task.template_id == template_id)
+        )
+    ).scalar_one()
+    if in_use:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Bu shablonga {in_use} ta topshiriq bog'langan — avval ularni o'chiring "
+            "yoki shablonni faqat 'is_active=false' qilib qo'ying",
+        )
+    await db.delete(tmpl)
+    await db.commit()
 
 
 # ─── Task instance ──────────────────────────────────────

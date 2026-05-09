@@ -37,6 +37,35 @@ class TaskTemplateRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TaskTemplateCreate(BaseModel):
+    practice_type_id: UUID
+    course: int = Field(..., ge=1, le=4)
+    semester: Semester
+    category: TaskCategory
+    type: TaskType
+    title: str = Field(..., min_length=1, max_length=500)
+    description: str | None = Field(None, max_length=10_000)
+    points: int = Field(..., ge=0, le=100)
+    quantity: int = Field(1, ge=1, le=100)
+    month_hint: str | None = Field(None, max_length=50)
+    display_order: int = Field(0, ge=0)
+    is_active: bool = True
+
+
+class TaskTemplateUpdate(BaseModel):
+    course: int | None = Field(None, ge=1, le=4)
+    semester: Semester | None = None
+    category: TaskCategory | None = None
+    type: TaskType | None = None
+    title: str | None = Field(None, min_length=1, max_length=500)
+    description: str | None = Field(None, max_length=10_000)
+    points: int | None = Field(None, ge=0, le=100)
+    quantity: int | None = Field(None, ge=1, le=100)
+    month_hint: str | None = Field(None, max_length=50)
+    display_order: int | None = Field(None, ge=0)
+    is_active: bool | None = None
+
+
 # ─── Task (instance) ────────────────────────────────────
 
 

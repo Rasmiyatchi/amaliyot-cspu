@@ -1,9 +1,10 @@
-import { Download, Loader2, Upload, Users } from "lucide-react";
+import { Download, Loader2, Plus, Upload, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { HemisImportDialog } from "@/components/admin/students/hemis-import-dialog";
 import { StudentDetailDialog } from "@/components/admin/students/student-detail-dialog";
+import { StudentFormDialog } from "@/components/admin/students/student-form-dialog";
 import { StudentsFilters } from "@/components/admin/students/students-filters";
 import { StudentsTable } from "@/components/admin/students/students-table";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ export function StudentsPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Student | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const handleFilterChange = (f: StudentFilters) => {
@@ -66,9 +68,13 @@ export function StudentsPage() {
             )}
             CSV eksport
           </Button>
-          <Button onClick={() => setImportOpen(true)}>
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" />
             Excel Import
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Yangi talaba
           </Button>
         </div>
       </div>
@@ -86,6 +92,7 @@ export function StudentsPage() {
 
       <StudentDetailDialog student={selected} onClose={() => setSelected(null)} />
       <HemisImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
+      <StudentFormDialog open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }
