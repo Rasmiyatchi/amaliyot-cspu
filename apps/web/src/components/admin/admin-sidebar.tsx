@@ -14,6 +14,7 @@ import {
   School,
   Search,
   Settings,
+  Shield,
   ShieldCheck,
   UserCog,
   Users,
@@ -80,6 +81,7 @@ const navSections: NavSection[] = [
     label: "Tizim",
     items: [
       { to: "/admin/admins", label: "Adminlar", icon: ShieldCheck, superAdminOnly: true },
+      { to: "/admin/audit-log", label: "Audit log", icon: Shield, superAdminOnly: true },
       { to: "/admin/system-settings", label: "Sozlamalar", icon: Settings, superAdminOnly: true },
     ],
   },

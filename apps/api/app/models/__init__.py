@@ -3,6 +3,7 @@
 from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.area import Area
 from app.models.attendance import AttendanceDay, AttendanceEvent, AttendanceOverride
+from app.models.audit_log import AuditLog
 from app.models.contract import Contract
 from app.models.document import Document
 from app.models.final_report import FinalReport
@@ -48,6 +49,7 @@ __all__ = [
     "AttendanceEvent",
     "AttendanceEventKind",
     "AttendanceOverride",
+    "AuditLog",
     "Contract",
     "ContractStatus",
     "ContractTemplate",

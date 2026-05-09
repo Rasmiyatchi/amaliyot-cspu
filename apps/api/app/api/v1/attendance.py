@@ -3,7 +3,7 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 
 from app.api.deps import (
     CurrentUser,
@@ -188,9 +188,22 @@ async def admin_mark_red(
 async def super_admin_override(
     day_id: UUID,
     payload: AttendanceOverrideRequest,
+    request: Request,
     db: SessionDep,
     user: RequireSuperAdmin,
 ) -> AttendanceDayDetail:
-    return AttendanceDayDetail.model_validate(
-        await svc.super_admin_override(db, day_id, user.id, payload)
+    from app.services import audit_log as audit
+
+    result = await svc.super_admin_override(db, day_id, user.id, payload)
+    await audit.log(
+        db,
+        actor=user,
+        action="override",
+        entity_type="attendance_day",
+        entity_id=day_id,
+        summary=f"Davomat override → {payload.new_status.value}",
+        metadata={"reason": payload.reason, "new_status": payload.new_status.value},
+        request=request,
     )
+    await db.commit()
+    return AttendanceDayDetail.model_validate(result)

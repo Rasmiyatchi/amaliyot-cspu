@@ -8,6 +8,7 @@ from app.api.v1 import (
     archive,
     areas,
     attendance,
+    audit_logs,
     auth,
     contracts,
     documents,
@@ -50,3 +51,4 @@ api_router.include_router(uploads.router)
 api_router.include_router(exports.router)
 api_router.include_router(documents.router)
 api_router.include_router(final_reports.router)
+api_router.include_router(audit_logs.router)

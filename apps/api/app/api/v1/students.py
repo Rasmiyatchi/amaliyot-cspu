@@ -2,13 +2,14 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 
 from app.api.deps import RequireAdmin
 from app.db.session import SessionDep
 from app.models.enums import StudentStatus
 from app.schemas.common import CredentialsUpdate, Paginated
 from app.schemas.student import StudentCreate, StudentRead, StudentUpdate
+from app.services import audit_log as audit
 from app.services.student import create_student as svc_create_student
 from app.services.student import delete_student as svc_delete_student
 from app.services.student import get_student as svc_get_student
@@ -64,9 +65,24 @@ async def get_student(id_: UUID, db: SessionDep, _: RequireAdmin) -> StudentRead
     summary="Admin: yakka talaba qo'shish",
 )
 async def create_student(
-    data: StudentCreate, db: SessionDep, _: RequireAdmin
+    data: StudentCreate,
+    request: Request,
+    db: SessionDep,
+    user: RequireAdmin,
 ) -> StudentRead:
-    return StudentRead.model_validate(await svc_create_student(db, data))
+    result = await svc_create_student(db, data)
+    full_name = f"{data.last_name} {data.first_name}".strip()
+    await audit.log(
+        db,
+        actor=user,
+        action="create",
+        entity_type="student",
+        entity_id=result["id"],
+        summary=f"Yangi talaba: {full_name}",
+        request=request,
+    )
+    await db.commit()
+    return StudentRead.model_validate(result)
 
 
 @router.patch(
@@ -75,9 +91,26 @@ async def create_student(
     summary="Admin: talaba ma'lumotlarini tahrirlash",
 )
 async def update_student(
-    id_: UUID, data: StudentUpdate, db: SessionDep, _: RequireAdmin
+    id_: UUID,
+    data: StudentUpdate,
+    request: Request,
+    db: SessionDep,
+    user: RequireAdmin,
 ) -> StudentRead:
-    return StudentRead.model_validate(await svc_update_student(db, id_, data))
+    result = await svc_update_student(db, id_, data)
+    full_name = result.get("full_name", "")
+    await audit.log(
+        db,
+        actor=user,
+        action="update",
+        entity_type="student",
+        entity_id=id_,
+        summary=f"Talaba tahrirlandi: {full_name}",
+        metadata={"changed_fields": list(data.model_dump(exclude_unset=True).keys())},
+        request=request,
+    )
+    await db.commit()
+    return StudentRead.model_validate(result)
 
 
 @router.delete(
@@ -85,8 +118,23 @@ async def update_student(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Admin: talabani o'chirish",
 )
-async def delete_student(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
+async def delete_student(
+    id_: UUID, request: Request, db: SessionDep, user: RequireAdmin
+) -> None:
+    # Snapshot for audit before delete
+    student = await svc_get_student(db, id_)
+    full_name = student.get("full_name", "")
     await svc_delete_student(db, id_)
+    await audit.log(
+        db,
+        actor=user,
+        action="delete",
+        entity_type="student",
+        entity_id=id_,
+        summary=f"Talaba o'chirildi: {full_name}",
+        request=request,
+    )
+    await db.commit()
 
 
 @router.patch(

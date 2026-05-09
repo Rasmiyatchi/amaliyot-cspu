@@ -6,6 +6,7 @@ import { AcademicPage } from "@/routes/dashboard/admin/academic";
 import { AdminsPage } from "@/routes/dashboard/admin/admins";
 import { AssignmentsPage } from "@/routes/dashboard/admin/assignments";
 import { AttendancePage } from "@/routes/dashboard/admin/attendance";
+import { AuditLogPage } from "@/routes/dashboard/admin/audit-log";
 import { ContractsPage } from "@/routes/dashboard/admin/contracts";
 import { DocumentsPage } from "@/routes/dashboard/admin/documents";
 import { AdminHome } from "@/routes/dashboard/admin/index";
@@ -52,6 +53,7 @@ export const router = createBrowserRouter([
           { path: "documents", Component: DocumentsPage },
           { path: "reports", Component: ReportsPage },
           { path: "admins", Component: AdminsPage },
+          { path: "audit-log", Component: AuditLogPage },
           { path: "system-settings", Component: SystemSettingsPage },
         ],
       },

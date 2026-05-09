@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 
 from app.api.deps import CurrentUser, RequireSuperAdmin
 from app.db.session import SessionDep
@@ -12,6 +12,7 @@ from app.schemas.final_report import (
     FinalReportReviewRequest,
     FinalReportSubmit,
 )
+from app.services import audit_log as audit
 from app.services import final_report as svc
 
 router = APIRouter(prefix="/final-reports", tags=["final-reports"])
@@ -64,8 +65,23 @@ async def submit(
 async def review(
     report_id: UUID,
     data: FinalReportReviewRequest,
+    request: Request,
     db: SessionDep,
     user: RequireSuperAdmin,
 ) -> FinalReportRead:
     item = await svc.review_report(db, user, report_id, data.approve, data.note)
+    await audit.log(
+        db,
+        actor=user,
+        action="approve" if data.approve else "reject",
+        entity_type="final_report",
+        entity_id=report_id,
+        summary=(
+            f"Yakuniy hisobot {'tasdiqlandi' if data.approve else 'rad etildi'}: "
+            f"{item.get('student_full_name') or '—'}"
+        ),
+        metadata={"note": data.note},
+        request=request,
+    )
+    await db.commit()
     return FinalReportRead.model_validate(item)
