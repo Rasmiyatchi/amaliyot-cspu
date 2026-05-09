@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import { AdminLayout } from "@/components/admin/admin-layout";
+import { SupervisorLayout } from "@/components/supervisor/supervisor-layout";
 import { AcademicPage } from "@/routes/dashboard/admin/academic";
 import { AdminsPage } from "@/routes/dashboard/admin/admins";
 import { AssignmentsPage } from "@/routes/dashboard/admin/assignments";
@@ -16,6 +17,10 @@ import { SystemSettingsPage } from "@/routes/dashboard/admin/system-settings";
 import { TaskTemplatesPage } from "@/routes/dashboard/admin/task-templates";
 import { StudentDashboard } from "@/routes/dashboard/student";
 import { SupervisorDashboard } from "@/routes/dashboard/supervisor";
+import {
+  SupervisorProgramsPage,
+  SupervisorRegulationsPage,
+} from "@/routes/dashboard/supervisor/documents";
 import { Home } from "@/routes/home";
 import { Login } from "@/routes/login";
 import { NotFound } from "@/routes/not-found";
@@ -57,16 +62,32 @@ export const router = createBrowserRouter([
   // Super Admin rescue — MaintenanceGuard'siz, faqat super_admin uchun
   { path: "/rescue", Component: RescuePage },
 
-  // Public + boshqa rollar
+  // Supervisor — sidebar layout
+  {
+    element: <Protected allowed={["supervisor"]} />,
+    children: [
+      {
+        path: "/supervisor",
+        element: <SupervisorLayout />,
+        children: [
+          { index: true, Component: SupervisorDashboard },
+          { path: "regulations", Component: SupervisorRegulationsPage },
+          { path: "programs", Component: SupervisorProgramsPage },
+          // Eski single-page'da bor edi — alohida sahifalar keyingi iteratsiyada
+          { path: "students", Component: SupervisorDashboard },
+          { path: "attendance", Component: SupervisorDashboard },
+          { path: "tasks", Component: SupervisorDashboard },
+        ],
+      },
+    ],
+  },
+
+  // Public + boshqa rollar (student hozircha RootLayout'da)
   {
     element: <RootLayout />,
     children: [
       { index: true, Component: Home },
       { path: "login", Component: Login },
-      {
-        element: <Protected allowed={["supervisor"]} />,
-        children: [{ path: "supervisor", Component: SupervisorDashboard }],
-      },
       {
         element: <Protected allowed={["student"]} />,
         children: [{ path: "student", Component: StudentDashboard }],

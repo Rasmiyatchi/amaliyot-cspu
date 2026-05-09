@@ -1,9 +1,11 @@
-import { BookOpen, Loader2 } from "lucide-react";
+import { BookOpen, Loader2, Sliders } from "lucide-react";
 import { useState } from "react";
 
+import { GradingRulesDialog } from "@/components/admin/practice-types/grading-rules-dialog";
 import { PracticeTypeDetailDialog } from "@/components/admin/practice-types/practice-type-detail-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -13,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePracticeTypes } from "@/lib/api/practice-types";
+import { useAuthStore } from "@/stores/auth";
 import type { PracticeType } from "@/lib/api/types";
 
 const OBJECT_KIND_LABEL = {
@@ -22,8 +25,11 @@ const OBJECT_KIND_LABEL = {
 };
 
 export function PracticeTypesPage() {
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === "super_admin";
   const { data, isPending, error } = usePracticeTypes();
   const [selected, setSelected] = useState<PracticeType | null>(null);
+  const [editingGrading, setEditingGrading] = useState<PracticeType | null>(null);
 
   return (
     <div className="container max-w-6xl py-8">
@@ -62,6 +68,7 @@ export function PracticeTypesPage() {
                 <TableHead className="w-[110px]">Obyekt</TableHead>
                 <TableHead className="w-[120px]">Haftalar</TableHead>
                 <TableHead>Kurslar</TableHead>
+                {isSuperAdmin && <TableHead className="w-[60px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -107,6 +114,21 @@ export function PracticeTypesPage() {
                       ))}
                     </div>
                   </TableCell>
+                  {isSuperAdmin && (
+                    <TableCell>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Baho shkalasi"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingGrading(pt);
+                        }}
+                      >
+                        <Sliders className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -117,6 +139,11 @@ export function PracticeTypesPage() {
       <PracticeTypeDetailDialog
         practiceType={selected}
         onClose={() => setSelected(null)}
+      />
+      <GradingRulesDialog
+        open={!!editingGrading}
+        practiceType={editingGrading}
+        onClose={() => setEditingGrading(null)}
       />
     </div>
   );

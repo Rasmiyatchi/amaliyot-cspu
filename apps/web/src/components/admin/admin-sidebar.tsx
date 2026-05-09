@@ -39,20 +39,49 @@ type NavItem = {
   superAdminOnly?: boolean;
 };
 
-const navItems: NavItem[] = [
-  { to: "/admin", label: "Bosh sahifa", icon: LayoutDashboard, end: true },
-  { to: "/admin/academic", label: "Akademik", icon: School },
-  { to: "/admin/practice-types", label: "Amaliyot turlari", icon: BookOpen },
-  { to: "/admin/objects", label: "Obyektlar", icon: Building2 },
-  { to: "/admin/supervisors", label: "Rahbarlar", icon: UserCog },
-  { to: "/admin/students", label: "Talabalar", icon: Users },
-  { to: "/admin/assignments", label: "Biriktirish", icon: ClipboardList },
-  { to: "/admin/contracts", label: "Shartnomalar", icon: FileCheck2 },
-  { to: "/admin/attendance", label: "Davomat", icon: CalendarCheck },
-  { to: "/admin/task-templates", label: "Topshiriqlar", icon: LibraryBig },
-  { to: "/admin/documents", label: "Hujjatlar", icon: FileText },
-  { to: "/admin/admins", label: "Adminlar", icon: ShieldCheck, superAdminOnly: true },
-  { to: "/admin/system-settings", label: "Sozlamalar", icon: Settings, superAdminOnly: true },
+type NavSection = {
+  label?: string; // section heading; undefined = no heading
+  items: NavItem[];
+};
+
+const navSections: NavSection[] = [
+  {
+    items: [
+      { to: "/admin", label: "Bosh sahifa", icon: LayoutDashboard, end: true },
+    ],
+  },
+  {
+    label: "Akademik",
+    items: [
+      { to: "/admin/academic", label: "Fakultet/guruh", icon: School },
+      { to: "/admin/students", label: "Talabalar", icon: Users },
+      { to: "/admin/supervisors", label: "Rahbarlar", icon: UserCog },
+    ],
+  },
+  {
+    label: "Amaliyotlar",
+    items: [
+      { to: "/admin/practice-types", label: "Amaliyot turlari", icon: BookOpen },
+      { to: "/admin/objects", label: "Obyektlar", icon: Building2 },
+      { to: "/admin/assignments", label: "Biriktirishlar", icon: ClipboardList },
+      { to: "/admin/contracts", label: "Shartnomalar", icon: FileCheck2 },
+      { to: "/admin/attendance", label: "Davomat", icon: CalendarCheck },
+    ],
+  },
+  {
+    label: "O'quv jarayoni",
+    items: [
+      { to: "/admin/task-templates", label: "Topshiriqlar", icon: LibraryBig },
+      { to: "/admin/documents", label: "Hujjatlar", icon: FileText },
+    ],
+  },
+  {
+    label: "Tizim",
+    items: [
+      { to: "/admin/admins", label: "Adminlar", icon: ShieldCheck, superAdminOnly: true },
+      { to: "/admin/system-settings", label: "Sozlamalar", icon: Settings, superAdminOnly: true },
+    ],
+  },
 ];
 
 const STORAGE_KEY = "admin-sidebar-collapsed";
@@ -118,38 +147,57 @@ export function AdminSidebar() {
         )}
 
         {/* Menu */}
-        <nav className={cn("flex-1 space-y-1 overflow-y-auto", collapsed ? "p-2" : "p-3")}>
-          {navItems
-            .filter((item) => !item.superAdminOnly || user?.role === "super_admin")
-            .map(({ to, label, icon: Icon, end }) => {
-              const link = (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={end}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center rounded-md text-sm font-medium transition-colors",
-                      collapsed ? "h-10 w-10 justify-center" : "gap-3 px-3 py-2",
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )
-                  }
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span className="truncate">{label}</span>}
-                </NavLink>
-              );
+        <nav className={cn("flex-1 overflow-y-auto", collapsed ? "p-2" : "p-3")}>
+          {navSections.map((section, secIdx) => {
+            const visibleItems = section.items.filter(
+              (item) => !item.superAdminOnly || user?.role === "super_admin",
+            );
+            if (visibleItems.length === 0) return null;
+            return (
+              <div
+                key={secIdx}
+                className={cn(
+                  "space-y-0.5",
+                  secIdx > 0 && (collapsed ? "mt-2 border-t border-border pt-2" : "mt-3"),
+                )}
+              >
+                {section.label && !collapsed && (
+                  <div className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {section.label}
+                  </div>
+                )}
+                {visibleItems.map(({ to, label, icon: Icon, end }) => {
+                  const link = (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={end}
+                      className={({ isActive }) =>
+                        cn(
+                          "flex items-center rounded-md text-sm font-medium transition-colors",
+                          collapsed ? "h-10 w-10 justify-center" : "gap-3 px-3 py-2",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        )
+                      }
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span className="truncate">{label}</span>}
+                    </NavLink>
+                  );
 
-              if (!collapsed) return link;
-              return (
-                <Tooltip key={to}>
-                  <TooltipTrigger asChild>{link}</TooltipTrigger>
-                  <TooltipContent side="right">{label}</TooltipContent>
-                </Tooltip>
-              );
-            })}
+                  if (!collapsed) return link;
+                  return (
+                    <Tooltip key={to}>
+                      <TooltipTrigger asChild>{link}</TooltipTrigger>
+                      <TooltipContent side="right">{label}</TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Footer — theme + user */}
