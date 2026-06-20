@@ -2,6 +2,26 @@
 
 Ubuntu 22.04+ VPS uchun bosqichma-bosqich qo'llanma.
 
+## 0. Ushbu release o'zgarishlari (2026-06)
+
+Yangi xususiyatlar (yangi env yoki dependency **talab qilinmaydi**):
+
+- **Topshiriq deadline + overdue** — deadline majburiy; muddati o'tgan topshiriqlar
+  admin/super-admin/supervisorga ko'rinadi.
+- **Kafedra (Department) entity** + supervizorni **5 tagacha tashkilotga** biriktirish
+  (M2M) + fakultet/kafedra + **supervizor Excel import** (`/supervisors/import`).
+- **Bitta-qurilma login** — talaba bitta qurilmaga bog'lanadi; boshqa qurilmadan
+  kirish bloklanadi va adminlarga xabar boradi; admin qurilmani reset qiladi.
+- **O'quv yili filtri** — talabalar ro'yxati/eksport o'quv yili bo'yicha filtrlanadi.
+- **Maxfiylik** — talaba passport/JSHSHIR/tug'ilgan sana butunlay olib tashlandi.
+
+**Migrationlar** (API container start'da `alembic upgrade head` avto-bajaradi):
+`b7f2c9a1e3d5` (PII drop) → `c1d3e5f7a9b2` (departments + supervisor multi-org) →
+`d2e4f6a8b1c3` (device binding). `git pull` + `up -d --build` yetarli.
+
+> ⚠️ **Lokal dev DB** migration zanjiridan orqada bo'lishi mumkin. Lokal sinovdan
+> oldin: `cd apps/api && .venv/bin/alembic upgrade head`.
+
 ## 1. Pre-rekvizitlar
 
 VPS'da quyidagilar bo'lishi kerak:
