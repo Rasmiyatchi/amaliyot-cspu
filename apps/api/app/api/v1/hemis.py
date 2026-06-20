@@ -25,10 +25,11 @@ MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
     summary="HEMIS Excel import",
     description=(
         "Excel'dan talabalarni bulk import qiladi. "
-        "Ustunlar: hemis_id, last_name, first_name, direction_code, group_name, course "
-        "(majburiy); middle_name, jshshir, passport_seria, phone, email, region, district, "
-        "enrollment_year (ixtiyoriy). Mavjud hemis_id skip qilinadi. "
-        "Har yangi talabaga 10 belgili parol avtomatik generatsiya qilinadi va javobda qaytariladi."
+        "Ustunlar: hemis_id, full_name, mutaxassislik (yo'nalish kodi), guruh, kurs "
+        "(majburiy); jins, viloyat, tuman, ta'lim tili/shakli/turi, semestr, bitiruvchi "
+        "(ixtiyoriy). Maxfiylik: tug'ilgan sana, pasport, JSHSHIR ustunlari bo'lsa ham "
+        "saqlanmaydi. Mavjud hemis_id skip qilinadi. "
+        "Har yangi talabaga login/parol avtomatik generatsiya qilinadi va javobda qaytariladi."
     ),
 )
 async def hemis_import(

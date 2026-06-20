@@ -71,9 +71,6 @@ export type StudentCreatePayload = {
   email?: string | null;
   phone?: string | null;
   gender?: "male" | "female" | null;
-  birth_date?: string | null;
-  jshshir?: string | null;
-  passport_number?: string | null;
   region?: string | null;
   district?: string | null;
   group_id: UUID;

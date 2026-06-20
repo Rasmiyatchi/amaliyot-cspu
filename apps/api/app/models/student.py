@@ -1,9 +1,8 @@
 """Student — User'ga bog'langan profil, HEMIS ma'lumotlari bilan."""
 
-from datetime import date
 from uuid import UUID
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, String
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -30,11 +29,7 @@ class Student(UUIDMixin, TimestampMixin, Base):
         SAEnum(Gender, name="gender", values_callable=lambda e: [m.value for m in e]),
         nullable=True,
     )
-    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-
-    # PII — TODO: encrypted at rest (Phase 14 security audit)
-    jshshir: Mapped[str | None] = mapped_column(String(14), nullable=True, comment="PII")
-    passport_number: Mapped[str | None] = mapped_column(String(16), nullable=True, comment="PII")
+    # Maxfiylik: passport, JSHSHIR, tug'ilgan sana saqlanmaydi (foydalanuvchi talabi 2026-06-20)
 
     # ─── Manzil ────────────────────────────────────────────
     region: Mapped[str | None] = mapped_column(String(64), nullable=True)

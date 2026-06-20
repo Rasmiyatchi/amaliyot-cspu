@@ -45,9 +45,6 @@ type FormState = {
   email: string;
   phone: string;
   gender: "" | "male" | "female";
-  birth_date: string;
-  jshshir: string;
-  passport_number: string;
   region: string;
   district: string;
   faculty_id: string;
@@ -63,9 +60,6 @@ const EMPTY: FormState = {
   email: "",
   phone: "",
   gender: "",
-  birth_date: "",
-  jshshir: "",
-  passport_number: "",
   region: "",
   district: "",
   faculty_id: "",
@@ -96,9 +90,6 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
         email: student.email ?? "",
         phone: student.phone ?? "",
         gender: (student.gender as "male" | "female") ?? "",
-        birth_date: student.birth_date ?? "",
-        jshshir: student.jshshir ?? "",
-        passport_number: student.passport_number ?? "",
         region: student.region ?? "",
         district: student.district ?? "",
         faculty_id: student.faculty_id ?? "",
@@ -151,9 +142,6 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
             email: form.email || null,
             phone: form.phone || null,
             gender: form.gender || null,
-            birth_date: form.birth_date || null,
-            jshshir: form.jshshir || null,
-            passport_number: form.passport_number || null,
             region: form.region || null,
             district: form.district || null,
             group_id: (form.group_id || undefined) as UUID | undefined,
@@ -169,9 +157,6 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
           email: form.email.trim() || null,
           phone: form.phone.trim() || null,
           gender: form.gender || null,
-          birth_date: form.birth_date || null,
-          jshshir: form.jshshir.trim() || null,
-          passport_number: form.passport_number.trim() || null,
           region: form.region.trim() || null,
           district: form.district.trim() || null,
           group_id: form.group_id as UUID,
@@ -333,30 +318,6 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
                 <SelectItem value="female">Ayol</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label>Tug'ilgan sana</Label>
-            <Input
-              type="date"
-              value={form.birth_date}
-              onChange={(e) => set("birth_date", e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>JSHSHIR</Label>
-            <Input
-              value={form.jshshir}
-              onChange={(e) => set("jshshir", e.target.value)}
-              maxLength={14}
-            />
-          </div>
-          <div>
-            <Label>Pasport</Label>
-            <Input
-              value={form.passport_number}
-              onChange={(e) => set("passport_number", e.target.value)}
-              placeholder="AD0000000"
-            />
           </div>
           <div>
             <Label>Viloyat</Label>

@@ -1,6 +1,6 @@
 """Student schemas — admin barcha maydonlarni ko'radi, hech narsa yashirilmaydi."""
 
-from datetime import date, datetime
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -28,11 +28,6 @@ class StudentRead(BaseModel):
 
     # Shaxsiy
     gender: Gender | None
-    birth_date: date | None
-
-    # PII (admin ko'radi — foydalanuvchi talabi 2026-04-23)
-    jshshir: str | None
-    passport_number: str | None
 
     # Manzil
     region: str | None
@@ -78,9 +73,6 @@ class StudentCreate(BaseModel):
     phone: str | None = Field(None, max_length=20)
 
     gender: Gender | None = None
-    birth_date: date | None = None
-    jshshir: str | None = Field(None, max_length=14)
-    passport_number: str | None = Field(None, max_length=20)
     region: str | None = Field(None, max_length=100)
     district: str | None = Field(None, max_length=100)
 
@@ -102,9 +94,6 @@ class StudentUpdate(BaseModel):
     phone: str | None = Field(None, max_length=20)
 
     gender: Gender | None = None
-    birth_date: date | None = None
-    jshshir: str | None = Field(None, max_length=14)
-    passport_number: str | None = Field(None, max_length=20)
     region: str | None = Field(None, max_length=100)
     district: str | None = Field(None, max_length=100)
 

@@ -33,9 +33,6 @@ def _student_base_select() -> Any:
             User.is_active,
             User.last_login_at,
             Student.gender,
-            Student.birth_date,
-            Student.jshshir,
-            Student.passport_number,
             Student.region,
             Student.district,
             Student.group_id,
@@ -251,9 +248,6 @@ async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
         user_id=user.id,
         hemis_id=hemis_id,
         gender=payload.get("gender"),
-        birth_date=payload.get("birth_date"),
-        jshshir=payload.get("jshshir"),
-        passport_number=payload.get("passport_number"),
         region=payload.get("region"),
         district=payload.get("district"),
         group_id=group_id,
@@ -296,7 +290,7 @@ async def update_student(
 
     # Student maydonlari
     student_keys = (
-        "gender", "birth_date", "jshshir", "passport_number",
+        "gender",
         "region", "district", "group_id", "current_semester",
         "is_graduating", "education_language", "education_form",
         "degree_type", "status",

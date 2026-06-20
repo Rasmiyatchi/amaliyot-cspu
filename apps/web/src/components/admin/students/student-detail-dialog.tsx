@@ -120,9 +120,6 @@ export function StudentDetailDialog({ student, onClose }: Props) {
                   label="Jinsi"
                   value={student.gender ? GENDER_LABEL[student.gender] : null}
                 />
-                <Field label="Tug'ilgan sana" value={student.birth_date} />
-                <Field label="JSHSHIR" value={student.jshshir} />
-                <Field label="Pasport" value={student.passport_number} />
               </Section>
 
               <Section title="Aloqa">

@@ -125,10 +125,6 @@ export type Student = {
   last_login_at: ISODateTime | null;
 
   gender: Gender | null;
-  birth_date: ISODate | null;
-
-  jshshir: string | null;
-  passport_number: string | null;
 
   region: string | null;
   district: string | null;

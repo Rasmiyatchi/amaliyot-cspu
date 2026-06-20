@@ -7,7 +7,6 @@ import io
 import re
 import secrets
 import string
-from datetime import date, datetime
 from typing import Any
 
 from loguru import logger
@@ -37,10 +36,8 @@ HEADER_MAP: dict[str, str] = {
     "viloyat": "region",
     "tuman": "district",
     "jins": "gender",
-    "tug'ilgan sana": "birth_date",
-    "pasport raqami": "passport_number",
-    "jshshir-kod": "jshshir",
-    "jshshir": "jshshir",  # alt
+    # Maxfiylik: tug'ilgan sana / pasport / JSHSHIR ustunlari bo'lsa ham
+    # e'tiborsiz qoldiriladi (saqlanmaydi) — foydalanuvchi talabi 2026-06-20
     "kurs": "course",
     "fakultet": "faculty_name",  # info only — Direction orqali topamiz
     "guruh": "group_name",
@@ -152,21 +149,6 @@ def _parse_bool(v: Any) -> bool:
         return False
     s = str(v).strip().lower()
     return s in {"ha", "yes", "true", "1"}
-
-
-def _parse_date(v: Any) -> date | None:
-    if v is None:
-        return None
-    if isinstance(v, datetime):
-        return v.date()
-    if isinstance(v, date):
-        return v
-    s = str(v).strip()
-    # ISO format "2004-12-21"
-    try:
-        return date.fromisoformat(s[:10])
-    except ValueError:
-        return None
 
 
 def _parse_excel(
@@ -344,9 +326,6 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                 user_id=user.id,
                 hemis_id=hemis_id,
                 gender=_parse_gender(rec.get("gender")),
-                birth_date=_parse_date(rec.get("birth_date")),
-                jshshir=rec.get("jshshir") or None,
-                passport_number=rec.get("passport_number") or None,
                 region=rec.get("region") or None,
                 district=rec.get("district") or None,
                 group_id=group.id,
