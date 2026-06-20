@@ -19,6 +19,19 @@ import type {
   UUID,
 } from "@/lib/api/types";
 
+export type OverdueTask = {
+  task_id: UUID;
+  assignment_id: UUID;
+  template_title: string;
+  template_points: number;
+  due_date: string;
+  days_overdue: number;
+  status: "not_started" | "rejected";
+  student_full_name: string | null;
+  student_hemis_id: string | null;
+  group_name: string | null;
+};
+
 export const taskKeys = {
   all: ["tasks"] as const,
   templates: (practice_type_id?: UUID, course?: number, semester?: Semester) =>
@@ -31,7 +44,16 @@ export const taskKeys = {
     [...taskKeys.all, "journal", assignmentId] as const,
   analyses: (assignmentId: UUID, quarter?: number) =>
     [...taskKeys.all, "analyses", assignmentId, quarter] as const,
+  overdue: () => [...taskKeys.all, "overdue"] as const,
 };
+
+export function useOverdueTasks(enabled = true) {
+  return useQuery({
+    queryKey: taskKeys.overdue(),
+    enabled,
+    queryFn: () => api.get("v1/tasks/overdue").json<OverdueTask[]>(),
+  });
+}
 
 // ─── Templates ───────────────────────────────────────────
 

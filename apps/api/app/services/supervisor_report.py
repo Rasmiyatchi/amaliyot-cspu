@@ -15,7 +15,7 @@ from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
 from app.models.student import Student
-from app.models.supervisor import Supervisor
+from app.models.supervisor import Supervisor, SupervisorOrganization
 from app.models.task import Task, TaskTemplate
 from app.models.user import User
 from app.services import pdf as pdf_svc
@@ -43,14 +43,29 @@ async def build_context(db: AsyncSession, user: User) -> dict[str, Any]:
     if supervisor_ids:
         sup = (
             await db.execute(
-                select(Supervisor.position, Organization.name)
-                .outerjoin(Organization, Organization.id == Supervisor.organization_id)
-                .where(Supervisor.id == supervisor_ids[0])
+                select(Supervisor.position).where(Supervisor.id == supervisor_ids[0])
             )
         ).first()
         if sup:
             position = sup[0]
-            organization_name = sup[1]
+        # Biriktirilgan tashkilot(lar) — birinchisini ko'rsatamiz
+        org_names = (
+            (
+                await db.execute(
+                    select(Organization.name)
+                    .join(
+                        SupervisorOrganization,
+                        SupervisorOrganization.organization_id == Organization.id,
+                    )
+                    .where(SupervisorOrganization.supervisor_id == supervisor_ids[0])
+                    .order_by(Organization.name)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if org_names:
+            organization_name = ", ".join(org_names)
 
     rows: list[dict[str, Any]] = []
     if supervisor_ids:

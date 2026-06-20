@@ -7,6 +7,12 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
+class OrganizationRef(BaseModel):
+    id: UUID
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+
 class SupervisorCreate(BaseModel):
     """Supervisor yaratish — User va profile birgalikda."""
 
@@ -23,7 +29,11 @@ class SupervisorCreate(BaseModel):
     position: str = Field(..., min_length=2, max_length=100)
     specialty: str | None = Field(None, max_length=150)
     experience_years: int | None = Field(None, ge=0, le=80)
-    organization_id: UUID | None = None
+    faculty_id: UUID | None = None
+    department_id: UUID | None = None
+    organization_ids: list[UUID] = Field(
+        default_factory=list, max_length=5, description="Maksimum 5 ta tashkilot"
+    )
     capacity: int = Field(5, ge=1, le=100)
 
 
@@ -39,7 +49,9 @@ class SupervisorUpdate(BaseModel):
     position: str | None = Field(None, min_length=2, max_length=100)
     specialty: str | None = Field(None, max_length=150)
     experience_years: int | None = Field(None, ge=0, le=80)
-    organization_id: UUID | None = None
+    faculty_id: UUID | None = None
+    department_id: UUID | None = None
+    organization_ids: list[UUID] | None = Field(None, max_length=5)
     capacity: int | None = Field(None, ge=1, le=100)
     is_active: bool | None = None
 
@@ -66,8 +78,11 @@ class SupervisorRead(BaseModel):
     experience_years: int | None
     capacity: int
     rating: Decimal
-    organization_id: UUID | None
-    organization_name: str | None
+    faculty_id: UUID | None
+    faculty_name: str | None
+    department_id: UUID | None
+    department_name: str | None
+    organizations: list[OrganizationRef] = []
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

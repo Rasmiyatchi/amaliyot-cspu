@@ -69,3 +69,25 @@ export function useDeleteSupervisor() {
     onSuccess: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
   });
 }
+
+export type SupervisorImportResponse = {
+  total_rows: number;
+  created: number;
+  skipped: number;
+  errors: { row: number; name: string | null; message: string }[];
+  credentials: { full_name: string; username: string; password: string }[];
+};
+
+export function useSupervisorImport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return api
+        .post("v1/supervisors/import", { body: fd, timeout: 120000 })
+        .json<SupervisorImportResponse>();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
+  });
+}

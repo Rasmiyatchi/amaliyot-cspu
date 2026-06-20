@@ -75,6 +75,22 @@ export type DirectionCreate = {
   name: string;
 };
 
+export type Department = {
+  id: UUID;
+  faculty_id: UUID;
+  name: string;
+  code: string | null;
+  is_active: boolean;
+  created_at: ISODateTime;
+};
+
+export type DepartmentCreate = {
+  faculty_id: UUID;
+  name: string;
+  code?: string | null;
+  is_active?: boolean;
+};
+
 export type AcademicYear = {
   id: UUID;
   name: string;
@@ -203,6 +219,8 @@ export type Area = {
 export type AreaCreate = Omit<Area, "id" | "created_at" | "updated_at">;
 
 // ─── Supervisor ───────────────────────────────────────────
+export type OrganizationRef = { id: UUID; name: string };
+
 export type Supervisor = {
   id: UUID;
   user_id: UUID;
@@ -220,8 +238,11 @@ export type Supervisor = {
   experience_years: number | null;
   capacity: number;
   rating: number;
-  organization_id: UUID | null;
-  organization_name: string | null;
+  faculty_id: UUID | null;
+  faculty_name: string | null;
+  department_id: UUID | null;
+  department_name: string | null;
+  organizations: OrganizationRef[];
   created_at: ISODateTime;
 };
 
@@ -236,7 +257,9 @@ export type SupervisorCreate = {
   position: string;
   specialty?: string | null;
   experience_years?: number | null;
-  organization_id?: UUID | null;
+  faculty_id?: UUID | null;
+  department_id?: UUID | null;
+  organization_ids?: UUID[];
   capacity: number;
 };
 
@@ -517,6 +540,7 @@ export type Task = {
   submission_md: string | null;
   attachments: TaskAttachment[];
   due_date: string | null;
+  is_overdue: boolean;
   notes: string | null;
   submitted_at: ISODateTime | null;
   points_earned: number | null;

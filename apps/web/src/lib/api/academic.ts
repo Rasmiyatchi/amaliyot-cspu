@@ -4,6 +4,8 @@ import { api } from "@/lib/api";
 import type {
   AcademicYear,
   AcademicYearCreate,
+  Department,
+  DepartmentCreate,
   Direction,
   DirectionCreate,
   Faculty,
@@ -19,6 +21,8 @@ export const academicKeys = {
   all: ["academic"] as const,
   faculties: () => [...academicKeys.all, "faculties"] as const,
   directions: (facultyId?: UUID) => [...academicKeys.all, "directions", facultyId ?? "all"] as const,
+  departments: (facultyId?: UUID) =>
+    [...academicKeys.all, "departments", facultyId ?? "all"] as const,
   academicYears: () => [...academicKeys.all, "academic-years"] as const,
   groups: (filters?: {
     directionId?: UUID;
@@ -98,6 +102,44 @@ export function useDeleteDirection() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: UUID) => api.delete(`v1/academic/directions/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: academicKeys.all }),
+  });
+}
+
+// ─── Departments (Kafedra) ────────────────────────────────
+export function useDepartments(facultyId?: UUID, page = 1, pageSize = 100) {
+  const qs = new URLSearchParams();
+  qs.set("page", String(page));
+  qs.set("page_size", String(pageSize));
+  if (facultyId) qs.set("faculty_id", facultyId);
+  return useQuery({
+    queryKey: [...academicKeys.departments(facultyId), page, pageSize],
+    queryFn: () => api.get(`v1/academic/departments?${qs}`).json<Paginated<Department>>(),
+  });
+}
+
+export function useCreateDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: DepartmentCreate) =>
+      api.post("v1/academic/departments", { json: data }).json<Department>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: academicKeys.all }),
+  });
+}
+
+export function useUpdateDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: UUID; data: Partial<DepartmentCreate> }) =>
+      api.patch(`v1/academic/departments/${id}`, { json: data }).json<Department>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: academicKeys.all }),
+  });
+}
+
+export function useDeleteDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) => api.delete(`v1/academic/departments/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: academicKeys.all }),
   });
 }

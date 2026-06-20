@@ -10,14 +10,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
+from app.models.academic import Department, Faculty
 from app.models.enums import UserRole
 from app.models.organization import Organization
-from app.models.supervisor import Supervisor
+from app.models.supervisor import Supervisor, SupervisorOrganization
 from app.models.user import User
 
 
 def _supervisor_base_select() -> Any:
-    """Supervisor + User + Organization fields flat."""
+    """Supervisor + User + Faculty + Department fields flat."""
     return (
         select(
             Supervisor.id,
@@ -35,19 +36,65 @@ def _supervisor_base_select() -> Any:
             Supervisor.experience_years,
             Supervisor.capacity,
             Supervisor.rating,
-            Supervisor.organization_id,
-            Organization.name.label("organization_name"),
+            Supervisor.faculty_id,
+            Faculty.name.label("faculty_name"),
+            Supervisor.department_id,
+            Department.name.label("department_name"),
             Supervisor.created_at,
         )
         .join(User, User.id == Supervisor.user_id)
-        .outerjoin(Organization, Organization.id == Supervisor.organization_id)
+        .outerjoin(Faculty, Faculty.id == Supervisor.faculty_id)
+        .outerjoin(Department, Department.id == Supervisor.department_id)
     )
 
 
 def _row_to_dict(r: dict[str, Any]) -> dict[str, Any]:
     middle = r["middle_name"]
     full_name = f"{r['last_name']} {r['first_name']}" + (f" {middle}" if middle else "")
-    return {**dict(r), "full_name": full_name}
+    return {**dict(r), "full_name": full_name, "organizations": []}
+
+
+async def _hydrate_organizations(
+    db: AsyncSession, rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Har bir supervizorga biriktirilgan tashkilotlar ro'yxatini qo'shadi."""
+    sup_ids = [r["id"] for r in rows]
+    if not sup_ids:
+        return rows
+    org_rows = (
+        await db.execute(
+            select(
+                SupervisorOrganization.supervisor_id,
+                Organization.id,
+                Organization.name,
+            )
+            .join(Organization, Organization.id == SupervisorOrganization.organization_id)
+            .where(SupervisorOrganization.supervisor_id.in_(sup_ids))
+            .order_by(Organization.name)
+        )
+    ).all()
+    by_sup: dict[Any, list[dict[str, Any]]] = {}
+    for sup_id, org_id, org_name in org_rows:
+        by_sup.setdefault(sup_id, []).append({"id": org_id, "name": org_name})
+    for r in rows:
+        r["organizations"] = by_sup.get(r["id"], [])
+    return rows
+
+
+async def _set_supervisor_organizations(
+    db: AsyncSession, supervisor_id: UUID, organization_ids: list[UUID]
+) -> None:
+    """M2M tashkilotlarni qayta o'rnatadi (max 5)."""
+    unique_ids = list(dict.fromkeys(organization_ids))[:5]
+    await db.execute(
+        SupervisorOrganization.__table__.delete().where(
+            SupervisorOrganization.supervisor_id == supervisor_id
+        )
+    )
+    for org_id in unique_ids:
+        db.add(
+            SupervisorOrganization(supervisor_id=supervisor_id, organization_id=org_id)
+        )
 
 
 async def list_supervisors(
@@ -67,7 +114,14 @@ async def list_supervisors(
 
     def apply(stmt):  # type: ignore[no-untyped-def]
         if organization_id:
-            stmt = stmt.where(Supervisor.organization_id == organization_id)
+            stmt = stmt.where(
+                select(SupervisorOrganization.id)
+                .where(
+                    SupervisorOrganization.supervisor_id == Supervisor.id,
+                    SupervisorOrganization.organization_id == organization_id,
+                )
+                .exists()
+            )
         if is_active is not None:
             stmt = stmt.where(User.is_active.is_(is_active))
         if search:
@@ -92,7 +146,9 @@ async def list_supervisors(
         .mappings()
         .all()
     )
-    return [_row_to_dict(dict(r)) for r in rows], total
+    items = [_row_to_dict(dict(r)) for r in rows]
+    await _hydrate_organizations(db, items)
+    return items, total
 
 
 async def get_supervisor(db: AsyncSession, id_: UUID) -> dict[str, Any]:
@@ -101,7 +157,9 @@ async def get_supervisor(db: AsyncSession, id_: UUID) -> dict[str, Any]:
     )
     if not row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Supervizor topilmadi: {id_}")
-    return _row_to_dict(dict(row))
+    item = _row_to_dict(dict(row))
+    await _hydrate_organizations(db, [item])
+    return item
 
 
 async def create_supervisor(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
@@ -135,15 +193,22 @@ async def create_supervisor(db: AsyncSession, data: BaseModel) -> dict[str, Any]
         position=payload["position"],
         specialty=payload.get("specialty"),
         experience_years=payload.get("experience_years"),
-        organization_id=payload.get("organization_id"),
+        faculty_id=payload.get("faculty_id"),
+        department_id=payload.get("department_id"),
         capacity=payload.get("capacity", 5),
     )
     db.add(supervisor)
     try:
+        await db.flush()
+        await _set_supervisor_organizations(
+            db, supervisor.id, payload.get("organization_ids") or []
+        )
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "Tashkilot topilmadi yoki xatolik") from e
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Tashkilot/kafedra topilmadi yoki xatolik"
+        ) from e
 
     return await get_supervisor(db, supervisor.id)
 
@@ -162,10 +227,13 @@ async def update_supervisor(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
         "position",
         "specialty",
         "experience_years",
-        "organization_id",
+        "faculty_id",
+        "department_id",
         "capacity",
         "is_active",
     }
+
+    organization_ids = payload.pop("organization_ids", None)
 
     for key, value in payload.items():
         if key in user_fields:
@@ -177,6 +245,8 @@ async def update_supervisor(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
             setattr(supervisor, key, value)
 
     try:
+        if organization_ids is not None:
+            await _set_supervisor_organizations(db, supervisor.id, organization_ids)
         await db.commit()
     except IntegrityError as e:
         await db.rollback()

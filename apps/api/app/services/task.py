@@ -416,7 +416,16 @@ async def list_available_templates_for_assignment(
 
 
 def _task_row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
-    return dict(row)
+    d = dict(row)
+    # Overdue: deadline o'tib ketgan, lekin hali topshirilmagan (yoki rad etilgan)
+    due = d.get("due_date")
+    st = d.get("status")
+    d["is_overdue"] = bool(
+        due is not None
+        and st in (TaskStatus.NOT_STARTED, TaskStatus.REJECTED)
+        and due < datetime.now(UTC).date()
+    )
+    return d
 
 
 def _base_task_select() -> Any:
@@ -437,6 +446,8 @@ def _base_task_select() -> Any:
             Task.status,
             Task.submission_md,
             Task.attachments,
+            Task.due_date,
+            Task.notes,
             Task.submitted_at,
             Task.points_earned,
             Task.graded_by_id,
@@ -465,6 +476,62 @@ async def list_tasks_for_assignment(
     items = [_task_row_to_dict(dict(r)) for r in rows]
     await _hydrate_grader_name(db, items)
     return items
+
+
+async def list_overdue_tasks(
+    db: AsyncSession, user: User
+) -> list[dict[str, Any]]:
+    """Deadline o'tib ketgan, hali topshirilmagan topshiriqlar.
+
+    admin/super_admin: barchasi; supervizor: faqat o'z biriktirishlari.
+    """
+    today = datetime.now(UTC).date()
+    stmt = (
+        select(
+            Task.id.label("task_id"),
+            Task.assignment_id,
+            Task.due_date,
+            Task.status,
+            TaskTemplate.title.label("template_title"),
+            TaskTemplate.points.label("template_points"),
+            Student.hemis_id.label("student_hemis_id"),
+            (User.last_name + " " + User.first_name).label("student_full_name"),
+            Group.name.label("group_name"),
+        )
+        .join(TaskTemplate, TaskTemplate.id == Task.template_id)
+        .join(PracticeAssignment, PracticeAssignment.id == Task.assignment_id)
+        .join(Student, Student.id == PracticeAssignment.student_id)
+        .outerjoin(User, User.id == Student.user_id)
+        .outerjoin(Group, Group.id == Student.group_id)
+        .where(
+            Task.due_date.is_not(None),
+            Task.due_date < today,
+            Task.status.in_([TaskStatus.NOT_STARTED, TaskStatus.REJECTED]),
+        )
+        .order_by(Task.due_date.asc())
+    )
+
+    if user.role == UserRole.SUPERVISOR:
+        supervisor_ids = (
+            (
+                await db.execute(
+                    select(Supervisor.id).where(Supervisor.user_id == user.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if not supervisor_ids:
+            return []
+        stmt = stmt.where(PracticeAssignment.supervisor_id.in_(supervisor_ids))
+
+    rows = (await db.execute(stmt)).mappings().all()
+    result: list[dict[str, Any]] = []
+    for r in rows:
+        d = dict(r)
+        d["days_overdue"] = (today - d["due_date"]).days
+        result.append(d)
+    return result
 
 
 async def get_task(db: AsyncSession, task_id: UUID) -> dict[str, Any]:

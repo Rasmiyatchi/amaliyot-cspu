@@ -19,6 +19,7 @@ from app.schemas.task import (
     LessonAnalysisRead,
     LessonAnalysisRejectRequest,
     LessonAnalysisUpdateRequest,
+    OverdueTaskRead,
     TaskGradeRequest,
     TaskRead,
     TaskRejectRequest,
@@ -111,6 +112,27 @@ async def delete_template(
     template_id: UUID, db: SessionDep, _: RequireAdmin
 ) -> None:
     await svc.delete_template(db, template_id)
+
+
+# ─── Overdue tasks (admin/super/supervisor) ─────────────
+
+
+@router.get(
+    "/tasks/overdue",
+    response_model=list[OverdueTaskRead],
+    summary="Deadline o'tib ketgan, topshirilmagan topshiriqlar",
+)
+async def list_overdue_tasks(
+    db: SessionDep, user: CurrentUser
+) -> list[OverdueTaskRead]:
+    if user.role not in (
+        UserRole.ADMIN,
+        UserRole.SUPER_ADMIN,
+        UserRole.SUPERVISOR,
+    ):
+        raise HTTPException(status.HTTP_403_FORBIDDEN)
+    items = await svc.list_overdue_tasks(db, user)
+    return [OverdueTaskRead.model_validate(i) for i in items]
 
 
 # ─── Task — per assignment ──────────────────────────────

@@ -19,6 +19,26 @@ class Faculty(UUIDMixin, TimestampMixin, Base):
         return f"<Faculty {self.name}>"
 
 
+class Department(UUIDMixin, TimestampMixin, Base):
+    """Kafedra — fakultet tarkibidagi bo'lim."""
+
+    __tablename__ = "departments"
+    __table_args__ = (
+        UniqueConstraint("faculty_id", "name", name="uq_departments_faculty_name"),
+    )
+
+    faculty_id: Mapped[UUID] = mapped_column(
+        ForeignKey("faculties.id", ondelete="RESTRICT"),
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(200))
+    code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+
+    def __repr__(self) -> str:
+        return f"<Department {self.name}>"
+
+
 class Direction(UUIDMixin, TimestampMixin, Base):
     """Ta'lim yo'nalishi — masalan '60110100 - Pedagogika'."""
 

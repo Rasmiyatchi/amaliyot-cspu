@@ -3,16 +3,58 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile, status
 
 from app.api.deps import RequireAdmin, RequireSupervisor
 from app.db.session import SessionDep
 from app.schemas.common import CredentialsUpdate, Paginated
 from app.schemas.supervisor import SupervisorCreate, SupervisorRead, SupervisorUpdate
+from app.schemas.supervisor_import import SupervisorImportResponse
 from app.services import supervisor as svc
+from app.services import supervisor_import as import_svc
 from app.services import supervisor_report as report_svc
 
 router = APIRouter(prefix="/supervisors", tags=["supervisors"])
+
+_IMPORT_ALLOWED_MIME = {
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "application/octet-stream",
+}
+_IMPORT_MAX_SIZE = 20 * 1024 * 1024
+
+
+@router.post(
+    "/import",
+    response_model=SupervisorImportResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Admin: supervizorlarni Excel'dan import qilish",
+    description=(
+        "Ustunlar: familiya*, ism*, otasining ismi, lavozim, telefon, email, "
+        "mutaxassislik, tajriba, fakultet, kafedra, tashkilot (vergul bilan max 5), "
+        "login. Login berilmasa avtomatik generatsiya (login = parol). "
+        "Fakultet nomi bo'yicha topiladi, kafedra yo'q bo'lsa avto-yaratiladi."
+    ),
+)
+async def import_supervisors(
+    db: SessionDep,
+    _: RequireAdmin,
+    file: UploadFile = File(...),  # noqa: B008
+) -> SupervisorImportResponse:
+    if file.content_type and file.content_type not in _IMPORT_ALLOWED_MIME:
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            f"Qo'llab-quvvatlanmaydigan format: {file.content_type}. .xlsx yuklang.",
+        )
+    content = await file.read()
+    if len(content) > _IMPORT_MAX_SIZE:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            f"Fayl juda katta (max {_IMPORT_MAX_SIZE // 1024 // 1024} MB)",
+        )
+    if not content:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fayl bo'sh")
+    return await import_svc.import_supervisors(db, content)
 
 
 @router.get(

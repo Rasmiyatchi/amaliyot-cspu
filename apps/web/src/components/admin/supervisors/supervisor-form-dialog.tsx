@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { useDepartments, useFaculties } from "@/lib/api/academic";
 import { useOrganizations } from "@/lib/api/organizations";
 import {
   useCreateSupervisor,
@@ -54,7 +55,9 @@ const supCreateSchema = z.object({
   position: z.string().min(2).max(100),
   specialty: z.string().max(150).optional().or(z.literal("")),
   experience_years: z.coerce.number().int().min(0).max(80).optional().or(z.literal(NaN as number)),
-  organization_id: z.string().optional().or(z.literal(NONE_VALUE)),
+  faculty_id: z.string().optional().or(z.literal(NONE_VALUE)),
+  department_id: z.string().optional().or(z.literal(NONE_VALUE)),
+  organization_ids: z.array(z.string()).max(5, "Maksimum 5 ta tashkilot").default([]),
   capacity: z.coerce.number().int().min(1).max(100),
 });
 
@@ -72,7 +75,8 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
   const create = useCreateSupervisor();
   const update = useUpdateSupervisor();
   const updateCreds = useUpdateSupervisorCredentials();
-  const orgs = useOrganizations({}, 1, 100);
+  const orgs = useOrganizations({}, 1, 200);
+  const faculties = useFaculties();
   const isEdit = !!existing;
 
   const form = useForm<SupForm>({
@@ -88,10 +92,17 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
       middle_name: "",
       position: "",
       specialty: "",
-      organization_id: NONE_VALUE,
+      faculty_id: NONE_VALUE,
+      department_id: NONE_VALUE,
+      organization_ids: [],
       capacity: 5,
     },
   });
+
+  const selectedFacultyId = form.watch("faculty_id");
+  const departments = useDepartments(
+    selectedFacultyId && selectedFacultyId !== NONE_VALUE ? selectedFacultyId : undefined,
+  );
 
   useEffect(() => {
     if (open && existing) {
@@ -106,7 +117,9 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
         position: existing.position,
         specialty: existing.specialty ?? "",
         experience_years: existing.experience_years ?? undefined,
-        organization_id: existing.organization_id ?? NONE_VALUE,
+        faculty_id: existing.faculty_id ?? NONE_VALUE,
+        department_id: existing.department_id ?? NONE_VALUE,
+        organization_ids: existing.organizations.map((o) => o.id),
         capacity: existing.capacity,
       });
     } else if (open) {
@@ -115,7 +128,9 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
   }, [open, existing, form]);
 
   const onSubmit = async (values: SupForm) => {
-    const orgId = values.organization_id === NONE_VALUE ? null : values.organization_id || null;
+    const facultyId = values.faculty_id === NONE_VALUE ? null : values.faculty_id || null;
+    const departmentId =
+      values.department_id === NONE_VALUE ? null : values.department_id || null;
     const basePayload = {
       email: values.email || null,
       phone: values.phone || null,
@@ -125,7 +140,9 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
       position: values.position,
       specialty: values.specialty || null,
       experience_years: Number.isFinite(values.experience_years) ? values.experience_years : null,
-      organization_id: orgId,
+      faculty_id: facultyId,
+      department_id: departmentId,
+      organization_ids: values.organization_ids,
       capacity: values.capacity,
     };
 
@@ -352,25 +369,104 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                 />
                 <FormField
                   control={form.control}
-                  name="organization_id"
+                  name="faculty_id"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Tashkilot</FormLabel>
-                      <Select value={field.value ?? NONE_VALUE} onValueChange={field.onChange}>
+                    <FormItem>
+                      <FormLabel>Fakultet</FormLabel>
+                      <Select
+                        value={field.value ?? NONE_VALUE}
+                        onValueChange={(v) => {
+                          field.onChange(v);
+                          form.setValue("department_id", NONE_VALUE);
+                        }}
+                      >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Tashkilot tanlang" />
+                            <SelectValue placeholder="Fakultet tanlang" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={NONE_VALUE}>Biriktirilmagan</SelectItem>
-                          {(orgs.data?.items ?? []).map((o) => (
-                            <SelectItem key={o.id} value={o.id}>
-                              {o.name}
+                          <SelectItem value={NONE_VALUE}>Tanlanmagan</SelectItem>
+                          {(faculties.data?.items ?? []).map((f) => (
+                            <SelectItem key={f.id} value={f.id}>
+                              {f.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="department_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Kafedra</FormLabel>
+                      <Select
+                        value={field.value ?? NONE_VALUE}
+                        onValueChange={field.onChange}
+                        disabled={!selectedFacultyId || selectedFacultyId === NONE_VALUE}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Kafedra tanlang" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={NONE_VALUE}>Tanlanmagan</SelectItem>
+                          {(departments.data?.items ?? []).map((d) => (
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="organization_ids"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>
+                        Tashkilotlar (maksimum 5) — {field.value.length}/5
+                      </FormLabel>
+                      <div className="max-h-44 space-y-1.5 overflow-y-auto rounded-md border border-border p-2">
+                        {(orgs.data?.items ?? []).length === 0 && (
+                          <div className="px-1 py-2 text-sm text-muted-foreground">
+                            Tashkilotlar yo'q
+                          </div>
+                        )}
+                        {(orgs.data?.items ?? []).map((o) => {
+                          const checked = field.value.includes(o.id);
+                          const atLimit = field.value.length >= 5;
+                          return (
+                            <label
+                              key={o.id}
+                              className="flex cursor-pointer items-center gap-2 text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4"
+                                checked={checked}
+                                disabled={!checked && atLimit}
+                                onChange={(e) =>
+                                  field.onChange(
+                                    e.target.checked
+                                      ? [...field.value, o.id]
+                                      : field.value.filter((x) => x !== o.id),
+                                  )
+                                }
+                              />
+                              {o.name}
+                            </label>
+                          );
+                        })}
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

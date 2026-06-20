@@ -46,6 +46,17 @@ class User(UUIDMixin, TimestampMixin, Base):
         Boolean, default=False, server_default="false", index=True
     )
 
+    # Qurilma bog'lash (asosan talaba uchun — bitta qurilmadan kirish)
+    device_id: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, index=True, comment="Bog'langan qurilma fingerprint'i"
+    )
+    device_label: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, comment="Qurilma tavsifi (user-agent)"
+    )
+    device_bound_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Profile (umumiy maydonlar — rol-specific detallari Student/Supervisor da)
     first_name: Mapped[str] = mapped_column(String(100))
     last_name: Mapped[str] = mapped_column(String(100))

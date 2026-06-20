@@ -1,6 +1,7 @@
 import { School } from "lucide-react";
 
 import { AcademicYearList } from "@/components/admin/academic/academic-year-list";
+import { DepartmentList } from "@/components/admin/academic/department-list";
 import { DirectionList } from "@/components/admin/academic/direction-list";
 import { FacultyList } from "@/components/admin/academic/faculty-list";
 import { GroupList } from "@/components/admin/academic/group-list";
@@ -24,6 +25,7 @@ export function AcademicPage() {
       <Tabs defaultValue="faculties">
         <TabsList>
           <TabsTrigger value="faculties">Fakultetlar</TabsTrigger>
+          <TabsTrigger value="departments">Kafedralar</TabsTrigger>
           <TabsTrigger value="directions">Yo'nalishlar</TabsTrigger>
           <TabsTrigger value="groups">Guruhlar</TabsTrigger>
           <TabsTrigger value="academic-years">O'quv yillari</TabsTrigger>
@@ -31,6 +33,9 @@ export function AcademicPage() {
 
         <TabsContent value="faculties">
           <FacultyList />
+        </TabsContent>
+        <TabsContent value="departments">
+          <DepartmentList />
         </TabsContent>
         <TabsContent value="directions">
           <DirectionList />

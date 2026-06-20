@@ -1,8 +1,9 @@
-import { Pencil, Plus, Trash2, UserCog, Users } from "lucide-react";
+import { Pencil, Plus, Trash2, Upload, UserCog, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { SupervisorFormDialog } from "@/components/admin/supervisors/supervisor-form-dialog";
+import { SupervisorImportDialog } from "@/components/admin/supervisors/supervisor-import-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ export function SupervisorsPage() {
   const del = useDeleteSupervisor();
   const [editing, setEditing] = useState<Supervisor | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const handleDelete = async (s: Supervisor) => {
     if (!confirm(`"${s.full_name}" ni o'chirishni tasdiqlang?`)) return;
@@ -51,10 +53,16 @@ export function SupervisorsPage() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" />
-          Yangi supervizor
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" />
+            Excel import
+          </Button>
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="h-4 w-4" />
+            Yangi supervizor
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 max-w-sm">
@@ -113,8 +121,21 @@ export function SupervisorsPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {s.organization_name ?? (
+                    {s.organizations.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {s.organizations.map((o) => (
+                          <Badge key={o.id} variant="secondary" className="text-xs">
+                            {o.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
                       <span className="text-muted-foreground">Biriktirilmagan</span>
+                    )}
+                    {(s.faculty_name || s.department_name) && (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {[s.faculty_name, s.department_name].filter(Boolean).join(" · ")}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="text-xs">
@@ -165,6 +186,7 @@ export function SupervisorsPage() {
           setEditing(null);
         }}
       />
+      <SupervisorImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   );
 }

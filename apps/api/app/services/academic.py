@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import Base
-from app.models.academic import AcademicYear, Direction, Faculty, Group
+from app.models.academic import AcademicYear, Department, Direction, Faculty, Group
 
 M = TypeVar("M", bound=Base)
 
@@ -130,6 +130,58 @@ async def delete_direction(db: AsyncSession, id_: UUID) -> None:
     except IntegrityError as e:
         await db.rollback()
         raise _409("Yo'nalishga bog'langan guruhlar bor") from e
+
+
+# ─── Department (Kafedra) ─────────────────────────────────
+async def list_departments(
+    db: AsyncSession, offset: int, limit: int, faculty_id: UUID | None = None
+) -> tuple[list[Department], int]:
+    base = select(Department)
+    count_stmt = select(func.count(Department.id))
+    if faculty_id:
+        base = base.where(Department.faculty_id == faculty_id)
+        count_stmt = count_stmt.where(Department.faculty_id == faculty_id)
+    total = (await db.execute(count_stmt)).scalar_one()
+    items = (
+        (await db.execute(base.order_by(Department.name).offset(offset).limit(limit)))
+        .scalars()
+        .all()
+    )
+    return list(items), total
+
+
+async def create_department(db: AsyncSession, data: BaseModel) -> Department:
+    d = Department(**data.model_dump(exclude_unset=True))
+    db.add(d)
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise _409("Shu nomli kafedra mavjud yoki fakultet topilmadi") from e
+    await db.refresh(d)
+    return d
+
+
+async def update_department(db: AsyncSession, id_: UUID, data: BaseModel) -> Department:
+    d = await _get_or_404(db, Department, id_, "Kafedra")
+    _apply_updates(d, data)
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise _409("Shu nomli kafedra mavjud") from e
+    await db.refresh(d)
+    return d
+
+
+async def delete_department(db: AsyncSession, id_: UUID) -> None:
+    d = await _get_or_404(db, Department, id_, "Kafedra")
+    try:
+        await db.delete(d)
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise _409("Kafedraga bog'langan supervizorlar bor") from e
 
 
 # ─── AcademicYear ─────────────────────────────────────────

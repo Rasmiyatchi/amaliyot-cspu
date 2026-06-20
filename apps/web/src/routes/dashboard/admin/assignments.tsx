@@ -8,6 +8,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { AssignmentDetailDialog } from "@/components/admin/assignments/assignment-detail-dialog";
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
 import { AssignmentWizard } from "@/components/admin/assignments/assignment-wizard";
+import { OverdueTasksCard } from "@/components/overdue-tasks-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,11 @@ export function AssignmentsPage() {
             Yangi biriktirish
           </Button>
         </div>
+      </div>
+
+      {/* Muddati o'tgan topshiriqlar */}
+      <div className="mb-4">
+        <OverdueTasksCard />
       </div>
 
       {/* Status tabs */}

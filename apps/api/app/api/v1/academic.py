@@ -10,6 +10,9 @@ from app.schemas.academic import (
     AcademicYearCreate,
     AcademicYearRead,
     AcademicYearUpdate,
+    DepartmentCreate,
+    DepartmentRead,
+    DepartmentUpdate,
     DirectionCreate,
     DirectionRead,
     DirectionUpdate,
@@ -95,6 +98,44 @@ async def update_direction(
 @router.delete("/directions/{id_}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_direction(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
     await svc.delete_direction(db, id_)
+
+
+# ─── Department (Kafedra) ─────────────────────────────────
+@router.get("/departments", response_model=Paginated[DepartmentRead])
+async def list_departments(
+    db: SessionDep,
+    _: RequireAdmin,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=200),
+    faculty_id: UUID | None = None,
+) -> Paginated[DepartmentRead]:
+    offset = (page - 1) * page_size
+    items, total = await svc.list_departments(db, offset, page_size, faculty_id)
+    return Paginated(
+        items=[DepartmentRead.model_validate(i) for i in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.post("/departments", response_model=DepartmentRead, status_code=status.HTTP_201_CREATED)
+async def create_department(
+    data: DepartmentCreate, db: SessionDep, _: RequireAdmin
+) -> DepartmentRead:
+    return DepartmentRead.model_validate(await svc.create_department(db, data))
+
+
+@router.patch("/departments/{id_}", response_model=DepartmentRead)
+async def update_department(
+    id_: UUID, data: DepartmentUpdate, db: SessionDep, _: RequireAdmin
+) -> DepartmentRead:
+    return DepartmentRead.model_validate(await svc.update_department(db, id_, data))
+
+
+@router.delete("/departments/{id_}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_department(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
+    await svc.delete_department(db, id_)
 
 
 # ─── AcademicYear ─────────────────────────────────────────

@@ -103,6 +103,7 @@ class TaskRead(BaseModel):
     submission_md: str | None
     attachments: list[dict[str, Any]] = []
     due_date: date | None = None
+    is_overdue: bool = False
     notes: str | None = None
     submitted_at: datetime | None
     points_earned: int | None
@@ -113,6 +114,21 @@ class TaskRead(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OverdueTaskRead(BaseModel):
+    task_id: UUID
+    assignment_id: UUID
+    template_title: str
+    template_points: int
+    due_date: date
+    days_overdue: int
+    status: TaskStatus
+    student_full_name: str | None = None
+    student_hemis_id: str | None = None
+    group_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

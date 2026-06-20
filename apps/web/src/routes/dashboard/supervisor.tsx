@@ -18,6 +18,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { downloadSupervisorReport } from "@/lib/api/supervisor-report";
+import { OverdueTasksCard } from "@/components/overdue-tasks-card";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { StatCard } from "@/components/admin/stat-card";
@@ -277,6 +278,9 @@ export function SupervisorDashboard() {
                 />
               </div>
             )}
+
+            {/* Muddati o'tgan topshiriqlar */}
+            <OverdueTasksCard />
 
             {/* Assignment tanlov + hisobot */}
             <div className="flex flex-wrap items-center gap-2">

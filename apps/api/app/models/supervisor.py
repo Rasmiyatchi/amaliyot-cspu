@@ -1,15 +1,35 @@
-"""Supervisor — User profili, tashkilotga biriktirilgan amaliyot rahbari."""
+"""Supervisor — User profili, tashkilot(lar)ga biriktirilgan amaliyot rahbari."""
 
 from uuid import UUID
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
 
 
+class SupervisorOrganization(UUIDMixin, TimestampMixin, Base):
+    """Supervizor ↔ tashkilot bog'lanishi (M2M, supervizorga maksimum 5 ta)."""
+
+    __tablename__ = "supervisor_organizations"
+    __table_args__ = (
+        UniqueConstraint(
+            "supervisor_id", "organization_id", name="uq_supervisor_organization"
+        ),
+    )
+
+    supervisor_id: Mapped[UUID] = mapped_column(
+        ForeignKey("supervisors.id", ondelete="CASCADE"), index=True
+    )
+    organization_id: Mapped[UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+
+
 class Supervisor(UUIDMixin, TimestampMixin, Base):
-    """Amaliyot rahbari — tashkilotdagi yoki universitet xodimi."""
+    """Amaliyot rahbari — tashkilot(lar)dagi yoki universitet xodimi."""
+
+    __tablename__ = "supervisors"
 
     user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -17,9 +37,14 @@ class Supervisor(UUIDMixin, TimestampMixin, Base):
         index=True,
     )
 
-    # Tashkilot — nullable (universitet ichidagi rahbar bo'lishi mumkin)
-    organization_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("organizations.id", ondelete="SET NULL"),
+    # Akademik mansublik (yangi supervizor fakultet + kafedra bilan qo'shiladi)
+    faculty_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("faculties.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    department_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("departments.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
@@ -45,4 +70,4 @@ class Supervisor(UUIDMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
     def __repr__(self) -> str:
-        return f"<Supervisor user={self.user_id} org={self.organization_id}>"
+        return f"<Supervisor user={self.user_id} faculty={self.faculty_id}>"

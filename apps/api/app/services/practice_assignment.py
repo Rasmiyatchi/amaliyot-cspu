@@ -17,7 +17,7 @@ from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
 from app.models.student import Student
-from app.models.supervisor import Supervisor
+from app.models.supervisor import Supervisor, SupervisorOrganization
 from app.models.user import User
 from app.schemas.practice_assignment import (
     BulkAssignmentError,
@@ -165,13 +165,22 @@ async def _validate_and_resolve(
             raise ValidationError(f"Supervizor topilmadi: {supervisor_id}")
         if not supervisor.is_active:
             raise ValidationError(f"Supervizor aktiv emas: {supervisor_id}")
-        # Supervisor'ning tashkiloti assignment tashkiloti bilan mos kelsinligini tekshirish
-        if (
-            organization_id
-            and supervisor.organization_id
-            and supervisor.organization_id != organization_id
-        ):
-            raise ValidationError("Supervizor boshqa tashkilotga biriktirilgan")
+        # Supervizor tashkilotlari (M2M) — assignment tashkiloti ulardan biri bo'lsin.
+        # Agar supervizorga hech qanday tashkilot biriktirilmagan bo'lsa — tekshirilmaydi.
+        if organization_id:
+            sup_org_ids = (
+                (
+                    await db.execute(
+                        select(SupervisorOrganization.organization_id).where(
+                            SupervisorOrganization.supervisor_id == supervisor.id
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if sup_org_ids and organization_id not in sup_org_ids:
+                raise ValidationError("Supervizor bu tashkilotga biriktirilmagan")
 
     # Sana + davomiylik (calendar span — ta'tillarni ham o'z ichiga olishi mumkin)
     if end_date < start_date:
