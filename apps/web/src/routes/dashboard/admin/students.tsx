@@ -33,6 +33,7 @@ export function StudentsPage() {
         direction_id: filters.direction_id,
         group_id: filters.group_id,
         course: filters.course,
+        academic_year_id: filters.academic_year_id,
         status: filters.status,
         search: filters.search,
       });

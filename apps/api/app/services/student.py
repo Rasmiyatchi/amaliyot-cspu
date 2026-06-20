@@ -32,6 +32,9 @@ def _student_base_select() -> Any:
             User.avatar_url,
             User.is_active,
             User.last_login_at,
+            User.device_id,
+            User.device_label,
+            User.device_bound_at,
             Student.gender,
             Student.region,
             Student.district,
@@ -75,6 +78,7 @@ async def list_students(
     direction_id: UUID | None = None,
     group_id: UUID | None = None,
     course: int | None = None,
+    academic_year_id: UUID | None = None,
     status_filter: StudentStatus | None = None,
     search: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
@@ -98,6 +102,8 @@ async def list_students(
             stmt = stmt.where(Student.group_id == group_id)
         if course is not None:
             stmt = stmt.where(Group.course == course)
+        if academic_year_id:
+            stmt = stmt.where(Group.academic_year_id == academic_year_id)
         if status_filter:
             stmt = stmt.where(Student.status == status_filter)
         if search:
@@ -305,6 +311,23 @@ async def update_student(
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Konflikt") from e
 
+    return await get_student(db, id_)
+
+
+async def reset_device(db: AsyncSession, id_: UUID) -> dict[str, Any]:
+    """Admin: talabaning bog'langan qurilmasini o'chiradi.
+
+    Shundan keyin talaba istalgan yangi qurilmadan kirib, qayta bog'lanadi.
+    """
+    student = await db.get(Student, id_)
+    if not student:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Talaba topilmadi: {id_}")
+    user = await db.get(User, student.user_id)
+    if user:
+        user.device_id = None
+        user.device_label = None
+        user.device_bound_at = None
+        await db.commit()
     return await get_student(db, id_)
 
 

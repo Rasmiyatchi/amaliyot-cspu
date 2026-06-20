@@ -11,6 +11,7 @@ from app.models.enums import UserRole
 class LoginRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=64)
     password: str = Field(..., min_length=4, max_length=128)
+    device_id: str | None = Field(None, max_length=128, description="Qurilma fingerprint'i")
 
 
 class TokenResponse(BaseModel):

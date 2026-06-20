@@ -7,12 +7,11 @@ Admin yuklaydi, supervizor va talabalar o'qiydi.
 - program — Amaliyot dasturlari (har amaliyot turi uchun)
 """
 
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 

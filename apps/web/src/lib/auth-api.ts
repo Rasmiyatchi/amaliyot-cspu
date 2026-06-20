@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { getDeviceId } from "@/lib/device-id";
 import { useAuthStore, type User } from "@/stores/auth";
 
 type TokenResponse = {
@@ -9,7 +10,9 @@ type TokenResponse = {
 
 export async function login(username: string, password: string): Promise<User> {
   const tokens = await api
-    .post("v1/auth/login", { json: { username, password } })
+    .post("v1/auth/login", {
+      json: { username, password, device_id: getDeviceId() },
+    })
     .json<TokenResponse>();
 
   useAuthStore.getState().setToken(tokens.access_token);

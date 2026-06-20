@@ -34,6 +34,7 @@ async def export_students(
     direction_id: UUID | None = None,
     group_id: UUID | None = None,
     course: int | None = Query(None, ge=1, le=4),
+    academic_year_id: UUID | None = None,
     status: StudentStatus | None = None,
     search: str | None = None,
 ) -> Response:
@@ -43,6 +44,7 @@ async def export_students(
         direction_id=direction_id,
         group_id=group_id,
         course=course,
+        academic_year_id=academic_year_id,
         status=status,
         search=search,
     )

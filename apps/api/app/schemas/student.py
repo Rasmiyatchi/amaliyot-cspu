@@ -26,6 +26,11 @@ class StudentRead(BaseModel):
     is_active: bool
     last_login_at: datetime | None
 
+    # Qurilma bog'lash (bitta-qurilma login)
+    device_id: str | None = None
+    device_label: str | None = None
+    device_bound_at: datetime | None = None
+
     # Shaxsiy
     gender: Gender | None
 

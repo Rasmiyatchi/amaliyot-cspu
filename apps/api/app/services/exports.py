@@ -41,6 +41,7 @@ async def export_students(
     direction_id: UUID | None = None,
     group_id: UUID | None = None,
     course: int | None = None,
+    academic_year_id: UUID | None = None,
     status: StudentStatus | None = None,
     search: str | None = None,
 ) -> bytes:
@@ -79,6 +80,8 @@ async def export_students(
         stmt = stmt.where(Student.group_id == group_id)
     if course is not None:
         stmt = stmt.where(Group.course == course)
+    if academic_year_id:
+        stmt = stmt.where(Group.academic_year_id == academic_year_id)
     if status:
         stmt = stmt.where(Student.status == status)
     if search:

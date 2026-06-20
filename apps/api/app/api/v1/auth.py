@@ -28,6 +28,7 @@ from app.schemas.auth import (
 )
 from app.services.auth import (
     authenticate,
+    enforce_device_binding,
     issue_tokens_for,
     refresh_tokens,
 )
@@ -65,6 +66,7 @@ async def login(
     db: SessionDep,
 ) -> TokenResponse:
     user = await authenticate(db, data.username, data.password)
+    await enforce_device_binding(db, user, data.device_id, request)
     access, refresh, ttl = await issue_tokens_for(db, user, request)
     _set_refresh_cookie(response, refresh)
     return TokenResponse(

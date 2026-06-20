@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useDirections, useFaculties, useGroups } from "@/lib/api/academic";
+import { useAcademicYears, useDirections, useFaculties, useGroups } from "@/lib/api/academic";
 import type { StudentFilters } from "@/lib/api/students";
 import type { StudentStatus, UUID } from "@/lib/api/types";
 
@@ -18,10 +18,12 @@ const ALL_VALUE = "__all__";
 export function StudentsFilters({ filters, onChange }: Props) {
   const faculties = useFaculties();
   const directions = useDirections(filters.faculty_id);
+  const academicYears = useAcademicYears();
   const groups = useGroups(
     {
       directionId: filters.direction_id,
       course: filters.course,
+      academicYearId: filters.academic_year_id,
     },
     1,
     200,
@@ -45,6 +47,7 @@ export function StudentsFilters({ filters, onChange }: Props) {
     !!filters.direction_id ||
     !!filters.group_id ||
     filters.course !== undefined ||
+    !!filters.academic_year_id ||
     !!filters.status;
 
   const set = (patch: Partial<StudentFilters>) => onChange({ ...filters, ...patch });
@@ -118,6 +121,26 @@ export function StudentsFilters({ filters, onChange }: Props) {
           {(groups.data?.items ?? []).map((g) => (
             <SelectItem key={g.id} value={g.id}>
               {g.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={filters.academic_year_id ?? ALL_VALUE}
+        onValueChange={(v) =>
+          set({ academic_year_id: v === ALL_VALUE ? undefined : (v as UUID) })
+        }
+      >
+        <SelectTrigger className="w-[150px]">
+          <SelectValue placeholder="O'quv yili" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL_VALUE}>Barcha yillar</SelectItem>
+          {(academicYears.data ?? []).map((y) => (
+            <SelectItem key={y.id} value={y.id}>
+              {y.name}
+              {y.is_active ? " (aktiv)" : ""}
             </SelectItem>
           ))}
         </SelectContent>

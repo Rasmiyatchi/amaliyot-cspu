@@ -14,6 +14,7 @@ from app.services.student import create_student as svc_create_student
 from app.services.student import delete_student as svc_delete_student
 from app.services.student import get_student as svc_get_student
 from app.services.student import list_students as svc_list_students
+from app.services.student import reset_device as svc_reset_device
 from app.services.student import update_credentials as svc_update_credentials
 from app.services.student import update_student as svc_update_student
 
@@ -30,6 +31,7 @@ async def list_students(
     direction_id: UUID | None = None,
     group_id: UUID | None = None,
     course: int | None = Query(None, ge=1, le=4),
+    academic_year_id: UUID | None = None,
     status_filter: StudentStatus | None = Query(None, alias="status"),
     search: str | None = Query(None, min_length=1, max_length=100),
 ) -> Paginated[StudentRead]:
@@ -42,6 +44,7 @@ async def list_students(
         direction_id,
         group_id,
         course,
+        academic_year_id,
         status_filter,
         search,
     )
@@ -146,3 +149,14 @@ async def update_student_credentials(
     id_: UUID, data: CredentialsUpdate, db: SessionDep, _: RequireAdmin
 ) -> StudentRead:
     return StudentRead.model_validate(await svc_update_credentials(db, id_, data))
+
+
+@router.post(
+    "/{id_}/reset-device",
+    response_model=StudentRead,
+    summary="Admin: talabaning bog'langan qurilmasini o'chirish",
+)
+async def reset_student_device(
+    id_: UUID, db: SessionDep, _: RequireAdmin
+) -> StudentRead:
+    return StudentRead.model_validate(await svc_reset_device(db, id_))

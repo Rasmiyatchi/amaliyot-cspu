@@ -16,6 +16,7 @@ from app.core.security import (
     hash_refresh_token,
     verify_password,
 )
+from app.models.enums import NotificationType, UserRole
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 
@@ -24,6 +25,77 @@ def _client_meta(request: Request) -> tuple[str | None, str | None]:
     ua = request.headers.get("user-agent")
     ip = request.client.host if request.client else None
     return ua, ip
+
+
+async def enforce_device_binding(
+    db: AsyncSession, user: User, device_id: str | None, request: Request
+) -> None:
+    """Talaba uchun bitta-qurilma siyosati.
+
+    - Birinchi kirish: qurilma bog'lanadi (saqlanadi).
+    - Bog'langan qurilma bilan: o'tadi.
+    - Boshqa qurilma: admin/super_admin'ga xabar yuboriladi va 403 qaytariladi.
+
+    Faqat talaba rollarga tegishli. device_id berilmasa — bog'lash o'tkazib yuboriladi.
+    """
+    if user.role != UserRole.STUDENT:
+        return
+    if not device_id:
+        return
+
+    ua, _ip = _client_meta(request)
+
+    if user.device_id is None:
+        user.device_id = device_id
+        user.device_label = (ua or "")[:255] or None
+        user.device_bound_at = datetime.now(UTC)
+        await db.commit()
+        return
+
+    if user.device_id == device_id:
+        return
+
+    # Boshqa qurilma — adminlarga xabar + blok
+    from app.services import notification as notification_svc
+
+    admin_ids = (
+        (
+            await db.execute(
+                select(User.id).where(
+                    User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+                    User.is_active.is_(True),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if admin_ids:
+        await notification_svc.create_bulk(
+            db,
+            user_ids=list(admin_ids),
+            type=NotificationType.GENERIC,
+            title="Boshqa qurilmadan kirishga urinish",
+            body=(
+                f"{user.full_name} ({user.username}) boshqa qurilmadan kirishga "
+                f"urindi. Talaba yangi qurilmadan kirishi uchun eski qurilmani o'chiring."
+            ),
+            data={
+                "kind": "device_blocked",
+                "user_id": str(user.id),
+                "username": user.username,
+                "attempted_user_agent": ua,
+            },
+        )
+        await db.commit()
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=(
+            "Bu profil boshqa qurilmaga bog'langan. Yangi qurilmadan kirish uchun "
+            "administratorga murojaat qiling (eski qurilmani o'chirishi kerak)."
+        ),
+    )
 
 
 async def authenticate(db: AsyncSession, username: str, password: str) -> User:

@@ -140,6 +140,10 @@ export type Student = {
   is_active: boolean;
   last_login_at: ISODateTime | null;
 
+  device_id: string | null;
+  device_label: string | null;
+  device_bound_at: ISODateTime | null;
+
   gender: Gender | null;
 
   region: string | null;

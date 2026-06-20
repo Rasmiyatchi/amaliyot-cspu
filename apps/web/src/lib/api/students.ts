@@ -13,6 +13,7 @@ export type StudentFilters = {
   direction_id?: UUID;
   group_id?: UUID;
   course?: number;
+  academic_year_id?: UUID;
   status?: StudentStatus;
   search?: string;
 };
@@ -32,6 +33,7 @@ function toQueryString(filters: StudentFilters, page: number, pageSize: number):
   if (filters.direction_id) qs.set("direction_id", filters.direction_id);
   if (filters.group_id) qs.set("group_id", filters.group_id);
   if (filters.course !== undefined) qs.set("course", String(filters.course));
+  if (filters.academic_year_id) qs.set("academic_year_id", filters.academic_year_id);
   if (filters.status) qs.set("status", filters.status);
   if (filters.search) qs.set("search", filters.search);
   return qs.toString();
@@ -51,6 +53,15 @@ export function useStudent(id: UUID | null) {
     queryKey: id ? studentKeys.detail(id) : [],
     enabled: !!id,
     queryFn: () => api.get(`v1/students/${id}`).json<Student>(),
+  });
+}
+
+export function useResetStudentDevice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) =>
+      api.post(`v1/students/${id}/reset-device`).json<Student>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
   });
 }
 
