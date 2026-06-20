@@ -13,7 +13,10 @@ class FinalReportRead(BaseModel):
     id: UUID
     assignment_id: UUID
     student_full_name: str | None = None
+    group_name: str | None = None
     practice_type_name: str | None = None
+    final_grade: int | None = None
+    credit_earned: bool | None = None
     title: str
     file_attachment: dict[str, Any]
     status: FinalReportStatus

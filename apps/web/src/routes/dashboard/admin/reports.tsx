@@ -24,16 +24,31 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useDirections, useFaculties, useGroups } from "@/lib/api/academic";
+import { downloadExport } from "@/lib/api/exports";
 import {
   useFinalReports,
   useReviewFinalReport,
   type FinalReport,
+  type FinalReportFilters,
   type FinalReportStatus,
 } from "@/lib/api/final-reports";
 import { downloadAttachment } from "@/lib/api/uploads";
+import type { UUID } from "@/lib/api/types";
+
+const ALL = "__all__";
 
 const STATUS_LABEL: Record<FinalReportStatus, string> = {
   draft: "Qoralama",
@@ -159,8 +174,14 @@ function ReviewDialog({
   );
 }
 
-function ReportsList({ status }: { status?: FinalReportStatus }) {
-  const { data, isPending, error } = useFinalReports(status);
+function ReportsList({
+  status,
+  filters,
+}: {
+  status?: FinalReportStatus;
+  filters: FinalReportFilters;
+}) {
+  const { data, isPending, error } = useFinalReports(status, filters);
   const [reviewing, setReviewing] = useState<FinalReport | null>(null);
 
   if (isPending) {
@@ -205,14 +226,21 @@ function ReportsList({ status }: { status?: FinalReportStatus }) {
                 <div className="flex-1 min-w-0">
                   <div className="leading-snug">{r.student_full_name ?? "—"}</div>
                   <div className="mt-0.5 text-xs font-normal text-muted-foreground">
-                    {r.practice_type_name ?? "—"}
+                    {[r.group_name, r.practice_type_name].filter(Boolean).join(" · ") || "—"}
                   </div>
                 </div>
                 <StatusBadge status={r.status} />
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="text-sm font-medium">{r.title}</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-sm font-medium">{r.title}</div>
+                {r.final_grade != null && (
+                  <Badge variant={r.credit_earned ? "success" : "secondary"} className="shrink-0">
+                    {r.final_grade} ball
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span className="truncate">{r.file_attachment.name}</span>
                 <span className="shrink-0">
@@ -250,21 +278,152 @@ function ReportsList({ status }: { status?: FinalReportStatus }) {
 }
 
 export function ReportsPage() {
+  const [tab, setTab] = useState<string>("submitted");
+  const [facultyId, setFacultyId] = useState<UUID | undefined>(undefined);
+  const [directionId, setDirectionId] = useState<UUID | undefined>(undefined);
+  const [groupId, setGroupId] = useState<UUID | undefined>(undefined);
+  const [course, setCourse] = useState<number | undefined>(undefined);
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebounce(searchInput, 300);
+
+  const faculties = useFaculties();
+  const directions = useDirections(facultyId);
+  const groups = useGroups({ directionId });
+
+  const filters: FinalReportFilters = {
+    faculty_id: facultyId,
+    direction_id: directionId,
+    group_id: groupId,
+    course,
+    search: search || undefined,
+  };
+
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await downloadExport("final-reports", {
+        status: tab === "all" ? undefined : tab,
+        faculty_id: facultyId,
+        direction_id: directionId,
+        group_id: groupId,
+        course,
+        search: search || undefined,
+      });
+      toast.success("CSV yuklab olindi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Xatolik");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="container max-w-6xl py-8">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <FileCheck2 className="h-5 w-5 text-primary" />
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <FileCheck2 className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold">Yakuniy hisobotlar</h1>
+            <p className="text-sm text-muted-foreground">
+              Talabalar topshirgan yakuniy hisobotlarni ko'rib chiqing
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold">Yakuniy hisobotlar</h1>
-          <p className="text-sm text-muted-foreground">
-            Talabalar topshirgan yakuniy hisobotlarni ko'rib chiqing
-          </p>
-        </div>
+        <Button variant="outline" onClick={handleExport} disabled={exporting}>
+          {exporting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          CSV eksport
+        </Button>
       </div>
 
-      <Tabs defaultValue="submitted">
+      {/* Filtrlar (fakultet → yo'nalish → guruh) */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Input
+          placeholder="Qidiruv (F.I.SH. yoki Talaba ID)"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="min-w-[220px] max-w-xs"
+        />
+        <Select
+          value={facultyId ?? ALL}
+          onValueChange={(v) => {
+            setFacultyId(v === ALL ? undefined : (v as UUID));
+            setDirectionId(undefined);
+            setGroupId(undefined);
+          }}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Fakultet" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha fakultetlar</SelectItem>
+            {(faculties.data?.items ?? []).map((f) => (
+              <SelectItem key={f.id} value={f.id}>
+                {f.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={directionId ?? ALL}
+          onValueChange={(v) => {
+            setDirectionId(v === ALL ? undefined : (v as UUID));
+            setGroupId(undefined);
+          }}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Yo'nalish" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha yo'nalishlar</SelectItem>
+            {(directions.data?.items ?? []).map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.code} — {d.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={groupId ?? ALL}
+          onValueChange={(v) => setGroupId(v === ALL ? undefined : (v as UUID))}
+        >
+          <SelectTrigger className="w-[170px]">
+            <SelectValue placeholder="Guruh" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha guruhlar</SelectItem>
+            {(groups.data?.items ?? []).map((g) => (
+              <SelectItem key={g.id} value={g.id}>
+                {g.name} ({g.course}-kurs)
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={course !== undefined ? String(course) : ALL}
+          onValueChange={(v) => setCourse(v === ALL ? undefined : Number(v))}
+        >
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="Kurs" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Barcha kurs</SelectItem>
+            {[1, 2, 3, 4].map((c) => (
+              <SelectItem key={c} value={String(c)}>
+                {c}-kurs
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="submitted">Kutilmoqda</TabsTrigger>
           <TabsTrigger value="approved">Tasdiqlangan</TabsTrigger>
@@ -272,16 +431,16 @@ export function ReportsPage() {
           <TabsTrigger value="all">Hammasi</TabsTrigger>
         </TabsList>
         <TabsContent value="submitted">
-          <ReportsList status="submitted" />
+          <ReportsList status="submitted" filters={filters} />
         </TabsContent>
         <TabsContent value="approved">
-          <ReportsList status="approved" />
+          <ReportsList status="approved" filters={filters} />
         </TabsContent>
         <TabsContent value="rejected">
-          <ReportsList status="rejected" />
+          <ReportsList status="rejected" filters={filters} />
         </TabsContent>
         <TabsContent value="all">
-          <ReportsList />
+          <ReportsList filters={filters} />
         </TabsContent>
       </Tabs>
     </div>

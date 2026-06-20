@@ -85,6 +85,17 @@ def render_contract_pdf(contract: Contract, organization: Organization) -> bytes
     return bytes(pdf_bytes)
 
 
+def render_supervisor_report_pdf(context: dict[str, object]) -> bytes:
+    """Supervizorning talabalari bo'yicha yakuniy hisobot PDF'i."""
+    template = _env.get_template("reports/supervisor_summary.html")
+    html_content = template.render(**context)
+    pdf_bytes: bytes | None = HTML(string=html_content).write_pdf()
+    if pdf_bytes is None:
+        raise RuntimeError("WeasyPrint PDF generation returned None")
+    logger.info(f"📄 Supervisor report PDF generated ({len(pdf_bytes)} bytes)")
+    return bytes(pdf_bytes)
+
+
 def save_contract_pdf(contract: Contract, pdf_bytes: bytes) -> str:
     """PDF'ni storage'ga saqlaydi, file path qaytaradi."""
     STORAGE_DIR.mkdir(parents=True, exist_ok=True)

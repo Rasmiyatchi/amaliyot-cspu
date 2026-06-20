@@ -1,16 +1,33 @@
 """Supervisors endpoints — User + profile birgalikda."""
 
+from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Response, status
 
-from app.api.deps import RequireAdmin
+from app.api.deps import RequireAdmin, RequireSupervisor
 from app.db.session import SessionDep
 from app.schemas.common import CredentialsUpdate, Paginated
 from app.schemas.supervisor import SupervisorCreate, SupervisorRead, SupervisorUpdate
 from app.services import supervisor as svc
+from app.services import supervisor_report as report_svc
 
 router = APIRouter(prefix="/supervisors", tags=["supervisors"])
+
+
+@router.get(
+    "/me/report.pdf",
+    summary="Supervizor: o'z talabalari bo'yicha yakuniy hisobot PDF",
+)
+async def my_report_pdf(db: SessionDep, user: RequireSupervisor) -> Response:
+    pdf_bytes = await report_svc.render_pdf(db, user)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"amaliyot_hisoboti_{ts}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("", response_model=Paginated[SupervisorRead])

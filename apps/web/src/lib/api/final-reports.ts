@@ -10,7 +10,10 @@ export type FinalReport = {
   id: UUID;
   assignment_id: UUID;
   student_full_name: string | null;
+  group_name: string | null;
   practice_type_name: string | null;
+  final_grade: number | null;
+  credit_earned: boolean | null;
   title: string;
   file_attachment: Attachment;
   status: FinalReportStatus;
@@ -33,19 +36,33 @@ export type FinalReportReviewPayload = {
   note?: string | null;
 };
 
+export type FinalReportFilters = {
+  group_id?: UUID;
+  direction_id?: UUID;
+  faculty_id?: UUID;
+  course?: number;
+  search?: string;
+};
+
 export const finalReportKeys = {
   all: ["final-reports"] as const,
-  list: (status?: FinalReportStatus) => [...finalReportKeys.all, "list", status] as const,
+  list: (status?: FinalReportStatus, filters?: FinalReportFilters) =>
+    [...finalReportKeys.all, "list", status, filters ?? {}] as const,
   byAssignment: (assignmentId: UUID) =>
     [...finalReportKeys.all, "by-assignment", assignmentId] as const,
 };
 
-export function useFinalReports(status?: FinalReportStatus) {
+export function useFinalReports(status?: FinalReportStatus, filters: FinalReportFilters = {}) {
   return useQuery({
-    queryKey: finalReportKeys.list(status),
+    queryKey: finalReportKeys.list(status, filters),
     queryFn: () => {
       const p = new URLSearchParams();
       if (status) p.set("status_filter", status);
+      if (filters.group_id) p.set("group_id", filters.group_id);
+      if (filters.direction_id) p.set("direction_id", filters.direction_id);
+      if (filters.faculty_id) p.set("faculty_id", filters.faculty_id);
+      if (filters.course !== undefined) p.set("course", String(filters.course));
+      if (filters.search) p.set("search", filters.search);
       return api.get(`v1/final-reports?${p}`).json<FinalReport[]>();
     },
   });

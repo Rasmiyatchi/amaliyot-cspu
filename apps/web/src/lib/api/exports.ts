@@ -1,6 +1,6 @@
 import { useAuthStore } from "@/stores/auth";
 
-export type ExportKind = "students" | "attendance" | "assignments";
+export type ExportKind = "students" | "attendance" | "assignments" | "final-reports";
 
 export async function downloadExport(
   kind: ExportKind,

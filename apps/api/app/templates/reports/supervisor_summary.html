@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 1.5cm;
+      @bottom-center {
+        content: "Sahifa " counter(page) " / " counter(pages);
+        font-size: 9px;
+        color: #888;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "DejaVu Sans", Arial, sans-serif;
+      color: #1a1a2e;
+      font-size: 11px;
+      margin: 0;
+    }
+    .header {
+      border-bottom: 2px solid #4f46e5;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 18px;
+      margin: 0 0 4px 0;
+      color: #4f46e5;
+    }
+    .meta {
+      color: #555;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+    .meta strong { color: #1a1a2e; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    th, td {
+      border: 1px solid #d4d4d8;
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    th {
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    td.num, th.num { text-align: center; white-space: nowrap; }
+    tr:nth-child(even) td { background: #fafafa; }
+    .badge {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-muted { background: #f1f5f9; color: #475569; }
+    .summary {
+      margin-top: 16px;
+      display: flex;
+      gap: 24px;
+      font-size: 12px;
+    }
+    .summary .item strong { color: #4f46e5; font-size: 14px; }
+    .empty {
+      margin-top: 24px;
+      text-align: center;
+      color: #888;
+      font-style: italic;
+    }
+    .footer-note {
+      margin-top: 24px;
+      font-size: 10px;
+      color: #888;
+      border-top: 1px solid #e5e5e5;
+      padding-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Amaliyot rahbari — talabalar bo'yicha yakuniy hisobot</h1>
+    <div class="meta">
+      <div><strong>Rahbar:</strong> {{ supervisor_name }}{% if supervisor_position %} · {{ supervisor_position }}{% endif %}</div>
+      {% if organization_name %}<div><strong>Tashkilot:</strong> {{ organization_name }}</div>{% endif %}
+      <div><strong>Sana:</strong> {{ generated_at }} · <strong>Talabalar:</strong> {{ rows|length }}</div>
+    </div>
+  </div>
+
+  {% if rows %}
+  <table>
+    <thead>
+      <tr>
+        <th class="num">№</th>
+        <th>F.I.SH.</th>
+        <th>Talaba ID</th>
+        <th>Guruh</th>
+        <th>Amaliyot turi</th>
+        <th>Obyekt</th>
+        <th class="num">Davomat<br>(yashil/jami)</th>
+        <th class="num">Topshiriq<br>(ball/maks)</th>
+        <th class="num">Yakuniy ball</th>
+        <th class="num">Kredit</th>
+        <th class="num">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td>{{ r.student_name or "—" }}</td>
+        <td class="num">{{ r.hemis_id or "—" }}</td>
+        <td>{{ r.group_name or "—" }}{% if r.course %} ({{ r.course }}-kurs){% endif %}</td>
+        <td>{{ r.practice_type_name or "—" }}</td>
+        <td>{{ r.object_name or "—" }}</td>
+        <td class="num">{{ r.attendance_green }} / {{ r.attendance_total }}</td>
+        <td class="num">{{ r.points_earned }} / {{ r.points_max }}</td>
+        <td class="num">{% if r.final_grade is not none %}{{ r.final_grade }}{% else %}—{% endif %}</td>
+        <td class="num">
+          {% if r.credit_earned %}<span class="badge badge-green">Ha</span>
+          {% else %}<span class="badge badge-muted">Yo'q</span>{% endif %}
+        </td>
+        <td class="num">{{ r.status_label }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="summary">
+    <div class="item">Jami talabalar: <strong>{{ rows|length }}</strong></div>
+    <div class="item">Kredit olgan: <strong>{{ credit_count }}</strong></div>
+    <div class="item">O'rtacha ball: <strong>{{ avg_grade }}</strong></div>
+  </div>
+  {% else %}
+  <div class="empty">Biriktirilgan talabalar topilmadi.</div>
+  {% endif %}
+
+  <div class="footer-note">
+    Ushbu hisobot {{ app_name }} platformasi orqali avtomatik shakllantirildi.
+  </div>
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, Query, Request, status
 
 from app.api.deps import CurrentUser, RequireSuperAdmin
 from app.db.session import SessionDep
@@ -23,9 +23,22 @@ async def list_reports(
     db: SessionDep,
     _: RequireSuperAdmin,
     status_filter: FinalReportStatus | None = None,
+    group_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    faculty_id: UUID | None = None,
+    course: int | None = Query(None, ge=1, le=4),
+    search: str | None = None,
 ) -> list[FinalReportRead]:
     """Super Admin: barcha hisobotlar (default: ko'rib chiqish kutayotganlar)."""
-    items = await svc.list_reports(db, status_filter=status_filter)
+    items = await svc.list_reports(
+        db,
+        status_filter=status_filter,
+        group_id=group_id,
+        direction_id=direction_id,
+        faculty_id=faculty_id,
+        course=course,
+        search=search,
+    )
     return [FinalReportRead.model_validate(i) for i in items]
 
 

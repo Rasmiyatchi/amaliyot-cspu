@@ -8,6 +8,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.academic import Group
 from app.models.enums import FinalReportStatus, UserRole
 from app.models.final_report import FinalReport
 from app.models.practice_assignment import PracticeAssignment
@@ -21,12 +22,19 @@ def _row_to_dict(
     student_name: str | None,
     practice_type_name: str | None,
     reviewer_name: str | None,
+    *,
+    group_name: str | None = None,
+    final_grade: int | None = None,
+    credit_earned: bool | None = None,
 ) -> dict[str, Any]:
     return {
         "id": fr.id,
         "assignment_id": fr.assignment_id,
         "student_full_name": student_name,
+        "group_name": group_name,
         "practice_type_name": practice_type_name,
+        "final_grade": final_grade,
+        "credit_earned": credit_earned,
         "title": fr.title,
         "file_attachment": fr.file_attachment,
         "status": fr.status,
@@ -47,18 +55,27 @@ def _full_name(first: str | None, last: str | None) -> str | None:
 
 
 async def _hydrate(db: AsyncSession, fr: FinalReport) -> dict[str, Any]:
-    """Bir hisobotni rich qaytaradi (student name + practice type name + reviewer name)."""
+    """Bir hisobotni rich qaytaradi (student name + group + grade + reviewer name)."""
     student_name: str | None = None
+    group_name: str | None = None
     practice_type_name: str | None = None
     reviewer_name: str | None = None
+    final_grade: int | None = None
+    credit_earned: bool | None = None
 
     asn = await db.get(PracticeAssignment, fr.assignment_id)
     if asn:
+        final_grade = asn.final_grade
+        credit_earned = asn.credit_earned
         student = await db.get(Student, asn.student_id)
         if student:
             user = await db.get(User, student.user_id)
             if user:
                 student_name = _full_name(user.first_name, user.last_name)
+            if student.group_id:
+                group = await db.get(Group, student.group_id)
+                if group:
+                    group_name = group.name
         pt = await db.get(PracticeType, asn.practice_type_id)
         if pt:
             practice_type_name = pt.name
@@ -68,7 +85,15 @@ async def _hydrate(db: AsyncSession, fr: FinalReport) -> dict[str, Any]:
         if reviewer:
             reviewer_name = _full_name(reviewer.first_name, reviewer.last_name)
 
-    return _row_to_dict(fr, student_name, practice_type_name, reviewer_name)
+    return _row_to_dict(
+        fr,
+        student_name,
+        practice_type_name,
+        reviewer_name,
+        group_name=group_name,
+        final_grade=final_grade,
+        credit_earned=credit_earned,
+    )
 
 
 async def list_reports(
@@ -76,12 +101,56 @@ async def list_reports(
     *,
     status_filter: FinalReportStatus | None = None,
     assignment_id: UUID | None = None,
+    group_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    faculty_id: UUID | None = None,
+    course: int | None = None,
+    search: str | None = None,
 ) -> list[dict[str, Any]]:
-    stmt = select(FinalReport).order_by(FinalReport.created_at.desc())
+    from sqlalchemy import func, or_
+
+    from app.models.academic import Direction
+
+    stmt = select(FinalReport)
+
+    needs_join = any([group_id, direction_id, faculty_id, course, search])
+    if needs_join:
+        stmt = (
+            stmt.join(
+                PracticeAssignment,
+                PracticeAssignment.id == FinalReport.assignment_id,
+            )
+            .join(Student, Student.id == PracticeAssignment.student_id)
+            .outerjoin(Group, Group.id == Student.group_id)
+        )
+        if direction_id or faculty_id:
+            stmt = stmt.outerjoin(Direction, Direction.id == Group.direction_id)
+        if search:
+            stmt = stmt.outerjoin(User, User.id == Student.user_id)
+
+    stmt = stmt.order_by(FinalReport.created_at.desc())
+
     if status_filter:
         stmt = stmt.where(FinalReport.status == status_filter)
     if assignment_id:
         stmt = stmt.where(FinalReport.assignment_id == assignment_id)
+    if group_id:
+        stmt = stmt.where(Student.group_id == group_id)
+    if direction_id:
+        stmt = stmt.where(Group.direction_id == direction_id)
+    if faculty_id:
+        stmt = stmt.where(Direction.faculty_id == faculty_id)
+    if course is not None:
+        stmt = stmt.where(Group.course == course)
+    if search:
+        like = f"%{search.lower()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(User.first_name).like(like),
+                func.lower(User.last_name).like(like),
+                Student.hemis_id.like(f"%{search}%"),
+            )
+        )
 
     rows = (await db.execute(stmt)).scalars().all()
     return [await _hydrate(db, r) for r in rows]

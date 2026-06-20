@@ -10,11 +10,13 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.academic import Direction, Faculty, Group
 from app.models.area import Area
 from app.models.attendance import AttendanceDay
-from app.models.enums import AttendanceDayStatus, StudentStatus
+from app.models.enums import AttendanceDayStatus, FinalReportStatus, StudentStatus
+from app.models.final_report import FinalReport
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
@@ -244,4 +246,124 @@ async def export_assignments(
     data = [list(r) for r in rows]
     # supervisor_id keyin qo'shilishi mumkin — alohida JOIN
     _ = Supervisor
+    return _to_csv(headers, data)
+
+
+_FINAL_REPORT_STATUS_LABEL = {
+    FinalReportStatus.DRAFT: "Qoralama",
+    FinalReportStatus.SUBMITTED: "Kutilmoqda",
+    FinalReportStatus.APPROVED: "Tasdiqlangan",
+    FinalReportStatus.REJECTED: "Rad etilgan",
+}
+
+
+async def export_final_reports(
+    db: AsyncSession,
+    *,
+    status: FinalReportStatus | None = None,
+    group_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    faculty_id: UUID | None = None,
+    course: int | None = None,
+    search: str | None = None,
+) -> bytes:
+    reviewer = aliased(User)
+    stmt = (
+        select(
+            Student.hemis_id,
+            User.last_name,
+            User.first_name,
+            Faculty.name.label("faculty_name"),
+            Direction.name.label("direction_name"),
+            Group.name.label("group_name"),
+            Group.course,
+            PracticeType.name.label("practice_type_name"),
+            FinalReport.title,
+            FinalReport.status,
+            PracticeAssignment.final_grade,
+            PracticeAssignment.credit_earned,
+            FinalReport.submitted_at,
+            FinalReport.reviewed_at,
+            reviewer.last_name.label("reviewer_last"),
+            reviewer.first_name.label("reviewer_first"),
+            FinalReport.reviewer_note,
+        )
+        .join(PracticeAssignment, PracticeAssignment.id == FinalReport.assignment_id)
+        .join(Student, Student.id == PracticeAssignment.student_id)
+        .join(User, User.id == Student.user_id)
+        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Direction, Direction.id == Group.direction_id)
+        .outerjoin(Faculty, Faculty.id == Direction.faculty_id)
+        .join(PracticeType, PracticeType.id == PracticeAssignment.practice_type_id)
+        .outerjoin(reviewer, reviewer.id == FinalReport.reviewer_id)
+        .order_by(Group.name, User.last_name, User.first_name)
+    )
+    if status:
+        stmt = stmt.where(FinalReport.status == status)
+    if group_id:
+        stmt = stmt.where(Student.group_id == group_id)
+    if direction_id:
+        stmt = stmt.where(Group.direction_id == direction_id)
+    if faculty_id:
+        stmt = stmt.where(Direction.faculty_id == faculty_id)
+    if course is not None:
+        stmt = stmt.where(Group.course == course)
+    if search:
+        from sqlalchemy import func, or_
+
+        like = f"%{search.lower()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(User.first_name).like(like),
+                func.lower(User.last_name).like(like),
+                Student.hemis_id.like(f"%{search}%"),
+            )
+        )
+
+    rows = (await db.execute(stmt)).all()
+    headers = [
+        "HEMIS ID",
+        "Familiya",
+        "Ism",
+        "Fakultet",
+        "Yo'nalish",
+        "Guruh",
+        "Kurs",
+        "Amaliyot turi",
+        "Hisobot nomi",
+        "Status",
+        "Yakuniy ball",
+        "Kredit",
+        "Topshirilgan",
+        "Ko'rib chiqilgan",
+        "Ko'ruvchi",
+        "Izoh",
+    ]
+    data: list[list[Any]] = []
+    for r in rows:
+        m = r._mapping
+        status_label = _FINAL_REPORT_STATUS_LABEL.get(m["status"], m["status"])
+        reviewer_name = (
+            f"{m['reviewer_last'] or ''} {m['reviewer_first'] or ''}".strip() or None
+        )
+        data.append(
+            [
+                m["hemis_id"],
+                m["last_name"],
+                m["first_name"],
+                m["faculty_name"],
+                m["direction_name"],
+                m["group_name"],
+                m["course"],
+                m["practice_type_name"],
+                m["title"],
+                status_label,
+                m["final_grade"],
+                "Ha" if m["credit_earned"] else "Yo'q",
+                m["submitted_at"].strftime("%Y-%m-%d %H:%M") if m["submitted_at"] else None,
+                m["reviewed_at"].strftime("%Y-%m-%d %H:%M") if m["reviewed_at"] else None,
+                reviewer_name,
+                m["reviewer_note"],
+            ]
+        )
     return _to_csv(headers, data)

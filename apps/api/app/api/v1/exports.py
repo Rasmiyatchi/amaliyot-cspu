@@ -10,7 +10,7 @@ from fastapi import APIRouter, Query, Response
 
 from app.api.deps import RequireAdmin
 from app.db.session import SessionDep
-from app.models.enums import AttendanceDayStatus, StudentStatus
+from app.models.enums import AttendanceDayStatus, FinalReportStatus, StudentStatus
 from app.services import exports as svc
 
 router = APIRouter(prefix="/exports", tags=["exports"])
@@ -80,3 +80,26 @@ async def export_attendance(
 async def export_assignments(db: SessionDep, _: RequireAdmin) -> Response:
     content = await svc.export_assignments(db)
     return _csv_response(content, "biriktirishlar")
+
+
+@router.get("/final-reports.csv", summary="Yakuniy hisobotlar CSV (filtrlar bilan)")
+async def export_final_reports(
+    db: SessionDep,
+    _: RequireAdmin,
+    status: FinalReportStatus | None = None,
+    group_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    faculty_id: UUID | None = None,
+    course: int | None = Query(None, ge=1, le=4),
+    search: str | None = None,
+) -> Response:
+    content = await svc.export_final_reports(
+        db,
+        status=status,
+        group_id=group_id,
+        direction_id=direction_id,
+        faculty_id=faculty_id,
+        course=course,
+        search=search,
+    )
+    return _csv_response(content, "yakuniy_hisobotlar")

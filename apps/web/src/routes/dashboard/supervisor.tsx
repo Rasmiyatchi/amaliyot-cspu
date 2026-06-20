@@ -5,6 +5,8 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  Download,
+  FileText,
   Inbox,
   Loader2,
   MapPin,
@@ -14,6 +16,8 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+
+import { downloadSupervisorReport } from "@/lib/api/supervisor-report";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { StatCard } from "@/components/admin/stat-card";
@@ -151,6 +155,19 @@ export function SupervisorDashboard() {
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<UUID | "all">(
     "all",
   );
+  const [downloadingReport, setDownloadingReport] = useState(false);
+
+  const handleDownloadReport = async () => {
+    setDownloadingReport(true);
+    try {
+      await downloadSupervisorReport();
+      toast.success("Hisobot yuklab olindi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Xatolik");
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
 
   // Bugungi va oxirgi kunlar davomatini tortish
   const assignmentFilter = selectedAssignmentId === "all" ? undefined : selectedAssignmentId;
@@ -261,7 +278,7 @@ export function SupervisorDashboard() {
               </div>
             )}
 
-            {/* Assignment tanlov */}
+            {/* Assignment tanlov + hisobot */}
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
@@ -280,6 +297,22 @@ export function SupervisorDashboard() {
                   {a.student_full_name}
                 </Button>
               ))}
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto"
+                onClick={handleDownloadReport}
+                disabled={downloadingReport}
+                title="Talabalar bo'yicha yakuniy hisobotni PDF yuklab olish"
+              >
+                {downloadingReport ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4" />
+                )}
+                Hisobot (PDF)
+                <Download className="h-4 w-4" />
+              </Button>
             </div>
 
             {/* Kutilayotgan tasdiqlar */}
