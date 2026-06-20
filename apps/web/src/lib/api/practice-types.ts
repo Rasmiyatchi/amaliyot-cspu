@@ -27,11 +27,28 @@ export function usePracticeType(id: UUID | null) {
   });
 }
 
+export function useCreatePracticeType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<PracticeType>) =>
+      api.post("v1/practice-types", { json: data }).json<PracticeType>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: practiceTypeKeys.all }),
+  });
+}
+
 export function useUpdatePracticeType() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: Partial<PracticeType> }) =>
       api.patch(`v1/practice-types/${id}`, { json: data }).json<PracticeType>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: practiceTypeKeys.all }),
+  });
+}
+
+export function useDeletePracticeType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) => api.delete(`v1/practice-types/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: practiceTypeKeys.all }),
   });
 }

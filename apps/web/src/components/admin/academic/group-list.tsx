@@ -1,5 +1,5 @@
 import { Loader2, Pencil, Plus, Trash2, Users } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { GroupFormDialog } from "@/components/admin/academic/group-form-dialog";
@@ -7,6 +7,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   useAcademicYears,
@@ -14,15 +22,28 @@ import {
   useDirections,
   useGroups,
 } from "@/lib/api/academic";
-import type { Group } from "@/lib/api/types";
+import type { Group, UUID } from "@/lib/api/types";
+
+const ALL = "__all__";
 
 export function GroupList() {
-  const groups = useGroups();
+  const [directionId, setDirectionId] = useState<UUID | undefined>(undefined);
+  const [academicYearId, setAcademicYearId] = useState<UUID | undefined>(undefined);
+  const [course, setCourse] = useState<number | undefined>(undefined);
+  const [search, setSearch] = useState("");
+  const groups = useGroups({ directionId, academicYearId, course });
   const directions = useDirections();
   const academicYears = useAcademicYears();
   const del = useDeleteGroup();
   const [editing, setEditing] = useState<Group | null>(null);
   const [creating, setCreating] = useState(false);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const items = groups.data?.items ?? [];
+    if (!q) return items;
+    return items.filter((g) => g.name.toLowerCase().includes(q));
+  }, [groups.data, search]);
 
   const handleDelete = async (g: Group) => {
     if (!confirm(`"${g.name}" ni o'chirishni tasdiqlang?`)) return;
@@ -39,8 +60,62 @@ export function GroupList() {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
-        <Button onClick={() => setCreating(true)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          placeholder="Qidiruv (guruh nomi)"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="min-w-[180px] max-w-[220px]"
+        />
+        <Select
+          value={directionId ?? ALL}
+          onValueChange={(v) => setDirectionId(v === ALL ? undefined : (v as UUID))}
+        >
+          <SelectTrigger className="w-[240px]">
+            <SelectValue placeholder="Yo'nalish" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha yo'nalishlar</SelectItem>
+            {(directions.data?.items ?? []).map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.code} — {d.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={academicYearId ?? ALL}
+          onValueChange={(v) => setAcademicYearId(v === ALL ? undefined : (v as UUID))}
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="O'quv yili" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Barcha yillar</SelectItem>
+            {(academicYears.data ?? []).map((ay) => (
+              <SelectItem key={ay.id} value={ay.id}>
+                {ay.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={course !== undefined ? String(course) : ALL}
+          onValueChange={(v) => setCourse(v === ALL ? undefined : Number(v))}
+        >
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="Kurs" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Barcha kurs</SelectItem>
+            {[1, 2, 3, 4].map((c) => (
+              <SelectItem key={c} value={String(c)}>
+                {c}-kurs
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button className="ml-auto" onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
           Yangi guruh
         </Button>
@@ -57,17 +132,21 @@ export function GroupList() {
         </Alert>
       )}
 
-      {groups.data && groups.data.items.length === 0 && (
+      {groups.data && filtered.length === 0 && (
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={Users}
             title="Guruhlar yo'q"
-            description="Yo'nalish va o'quv yili tanlab yangi guruh yarating"
+            description={
+              search || directionId || academicYearId || course !== undefined
+                ? "Filtrga mos guruh topilmadi"
+                : "Yo'nalish va o'quv yili tanlab yangi guruh yarating"
+            }
           />
         </div>
       )}
 
-      {groups.data && groups.data.items.length > 0 && (
+      {groups.data && filtered.length > 0 && (
         <div className="rounded-lg border border-border">
           <Table>
             <TableHeader>
@@ -80,7 +159,7 @@ export function GroupList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {groups.data.items.map((g) => {
+              {filtered.map((g) => {
                 const d = dirById.get(g.direction_id);
                 return (
                   <TableRow key={g.id}>

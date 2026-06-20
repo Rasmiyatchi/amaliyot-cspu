@@ -34,7 +34,7 @@ async def list_organizations(
         if kind:
             stmt = stmt.where(Organization.kind == kind)
         if region:
-            stmt = stmt.where(Organization.region == region)
+            stmt = stmt.where(func.lower(Organization.region).like(f"%{region.lower()}%"))
         if is_active is not None:
             stmt = stmt.where(Organization.is_active.is_(is_active))
         return stmt

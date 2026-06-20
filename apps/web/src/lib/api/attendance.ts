@@ -22,6 +22,9 @@ export type AttendanceFilters = {
   status?: AttendanceDayStatus;
   date_from?: ISODate;
   date_to?: ISODate;
+  group_id?: UUID;
+  direction_id?: UUID;
+  faculty_id?: UUID;
 };
 
 export const attendanceKeys = {
@@ -42,6 +45,9 @@ function qs(filters: AttendanceFilters, page: number, pageSize: number): string 
   if (filters.status) p.set("status", filters.status);
   if (filters.date_from) p.set("date_from", filters.date_from);
   if (filters.date_to) p.set("date_to", filters.date_to);
+  if (filters.group_id) p.set("group_id", filters.group_id);
+  if (filters.direction_id) p.set("direction_id", filters.direction_id);
+  if (filters.faculty_id) p.set("faculty_id", filters.faculty_id);
   return p.toString();
 }
 

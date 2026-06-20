@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.academic import Direction, Group
 from app.models.area import Area
 from app.models.attendance import AttendanceDay, AttendanceEvent, AttendanceOverride
 from app.models.enums import AttendanceDayStatus, AttendanceEventKind, NotificationType
@@ -505,6 +506,9 @@ async def list_days(
     status_filter: AttendanceDayStatus | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    group_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    faculty_id: UUID | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     base = _base_day_select()
     count_stmt = (
@@ -524,6 +528,16 @@ async def list_days(
             stmt = stmt.where(AttendanceDay.date >= date_from)
         if date_to:
             stmt = stmt.where(AttendanceDay.date <= date_to)
+        if group_id:
+            stmt = stmt.where(Student.group_id == group_id)
+        if direction_id or faculty_id:
+            stmt = stmt.join(Group, Group.id == Student.group_id)
+            if direction_id:
+                stmt = stmt.where(Group.direction_id == direction_id)
+            if faculty_id:
+                stmt = stmt.join(
+                    Direction, Direction.id == Group.direction_id
+                ).where(Direction.faculty_id == faculty_id)
         return stmt
 
     base = apply(base)

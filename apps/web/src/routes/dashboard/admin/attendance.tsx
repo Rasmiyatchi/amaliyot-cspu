@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/table";
 import { useAttendanceDays, type AttendanceFilters } from "@/lib/api/attendance";
 import { useAssignments } from "@/lib/api/assignments";
+import { useDirections, useFaculties, useGroups } from "@/lib/api/academic";
 import type {
   AttendanceDay,
   AttendanceDayStatus,
@@ -60,6 +61,11 @@ export function AttendancePage() {
     (a) => a.status === "active" || a.status === "draft",
   );
 
+  // Akademik filtrlar (kaskad: fakultet → yo'nalish → guruh)
+  const faculties = useFaculties();
+  const directions = useDirections(filters.faculty_id);
+  const groups = useGroups({ directionId: filters.direction_id });
+
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / pageSize));
 
   const selectedAssignment = filters.assignment_id
@@ -74,6 +80,11 @@ export function AttendancePage() {
         assignment_id: filters.assignment_id,
         student_id: filters.student_id,
         status: filters.status,
+        group_id: filters.group_id,
+        direction_id: filters.direction_id,
+        faculty_id: filters.faculty_id,
+        date_from: filters.date_from,
+        date_to: filters.date_to,
       });
       toast.success("CSV yuklab olindi");
     } catch (e) {
@@ -119,7 +130,85 @@ export function AttendancePage() {
       </div>
 
       {/* Filtrlar */}
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <Label className="text-xs">Fakultet</Label>
+          <Select
+            value={filters.faculty_id ?? ALL}
+            onValueChange={(v) => {
+              setFilters({
+                ...filters,
+                faculty_id: v === ALL ? undefined : v,
+                direction_id: undefined,
+                group_id: undefined,
+              });
+              setPage(1);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Fakultet" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              <SelectItem value={ALL}>Barcha fakultetlar</SelectItem>
+              {(faculties.data?.items ?? []).map((f) => (
+                <SelectItem key={f.id} value={f.id}>
+                  {f.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-xs">Yo'nalish</Label>
+          <Select
+            value={filters.direction_id ?? ALL}
+            onValueChange={(v) => {
+              setFilters({
+                ...filters,
+                direction_id: v === ALL ? undefined : v,
+                group_id: undefined,
+              });
+              setPage(1);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Yo'nalish" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              <SelectItem value={ALL}>Barcha yo'nalishlar</SelectItem>
+              {(directions.data?.items ?? []).map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.code} — {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-xs">Guruh</Label>
+          <Select
+            value={filters.group_id ?? ALL}
+            onValueChange={(v) => {
+              setFilters({ ...filters, group_id: v === ALL ? undefined : v });
+              setPage(1);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Guruh" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              <SelectItem value={ALL}>Barcha guruhlar</SelectItem>
+              {(groups.data?.items ?? []).map((g) => (
+                <SelectItem key={g.id} value={g.id}>
+                  {g.name} ({g.course}-kurs)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div>
           <Label className="text-xs">Biriktirish</Label>
           <Select
@@ -200,7 +289,13 @@ export function AttendancePage() {
         </div>
 
         <div className="flex items-end">
-          {(filters.assignment_id || filters.status || filters.date_from || filters.date_to) && (
+          {(filters.assignment_id ||
+            filters.status ||
+            filters.date_from ||
+            filters.date_to ||
+            filters.faculty_id ||
+            filters.direction_id ||
+            filters.group_id) && (
             <Button
               variant="outline"
               onClick={() => {

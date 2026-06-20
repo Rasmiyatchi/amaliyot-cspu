@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -39,6 +40,14 @@ import { useSupervisors } from "@/lib/api/supervisors";
 import type { AssignmentStatus, PracticeAssignment, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
+
+const STATUS_TABS: { value: string; label: string }[] = [
+  { value: ALL, label: "Barchasi" },
+  { value: "draft", label: "Qoralama" },
+  { value: "active", label: "Aktiv" },
+  { value: "completed", label: "Tugagan" },
+  { value: "cancelled", label: "Bekor qilingan" },
+];
 
 export function AssignmentsPage() {
   const [filters, setFilters] = useState<AssignmentFilters>({});
@@ -109,6 +118,23 @@ export function AssignmentsPage() {
         </div>
       </div>
 
+      {/* Status tabs */}
+      <Tabs
+        value={filters.status ?? ALL}
+        onValueChange={(v) =>
+          setFilter({ status: v === ALL ? undefined : (v as AssignmentStatus) })
+        }
+        className="mb-4"
+      >
+        <TabsList className="flex-wrap">
+          {STATUS_TABS.map((t) => (
+            <TabsTrigger key={t.value} value={t.value}>
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
@@ -131,23 +157,6 @@ export function AssignmentsPage() {
                 {pt.name}
               </SelectItem>
             ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={filters.status ?? ALL}
-          onValueChange={(v) =>
-            setFilter({ status: v === ALL ? undefined : (v as AssignmentStatus) })
-          }
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Barcha status</SelectItem>
-            <SelectItem value="draft">Qoralama</SelectItem>
-            <SelectItem value="active">Aktiv</SelectItem>
-            <SelectItem value="completed">Tugagan</SelectItem>
-            <SelectItem value="cancelled">Bekor qilingan</SelectItem>
           </SelectContent>
         </Select>
         <Select

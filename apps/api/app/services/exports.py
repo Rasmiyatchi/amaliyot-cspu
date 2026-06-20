@@ -127,6 +127,11 @@ async def export_attendance(
     assignment_id: UUID | None = None,
     student_id: UUID | None = None,
     status: AttendanceDayStatus | None = None,
+    group_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    faculty_id: UUID | None = None,
+    date_from: Any = None,
+    date_to: Any = None,
 ) -> bytes:
     stmt = (
         select(
@@ -134,8 +139,11 @@ async def export_attendance(
             User.last_name,
             User.first_name,
             Student.hemis_id,
+            Faculty.name.label("faculty_name"),
+            Direction.name.label("direction_name"),
             Group.name.label("group_name"),
             Organization.name.label("organization_name"),
+            Area.name.label("area_name"),
             AttendanceDay.status,
             AttendanceDay.check_in_at,
             AttendanceDay.check_out_at,
@@ -145,7 +153,10 @@ async def export_attendance(
         .join(Student, Student.id == PracticeAssignment.student_id)
         .join(User, User.id == Student.user_id)
         .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Direction, Direction.id == Group.direction_id)
+        .outerjoin(Faculty, Faculty.id == Direction.faculty_id)
         .outerjoin(Organization, Organization.id == PracticeAssignment.organization_id)
+        .outerjoin(Area, Area.id == PracticeAssignment.area_id)
         .order_by(AttendanceDay.date.desc(), User.last_name)
     )
     if assignment_id:
@@ -154,6 +165,16 @@ async def export_attendance(
         stmt = stmt.where(Student.id == student_id)
     if status:
         stmt = stmt.where(AttendanceDay.status == status)
+    if group_id:
+        stmt = stmt.where(Student.group_id == group_id)
+    if direction_id:
+        stmt = stmt.where(Group.direction_id == direction_id)
+    if faculty_id:
+        stmt = stmt.where(Direction.faculty_id == faculty_id)
+    if date_from:
+        stmt = stmt.where(AttendanceDay.date >= date_from)
+    if date_to:
+        stmt = stmt.where(AttendanceDay.date <= date_to)
 
     rows = (await db.execute(stmt)).all()
     headers = [
@@ -161,8 +182,11 @@ async def export_attendance(
         "Familiya",
         "Ism",
         "HEMIS ID",
+        "Fakultet",
+        "Yo'nalish",
         "Guruh",
         "Tashkilot",
+        "Hudud",
         "Status",
         "Kelish vaqti",
         "Ketish vaqti",

@@ -45,6 +45,9 @@ async def list_days(
     status_filter: AttendanceDayStatus | None = Query(None, alias="status"),
     date_from: date | None = None,
     date_to: date | None = None,
+    group_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    faculty_id: UUID | None = None,
 ) -> Paginated[AttendanceDayRead]:
     # RBAC: admin/supervisor/student hammasi foydalana oladi; filtr farqli
     offset = (page - 1) * page_size
@@ -57,6 +60,9 @@ async def list_days(
         status_filter=status_filter,
         date_from=date_from,
         date_to=date_to,
+        group_id=group_id,
+        direction_id=direction_id,
+        faculty_id=faculty_id,
     )
     return Paginated(
         items=[AttendanceDayRead.model_validate(i) for i in items],

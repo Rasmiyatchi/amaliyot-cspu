@@ -1,11 +1,13 @@
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { AreaFormDialog } from "@/components/admin/objects/area-form-dialog";
+import { useDebounce } from "@/hooks/use-debounce";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/loading-skeletons";
 import {
   Table,
@@ -19,7 +21,14 @@ import { useAreas, useDeleteArea } from "@/lib/api/areas";
 import type { Area } from "@/lib/api/types";
 
 export function AreasList() {
-  const { data, isPending, error } = useAreas();
+  const [searchInput, setSearchInput] = useState("");
+  const [regionInput, setRegionInput] = useState("");
+  const search = useDebounce(searchInput, 300);
+  const region = useDebounce(regionInput, 300);
+  const { data, isPending, error } = useAreas({
+    search: search || undefined,
+    region: region || undefined,
+  });
   const del = useDeleteArea();
   const [editing, setEditing] = useState<Area | null>(null);
   const [creating, setCreating] = useState(false);
@@ -36,8 +45,23 @@ export function AreasList() {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
-        <Button onClick={() => setCreating(true)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          placeholder="Qidiruv (nomi)"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="min-w-[180px] max-w-[220px]"
+        />
+        <div className="relative">
+          <MapPin className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Viloyat (joylashuv)"
+            value={regionInput}
+            onChange={(e) => setRegionInput(e.target.value)}
+            className="min-w-[180px] max-w-[220px] pl-8"
+          />
+        </div>
+        <Button className="ml-auto" onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
           Yangi hudud
         </Button>

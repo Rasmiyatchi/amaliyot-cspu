@@ -3,7 +3,7 @@
 Hammasi admin / super_admin uchun. Filtr parametrlari list endpoint'lari bilan bir xil.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Response
@@ -56,9 +56,22 @@ async def export_attendance(
     assignment_id: UUID | None = None,
     student_id: UUID | None = None,
     status: AttendanceDayStatus | None = None,
+    group_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    faculty_id: UUID | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
 ) -> Response:
     content = await svc.export_attendance(
-        db, assignment_id=assignment_id, student_id=student_id, status=status
+        db,
+        assignment_id=assignment_id,
+        student_id=student_id,
+        status=status,
+        group_id=group_id,
+        direction_id=direction_id,
+        faculty_id=faculty_id,
+        date_from=date_from,
+        date_to=date_to,
     )
     return _csv_response(content, "davomat")
 

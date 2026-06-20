@@ -1,8 +1,10 @@
-import { BookOpen, Loader2, Sliders } from "lucide-react";
+import { BookOpen, Loader2, Pencil, Plus, Sliders, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { GradingRulesDialog } from "@/components/admin/practice-types/grading-rules-dialog";
 import { PracticeTypeDetailDialog } from "@/components/admin/practice-types/practice-type-detail-dialog";
+import { PracticeTypeFormDialog } from "@/components/admin/practice-types/practice-type-form-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { usePracticeTypes } from "@/lib/api/practice-types";
+import { useDeletePracticeType, usePracticeTypes } from "@/lib/api/practice-types";
 import { useAuthStore } from "@/stores/auth";
 import type { PracticeType } from "@/lib/api/types";
 
@@ -30,19 +32,40 @@ export function PracticeTypesPage() {
   const { data, isPending, error } = usePracticeTypes();
   const [selected, setSelected] = useState<PracticeType | null>(null);
   const [editingGrading, setEditingGrading] = useState<PracticeType | null>(null);
+  const [editing, setEditing] = useState<PracticeType | null>(null);
+  const [creating, setCreating] = useState(false);
+  const del = useDeletePracticeType();
+
+  const handleDelete = async (pt: PracticeType) => {
+    if (!confirm(`"${pt.name}" amaliyot turini o'chirishni tasdiqlang?`)) return;
+    try {
+      await del.mutateAsync(pt.id);
+      toast.success("O'chirildi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Xatolik");
+    }
+  };
 
   return (
     <div className="container max-w-6xl py-8">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <BookOpen className="h-5 w-5 text-primary" />
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <BookOpen className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold">Amaliyot turlari</h1>
+            <p className="text-sm text-muted-foreground">
+              Standart turlar: 4+2, dala, pedagogik, malakaviy va boshqalar
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold">Amaliyot turlari</h1>
-          <p className="text-sm text-muted-foreground">
-            8 ta standart tur: 4+2, dala, pedagogik, malakaviy va boshqalar
-          </p>
-        </div>
+        {isSuperAdmin && (
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="h-4 w-4" />
+            Yangi amaliyot turi
+          </Button>
+        )}
       </div>
 
       {isPending && (
@@ -68,7 +91,7 @@ export function PracticeTypesPage() {
                 <TableHead className="w-[110px]">Obyekt</TableHead>
                 <TableHead className="w-[120px]">Haftalar</TableHead>
                 <TableHead>Kurslar</TableHead>
-                {isSuperAdmin && <TableHead className="w-[60px]"></TableHead>}
+                {isSuperAdmin && <TableHead className="w-[140px]"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -116,17 +139,42 @@ export function PracticeTypesPage() {
                   </TableCell>
                   {isSuperAdmin && (
                     <TableCell>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        title="Baho shkalasi"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingGrading(pt);
-                        }}
-                      >
-                        <Sliders className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Tahrirlash"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditing(pt);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Baho shkalasi"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingGrading(pt);
+                          }}
+                        >
+                          <Sliders className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="O'chirish"
+                          disabled={del.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(pt);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -144,6 +192,14 @@ export function PracticeTypesPage() {
         open={!!editingGrading}
         practiceType={editingGrading}
         onClose={() => setEditingGrading(null)}
+      />
+      <PracticeTypeFormDialog
+        open={creating || !!editing}
+        existing={editing}
+        onClose={() => {
+          setCreating(false);
+          setEditing(null);
+        }}
       />
     </div>
   );

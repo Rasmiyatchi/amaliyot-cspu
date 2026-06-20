@@ -26,7 +26,7 @@ async def list_areas(
         if search:
             stmt = stmt.where(func.lower(Area.name).like(f"%{search.lower()}%"))
         if region:
-            stmt = stmt.where(Area.region == region)
+            stmt = stmt.where(func.lower(Area.region).like(f"%{region.lower()}%"))
         if is_active is not None:
             stmt = stmt.where(Area.is_active.is_(is_active))
         return stmt
