@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { downloadSupervisorsTemplate } from "@/lib/api/import-templates";
 import {
   useSupervisorImport,
   type SupervisorImportResponse,
@@ -230,12 +231,24 @@ export function SupervisorImportDialog({ open, onClose }: Props) {
               <AlertTitle>Kutilgan ustunlar</AlertTitle>
               <AlertDescription>
                 <div className="mt-1 text-xs">
-                  <strong>Majburiy</strong>: Familiya, Ism.
+                  <strong>Majburiy</strong>: FISh (yagona ustun) yoki Familiya + Ism.
                   <br />
-                  <strong>Ixtiyoriy</strong>: Otasining ismi, Lavozim, Telefon, Email,
-                  Mutaxassislik, Tajriba, Fakultet, Kafedra, Tashkilot (vergul bilan, max 5),
-                  Login.
+                  <strong>Ixtiyoriy</strong>: Fakultet, Kafedra, Lavozim, E-pochta, Telefon,
+                  Mutaxassislik, Tashkilot (vergul bilan, max 5), Login.
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() =>
+                    downloadSupervisorsTemplate().catch((e) =>
+                      toast.error(e instanceof Error ? e.message : "Yuklab bo'lmadi"),
+                    )
+                  }
+                >
+                  <Download className="h-4 w-4" />
+                  Namuna shablonni yuklab olish
+                </Button>
               </AlertDescription>
             </Alert>
           </div>

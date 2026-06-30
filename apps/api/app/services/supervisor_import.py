@@ -1,8 +1,9 @@
-"""Supervisor (amaliyot rahbari) excel import service.
+"""O'qituvchi (amaliyot rahbari) excel import service.
 
-Ustunlar (normalize qilingan header → kalit):
-  familiya*, ism*, otasining ismi, lavozim, telefon, email, mutaxassislik,
-  tajriba, fakultet, kafedra, tashkilot (vergul bilan bir nechta, max 5), login
+Namuna shablon ustunlari: FISh (yagona ustun), Fakultet, Kafedra, Lavozim,
+E-pochta. Header qatori dinamik aniqlanadi (yuqorida sarlavha/izoh qatorlari
+bo'lsa ham). FISh yagona ustun bo'lsa Familiya/Ism/Sharifga bo'linadi; eski
+"Familiya"+"Ism" ustunlari ham qo'llab-quvvatlanadi.
 
 Login berilmasa avtomatik generatsiya (LOGIN_YEAR_PREFIX), parol = login,
 must_change_password=True. Fakultet/kafedra nomi bo'yicha topiladi (kafedra
@@ -29,9 +30,22 @@ from app.schemas.supervisor_import import (
     SupervisorImportError,
     SupervisorImportResponse,
 )
-from app.services.hemis import _generate_unique_login, _normalize_header
+from app.services.hemis import (
+    _generate_unique_login,
+    _normalize_header,
+    _parse_full_name,
+)
 
 HEADER_MAP: dict[str, str] = {
+    # Yagona FISh ustuni (namuna shablon) — Familiya/Ism/Sharifga bo'linadi
+    "fish (to'liq ismi sharifi)": "full_name",
+    "fish": "full_name",
+    "f.i.sh.": "full_name",
+    "f.i.sh": "full_name",
+    "f.i.o": "full_name",
+    "to'liq ismi": "full_name",
+    "to'liq ismi sharifi": "full_name",
+    # Eski alohida ustunlar (orqaga moslik)
     "familiya": "last_name",
     "ism": "first_name",
     "otasining ismi": "middle_name",
@@ -40,6 +54,8 @@ HEADER_MAP: dict[str, str] = {
     "telefon": "phone",
     "tel": "phone",
     "email": "email",
+    "e-pochta": "email",
+    "e pochta": "email",
     "mutaxassislik": "specialty",
     "tajriba": "experience_years",
     "fakultet": "faculty_name",
@@ -47,8 +63,6 @@ HEADER_MAP: dict[str, str] = {
     "tashkilot": "organization_names",
     "login": "username",
 }
-
-REQUIRED_KEYS = {"last_name", "first_name"}
 
 
 def _parse_excel(
@@ -68,34 +82,51 @@ def _parse_excel(
         errors.append(SupervisorImportError(row=0, message="Excel bo'sh"))
         return rows, errors
 
-    iterator = ws.iter_rows(values_only=True)
-    header_row = next(iterator, None)
-    if not header_row:
-        errors.append(SupervisorImportError(row=1, message="Header yo'q"))
+    all_rows = list(ws.iter_rows(values_only=True))
+    if not all_rows:
+        errors.append(SupervisorImportError(row=0, message="Excel bo'sh"))
         return rows, errors
 
+    # Header qatorini dinamik aniqlaymiz: yuqorida sarlavha/izoh qatorlari
+    # bo'lsa ham — kamida 2 ta ustun nomi tanilgan birinchi qator = header.
+    header_idx: int | None = None
     col_to_key: dict[int, str] = {}
-    for idx, cell in enumerate(header_row):
-        if cell is None:
-            continue
-        norm = _normalize_header(str(cell))
-        if norm in HEADER_MAP:
-            col_to_key[idx] = HEADER_MAP[norm]
+    for i, r in enumerate(all_rows[:15]):
+        mapping: dict[int, str] = {}
+        for idx, cell in enumerate(r):
+            if cell is None:
+                continue
+            norm = _normalize_header(str(cell))
+            if norm in HEADER_MAP:
+                mapping[idx] = HEADER_MAP[norm]
+        if len(mapping) >= 2:
+            header_idx = i
+            col_to_key = mapping
+            break
 
-    missing = REQUIRED_KEYS - set(col_to_key.values())
-    if missing:
+    if header_idx is None:
+        errors.append(
+            SupervisorImportError(row=1, message="Ustun nomlari (header) topilmadi")
+        )
+        return rows, errors
+
+    keys = set(col_to_key.values())
+    has_name = "full_name" in keys or {"last_name", "first_name"} <= keys
+    if not has_name:
         errors.append(
             SupervisorImportError(
-                row=1,
-                message=f"Majburiy ustunlar yetmaydi: {', '.join(sorted(missing))}",
+                row=header_idx + 1,
+                message="Majburiy ustun yetmaydi: FISh (yoki Familiya + Ism)",
             )
         )
         return rows, errors
 
-    for row_idx, row in enumerate(iterator, start=2):
+    # Header'dan keyingi qatorlar — data (Excel qator raqami = index + 1)
+    for j in range(header_idx + 1, len(all_rows)):
+        row = all_rows[j]
         if all(c is None or (isinstance(c, str) and not c.strip()) for c in row):
             continue
-        rec: dict[str, Any] = {"_row_idx": row_idx}
+        rec: dict[str, Any] = {"_row_idx": j + 1}
         for col_idx, key in col_to_key.items():
             val = row[col_idx] if col_idx < len(row) else None
             if isinstance(val, str):
@@ -162,12 +193,31 @@ async def import_supervisors(
         row_idx = rec.get("_row_idx", 0)
         last_name = rec.get("last_name")
         first_name = rec.get("first_name")
-        full_name = f"{last_name or ''} {first_name or ''}".strip()
+        middle_name = rec.get("middle_name")
+        full_name_raw = rec.get("full_name")
+
+        # Yagona FISh ustuni bo'lsa — Familiya / Ism / Sharifga bo'lamiz.
+        if full_name_raw and not (last_name and first_name):
+            try:
+                last_name, first_name, middle_name = _parse_full_name(str(full_name_raw))
+            except ValueError:
+                parts = str(full_name_raw).split()
+                last_name = parts[0] if parts else None
+                first_name = parts[1] if len(parts) > 1 else None
+                middle_name = " ".join(parts[2:]) if len(parts) > 2 else None
+
+        full_name = (
+            str(full_name_raw).strip()
+            if full_name_raw
+            else f"{last_name or ''} {first_name or ''}".strip()
+        )
 
         if not last_name or not first_name:
             errors.append(
                 SupervisorImportError(
-                    row=row_idx, name=full_name or None, message="Familiya/Ism majburiy"
+                    row=row_idx,
+                    name=full_name or None,
+                    message="FISh (Familiya + Ism) majburiy",
                 )
             )
             continue
@@ -213,7 +263,7 @@ async def import_supervisors(
                     is_active=True,
                     first_name=str(first_name),
                     last_name=str(last_name),
-                    middle_name=(str(rec["middle_name"]) if rec.get("middle_name") else None),
+                    middle_name=(str(middle_name) if middle_name else None),
                     phone=(str(rec["phone"]) if rec.get("phone") else None),
                     email=(str(rec["email"]) if rec.get("email") else None),
                     must_change_password=True,

@@ -782,6 +782,9 @@ export type HemisImportError = {
 export type HemisCredentials = {
   amaliyot_id: string;
   full_name: string;
+  group_name: string | null;
+  course: number | null;
+  direction_code: string | null;
   username: string;
   password: string;
 };

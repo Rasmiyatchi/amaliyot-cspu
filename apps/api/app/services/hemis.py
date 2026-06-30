@@ -1,6 +1,9 @@
-"""HEMIS Excel import service.
+"""Talabalar Excel import service.
 
-Haqiqiy HEMIS exportidagi 18 ta ustunni parse qiladi.
+Namuna shablon ustunlari (13 ta): To'liq ismi, Viloyat, Tuman, Jins, Kurs,
+Fakultet, Guruh, Ta'lim tili, O'quv yili, Semestr, Bitiruvchi, Mutaxassislik,
+Ta'lim shakli. "Talaba/Amaliyot id" ustuni IXTIYORIY — berilmasa tizim
+avtomatik generatsiya qiladi. Majburiy: To'liq ismi, Mutaxassislik, Guruh, Kurs.
 """
 
 import io
@@ -11,7 +14,7 @@ from typing import Any
 
 from loguru import logger
 from openpyxl import load_workbook
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
@@ -31,7 +34,11 @@ def _normalize_header(s: str) -> str:
 
 # Header (normalized) → canonical key
 HEADER_MAP: dict[str, str] = {
-    "talaba id": "hemis_id",
+    # "talaba id" / "hemis id" — IXTIYORIY (legacy). Berilsa amaliyot id sifatida
+    # ishlatiladi, berilmasa tizim avtomatik generatsiya qiladi.
+    "talaba id": "amaliyot_id",
+    "hemis id": "amaliyot_id",
+    "amaliyot id": "amaliyot_id",
     "to'liq ismi": "full_name",
     "viloyat": "region",
     "tuman": "district",
@@ -50,7 +57,8 @@ HEADER_MAP: dict[str, str] = {
     "ta'lim shakli": "education_form",
 }
 
-REQUIRED_KEYS = {"hemis_id", "full_name", "direction_code", "group_name", "course"}
+# "amaliyot_id" MAJBURIY EMAS — berilmasa tizim avtomatik generatsiya qiladi.
+REQUIRED_KEYS = {"full_name", "direction_code", "group_name", "course"}
 
 
 def _generate_password(length: int = 10) -> str:
@@ -122,13 +130,17 @@ def _parse_education_form(v: Any) -> EducationForm | None:
     if v is None:
         return None
     s = str(v).strip().lower()
-    mapping = {
-        "kunduzgi": EducationForm.DAYTIME,
-        "kechki": EducationForm.EVENING,
-        "sirtqi": EducationForm.CORRESPONDENCE,
-        "masofaviy": EducationForm.DISTANCE,
-    }
-    return mapping.get(s)
+    # Substring tekshiruvi — "Ikkinchi oliy (sirtqi)" kabi qiymatlarni ham ushlaydi.
+    # "masofaviy" "sirtqi"dan oldin tekshiriladi (ba'zan birga yoziladi).
+    if "kunduzgi" in s:
+        return EducationForm.DAYTIME
+    if "kechki" in s:
+        return EducationForm.EVENING
+    if "masofaviy" in s:
+        return EducationForm.DISTANCE
+    if "sirtqi" in s:
+        return EducationForm.CORRESPONDENCE
+    return None
 
 
 def _parse_degree_type(v: Any) -> DegreeType | None:
@@ -238,16 +250,13 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
 
     for rec in rows:
         row_idx = rec["_row_idx"]
-        hemis_id = rec.get("hemis_id")
+        incoming_id = rec.get("amaliyot_id")
+        incoming_id = str(incoming_id).strip() if incoming_id else None
 
         try:
-            if not hemis_id:
-                raise ValueError("Talaba ID bo'sh")
-            hemis_id = str(hemis_id).strip()
-
-            # Dublikat
-            if (
-                await db.execute(select(Student).where(Student.hemis_id == hemis_id))
+            # Amaliyot id berilgan bo'lsa — u bo'yicha dublikat tekshiramiz.
+            if incoming_id and (
+                await db.execute(select(Student).where(Student.hemis_id == incoming_id))
             ).scalar_one_or_none():
                 skipped += 1
                 continue
@@ -300,6 +309,24 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                 raise ValueError("To'liq ismi bo'sh")
             last_name, first_name, middle_name = _parse_full_name(full_name_raw)
 
+            # Amaliyot id berilmagan bo'lsa — ayni guruhda bir xil ism+familiyali
+            # talaba bormi tekshiramiz (qayta importda dublikatni oldini olish).
+            if not incoming_id:
+                dup = (
+                    await db.execute(
+                        select(Student.id)
+                        .join(User, Student.user_id == User.id)
+                        .where(
+                            Student.group_id == group.id,
+                            func.lower(User.last_name) == last_name.lower(),
+                            func.lower(User.first_name) == first_name.lower(),
+                        )
+                    )
+                ).first()
+                if dup:
+                    skipped += 1
+                    continue
+
             # Avtomatik login: "{2500}{8 raqam}" — birinchi kirishda parol almashtiriladi.
             # login = parol (bir xil), majburiy o'zgartirish flag bilan.
             from app.core.config import settings as app_settings
@@ -308,6 +335,9 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                 db, app_settings.LOGIN_YEAR_PREFIX
             )
             password = generated_login  # login va parol bir xil
+
+            # Amaliyot id: berilgan bo'lsa o'sha, aks holda generatsiya qilingan login.
+            amaliyot_id = incoming_id or generated_login
 
             user = User(
                 username=generated_login,
@@ -324,7 +354,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
 
             student = Student(
                 user_id=user.id,
-                hemis_id=hemis_id,
+                hemis_id=amaliyot_id,
                 gender=_parse_gender(rec.get("gender")),
                 region=rec.get("region") or None,
                 district=rec.get("district") or None,
@@ -341,8 +371,11 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
 
             credentials.append(
                 HemisCredentials(
-                    amaliyot_id=hemis_id,
+                    amaliyot_id=amaliyot_id,
                     full_name=full_name_raw,
+                    group_name=group_name,
+                    course=course,
+                    direction_code=direction_code,
                     username=generated_login,
                     password=password,
                 )
@@ -353,7 +386,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
             errors.append(
                 HemisImportError(
                     row=row_idx,
-                    amaliyot_id=str(hemis_id) if hemis_id else None,
+                    amaliyot_id=incoming_id,
                     message=str(e),
                 )
             )

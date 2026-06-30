@@ -1,13 +1,19 @@
-"""HEMIS import endpoint."""
+"""Talabalar Excel import endpoint."""
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
 from app.api.deps import RequireAdmin
 from app.db.session import SessionDep
-from app.schemas.hemis import HemisImportResponse
+from app.schemas.hemis import HemisCredentialsExportRequest, HemisImportResponse
 from app.services.hemis import import_students
+from app.services.import_templates import (
+    build_credentials_xlsx,
+    build_students_template,
+)
 
 router = APIRouter(prefix="/hemis", tags=["hemis"])
+
+_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 ALLOWED_MIME = {
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
@@ -18,17 +24,47 @@ ALLOWED_MIME = {
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 
 
+@router.get(
+    "/template",
+    summary="Talaba import uchun namuna Excel shablonini yuklab olish",
+)
+async def students_template(_: RequireAdmin) -> Response:
+    return Response(
+        content=build_students_template(),
+        media_type=_XLSX_MIME,
+        headers={
+            "Content-Disposition": 'attachment; filename="talabalar_import_shablon.xlsx"'
+        },
+    )
+
+
+@router.post(
+    "/credentials.xlsx",
+    summary="Import qilingan talabalar login/parolini Excel'ga eksport qilish",
+)
+async def export_credentials(
+    payload: HemisCredentialsExportRequest, _: RequireAdmin
+) -> Response:
+    return Response(
+        content=build_credentials_xlsx(payload.credentials),
+        media_type=_XLSX_MIME,
+        headers={
+            "Content-Disposition": 'attachment; filename="talabalar_login_parol.xlsx"'
+        },
+    )
+
+
 @router.post(
     "/import",
     response_model=HemisImportResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="HEMIS Excel import",
+    summary="Talabalar Excel import",
     description=(
         "Excel'dan talabalarni bulk import qiladi. "
-        "Ustunlar: hemis_id, full_name, mutaxassislik (yo'nalish kodi), guruh, kurs "
-        "(majburiy); jins, viloyat, tuman, ta'lim tili/shakli/turi, semestr, bitiruvchi "
-        "(ixtiyoriy). Maxfiylik: tug'ilgan sana, pasport, JSHSHIR ustunlari bo'lsa ham "
-        "saqlanmaydi. Mavjud hemis_id skip qilinadi. "
+        "Majburiy ustunlar: To'liq ismi, Mutaxassislik (yo'nalish kodi), Guruh, Kurs. "
+        "Ixtiyoriy: Viloyat, Tuman, Jins, Ta'lim tili, O'quv yili, Semestr, Bitiruvchi, "
+        "Ta'lim shakli. Amaliyot ID ixtiyoriy — berilmasa tizim avtomatik generatsiya qiladi. "
+        "Maxfiylik: tug'ilgan sana, pasport, JSHSHIR saqlanmaydi. "
         "Har yangi talabaga login/parol avtomatik generatsiya qilinadi va javobda qaytariladi."
     ),
 )

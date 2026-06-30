@@ -13,27 +13,43 @@ from app.schemas.supervisor_import import SupervisorImportResponse
 from app.services import supervisor as svc
 from app.services import supervisor_import as import_svc
 from app.services import supervisor_report as report_svc
+from app.services.import_templates import build_supervisors_template
 
 router = APIRouter(prefix="/supervisors", tags=["supervisors"])
 
+_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 _IMPORT_ALLOWED_MIME = {
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    _XLSX_MIME,
     "application/vnd.ms-excel",
     "application/octet-stream",
 }
 _IMPORT_MAX_SIZE = 20 * 1024 * 1024
 
 
+@router.get(
+    "/import-template",
+    summary="O'qituvchi import uchun namuna Excel shablonini yuklab olish",
+)
+async def supervisors_import_template(_: RequireAdmin) -> Response:
+    return Response(
+        content=build_supervisors_template(),
+        media_type=_XLSX_MIME,
+        headers={
+            "Content-Disposition": 'attachment; filename="oqituvchilar_import_shablon.xlsx"'
+        },
+    )
+
+
 @router.post(
     "/import",
     response_model=SupervisorImportResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Admin: supervizorlarni Excel'dan import qilish",
+    summary="Admin: o'qituvchilarni Excel'dan import qilish",
     description=(
-        "Ustunlar: familiya*, ism*, otasining ismi, lavozim, telefon, email, "
-        "mutaxassislik, tajriba, fakultet, kafedra, tashkilot (vergul bilan max 5), "
-        "login. Login berilmasa avtomatik generatsiya (login = parol). "
-        "Fakultet nomi bo'yicha topiladi, kafedra yo'q bo'lsa avto-yaratiladi."
+        "Namuna shablon ustunlari: FISh (yagona ustun), Fakultet, Kafedra, Lavozim, "
+        "E-pochta. Header qatori dinamik aniqlanadi. Login berilmasa avtomatik "
+        "generatsiya (login = parol). Fakultet nomi bo'yicha topiladi, kafedra yo'q "
+        "bo'lsa avto-yaratiladi."
     ),
 )
 async def import_supervisors(

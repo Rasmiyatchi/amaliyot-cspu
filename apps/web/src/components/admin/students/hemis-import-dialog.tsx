@@ -1,5 +1,4 @@
 import { CheckCircle2, Download, FileSpreadsheet, Loader2, Upload, X } from "lucide-react";
-import Papa from "papaparse";
 import { useState, type ChangeEvent, type DragEvent } from "react";
 import { toast } from "sonner";
 
@@ -24,6 +23,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useHemisImport } from "@/lib/api/hemis";
+import {
+  downloadStudentsCredentials,
+  downloadStudentsTemplate,
+} from "@/lib/api/import-templates";
 import { cn } from "@/lib/utils";
 import type { HemisImportResponse } from "@/lib/api/types";
 
@@ -34,6 +37,7 @@ export function HemisImportDialog({ open, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [result, setResult] = useState<HemisImportResponse | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const reset = () => {
     setFile(null);
@@ -70,24 +74,16 @@ export function HemisImportDialog({ open, onClose }: Props) {
     }
   };
 
-  const downloadCredentials = () => {
+  const downloadCredentials = async () => {
     if (!result?.credentials.length) return;
-    const csv = Papa.unparse(
-      result.credentials.map((c) => ({
-        amaliyot_id: c.amaliyot_id,
-        full_name: c.full_name,
-        username: c.username,
-        password: c.password,
-      })),
-    );
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const date = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `chdpu-students-credentials-${date}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    setExporting(true);
+    try {
+      await downloadStudentsCredentials(result.credentials);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Yuklab bo'lmadi");
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -132,12 +128,16 @@ export function HemisImportDialog({ open, onClose }: Props) {
                   <div>
                     <h3 className="text-sm font-semibold">Login ma'lumotlari</h3>
                     <p className="text-xs text-muted-foreground">
-                      Parollar faqat shu yerda ko'rsatiladi — CSV ni yuklab oling
+                      Parollar faqat shu yerda ko'rsatiladi — Excel'ni yuklab oling
                     </p>
                   </div>
-                  <Button onClick={downloadCredentials}>
-                    <Download className="h-4 w-4" />
-                    CSV yuklab olish
+                  <Button onClick={downloadCredentials} disabled={exporting}>
+                    {exporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Excel yuklab olish
                   </Button>
                 </div>
                 <div className="max-h-60 overflow-y-auto rounded-lg border border-border">
@@ -160,7 +160,7 @@ export function HemisImportDialog({ open, onClose }: Props) {
                       {result.credentials.length > 100 && (
                         <TableRow>
                           <TableCell colSpan={3} className="text-center text-xs text-muted-foreground">
-                            +{result.credentials.length - 100} ta — CSV'ni yuklab oling
+                            +{result.credentials.length - 100} ta — Excel'ni yuklab oling
                           </TableCell>
                         </TableRow>
                       )}
@@ -236,11 +236,26 @@ export function HemisImportDialog({ open, onClose }: Props) {
               <AlertTitle>Kutilgan ustunlar</AlertTitle>
               <AlertDescription>
                 <div className="mt-1 text-xs">
-                  <strong>Majburiy</strong>: Talaba ID, To'liq ismi, Mutaxassislik, Guruh, Kurs.
+                  <strong>Majburiy</strong>: To'liq ismi, Mutaxassislik, Guruh, Kurs.
                   <br />
-                  <strong>Ixtiyoriy</strong>: Viloyat, Tuman, Jins, Tug'ilgan sana, JSHSHIR-kod,
-                  Pasport raqami, Ta'lim tili, Semestr, Bitiruvchi, Ta'lim turi, Ta'lim shakli.
+                  <strong>Ixtiyoriy</strong>: Viloyat, Tuman, Jins, Ta'lim tili, O'quv yili,
+                  Semestr, Bitiruvchi, Ta'lim shakli.
+                  <br />
+                  Amaliyot ID berilmasa tizim avtomatik generatsiya qiladi.
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() =>
+                    downloadStudentsTemplate().catch((e) =>
+                      toast.error(e instanceof Error ? e.message : "Yuklab bo'lmadi"),
+                    )
+                  }
+                >
+                  <Download className="h-4 w-4" />
+                  Namuna shablonni yuklab olish
+                </Button>
               </AlertDescription>
             </Alert>
           </div>
