@@ -72,11 +72,19 @@ Almashtirilishi shart:
 
 **Muhim**: `.env.prod` ni hech qachon git'ga commit qilmang. `.gitignore` da bor.
 
+> 💡 **Tavsiya**: `cp .env.prod .env` qiling. Compose `.env` ni avtomatik o'qiydi,
+> shunda barcha `docker compose` buyruqlarini (`logs`, `exec`, `ps`, `up`)
+> `--env-file .env.prod` siz ishlatasiz. Aks holda HAR BIR buyruqqa `--env-file`
+> qo'shish shart (yo'qsa `POSTGRES_PASSWORD ... missing` xatosi chiqadi).
+
 ## 4. Stack'ni ishga tushirish
 
 ```bash
 docker compose -f infra/compose/docker-compose.prod.yml --env-file .env.prod up -d --build
 ```
+
+> Quyidagi barcha buyruqlarda `--env-file .env.prod` kerak (yoki 3-bo'limdagi
+> `cp .env.prod .env` ni bajargan bo'lsangiz — kerak emas).
 
 Birinchi marta:
 1. Postgres + Redis volumelari yaratiladi
