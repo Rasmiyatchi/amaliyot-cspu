@@ -2,22 +2,29 @@
 
 Ubuntu 22.04+ VPS uchun bosqichma-bosqich qo'llanma.
 
-## 0. Ushbu release o'zgarishlari (2026-06)
+## 0. Ushbu release o'zgarishlari (Phase 17 — 2026-06)
 
-Yangi xususiyatlar (yangi env yoki dependency **talab qilinmaydi**):
+Rahbariyat feedback'iga javoban katta yangilash. **Yangi env talab qilinmaydi**;
+yangi Python dependency (`docxtpl`) `uv.lock` da bor — image build avtomatik o'rnatadi
+(qo'lda harakat shart emas).
 
-- **Topshiriq deadline + overdue** — deadline majburiy; muddati o'tgan topshiriqlar
-  admin/super-admin/supervisorga ko'rinadi.
-- **Kafedra (Department) entity** + supervizorni **5 tagacha tashkilotga** biriktirish
-  (M2M) + fakultet/kafedra + **supervizor Excel import** (`/supervisors/import`).
-- **Bitta-qurilma login** — talaba bitta qurilmaga bog'lanadi; boshqa qurilmadan
-  kirish bloklanadi va adminlarga xabar boradi; admin qurilmani reset qiladi.
-- **O'quv yili filtri** — talabalar ro'yxati/eksport o'quv yili bo'yicha filtrlanadi.
-- **Maxfiylik** — talaba passport/JSHSHIR/tug'ilgan sana butunlay olib tashlandi.
+**Yangi xususiyatlar:**
+- **5-kurs** hamma joyda + guruh tanlash bug tuzatildi; "HEMIS id" → "Amaliyot id".
+- **Import shablonlari** — talaba (13 ustun, id'siz) + o'qituvchi (yagona FISh)
+  parserlari; namuna shablon yuklab olish; login/parol **Excel** eksporti.
+- **Amaliyotlar Monitoringi** filtrlari (o'quv yili/mutaxassislik/kurs/guruh);
+  **Shartnomalar** tab dizayni; yangi **Qaydnomalar** sahifa (Excel + Baholash PDF).
+- **DOCX shartnoma shablonlari** (super admin yuklaydi, `{{ maydon }}` aniqlanadi).
+- **Talaba amaliyot arizasi** → super admin QR tasdiq + hudud bo'yicha **ilova**.
+- **Talaba ↔ admin murojaat** (chat).
 
-**Migrationlar** (API container start'da `alembic upgrade head` avto-bajaradi):
-`b7f2c9a1e3d5` (PII drop) → `c1d3e5f7a9b2` (departments + supervisor multi-org) →
-`d2e4f6a8b1c3` (device binding). `git pull` + `up -d --build` yetarli.
+**Yangi migrationlar** (API container start'da `alembic upgrade head` avto-bajaradi):
+`e9a1c7b3f0d2` (practice_types.education_forms) → `f1b3d5a7c9e0` (contract_templates)
+→ `a2c4e6b8d0f1` (practice_applications) → `b3d5f7a9c1e2` (inquiries). HEAD =
+`b3d5f7a9c1e2`. `git pull` + `up -d --build` yetarli.
+
+**Storage:** DOCX shablonlar `storage/contract_templates/` da saqlanadi (mavjud
+`apistorage` volume ichida — qo'shimcha sozlash shart emas).
 
 > ⚠️ **Lokal dev DB** migration zanjiridan orqada bo'lishi mumkin. Lokal sinovdan
 > oldin: `cd apps/api && .venv/bin/alembic upgrade head`.

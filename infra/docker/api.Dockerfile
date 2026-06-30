@@ -70,8 +70,8 @@ COPY --from=builder /app/app ./app
 COPY --from=builder /app/alembic ./alembic
 COPY --from=builder /app/alembic.ini ./alembic.ini
 
-# Storage dir for uploads/PDFs (volume-mountable)
-RUN mkdir -p /app/storage/uploads /app/storage/contracts && \
+# Storage dir for uploads/PDFs/templates (volume-mountable)
+RUN mkdir -p /app/storage/uploads /app/storage/contracts /app/storage/contract_templates && \
     chown -R app:app /app
 
 USER app
