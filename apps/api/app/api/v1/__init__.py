@@ -10,14 +10,17 @@ from app.api.v1 import (
     attendance,
     audit_logs,
     auth,
+    contract_templates,
     contracts,
     documents,
     exports,
     final_reports,
     health,
     hemis,
+    inquiries,
     notifications,
     organizations,
+    practice_applications,
     practice_assignments,
     practice_types,
     records,
@@ -39,8 +42,10 @@ api_router.include_router(practice_types.router)
 api_router.include_router(organizations.router)
 api_router.include_router(areas.router)
 api_router.include_router(supervisors.router)
+api_router.include_router(practice_applications.router)
 api_router.include_router(practice_assignments.router)
 api_router.include_router(contracts.router)
+api_router.include_router(contract_templates.router)
 api_router.include_router(attendance.router)
 api_router.include_router(tasks.router)
 api_router.include_router(archive.router)
@@ -54,3 +59,4 @@ api_router.include_router(documents.router)
 api_router.include_router(final_reports.router)
 api_router.include_router(audit_logs.router)
 api_router.include_router(records.router)
+api_router.include_router(inquiries.router)

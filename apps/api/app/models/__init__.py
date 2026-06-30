@@ -5,8 +5,10 @@ from app.models.area import Area
 from app.models.attendance import AttendanceDay, AttendanceEvent, AttendanceOverride
 from app.models.audit_log import AuditLog
 from app.models.contract import Contract
+from app.models.contract_template import ContractTemplateDoc
 from app.models.document import Document
 from app.models.enums import (
+    ApplicationStatus,
     AssignmentStatus,
     AttendanceDayStatus,
     AttendanceEventKind,
@@ -29,8 +31,10 @@ from app.models.enums import (
     UserRole,
 )
 from app.models.final_report import FinalReport
+from app.models.inquiry import Inquiry, InquiryMessage
 from app.models.notification import Notification
 from app.models.organization import Organization
+from app.models.practice_application import PracticeApplication
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
 from app.models.refresh_token import RefreshToken
@@ -42,6 +46,7 @@ from app.models.user import User
 
 __all__ = [
     "AcademicYear",
+    "ApplicationStatus",
     "Area",
     "AssignmentStatus",
     "AttendanceDay",
@@ -53,6 +58,7 @@ __all__ = [
     "Contract",
     "ContractStatus",
     "ContractTemplate",
+    "ContractTemplateDoc",
     "DegreeType",
     "Department",
     "Direction",
@@ -64,6 +70,8 @@ __all__ = [
     "FinalReportStatus",
     "Gender",
     "Group",
+    "Inquiry",
+    "InquiryMessage",
     "JournalEntry",
     "JournalStatus",
     "LessonAnalysis",
@@ -72,6 +80,7 @@ __all__ = [
     "ObjectKind",
     "Organization",
     "OrganizationKind",
+    "PracticeApplication",
     "PracticeAssignment",
     "PracticeType",
     "RefreshToken",

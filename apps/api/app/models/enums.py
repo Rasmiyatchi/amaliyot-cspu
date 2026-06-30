@@ -95,6 +95,19 @@ class ContractTemplate(StrEnum):
     PARTNERSHIP = "partnership"  # Dastlabki hamkorlik (№8490 kabi)
 
 
+class ApplicationStatus(StrEnum):
+    """Talaba amaliyot arizasi statusi.
+
+    PENDING → talaba ariza yubordi, super admin ko'rib chiqishi kutilyapti
+    APPROVED → super admin QR bilan tasdiqladi
+    REJECTED → super admin rad etdi
+    """
+
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class AttendanceDayStatus(StrEnum):
     """Kunlik davomat statusi.
 

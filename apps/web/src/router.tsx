@@ -12,6 +12,9 @@ import { DocumentsPage } from "@/routes/dashboard/admin/documents";
 import { AdminHome } from "@/routes/dashboard/admin/index";
 import { ObjectsPage } from "@/routes/dashboard/admin/objects";
 import { PracticeTypesPage } from "@/routes/dashboard/admin/practice-types";
+import { ApplicationsPage } from "@/routes/dashboard/admin/applications";
+import { ContractTemplatesPage } from "@/routes/dashboard/admin/contract-templates";
+import { InquiriesPage } from "@/routes/dashboard/admin/inquiries";
 import { RecordsPage } from "@/routes/dashboard/admin/records";
 import { ReportsPage } from "@/routes/dashboard/admin/reports";
 import { StudentsPage } from "@/routes/dashboard/admin/students";
@@ -50,11 +53,14 @@ export const router = createBrowserRouter([
           { path: "students", Component: StudentsPage },
           { path: "assignments", Component: AssignmentsPage },
           { path: "contracts", Component: ContractsPage },
+          { path: "contract-templates", Component: ContractTemplatesPage },
+          { path: "applications", Component: ApplicationsPage },
           { path: "attendance", Component: AttendancePage },
           { path: "task-templates", Component: TaskTemplatesPage },
           { path: "documents", Component: DocumentsPage },
           { path: "reports", Component: ReportsPage },
           { path: "records", Component: RecordsPage },
+          { path: "inquiries", Component: InquiriesPage },
           { path: "admins", Component: AdminsPage },
           { path: "audit-log", Component: AuditLogPage },
           { path: "system-settings", Component: SystemSettingsPage },

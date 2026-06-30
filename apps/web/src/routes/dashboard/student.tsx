@@ -2,6 +2,8 @@ import { CalendarDays, GraduationCap, Loader2 } from "lucide-react";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { ArchiveCard } from "@/components/archive-card";
+import { StudentApplicationCard } from "@/components/student/application-card";
+import { StudentInquiryCard } from "@/components/student/inquiry-card";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { StudentAcademicPanel } from "@/components/student/academic-panel";
 import { FinalReportCard } from "@/components/student/final-report-card";
@@ -176,6 +178,12 @@ export function StudentDashboard() {
             <ArchiveCard assignmentId={activeAssignment.id} />
           </>
         )}
+
+        {/* Amaliyot arizalari — biriktirishdan mustaqil, har doim ko'rinadi */}
+        <StudentApplicationCard />
+
+        {/* Adminga murojaat (chat) */}
+        <StudentInquiryCard />
       </div>
     </main>
   );
