@@ -31,7 +31,7 @@ const schema = z.object({
   direction_id: z.string().uuid("Yo'nalish tanlang"),
   academic_year_id: z.string().uuid("O'quv yili tanlang"),
   name: z.string().min(1).max(32),
-  course: z.coerce.number().int().min(1).max(4),
+  course: z.coerce.number().int().min(1).max(5),
 });
 
 type Values = z.infer<typeof schema>;
@@ -185,7 +185,7 @@ export function GroupFormDialog({ open, existing, onClose }: Props) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {[1, 2, 3, 4].map((c) => (
+                        {[1, 2, 3, 4, 5].map((c) => (
                           <SelectItem key={c} value={String(c)}>
                             {c}-kurs
                           </SelectItem>

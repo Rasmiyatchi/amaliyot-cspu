@@ -74,7 +74,7 @@ export function HemisImportDialog({ open, onClose }: Props) {
     if (!result?.credentials.length) return;
     const csv = Papa.unparse(
       result.credentials.map((c) => ({
-        hemis_id: c.hemis_id,
+        amaliyot_id: c.amaliyot_id,
         full_name: c.full_name,
         username: c.username,
         password: c.password,
@@ -96,7 +96,7 @@ export function HemisImportDialog({ open, onClose }: Props) {
         <DialogHeader>
           <DialogTitle>Talabalar Excel import</DialogTitle>
           <DialogDescription>
-            .xlsx faylni yuklang (HEMIS yoki o'zingiz tayyorlagan). Mavjud talabalar o'tkazib yuboriladi.
+            .xlsx faylni yuklang (namuna shablon bo'yicha). Mavjud talabalar o'tkazib yuboriladi.
           </DialogDescription>
         </DialogHeader>
 
@@ -117,7 +117,7 @@ export function HemisImportDialog({ open, onClose }: Props) {
                     {result.errors.slice(0, 50).map((e, i) => (
                       <li key={i}>
                         <span className="font-mono">Row {e.row}</span>
-                        {e.hemis_id ? ` · ${e.hemis_id}` : ""}: {e.message}
+                        {e.amaliyot_id ? ` · ${e.amaliyot_id}` : ""}: {e.message}
                       </li>
                     ))}
                   </ul>
@@ -144,15 +144,15 @@ export function HemisImportDialog({ open, onClose }: Props) {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Talaba ID</TableHead>
+                        <TableHead>Amaliyot ID</TableHead>
                         <TableHead>F.I.SH.</TableHead>
                         <TableHead className="w-[130px] font-mono">Parol</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {result.credentials.slice(0, 100).map((c) => (
-                        <TableRow key={c.hemis_id}>
-                          <TableCell className="font-mono text-xs">{c.hemis_id}</TableCell>
+                        <TableRow key={c.amaliyot_id}>
+                          <TableCell className="font-mono text-xs">{c.amaliyot_id}</TableCell>
                           <TableCell className="text-sm">{c.full_name}</TableCell>
                           <TableCell className="font-mono text-xs">{c.password}</TableCell>
                         </TableRow>

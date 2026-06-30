@@ -39,7 +39,7 @@ class TaskTemplateRead(BaseModel):
 
 class TaskTemplateCreate(BaseModel):
     practice_type_id: UUID
-    course: int = Field(..., ge=1, le=4)
+    course: int = Field(..., ge=1, le=5)
     semester: Semester
     category: TaskCategory
     type: TaskType
@@ -53,7 +53,7 @@ class TaskTemplateCreate(BaseModel):
 
 
 class TaskTemplateUpdate(BaseModel):
-    course: int | None = Field(None, ge=1, le=4)
+    course: int | None = Field(None, ge=1, le=5)
     semester: Semester | None = None
     category: TaskCategory | None = None
     type: TaskType | None = None

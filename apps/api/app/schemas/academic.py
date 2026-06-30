@@ -102,14 +102,14 @@ class GroupCreate(BaseModel):
     direction_id: UUID
     academic_year_id: UUID
     name: str = Field(..., min_length=1, max_length=32)
-    course: int = Field(..., ge=1, le=4)
+    course: int = Field(..., ge=1, le=5)
 
 
 class GroupUpdate(BaseModel):
     direction_id: UUID | None = None
     academic_year_id: UUID | None = None
     name: str | None = Field(None, min_length=1, max_length=32)
-    course: int | None = Field(None, ge=1, le=4)
+    course: int | None = Field(None, ge=1, le=5)
 
 
 class GroupRead(BaseModel):

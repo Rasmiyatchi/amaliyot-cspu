@@ -96,7 +96,7 @@ class Group(UUIDMixin, TimestampMixin, Base):
         index=True,
     )
     name: Mapped[str] = mapped_column(String(32), comment="Masalan '2301-01'")
-    course: Mapped[int] = mapped_column(Integer, comment="1..4")
+    course: Mapped[int] = mapped_column(Integer, comment="1..5")
 
     def __repr__(self) -> str:
         return f"<Group {self.name} course={self.course}>"

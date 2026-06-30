@@ -213,7 +213,7 @@ export function TaskTemplateFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[1, 2, 3, 4].map((c) => (
+                {[1, 2, 3, 4, 5].map((c) => (
                   <SelectItem key={c} value={String(c)}>
                     {c}-kurs
                   </SelectItem>

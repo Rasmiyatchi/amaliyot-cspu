@@ -775,12 +775,12 @@ export type PracticeType = {
 // ─── HEMIS Import ────────────────────────────────────────
 export type HemisImportError = {
   row: number;
-  hemis_id: string | null;
+  amaliyot_id: string | null;
   message: string;
 };
 
 export type HemisCredentials = {
-  hemis_id: string;
+  amaliyot_id: string;
   full_name: string;
   username: string;
   password: string;

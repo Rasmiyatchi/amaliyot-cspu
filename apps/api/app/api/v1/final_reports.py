@@ -26,7 +26,7 @@ async def list_reports(
     group_id: UUID | None = None,
     direction_id: UUID | None = None,
     faculty_id: UUID | None = None,
-    course: int | None = Query(None, ge=1, le=4),
+    course: int | None = Query(None, ge=1, le=5),
     search: str | None = None,
 ) -> list[FinalReportRead]:
     """Super Admin: barcha hisobotlar (default: ko'rib chiqish kutayotganlar)."""

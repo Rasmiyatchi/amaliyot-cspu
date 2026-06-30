@@ -94,8 +94,8 @@ def _parse_course(v: Any) -> int:
     if not m:
         raise ValueError(f"kurs noto'g'ri: {v!r}")
     c = int(m.group(1))
-    if not (1 <= c <= 4):
-        raise ValueError(f"kurs 1-4 bo'lishi kerak: {c}")
+    if not (1 <= c <= 5):
+        raise ValueError(f"kurs 1-5 bo'lishi kerak: {c}")
     return c
 
 
@@ -341,7 +341,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
 
             credentials.append(
                 HemisCredentials(
-                    hemis_id=hemis_id,
+                    amaliyot_id=hemis_id,
                     full_name=full_name_raw,
                     username=generated_login,
                     password=password,
@@ -353,7 +353,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
             errors.append(
                 HemisImportError(
                     row=row_idx,
-                    hemis_id=str(hemis_id) if hemis_id else None,
+                    amaliyot_id=str(hemis_id) if hemis_id else None,
                     message=str(e),
                 )
             )

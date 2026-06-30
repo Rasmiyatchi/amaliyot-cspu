@@ -30,7 +30,7 @@ async def list_students(
     faculty_id: UUID | None = None,
     direction_id: UUID | None = None,
     group_id: UUID | None = None,
-    course: int | None = Query(None, ge=1, le=4),
+    course: int | None = Query(None, ge=1, le=5),
     academic_year_id: UUID | None = None,
     status_filter: StudentStatus | None = Query(None, alias="status"),
     search: str | None = Query(None, min_length=1, max_length=100),

@@ -155,7 +155,7 @@ export function StudentsFilters({ filters, onChange }: Props) {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL_VALUE}>Barcha kurs</SelectItem>
-          {[1, 2, 3, 4].map((c) => (
+          {[1, 2, 3, 4, 5].map((c) => (
             <SelectItem key={c} value={String(c)}>
               {c}-kurs
             </SelectItem>

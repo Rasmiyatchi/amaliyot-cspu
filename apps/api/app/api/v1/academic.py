@@ -174,10 +174,10 @@ async def list_groups(
     db: SessionDep,
     _: RequireAdmin,
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=200),
     direction_id: UUID | None = None,
     academic_year_id: UUID | None = None,
-    course: int | None = Query(None, ge=1, le=4),
+    course: int | None = Query(None, ge=1, le=5),
 ) -> Paginated[GroupRead]:
     offset = (page - 1) * page_size
     items, total = await svc.list_groups(

@@ -33,7 +33,7 @@ async def export_students(
     faculty_id: UUID | None = None,
     direction_id: UUID | None = None,
     group_id: UUID | None = None,
-    course: int | None = Query(None, ge=1, le=4),
+    course: int | None = Query(None, ge=1, le=5),
     academic_year_id: UUID | None = None,
     status: StudentStatus | None = None,
     search: str | None = None,
@@ -92,7 +92,7 @@ async def export_final_reports(
     group_id: UUID | None = None,
     direction_id: UUID | None = None,
     faculty_id: UUID | None = None,
-    course: int | None = Query(None, ge=1, le=4),
+    course: int | None = Query(None, ge=1, le=5),
     search: str | None = None,
 ) -> Response:
     content = await svc.export_final_reports(

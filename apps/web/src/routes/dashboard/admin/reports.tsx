@@ -414,7 +414,7 @@ export function ReportsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL}>Barcha kurs</SelectItem>
-            {[1, 2, 3, 4].map((c) => (
+            {[1, 2, 3, 4, 5].map((c) => (
               <SelectItem key={c} value={String(c)}>
                 {c}-kurs
               </SelectItem>

@@ -5,12 +5,12 @@ from pydantic import BaseModel
 
 class HemisImportError(BaseModel):
     row: int
-    hemis_id: str | None = None
+    amaliyot_id: str | None = None
     message: str
 
 
 class HemisCredentials(BaseModel):
-    hemis_id: str
+    amaliyot_id: str  # tizimdagi talaba identifikatori (eski "HEMIS id" o'rniga)
     full_name: str
     username: str
     password: str  # plaintext — faqat javobda bir marta

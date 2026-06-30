@@ -61,7 +61,7 @@ async def list_templates(
     db: SessionDep,
     _: CurrentUser,
     practice_type_id: UUID | None = None,
-    course: int | None = Query(None, ge=1, le=4),
+    course: int | None = Query(None, ge=1, le=5),
     semester: Semester | None = None,
     include_inactive: bool = False,
 ) -> list[TaskTemplateRead]:

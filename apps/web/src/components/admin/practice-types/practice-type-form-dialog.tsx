@@ -50,7 +50,7 @@ type Values = z.infer<typeof schema>;
 
 type Props = { open: boolean; existing: PracticeType | null; onClose: () => void };
 
-const COURSES = [1, 2, 3, 4];
+const COURSES = [1, 2, 3, 4, 5];
 
 export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
   const create = useCreatePracticeType();

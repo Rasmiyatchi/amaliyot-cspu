@@ -204,7 +204,7 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
                 <Input
                   value={form.hemis_id}
                   onChange={(e) => set("hemis_id", e.target.value)}
-                  placeholder="354231100489 (HEMIS ID yoki o'z raqamingiz)"
+                  placeholder="354231100489 (Amaliyot ID yoki o'z raqamingiz)"
                 />
               </div>
             </>
