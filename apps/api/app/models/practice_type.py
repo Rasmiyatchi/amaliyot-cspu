@@ -57,6 +57,14 @@ class PracticeType(UUIDMixin, TimestampMixin, Base):
         comment="Masalan {2,3,4} yoki {1,2}",
     )
 
+    # Ta'lim shakllari — PG text[] (bo'sh = barcha shakllarga tegishli)
+    allowed_education_forms: Mapped[list[str]] = mapped_column(
+        ARRAY(String),
+        default=list,
+        server_default="{}",
+        comment="Masalan {daytime,evening} — bo'sh bo'lsa barcha shakllar",
+    )
+
     # Baholash (100-ball tizimi) — JSONB, Phase 9 da enforcement qilinadi
     grading_rules: Mapped[dict[str, Any]] = mapped_column(
         JSONB,

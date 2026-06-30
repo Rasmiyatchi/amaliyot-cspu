@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 1.4cm;
+      @bottom-center {
+        content: "Sahifa " counter(page) " / " counter(pages);
+        font-size: 9px;
+        color: #888;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { font-family: "DejaVu Sans", Arial, sans-serif; color: #1a1a2e; font-size: 10px; margin: 0; }
+    .header { border-bottom: 2px solid #4f46e5; padding-bottom: 8px; margin-bottom: 12px; }
+    .header h1 { font-size: 17px; margin: 0 0 4px 0; color: #4f46e5; }
+    .meta { color: #555; font-size: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #d4d4e0; padding: 5px 6px; text-align: left; }
+    th { background: #eef2ff; color: #312e81; font-size: 9.5px; }
+    td.num, th.num { text-align: center; }
+    tr:nth-child(even) td { background: #fafafe; }
+    .empty { text-align: center; color: #888; padding: 24px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Baholash qaydnomasi</h1>
+    <div class="meta">
+      {{ app_name }} · Jami: <strong>{{ rows|length }}</strong> ta amaliyot · {{ generated_at }}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="num">№</th>
+        <th>Talaba</th>
+        <th>Mutaxassislik</th>
+        <th>Guruh</th>
+        <th class="num">Kurs</th>
+        <th>Amaliyot nomi</th>
+        <th>Korxona</th>
+        <th>Muddat</th>
+        <th class="num">Davomat %</th>
+        <th class="num">Korxona bahosi</th>
+        <th class="num">Qaydnoma bahosi</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td>{{ r.student_name }}</td>
+        <td>{{ r.direction_name or r.direction_code or "—" }}</td>
+        <td>{{ r.group_name or "—" }}</td>
+        <td class="num">{{ r.course or "—" }}</td>
+        <td>{{ r.practice_type_name }}</td>
+        <td>{{ r.object_name or "—" }}</td>
+        <td>{{ r.start_date }} — {{ r.end_date }}</td>
+        <td class="num">{% if r.attendance_pct is not none %}{{ r.attendance_pct }}%{% else %}—{% endif %}</td>
+        <td class="num">{% if r.korxona_grade is not none %}{{ r.korxona_grade }}{% if r.korxona_grade_max %}/{{ r.korxona_grade_max }}{% endif %}{% else %}—{% endif %}</td>
+        <td class="num">{% if r.qaydnoma_grade is not none %}{{ r.qaydnoma_grade }}{% else %}—{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td class="empty" colspan="11">Ma'lumot yo'q</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

@@ -35,6 +35,7 @@ import {
   useAssignments,
   type AssignmentFilters,
 } from "@/lib/api/assignments";
+import { useAcademicYears, useDirections, useGroups } from "@/lib/api/academic";
 import { useOrganizations } from "@/lib/api/organizations";
 import { usePracticeTypes } from "@/lib/api/practice-types";
 import { useSupervisors } from "@/lib/api/supervisors";
@@ -44,11 +45,13 @@ const ALL = "__all__";
 
 const STATUS_TABS: { value: string; label: string }[] = [
   { value: ALL, label: "Barchasi" },
-  { value: "draft", label: "Qoralama" },
-  { value: "active", label: "Aktiv" },
-  { value: "completed", label: "Tugagan" },
-  { value: "cancelled", label: "Bekor qilingan" },
+  { value: "draft", label: "Yangi" },
+  { value: "active", label: "Faol" },
+  { value: "cancelled", label: "Rad etilgan" },
+  { value: "completed", label: "Tugatilgan" },
 ];
+
+const COURSES = [1, 2, 3, 4, 5];
 
 export function AssignmentsPage() {
   const [filters, setFilters] = useState<AssignmentFilters>({});
@@ -60,6 +63,13 @@ export function AssignmentsPage() {
   const pageSize = 20;
   const orgs = useOrganizations({}, 1, 200);
   const supervisorsQ = useSupervisors({}, 1, 200);
+  const academicYearsQ = useAcademicYears();
+  const directionsQ = useDirections(undefined, 1, 200);
+  const groupsQ = useGroups(
+    { directionId: filters.direction_id, course: filters.course },
+    1,
+    200,
+  );
 
   useEffect(() => {
     setFilters((f) => ({ ...f, search: debouncedSearch || undefined }));
@@ -97,9 +107,9 @@ export function AssignmentsPage() {
             <ClipboardList className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Amaliyot biriktirish</h1>
+            <h1 className="text-2xl font-semibold">Amaliyotlar Monitoringi</h1>
             <p className="text-sm text-muted-foreground">
-              Talabalarni amaliyotga yakka yoki guruh bo'lib biriktirish
+              Talabalarning amaliyot jarayonlarini kuzatish va boshqarish
             </p>
           </div>
         </div>
@@ -201,6 +211,99 @@ export function AssignmentsPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={filters.academic_year_id ?? ALL}
+          onValueChange={(v) =>
+            setFilter({ academic_year_id: v === ALL ? undefined : (v as UUID) })
+          }
+        >
+          <SelectTrigger className="w-[170px]">
+            <SelectValue placeholder="O'quv yili" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha o'quv yillari</SelectItem>
+            {(academicYearsQ.data ?? []).map((y) => (
+              <SelectItem key={y.id} value={y.id}>
+                {y.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.direction_id ?? ALL}
+          onValueChange={(v) =>
+            setFilter({
+              direction_id: v === ALL ? undefined : (v as UUID),
+              group_id: undefined,
+            })
+          }
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Mutaxassislik" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha mutaxassisliklar</SelectItem>
+            {(directionsQ.data?.items ?? []).map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.code} · {d.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.course !== undefined ? String(filters.course) : ALL}
+          onValueChange={(v) =>
+            setFilter({
+              course: v === ALL ? undefined : Number(v),
+              group_id: undefined,
+            })
+          }
+        >
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="Kurs" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Barcha kurslar</SelectItem>
+            {COURSES.map((c) => (
+              <SelectItem key={c} value={String(c)}>
+                {c}-kurs
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.group_id ?? ALL}
+          onValueChange={(v) => setFilter({ group_id: v === ALL ? undefined : (v as UUID) })}
+        >
+          <SelectTrigger className="w-[170px]">
+            <SelectValue placeholder="Guruh" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha guruhlar</SelectItem>
+            {(groupsQ.data?.items ?? []).map((g) => (
+              <SelectItem key={g.id} value={g.id}>
+                {g.name} (kurs {g.course})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {(filters.practice_type_id ||
+          filters.organization_id ||
+          filters.supervisor_id ||
+          filters.academic_year_id ||
+          filters.direction_id ||
+          filters.course !== undefined ||
+          filters.group_id) && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setFilters({ search: filters.search });
+              setPage(1);
+            }}
+          >
+            Tozalash
+          </Button>
+        )}
       </div>
 
       {isPending && !data && <TableSkeleton columns={6} rows={8} />}

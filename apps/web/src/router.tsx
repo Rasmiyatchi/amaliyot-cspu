@@ -12,6 +12,7 @@ import { DocumentsPage } from "@/routes/dashboard/admin/documents";
 import { AdminHome } from "@/routes/dashboard/admin/index";
 import { ObjectsPage } from "@/routes/dashboard/admin/objects";
 import { PracticeTypesPage } from "@/routes/dashboard/admin/practice-types";
+import { RecordsPage } from "@/routes/dashboard/admin/records";
 import { ReportsPage } from "@/routes/dashboard/admin/reports";
 import { StudentsPage } from "@/routes/dashboard/admin/students";
 import { SupervisorsPage } from "@/routes/dashboard/admin/supervisors";
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
           { path: "task-templates", Component: TaskTemplatesPage },
           { path: "documents", Component: DocumentsPage },
           { path: "reports", Component: ReportsPage },
+          { path: "records", Component: RecordsPage },
           { path: "admins", Component: AdminsPage },
           { path: "audit-log", Component: AuditLogPage },
           { path: "system-settings", Component: SystemSettingsPage },

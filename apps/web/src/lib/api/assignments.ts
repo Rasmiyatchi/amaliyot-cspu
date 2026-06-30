@@ -18,6 +18,9 @@ export type AssignmentFilters = {
   organization_id?: UUID;
   area_id?: UUID;
   supervisor_id?: UUID;
+  direction_id?: UUID;
+  course?: number;
+  group_id?: UUID;
   status?: AssignmentStatus;
   search?: string;
 };
@@ -39,6 +42,9 @@ function qs(filters: AssignmentFilters, page: number, pageSize: number): string 
   if (filters.organization_id) p.set("organization_id", filters.organization_id);
   if (filters.area_id) p.set("area_id", filters.area_id);
   if (filters.supervisor_id) p.set("supervisor_id", filters.supervisor_id);
+  if (filters.direction_id) p.set("direction_id", filters.direction_id);
+  if (filters.course !== undefined) p.set("course", String(filters.course));
+  if (filters.group_id) p.set("group_id", filters.group_id);
   if (filters.status) p.set("status", filters.status);
   if (filters.search) p.set("search", filters.search);
   return p.toString();

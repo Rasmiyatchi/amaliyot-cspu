@@ -41,7 +41,7 @@ async def list_contracts(
     organization_id: UUID | None = None,
     practice_type_id: UUID | None = None,
     academic_year_id: UUID | None = None,
-    status_filter: ContractStatus | None = Query(None, alias="status"),
+    status_filter: list[ContractStatus] | None = Query(None, alias="status"),
     search: str | None = Query(None, min_length=1, max_length=100),
 ) -> Paginated[ContractRead]:
     offset = (page - 1) * page_size

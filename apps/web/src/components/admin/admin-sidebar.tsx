@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   ClipboardList,
   FileCheck2,
   FileText,
@@ -75,6 +76,7 @@ const navSections: NavSection[] = [
       { to: "/admin/task-templates", label: "Topshiriqlar", icon: LibraryBig },
       { to: "/admin/documents", label: "Hujjatlar", icon: FileText },
       { to: "/admin/reports", label: "Yakuniy hisobotlar", icon: FileCheck2 },
+      { to: "/admin/records", label: "Qaydnomalar", icon: ClipboardCheck },
     ],
   },
   {

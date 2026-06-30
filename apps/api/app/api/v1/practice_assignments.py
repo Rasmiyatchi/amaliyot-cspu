@@ -32,6 +32,9 @@ async def list_assignments(
     organization_id: UUID | None = None,
     area_id: UUID | None = None,
     supervisor_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    course: int | None = Query(None, ge=1, le=5),
+    group_id: UUID | None = None,
     status_filter: AssignmentStatus | None = Query(None, alias="status"),
     search: str | None = Query(None, min_length=1, max_length=100),
 ) -> Paginated[PracticeAssignmentRead]:
@@ -46,6 +49,9 @@ async def list_assignments(
         organization_id=organization_id,
         area_id=area_id,
         supervisor_id=supervisor_id,
+        direction_id=direction_id,
+        course=course,
+        group_id=group_id,
         status_filter=status_filter,
         search=search,
     )

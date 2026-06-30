@@ -37,6 +37,7 @@ class PracticeTypeBase(BaseModel):
     hours_per_day: int | None = Field(None, ge=1, le=12)
 
     allowed_courses: list[int] = Field(default_factory=list)
+    allowed_education_forms: list[str] = Field(default_factory=list)
     grading_rules: dict[str, Any] = Field(default_factory=dict)
     syllabus_md: str | None = None
 
@@ -59,6 +60,7 @@ class PracticeTypeUpdate(BaseModel):
     days_per_week: int | None = Field(None, ge=1, le=7)
     hours_per_day: int | None = Field(None, ge=1, le=12)
     allowed_courses: list[int] | None = None
+    allowed_education_forms: list[str] | None = None
     grading_rules: dict[str, Any] | None = None
     syllabus_md: str | None = None
     is_active: bool | None = None

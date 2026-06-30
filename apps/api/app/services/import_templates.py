@@ -131,6 +131,60 @@ def build_credentials_xlsx(credentials: list) -> bytes:
     return _to_bytes(wb)
 
 
+_RECORDS_HEADERS = [
+    "№",
+    "Talaba",
+    "Mutaxassislik",
+    "Guruh",
+    "Kurs",
+    "Amaliyot nomi",
+    "Korxona",
+    "Muddat",
+    "Davomat %",
+    "Korxona bahosi",
+    "Qaydnoma bahosi",
+]
+
+
+def build_records_xlsx(rows: list) -> bytes:
+    """Qaydnomalar ro'yxatini Excel'ga yozadi."""
+
+    def _g(obj, key):
+        return obj.get(key) if isinstance(obj, dict) else getattr(obj, key, None)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Qaydnomalar"
+    for i, h in enumerate(_RECORDS_HEADERS, start=1):
+        c = ws.cell(row=1, column=i, value=h)
+        c.fill = _HEADER_FILL
+        c.font = _HEADER_FONT
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for idx, r in enumerate(rows, start=1):
+        sd, ed = _g(r, "start_date"), _g(r, "end_date")
+        muddat = f"{sd} — {ed}" if sd and ed else ""
+        att = _g(r, "attendance_pct")
+        kg, kgm = _g(r, "korxona_grade"), _g(r, "korxona_grade_max")
+        korxona = f"{kg}/{kgm}" if kg is not None and kgm else (kg if kg is not None else "")
+        row = idx + 1
+        ws.cell(row=row, column=1, value=idx)
+        ws.cell(row=row, column=2, value=_g(r, "student_name"))
+        ws.cell(row=row, column=3, value=_g(r, "direction_name") or _g(r, "direction_code"))
+        ws.cell(row=row, column=4, value=_g(r, "group_name"))
+        ws.cell(row=row, column=5, value=_g(r, "course"))
+        ws.cell(row=row, column=6, value=_g(r, "practice_type_name"))
+        ws.cell(row=row, column=7, value=_g(r, "object_name"))
+        ws.cell(row=row, column=8, value=muddat)
+        ws.cell(row=row, column=9, value=f"{att}%" if att is not None else "")
+        ws.cell(row=row, column=10, value=korxona)
+        ws.cell(row=row, column=11, value=_g(r, "qaydnoma_grade"))
+
+    _autosize(ws, _RECORDS_HEADERS)
+    ws.freeze_panes = "A2"
+    return _to_bytes(wb)
+
+
 def build_supervisors_template() -> bytes:
     wb = Workbook()
     ws = wb.active

@@ -9,6 +9,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,6 +33,18 @@ const OBJECT_KIND_LABEL = {
   any: "Ikkalasi",
 };
 
+const ALL = "__all__";
+const COURSES = [1, 2, 3, 4, 5];
+const EDU_FORMS = [
+  { value: "daytime", label: "Kunduzgi" },
+  { value: "evening", label: "Kechki" },
+  { value: "correspondence", label: "Sirtqi" },
+  { value: "distance", label: "Masofaviy" },
+];
+const EDU_FORM_LABEL: Record<string, string> = Object.fromEntries(
+  EDU_FORMS.map((f) => [f.value, f.label]),
+);
+
 export function PracticeTypesPage() {
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
@@ -34,7 +53,23 @@ export function PracticeTypesPage() {
   const [editingGrading, setEditingGrading] = useState<PracticeType | null>(null);
   const [editing, setEditing] = useState<PracticeType | null>(null);
   const [creating, setCreating] = useState(false);
+  const [formFilter, setFormFilter] = useState<string>(ALL);
+  const [courseFilter, setCourseFilter] = useState<string>(ALL);
   const del = useDeletePracticeType();
+
+  const filtered = (data ?? []).filter((pt) => {
+    if (
+      formFilter !== ALL &&
+      pt.allowed_education_forms.length > 0 &&
+      !pt.allowed_education_forms.includes(formFilter)
+    ) {
+      return false;
+    }
+    if (courseFilter !== ALL && !pt.allowed_courses.includes(Number(courseFilter))) {
+      return false;
+    }
+    return true;
+  });
 
   const handleDelete = async (pt: PracticeType) => {
     if (!confirm(`"${pt.name}" amaliyot turini o'chirishni tasdiqlang?`)) return;
@@ -81,6 +116,48 @@ export function PracticeTypesPage() {
       )}
 
       {data && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Select value={formFilter} onValueChange={setFormFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Ta'lim shakli" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Barcha ta'lim shakli</SelectItem>
+              {EDU_FORMS.map((f) => (
+                <SelectItem key={f.value} value={f.value}>
+                  {f.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={courseFilter} onValueChange={setCourseFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Kurs" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Barcha kurslar</SelectItem>
+              {COURSES.map((c) => (
+                <SelectItem key={c} value={String(c)}>
+                  {c}-kurs
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(formFilter !== ALL || courseFilter !== ALL) && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setFormFilter(ALL);
+                setCourseFilter(ALL);
+              }}
+            >
+              Tozalash
+            </Button>
+          )}
+        </div>
+      )}
+
+      {data && (
         <div className="rounded-lg border border-border">
           <Table>
             <TableHeader>
@@ -95,7 +172,7 @@ export function PracticeTypesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((pt) => (
+              {filtered.map((pt) => (
                 <TableRow
                   key={pt.id}
                   onClick={() => setSelected(pt)}
@@ -136,6 +213,15 @@ export function PracticeTypesPage() {
                         </Badge>
                       ))}
                     </div>
+                    {pt.allowed_education_forms.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {pt.allowed_education_forms.map((f) => (
+                          <Badge key={f} variant="secondary" className="text-xs">
+                            {EDU_FORM_LABEL[f] ?? f}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </TableCell>
                   {isSuperAdmin && (
                     <TableCell>

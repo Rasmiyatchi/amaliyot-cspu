@@ -2,11 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import type { ContractStatus } from "@/lib/api/types";
 
 const LABEL: Record<ContractStatus, string> = {
-  draft: "Qoralama",
+  draft: "Yangi",
   generated: "PDF tayyor",
-  active: "Aktiv",
-  expired: "Muddati o'tgan",
-  revoked: "Bekor qilingan",
+  active: "Faol",
+  expired: "Arxiv",
+  revoked: "Rad etilgan",
 };
 
 const VARIANT: Record<

@@ -274,6 +274,9 @@ async def list_assignments(
     organization_id: UUID | None = None,
     area_id: UUID | None = None,
     supervisor_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    course: int | None = None,
+    group_id: UUID | None = None,
     status_filter: AssignmentStatus | None = None,
     search: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
@@ -282,6 +285,7 @@ async def list_assignments(
         select(func.count(PracticeAssignment.id))
         .join(Student, Student.id == PracticeAssignment.student_id)
         .join(User, User.id == Student.user_id)
+        .outerjoin(Group, Group.id == Student.group_id)
     )
 
     def apply(stmt: Any) -> Any:
@@ -297,6 +301,12 @@ async def list_assignments(
             stmt = stmt.where(PracticeAssignment.area_id == area_id)
         if supervisor_id:
             stmt = stmt.where(PracticeAssignment.supervisor_id == supervisor_id)
+        if group_id:
+            stmt = stmt.where(Student.group_id == group_id)
+        if direction_id:
+            stmt = stmt.where(Group.direction_id == direction_id)
+        if course is not None:
+            stmt = stmt.where(Group.course == course)
         if status_filter:
             stmt = stmt.where(PracticeAssignment.status == status_filter)
         if search:

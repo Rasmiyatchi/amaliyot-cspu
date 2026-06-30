@@ -112,7 +112,7 @@ async def list_contracts(
     organization_id: UUID | None = None,
     practice_type_id: UUID | None = None,
     academic_year_id: UUID | None = None,
-    status_filter: ContractStatus | None = None,
+    status_filter: list[ContractStatus] | None = None,
     search: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     base = _base_read_select()
@@ -128,7 +128,7 @@ async def list_contracts(
         if academic_year_id:
             stmt = stmt.where(Contract.academic_year_id == academic_year_id)
         if status_filter:
-            stmt = stmt.where(Contract.status == status_filter)
+            stmt = stmt.where(Contract.status.in_(status_filter))
         if search:
             like = f"%{search}%"
             stmt = stmt.where(or_(Contract.number.like(like), Organization.name.ilike(like)))

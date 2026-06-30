@@ -20,6 +20,7 @@ from app.api.v1 import (
     organizations,
     practice_assignments,
     practice_types,
+    records,
     stats,
     students,
     supervisors,
@@ -52,3 +53,4 @@ api_router.include_router(exports.router)
 api_router.include_router(documents.router)
 api_router.include_router(final_reports.router)
 api_router.include_router(audit_logs.router)
+api_router.include_router(records.router)

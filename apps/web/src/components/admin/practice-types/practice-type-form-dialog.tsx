@@ -38,6 +38,7 @@ const schema = z
     days_per_week: z.coerce.number().int().min(1).max(7).optional(),
     hours_per_day: z.coerce.number().int().min(1).max(12).optional(),
     allowed_courses: z.array(z.number()).min(1, "Kamida bitta kurs tanlang"),
+    allowed_education_forms: z.array(z.string()),
     display_order: z.coerce.number().int().min(0).max(999),
     is_active: z.boolean(),
   })
@@ -51,6 +52,12 @@ type Values = z.infer<typeof schema>;
 type Props = { open: boolean; existing: PracticeType | null; onClose: () => void };
 
 const COURSES = [1, 2, 3, 4, 5];
+const EDU_FORMS = [
+  { value: "daytime", label: "Kunduzgi" },
+  { value: "evening", label: "Kechki" },
+  { value: "correspondence", label: "Sirtqi" },
+  { value: "distance", label: "Masofaviy" },
+];
 
 export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
   const create = useCreatePracticeType();
@@ -71,6 +78,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
       days_per_week: undefined,
       hours_per_day: undefined,
       allowed_courses: [],
+      allowed_education_forms: [],
       display_order: 0,
       is_active: true,
     },
@@ -89,6 +97,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
         days_per_week: existing.days_per_week ?? undefined,
         hours_per_day: existing.hours_per_day ?? undefined,
         allowed_courses: existing.allowed_courses,
+        allowed_education_forms: existing.allowed_education_forms ?? [],
         display_order: existing.display_order,
         is_active: existing.is_active,
       });
@@ -309,6 +318,38 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                           }
                         />
                         {c}-kurs
+                      </label>
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="allowed_education_forms"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ta'lim shakllari (bo'sh = barchasi)</FormLabel>
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    {EDU_FORMS.map((f) => (
+                      <label
+                        key={f.value}
+                        className="flex cursor-pointer items-center gap-1.5 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={field.value.includes(f.value)}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.checked
+                                ? [...field.value, f.value]
+                                : field.value.filter((x) => x !== f.value),
+                            )
+                          }
+                        />
+                        {f.label}
                       </label>
                     ))}
                   </div>

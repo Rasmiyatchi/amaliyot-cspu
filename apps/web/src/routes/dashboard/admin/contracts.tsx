@@ -1,5 +1,6 @@
-import { ChevronLeft, ChevronRight, FileCheck2, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileCheck2, FileText, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -11,13 +12,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/loading-skeletons";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -26,19 +21,44 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useContracts, type ContractFilters } from "@/lib/api/contracts";
+import {
+  downloadContractPdf,
+  useContracts,
+  type ContractFilters,
+} from "@/lib/api/contracts";
 import type { Contract, ContractStatus } from "@/lib/api/types";
 
 const ALL = "__all__";
+
+const STATUS_TABS: { value: string; label: string; statuses?: ContractStatus[] }[] = [
+  { value: ALL, label: "Barchasi" },
+  { value: "yangi", label: "Yangi", statuses: ["draft", "generated"] },
+  { value: "imzolangan", label: "Imzolangan", statuses: ["active"] },
+  { value: "rad", label: "Rad etilgan", statuses: ["revoked"] },
+  { value: "arxiv", label: "Arxiv", statuses: ["expired"] },
+];
 
 export function ContractsPage() {
   const [filters, setFilters] = useState<ContractFilters>({});
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
   const [page, setPage] = useState(1);
+  const [statusTab, setStatusTab] = useState(ALL);
   const [selected, setSelected] = useState<Contract | null>(null);
   const [creating, setCreating] = useState(false);
+  const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
   const pageSize = 20;
+
+  const handlePdf = async (c: Contract) => {
+    setPdfBusyId(c.id);
+    try {
+      await downloadContractPdf(c.id, c.number);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "PDF yuklab bo'lmadi");
+    } finally {
+      setPdfBusyId(null);
+    }
+  };
 
   useEffect(() => {
     setFilters((f) => ({ ...f, search: debouncedSearch || undefined }));
@@ -59,7 +79,7 @@ export function ContractsPage() {
           <div>
             <h1 className="text-2xl font-semibold">Shartnomalar</h1>
             <p className="text-sm text-muted-foreground">
-              QR-kodli PDF shartnomalar + ommaviy tekshirish
+              O'quv amaliyot shartnomalari bilan ishlash
             </p>
           </div>
         </div>
@@ -69,38 +89,35 @@ export function ContractsPage() {
         </Button>
       </div>
 
+      <Tabs
+        value={statusTab}
+        onValueChange={(v) => {
+          setStatusTab(v);
+          const tab = STATUS_TABS.find((t) => t.value === v);
+          setFilters((f) => ({ ...f, status: tab?.statuses }));
+          setPage(1);
+        }}
+        className="mb-4"
+      >
+        <TabsList className="flex-wrap">
+          {STATUS_TABS.map((t) => (
+            <TabsTrigger key={t.value} value={t.value}>
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Qidiruv (raqam yoki tashkilot)"
+          placeholder="Shartnoma raqami yoki kompaniya nomi bo'yicha qidirish"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="min-w-[220px] flex-1 max-w-xs"
+          className="min-w-[280px] flex-1 max-w-md"
         />
-        <Select
-          value={filters.status ?? ALL}
-          onValueChange={(v) => {
-            setFilters({
-              ...filters,
-              status: v === ALL ? undefined : (v as ContractStatus),
-            });
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Barcha status</SelectItem>
-            <SelectItem value="draft">Qoralama</SelectItem>
-            <SelectItem value="generated">PDF tayyor</SelectItem>
-            <SelectItem value="active">Aktiv</SelectItem>
-            <SelectItem value="expired">Muddati o'tgan</SelectItem>
-            <SelectItem value="revoked">Bekor qilingan</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      {isPending && !data && <TableSkeleton columns={6} rows={6} />}
+      {isPending && !data && <TableSkeleton columns={7} rows={6} />}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error.message}</AlertDescription>
@@ -123,30 +140,55 @@ export function ContractsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Raqam</TableHead>
-                  <TableHead>Tashkilot</TableHead>
-                  <TableHead>Amaliyot turi</TableHead>
-                  <TableHead className="w-[100px]">Talabalar</TableHead>
-                  <TableHead className="w-[180px]">Muddati</TableHead>
-                  <TableHead className="w-[140px]">Status</TableHead>
+                  <TableHead className="w-[50px]">№</TableHead>
+                  <TableHead>Shartnoma raqami</TableHead>
+                  <TableHead>Kompaniya nomi</TableHead>
+                  <TableHead className="w-[200px]">O'quv yili / Muddati</TableHead>
+                  <TableHead className="w-[130px]">Yaratilgan sana</TableHead>
+                  <TableHead className="w-[140px]">Shartnoma</TableHead>
+                  <TableHead className="w-[120px]">Holat</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.items.map((c) => (
+                {data.items.map((c, i) => (
                   <TableRow
                     key={c.id}
                     onClick={() => setSelected(c)}
                     className="cursor-pointer"
                   >
+                    <TableCell className="text-sm text-muted-foreground">
+                      {(page - 1) * pageSize + i + 1}
+                    </TableCell>
                     <TableCell className="font-mono text-sm">{c.number}</TableCell>
-                    <TableCell>{c.organization_name}</TableCell>
-                    <TableCell className="text-sm">{c.practice_type_name}</TableCell>
-                    <TableCell>{c.students_count}</TableCell>
+                    <TableCell className="text-sm">{c.organization_name}</TableCell>
                     <TableCell className="text-xs">
-                      <div>{new Date(c.start_date).toLocaleDateString("uz-UZ")}</div>
+                      <div className="font-medium">{c.academic_year_name}</div>
                       <div className="text-muted-foreground">
+                        {new Date(c.start_date).toLocaleDateString("uz-UZ")} —{" "}
                         {new Date(c.end_date).toLocaleDateString("uz-UZ")}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {new Date(c.created_at).toLocaleDateString("uz-UZ")}
+                    </TableCell>
+                    <TableCell>
+                      {c.pdf_path ? (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-auto gap-1 p-0 text-primary"
+                          disabled={pdfBusyId === c.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handlePdf(c);
+                          }}
+                        >
+                          <FileText className="h-4 w-4" />
+                          Shartnoma PDF
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <ContractStatusBadge status={c.status} />

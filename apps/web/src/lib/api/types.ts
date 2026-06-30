@@ -764,6 +764,7 @@ export type PracticeType = {
   days_per_week: number | null;
   hours_per_day: number | null;
   allowed_courses: number[];
+  allowed_education_forms: string[];
   grading_rules: GradingRules;
   syllabus_md: string | null;
   is_active: boolean;

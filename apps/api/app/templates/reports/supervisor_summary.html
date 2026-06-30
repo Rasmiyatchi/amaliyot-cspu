@@ -103,13 +103,13 @@
       <tr>
         <th class="num">№</th>
         <th>F.I.SH.</th>
-        <th>Talaba ID</th>
+        <th>Amaliyot ID</th>
         <th>Guruh</th>
         <th>Amaliyot turi</th>
-        <th>Obyekt</th>
-        <th class="num">Davomat<br>(yashil/jami)</th>
-        <th class="num">Topshiriq<br>(ball/maks)</th>
-        <th class="num">Yakuniy ball</th>
+        <th>Korxona</th>
+        <th class="num">Davomat %</th>
+        <th class="num">Korxona bahosi<br>(ball/maks)</th>
+        <th class="num">Qaydnoma bahosi</th>
         <th class="num">Kredit</th>
         <th class="num">Status</th>
       </tr>
@@ -123,7 +123,7 @@
         <td>{{ r.group_name or "—" }}{% if r.course %} ({{ r.course }}-kurs){% endif %}</td>
         <td>{{ r.practice_type_name or "—" }}</td>
         <td>{{ r.object_name or "—" }}</td>
-        <td class="num">{{ r.attendance_green }} / {{ r.attendance_total }}</td>
+        <td class="num">{% if r.attendance_pct is not none %}{{ r.attendance_pct }}%{% else %}—{% endif %}</td>
         <td class="num">{{ r.points_earned }} / {{ r.points_max }}</td>
         <td class="num">{% if r.final_grade is not none %}{{ r.final_grade }}{% else %}—{% endif %}</td>
         <td class="num">

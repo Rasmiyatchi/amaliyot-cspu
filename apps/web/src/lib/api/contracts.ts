@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/auth";
 import type {
   Contract,
   ContractCreate,
@@ -14,7 +15,7 @@ export type ContractFilters = {
   organization_id?: UUID;
   practice_type_id?: UUID;
   academic_year_id?: UUID;
-  status?: ContractStatus;
+  status?: ContractStatus[];
   search?: string;
 };
 
@@ -32,9 +33,28 @@ function qs(filters: ContractFilters, page: number, pageSize: number): string {
   if (filters.organization_id) p.set("organization_id", filters.organization_id);
   if (filters.practice_type_id) p.set("practice_type_id", filters.practice_type_id);
   if (filters.academic_year_id) p.set("academic_year_id", filters.academic_year_id);
-  if (filters.status) p.set("status", filters.status);
+  if (filters.status) filters.status.forEach((s) => p.append("status", s));
   if (filters.search) p.set("search", filters.search);
   return p.toString();
+}
+
+/** Shartnoma PDF'ini autentifikatsiya bilan yuklab oladi. */
+export async function downloadContractPdf(id: UUID, number: string): Promise<void> {
+  const token = useAuthStore.getState().accessToken;
+  if (!token) throw new Error("Sessiya tugagan");
+  const res = await fetch(`/api/v1/contracts/${id}/pdf`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`PDF yuklab bo'lmadi (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${number}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function useContracts(filters: ContractFilters = {}, page = 1, pageSize = 20) {

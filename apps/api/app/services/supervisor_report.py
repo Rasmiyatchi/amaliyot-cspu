@@ -142,6 +142,7 @@ async def build_context(db: AsyncSession, user: User) -> dict[str, Any]:
             middle = f" {r.middle_name}" if r.middle_name else ""
             att = att_map.get(r.id, {"green": 0, "total": 0})
             pts = pts_map.get(r.id, {"earned": 0, "max": 0})
+            att_pct = round(att["green"] / att["total"] * 100) if att["total"] else None
             rows.append(
                 {
                     "student_name": f"{r.last_name} {r.first_name}{middle}".strip(),
@@ -152,6 +153,7 @@ async def build_context(db: AsyncSession, user: User) -> dict[str, Any]:
                     "object_name": r.organization_name or r.area_name,
                     "attendance_green": att["green"],
                     "attendance_total": att["total"],
+                    "attendance_pct": att_pct,
                     "points_earned": pts["earned"],
                     "points_max": pts["max"],
                     "final_grade": r.final_grade,
