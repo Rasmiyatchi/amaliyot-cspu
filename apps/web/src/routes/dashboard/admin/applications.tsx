@@ -1,4 +1,4 @@
-import { Check, ClipboardEdit, Layers, Loader2, X } from "lucide-react";
+import { Check, ClipboardEdit, Download, Layers, Loader2, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  downloadContract,
   useAppendix,
   useApplications,
   useApproveApplication,
@@ -168,6 +169,26 @@ export function ApplicationsPage() {
                         <Badge variant={STATUS_BADGE[a.status].variant}>
                           {STATUS_BADGE[a.status].label}
                         </Badge>
+                        {a.contract_number && (
+                          <div className="mt-1 flex items-center gap-1">
+                            <span className="text-xs text-muted-foreground">
+                              {a.contract_number}
+                            </span>
+                            {a.has_contract_file && (
+                              <button
+                                title="Shartnoma (DOCX)"
+                                className="text-primary hover:underline"
+                                onClick={() =>
+                                  downloadContract(a.id, a.contract_number).catch((e) =>
+                                    toast.error(e instanceof Error ? e.message : "Xatolik"),
+                                  )
+                                }
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                       {isSuperAdmin && (
                         <TableCell>

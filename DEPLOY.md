@@ -102,6 +102,19 @@ curl -fsS http://127.0.0.1:8080/healthz
 
 ## 5. Edge Nginx (TLS + domen)
 
+> ⚠️ **DIQQAT — BIRINCHI MARTA sozlashda:** `edge.conf` PLACEHOLDER domenlar
+> (`chdpu.example.uz`) bilan keladi. Uni ILK marta sozlaganda ko'chiring,
+> domenlarni almashtiring va certbot ishlating.
+>
+> **KEYINGI yangilashlarda** `edge.conf` ni to'g'ridan-to'g'ri `cp` QILMANG —
+> u sizning haqiqiy domen + sertifikat konfiguratsiyangizni ustidan yozadi
+> (`cannot load certificate ... example.uz` xatosi). Faqat kerakli
+> o'zgarishni (masalan import timeout blokini) qo'lda `chdpu.conf` ga qo'shing.
+>
+> Agar alohida `qr.` subdomeningiz bo'lmasa, edge.conf'dagi ikkinchi (QR)
+> server blokini olib tashlang — QR verify asosiy domen ostida ishlaydi
+> (`https://<domain>/verify/<token>`).
+
 ```bash
 sudo cp infra/nginx/edge.conf /etc/nginx/sites-available/chdpu.conf
 sudo nano /etc/nginx/sites-available/chdpu.conf

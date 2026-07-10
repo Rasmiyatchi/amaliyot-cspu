@@ -1,9 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/auth";
 import type { UUID } from "@/lib/api/types";
 
 export type ApplicationStatus = "pending" | "approved" | "rejected";
+
+export type ContractType = {
+  id: UUID;
+  name: string;
+  description: string | null;
+  practice_type_id: UUID | null;
+};
 
 export type PracticeApplication = {
   id: UUID;
@@ -12,6 +20,10 @@ export type PracticeApplication = {
   direction_name: string | null;
   group_name: string | null;
   course: number | null;
+  contract_template_id: UUID | null;
+  contract_template_name: string | null;
+  contract_number: string | null;
+  has_contract_file: boolean;
   object_name: string;
   object_location: string;
   manager_name: string | null;
@@ -29,6 +41,7 @@ export type PracticeApplication = {
 };
 
 export type ApplicationCreate = {
+  contract_template_id?: UUID;
   object_name: string;
   object_location: string;
   manager_name?: string;
@@ -67,6 +80,34 @@ export function useCreateApplication() {
       api.post("v1/practice-applications", { json: data }).json<PracticeApplication>(),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
+}
+
+/** Talaba tanlashi mumkin bo'lgan shartnoma turlari (faol shablonlar). */
+export function useContractTypes() {
+  return useQuery({
+    queryKey: [...KEY, "contract-types"],
+    queryFn: () =>
+      api.get("v1/practice-applications/contract-types").json<ContractType[]>(),
+  });
+}
+
+/** Tasdiqlangan shartnoma DOCX faylini yuklab oladi. */
+export async function downloadContract(id: UUID, number: string | null): Promise<void> {
+  const token = useAuthStore.getState().accessToken;
+  if (!token) throw new Error("Sessiya tugagan");
+  const res = await fetch(`/api/v1/practice-applications/${id}/contract.docx`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Yuklab bo'lmadi (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${number ?? "shartnoma"}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 // ─── Admin ────────────────────────────────────────────────

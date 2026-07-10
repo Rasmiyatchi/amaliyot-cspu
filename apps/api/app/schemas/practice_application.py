@@ -9,6 +9,7 @@ from app.models.enums import ApplicationStatus
 
 
 class ApplicationCreate(BaseModel):
+    contract_template_id: UUID | None = None  # tanlangan shartnoma turi (shablon)
     object_name: str = Field(..., min_length=2, max_length=300)
     object_location: str = Field(..., min_length=2, max_length=500)
     manager_name: str | None = Field(None, max_length=200)
@@ -29,6 +30,10 @@ class ApplicationRead(BaseModel):
     direction_name: str | None = None
     group_name: str | None = None
     course: int | None = None
+    contract_template_id: UUID | None = None
+    contract_template_name: str | None = None
+    contract_number: str | None = None
+    has_contract_file: bool = False
     object_name: str
     object_location: str
     manager_name: str | None = None

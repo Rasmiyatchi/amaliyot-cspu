@@ -3,8 +3,9 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Query, status
+from fastapi.responses import FileResponse
 
-from app.api.deps import RequireAdmin, RequireStudent, RequireSuperAdmin
+from app.api.deps import CurrentUser, RequireAdmin, RequireStudent, RequireSuperAdmin
 from app.db.session import SessionDep
 from app.models.enums import ApplicationStatus
 from app.schemas.practice_application import (
@@ -15,6 +16,8 @@ from app.schemas.practice_application import (
 from app.services import practice_application as svc
 
 router = APIRouter(prefix="/practice-applications", tags=["practice-applications"])
+
+_DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
 # ─── Talaba ───────────────────────────────────────────────
@@ -28,6 +31,18 @@ async def create_application(
 @router.get("/my", response_model=list[ApplicationRead])
 async def my_applications(db: SessionDep, user: RequireStudent) -> list[ApplicationRead]:
     return [ApplicationRead.model_validate(r) for r in await svc.list_my(db, user)]
+
+
+@router.get("/contract-types")
+async def contract_types(db: SessionDep, _: CurrentUser) -> list[dict]:
+    """Talaba tanlashi mumkin bo'lgan shartnoma turlari (faol shablonlar)."""
+    return await svc.list_contract_types(db)
+
+
+@router.get("/{id_}/contract.docx")
+async def download_contract(id_: UUID, db: SessionDep, user: CurrentUser) -> FileResponse:
+    path, number = await svc.contract_file_path(db, user, id_)
+    return FileResponse(path, media_type=_DOCX_MIME, filename=f"{number or 'shartnoma'}.docx")
 
 
 # ─── Admin ────────────────────────────────────────────────
