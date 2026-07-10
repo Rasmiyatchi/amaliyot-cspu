@@ -105,7 +105,10 @@ async def create_direction(db: AsyncSession, data: BaseModel) -> Direction:
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise _409("Shu kodli yo'nalish mavjud yoki fakultet topilmadi") from e
+        raise _409(
+            "Aynan shu kod VA nomli yo'nalish allaqachon mavjud "
+            "(bir kod bilan boshqa nomli yo'nalish qo'shsa bo'ladi)"
+        ) from e
     await db.refresh(d)
     return d
 
@@ -117,7 +120,7 @@ async def update_direction(db: AsyncSession, id_: UUID, data: BaseModel) -> Dire
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise _409("Shu kodli yo'nalish mavjud") from e
+        raise _409("Aynan shu kod va nomli yo'nalish allaqachon mavjud") from e
     await db.refresh(d)
     return d
 

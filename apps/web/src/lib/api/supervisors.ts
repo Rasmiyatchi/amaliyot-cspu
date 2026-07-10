@@ -8,6 +8,7 @@ export type SupervisorFilters = {
   organization_id?: UUID;
   search?: string;
   is_active?: boolean;
+  faculty_id?: UUID;
 };
 
 export const supervisorKeys = {
@@ -23,6 +24,7 @@ function qs(filters: SupervisorFilters, page: number, pageSize: number): string 
   if (filters.organization_id) p.set("organization_id", filters.organization_id);
   if (filters.search) p.set("search", filters.search);
   if (filters.is_active !== undefined) p.set("is_active", String(filters.is_active));
+  if (filters.faculty_id) p.set("faculty_id", filters.faculty_id);
   return p.toString();
 }
 

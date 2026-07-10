@@ -104,6 +104,7 @@ async def list_supervisors(
     organization_id: UUID | None = None,
     search: str | None = None,
     is_active: bool | None = None,
+    faculty_id: UUID | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     base = _supervisor_base_select()
     count_stmt = (
@@ -113,6 +114,8 @@ async def list_supervisors(
     )
 
     def apply(stmt):  # type: ignore[no-untyped-def]
+        if faculty_id:
+            stmt = stmt.where(Supervisor.faculty_id == faculty_id)
         if organization_id:
             stmt = stmt.where(
                 select(SupervisorOrganization.id)

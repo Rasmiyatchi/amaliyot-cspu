@@ -229,7 +229,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
         )
 
     ay = (
-        await db.execute(select(AcademicYear).where(AcademicYear.is_active.is_(True)))
+        await db.execute(select(AcademicYear.id).where(AcademicYear.is_active.is_(True)))
     ).scalar_one_or_none()
     if not ay:
         return HemisImportResponse(
@@ -239,9 +239,13 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
             errors=[HemisImportError(row=0, message="Aktiv akademik yil topilmadi")],
             credentials=[],
         )
+    ay_id = ay  # plain UUID — commit'lardan keyin eskirmaydi
 
-    direction_cache: dict[str, Direction | None] = {}
-    group_cache: dict[tuple[str, int, str], Group] = {}
+    from app.core.config import settings as app_settings
+
+    # Kesh — ORM obyekt EMAS, ID saqlaymiz (per-row commit'da eskirmaydi).
+    direction_cache: dict[str, "UUID | None"] = {}
+    group_cache: dict[tuple[str, str], "UUID"] = {}
 
     errors: list[HemisImportError] = []
     credentials: list[HemisCredentials] = []
@@ -250,74 +254,79 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
 
     for rec in rows:
         row_idx = rec["_row_idx"]
-        incoming_id = rec.get("amaliyot_id")
-        incoming_id = str(incoming_id).strip() if incoming_id else None
+        raw_id = rec.get("amaliyot_id")
+        incoming_id = str(raw_id).strip() if raw_id else None
 
         try:
-            # Amaliyot id berilgan bo'lsa — u bo'yicha dublikat tekshiramiz.
+            # ── Amaliyot id bo'yicha dublikat (read-only) ──
             if incoming_id and (
-                await db.execute(select(Student).where(Student.hemis_id == incoming_id))
-            ).scalar_one_or_none():
+                await db.execute(select(Student.id).where(Student.hemis_id == incoming_id))
+            ).first():
                 skipped += 1
                 continue
 
-            # Direction — Mutaxassislik kodi bo'yicha
+            # ── Yo'nalish — Mutaxassislik shifri (kodi) bo'yicha ──
             direction_code = str(rec.get("direction_code", "")).strip()
             if direction_code not in direction_cache:
-                d = (
-                    await db.execute(select(Direction).where(Direction.code == direction_code))
-                ).scalar_one_or_none()
-                direction_cache[direction_code] = d
-            direction = direction_cache[direction_code]
-            if not direction:
-                raise ValueError(f"Yo'nalish topilmadi: {direction_code}")
+                # Kod unikal EMAS (bir kodda bir nechta yo'nalish bo'lishi mumkin) —
+                # birinchisini olamiz (shablonda faqat kod bo'lgani uchun).
+                direction_cache[direction_code] = (
+                    await db.execute(
+                        select(Direction.id).where(Direction.code == direction_code)
+                    )
+                ).scalars().first()
+            dir_id = direction_cache[direction_code]
+            if not dir_id:
+                shown = direction_code or "(bo'sh)"
+                raise ValueError(
+                    f"Yo'nalish topilmadi — bu shifr (kod) akademik tuzilmada yo'q: {shown}"
+                )
 
             course = _parse_course(rec.get("course"))
 
-            # Group — yo'q bo'lsa avto-yaratamiz
             group_name = str(rec.get("group_name", "")).strip()
             if not group_name:
                 raise ValueError("Guruh nomi bo'sh")
 
-            cache_key = (str(direction.id), course, group_name)
-            if cache_key not in group_cache:
-                g = (
+            # ── Guruh — yo'q bo'lsa avto-yaratamiz (ID-cache) ──
+            gkey = (str(dir_id), group_name)
+            group_id = group_cache.get(gkey)
+            if group_id is None:
+                g_id = (
                     await db.execute(
-                        select(Group).where(
-                            Group.direction_id == direction.id,
-                            Group.academic_year_id == ay.id,
+                        select(Group.id).where(
+                            Group.direction_id == dir_id,
+                            Group.academic_year_id == ay_id,
                             Group.name == group_name,
                         )
                     )
                 ).scalar_one_or_none()
-                if not g:
+                if g_id is None:
                     g = Group(
-                        direction_id=direction.id,
-                        academic_year_id=ay.id,
+                        direction_id=dir_id,
+                        academic_year_id=ay_id,
                         name=group_name,
                         course=course,
                     )
                     db.add(g)
                     await db.flush()
-                    logger.info(f"👥 Guruh avto-yaratildi: {group_name} (kurs {course})")
-                group_cache[cache_key] = g
-            group = group_cache[cache_key]
+                    g_id = g.id
+                group_id = g_id
 
-            # Ism parse
+            # ── Ism ──
             full_name_raw = str(rec.get("full_name", "")).strip()
             if not full_name_raw:
                 raise ValueError("To'liq ismi bo'sh")
             last_name, first_name, middle_name = _parse_full_name(full_name_raw)
 
-            # Amaliyot id berilmagan bo'lsa — ayni guruhda bir xil ism+familiyali
-            # talaba bormi tekshiramiz (qayta importda dublikatni oldini olish).
+            # ── Ism+guruh bo'yicha dublikat (amaliyot id yo'q bo'lsa) ──
             if not incoming_id:
                 dup = (
                     await db.execute(
                         select(Student.id)
                         .join(User, Student.user_id == User.id)
                         .where(
-                            Student.group_id == group.id,
+                            Student.group_id == group_id,
                             func.lower(User.last_name) == last_name.lower(),
                             func.lower(User.first_name) == first_name.lower(),
                         )
@@ -327,16 +336,11 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                     skipped += 1
                     continue
 
-            # Avtomatik login: "{2500}{8 raqam}" — birinchi kirishda parol almashtiriladi.
-            # login = parol (bir xil), majburiy o'zgartirish flag bilan.
-            from app.core.config import settings as app_settings
-
+            # ── Login + user + student ──
             generated_login = await _generate_unique_login(
                 db, app_settings.LOGIN_YEAR_PREFIX
             )
             password = generated_login  # login va parol bir xil
-
-            # Amaliyot id: berilgan bo'lsa o'sha, aks holda generatsiya qilingan login.
             amaliyot_id = incoming_id or generated_login
 
             user = User(
@@ -358,7 +362,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                 gender=_parse_gender(rec.get("gender")),
                 region=rec.get("region") or None,
                 district=rec.get("district") or None,
-                group_id=group.id,
+                group_id=group_id,
                 current_semester=_parse_semester(rec.get("semester")),
                 is_graduating=_parse_bool(rec.get("is_graduating")),
                 education_language=rec.get("education_language") or None,
@@ -367,8 +371,11 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                 status=StudentStatus.STUDYING,
             )
             db.add(student)
-            await db.flush()
 
+            # ── Shu qatorni ATOMAR commit — xato bo'lsa faqat shu qator yo'qoladi ──
+            await db.commit()
+
+            group_cache[gkey] = group_id  # muvaffaqiyatdan keyin keshlaymiz
             credentials.append(
                 HemisCredentials(
                     amaliyot_id=amaliyot_id,
@@ -383,23 +390,12 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
             created += 1
 
         except Exception as e:  # noqa: BLE001
-            errors.append(
-                HemisImportError(
-                    row=row_idx,
-                    amaliyot_id=incoming_id,
-                    message=str(e),
-                )
-            )
-            # Rollback va kesh'ni qayta yuklash
+            # Faqat shu qatorni bekor qilamiz (oldingi qatorlar allaqachon commit qilingan).
             await db.rollback()
-            direction_cache.clear()
-            group_cache.clear()
-            ay = (
-                await db.execute(select(AcademicYear).where(AcademicYear.is_active.is_(True)))
-            ).scalar_one()
+            errors.append(
+                HemisImportError(row=row_idx, amaliyot_id=incoming_id, message=str(e))
+            )
             continue
-
-    await db.commit()
 
     return HemisImportResponse(
         total_rows=len(rows),

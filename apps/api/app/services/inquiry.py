@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -165,8 +166,9 @@ async def add_message(
     db.add(
         InquiryMessage(inquiry_id=id_, sender_id=user.id, from_admin=admin, body=body)
     )
-    # admin javob bersa — savol ochiq qoladi; lekin updated_at yangilansin
-    inquiry.updated_at = func.now()
+    # Yangi xabar bilan tred yuqoriga chiqsin (real datetime — expire_on_commit=False
+    # bo'lgani uchun func.now() qoldirib bo'lmaydi, aks holda Pydantic xato beradi).
+    inquiry.updated_at = datetime.now(UTC)
     await db.commit()
     return await get_detail(db, user, id_)
 

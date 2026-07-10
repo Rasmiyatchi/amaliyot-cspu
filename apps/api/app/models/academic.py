@@ -40,9 +40,16 @@ class Department(UUIDMixin, TimestampMixin, Base):
 
 
 class Direction(UUIDMixin, TimestampMixin, Base):
-    """Ta'lim yo'nalishi — masalan '60110100 - Pedagogika'."""
+    """Ta'lim yo'nalishi — masalan '60110100 - Pedagogika'.
+
+    Kod UNIKAL EMAS: bir kod bilan turli nomli yo'nalishlar bo'lishi mumkin.
+    Faqat (kod + nom) juftligi takrorlanmas.
+    """
 
     __tablename__ = "directions"
+    __table_args__ = (
+        UniqueConstraint("code", "name", name="uq_directions_code_name"),
+    )
 
     faculty_id: Mapped[UUID] = mapped_column(
         ForeignKey("faculties.id", ondelete="RESTRICT"),
@@ -50,9 +57,8 @@ class Direction(UUIDMixin, TimestampMixin, Base):
     )
     code: Mapped[str] = mapped_column(
         String(8),
-        unique=True,
         index=True,
-        comment="HEMIS yo'nalish kodi, masalan 60110100",
+        comment="HEMIS yo'nalish kodi, masalan 60110100 (unikal emas)",
     )
     name: Mapped[str] = mapped_column(String(200))
 

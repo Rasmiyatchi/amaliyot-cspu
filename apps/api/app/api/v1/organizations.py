@@ -23,7 +23,7 @@ async def list_organizations(
     db: SessionDep,
     _: RequireAdmin,
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=200),
     search: str | None = Query(None, min_length=1, max_length=100),
     kind: OrganizationKind | None = None,
     region: str | None = None,

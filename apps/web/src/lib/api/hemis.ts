@@ -11,7 +11,7 @@ export function useHemisImport() {
     mutationFn: async (file: File): Promise<HemisImportResponse> => {
       const fd = new FormData();
       fd.append("file", file);
-      return api.post("v1/hemis/import", { body: fd, timeout: 120_000 }).json<HemisImportResponse>();
+      return api.post("v1/hemis/import", { body: fd, timeout: 600_000 }).json<HemisImportResponse>();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: studentKeys.all });

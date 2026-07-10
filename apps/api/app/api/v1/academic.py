@@ -70,7 +70,7 @@ async def list_directions(
     db: SessionDep,
     _: RequireAdmin,
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=200),
     faculty_id: UUID | None = None,
 ) -> Paginated[DirectionRead]:
     offset = (page - 1) * page_size

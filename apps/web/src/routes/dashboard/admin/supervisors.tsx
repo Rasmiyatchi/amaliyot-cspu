@@ -11,6 +11,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/loading-skeletons";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -18,12 +25,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useFaculties } from "@/lib/api/academic";
+import { useOrganizations } from "@/lib/api/organizations";
 import { useDeleteSupervisor, useSupervisors } from "@/lib/api/supervisors";
-import type { Supervisor } from "@/lib/api/types";
+import type { Supervisor, UUID } from "@/lib/api/types";
+
+const ALL = "__all__";
 
 export function SupervisorsPage() {
   const [search, setSearch] = useState("");
-  const { data, isPending, error } = useSupervisors({ search: search || undefined });
+  const [facultyId, setFacultyId] = useState<string>(ALL);
+  const [orgId, setOrgId] = useState<string>(ALL);
+  const [status, setStatus] = useState<string>(ALL);
+  const faculties = useFaculties(1, 100);
+  const orgs = useOrganizations({}, 1, 200);
+  const { data, isPending, error } = useSupervisors({
+    search: search || undefined,
+    faculty_id: facultyId === ALL ? undefined : (facultyId as UUID),
+    organization_id: orgId === ALL ? undefined : (orgId as UUID),
+    is_active: status === ALL ? undefined : status === "active",
+  });
   const del = useDeleteSupervisor();
   const [editing, setEditing] = useState<Supervisor | null>(null);
   const [creating, setCreating] = useState(false);
@@ -65,12 +86,61 @@ export function SupervisorsPage() {
         </div>
       </div>
 
-      <div className="mb-4 max-w-sm">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
           placeholder="Qidiruv (F.I.SH. yoki username)"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          className="min-w-[220px] max-w-xs flex-1"
         />
+        <Select value={facultyId} onValueChange={setFacultyId}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Fakultet" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha fakultetlar</SelectItem>
+            {(faculties.data?.items ?? []).map((f) => (
+              <SelectItem key={f.id} value={f.id}>
+                {f.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={orgId} onValueChange={setOrgId}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Tashkilot" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            <SelectItem value={ALL}>Barcha tashkilotlar</SelectItem>
+            {(orgs.data?.items ?? []).map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                {o.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Holat" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Barcha holat</SelectItem>
+            <SelectItem value="active">Faol</SelectItem>
+            <SelectItem value="inactive">Nofaol</SelectItem>
+          </SelectContent>
+        </Select>
+        {(facultyId !== ALL || orgId !== ALL || status !== ALL) && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setFacultyId(ALL);
+              setOrgId(ALL);
+              setStatus(ALL);
+            }}
+          >
+            Tozalash
+          </Button>
+        )}
       </div>
 
       {isPending && !data && <TableSkeleton rows={6} columns={7} />}

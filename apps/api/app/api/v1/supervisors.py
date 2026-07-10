@@ -93,14 +93,15 @@ async def list_supervisors(
     db: SessionDep,
     _: RequireAdmin,
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=200),
     organization_id: UUID | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
     is_active: bool | None = None,
+    faculty_id: UUID | None = None,
 ) -> Paginated[SupervisorRead]:
     offset = (page - 1) * page_size
     items, total = await svc.list_supervisors(
-        db, offset, page_size, organization_id, search, is_active
+        db, offset, page_size, organization_id, search, is_active, faculty_id
     )
     return Paginated(
         items=[SupervisorRead.model_validate(i) for i in items],
