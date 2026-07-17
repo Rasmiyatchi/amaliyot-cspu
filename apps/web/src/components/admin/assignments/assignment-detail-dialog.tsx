@@ -1,5 +1,6 @@
 import { HTTPError } from "ky";
 import {
+  Award,
   BookOpen,
   CalendarDays,
   CheckCircle2,
@@ -17,6 +18,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
+import { GradePanel } from "@/components/admin/assignments/grade-panel";
 import { TaskGradeDialog } from "@/components/admin/assignments/task-grade-dialog";
 import { TasksAddDialog } from "@/components/admin/assignments/tasks-add-dialog";
 import { ArchiveCard } from "@/components/archive-card";
@@ -320,7 +322,16 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                 <Sparkles className="h-3.5 w-3.5" />
                 Dars tahlillari {analyses ? `(${analyses.length})` : ""}
               </TabsTrigger>
+              <TabsTrigger value="grade">
+                <Award className="h-3.5 w-3.5" />
+                Baholash
+              </TabsTrigger>
             </TabsList>
+
+            {/* BAHOLASH */}
+            <TabsContent value="grade">
+              <GradePanel assignmentId={assignment.id} />
+            </TabsContent>
 
             {/* TASKS */}
             <TabsContent value="tasks" className="space-y-3">

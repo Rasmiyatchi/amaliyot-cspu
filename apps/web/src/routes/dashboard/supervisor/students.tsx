@@ -22,8 +22,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { GradePanel } from "@/components/admin/assignments/grade-panel";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useMyAssignments } from "@/lib/api/assignments";
-import type { AssignmentStatus } from "@/lib/api/types";
+import type { AssignmentStatus, PracticeAssignment } from "@/lib/api/types";
 
 const ALL = "__all__";
 const STATUSES: { value: string; label: string }[] = [
@@ -38,6 +46,7 @@ const STATUSES: { value: string; label: string }[] = [
 export function SupervisorStudentsPage() {
   const { data, isPending, error } = useMyAssignments();
   const [search, setSearch] = useState("");
+  const [grading, setGrading] = useState<PracticeAssignment | null>(null);
   const [status, setStatus] = useState(ALL);
 
   const rows = useMemo(() => {
@@ -170,7 +179,12 @@ export function SupervisorStudentsPage() {
                   </TableHeader>
                   <TableBody>
                     {items.map((a, i) => (
-                      <TableRow key={a.id}>
+                      <TableRow
+                        key={a.id}
+                        onClick={() => setGrading(a)}
+                        className="cursor-pointer"
+                        title="Baholash uchun bosing"
+                      >
                         <TableCell className="text-sm text-muted-foreground">
                           {i + 1}
                         </TableCell>
@@ -210,6 +224,20 @@ export function SupervisorStudentsPage() {
           </>
         )}
       </div>
+
+      {/* Baholash — 12.07 qarori: yakuniy bahoni biriktirilgan amaliyot rahbari qo'yadi */}
+      <Dialog open={!!grading} onOpenChange={(o) => !o && setGrading(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{grading?.student_full_name}</DialogTitle>
+            <DialogDescription>
+              {grading?.practice_type_name} ·{" "}
+              {grading?.organization_name ?? grading?.area_name ?? "—"}
+            </DialogDescription>
+          </DialogHeader>
+          {grading && <GradePanel assignmentId={grading.id} />}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

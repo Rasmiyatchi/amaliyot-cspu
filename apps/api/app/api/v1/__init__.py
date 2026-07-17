@@ -15,6 +15,7 @@ from app.api.v1 import (
     documents,
     exports,
     final_reports,
+    grading,
     health,
     hemis,
     inquiries,
@@ -58,5 +59,6 @@ api_router.include_router(exports.router)
 api_router.include_router(documents.router)
 api_router.include_router(final_reports.router)
 api_router.include_router(audit_logs.router)
+api_router.include_router(grading.router)
 api_router.include_router(records.router)
 api_router.include_router(inquiries.router)
