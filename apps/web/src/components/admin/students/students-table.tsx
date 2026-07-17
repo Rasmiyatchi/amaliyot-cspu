@@ -22,10 +22,24 @@ type Props = {
   onPageChange: (page: number) => void;
   onRowClick: (student: Student) => void;
   pageSize?: number;
+  /** Ko'p tanlab o'chirish uchun — berilmasa checkbox ustuni ko'rinmaydi */
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onTogglePage?: (ids: string[], checked: boolean) => void;
 };
 
-export function StudentsTable({ filters, page, onPageChange, onRowClick, pageSize = 20 }: Props) {
+export function StudentsTable({
+  filters,
+  page,
+  onPageChange,
+  onRowClick,
+  pageSize = 20,
+  selectedIds,
+  onToggleSelect,
+  onTogglePage,
+}: Props) {
   const q = useStudents(filters, page, pageSize);
+  const selectable = !!selectedIds && !!onToggleSelect && !!onTogglePage;
 
   if (q.isPending && !q.data) {
     return <TableSkeleton rows={8} columns={6} />;
@@ -39,6 +53,9 @@ export function StudentsTable({ filters, page, onPageChange, onRowClick, pageSiz
   }
 
   const data = q.data!;
+  const pageIds = data.items.map((s) => s.id);
+  const allOnPageSelected =
+    selectable && pageIds.length > 0 && pageIds.every((id) => selectedIds!.has(id));
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
   const from = data.items.length === 0 ? 0 : (data.page - 1) * data.page_size + 1;
   const to = (data.page - 1) * data.page_size + data.items.length;
@@ -49,6 +66,17 @@ export function StudentsTable({ filters, page, onPageChange, onRowClick, pageSiz
         <Table>
           <TableHeader>
             <TableRow>
+              {selectable && (
+                <TableHead className="w-[44px]">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 cursor-pointer"
+                    aria-label="Sahifadagi hammasini tanlash"
+                    checked={allOnPageSelected}
+                    onChange={(e) => onTogglePage!(pageIds, e.target.checked)}
+                  />
+                </TableHead>
+              )}
               <TableHead className="w-[280px]">Talaba</TableHead>
               <TableHead>Yo'nalish</TableHead>
               <TableHead className="w-[120px]">Guruh</TableHead>
@@ -59,7 +87,10 @@ export function StudentsTable({ filters, page, onPageChange, onRowClick, pageSiz
           <TableBody>
             {data.items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={selectable ? 6 : 5}
+                  className="text-center text-muted-foreground"
+                >
                   Talabalar topilmadi
                 </TableCell>
               </TableRow>
@@ -70,6 +101,17 @@ export function StudentsTable({ filters, page, onPageChange, onRowClick, pageSiz
                 onClick={() => onRowClick(s)}
                 className="cursor-pointer"
               >
+                {selectable && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 cursor-pointer"
+                      aria-label="Tanlash"
+                      checked={selectedIds!.has(s.id)}
+                      onChange={() => onToggleSelect!(s.id)}
+                    />
+                  </TableCell>
+                )}
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">

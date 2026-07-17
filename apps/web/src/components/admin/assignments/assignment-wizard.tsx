@@ -105,11 +105,18 @@ export function AssignmentWizard({ open, onClose }: Props) {
     ? allStudents.filter((s) => s.course && allowedCourses.includes(s.course))
     : allStudents;
 
-  // Supervisorlarni org bilan filter
+  // Supervisorlar: tashkilot tanlansa — o'sha tashkilotdagilar + tashkilotga
+  // bog'lanmaganlar (import qilinganlar odatda tashkilotsiz keladi; backend ham
+  // ularni istalgan tashkilotga biriktirishga ruxsat beradi). Hudud (area) uchun
+  // esa filtr yo'q — barcha faol supervizorlar.
   const supervisorsQuery = useSupervisors(
-    { organization_id: organizationId || undefined, is_active: true },
+    {
+      organization_id: organizationId || undefined,
+      include_unassigned: true,
+      is_active: true,
+    },
     1,
-    100,
+    200,
   );
 
   // Guruhlarni ruxsat etilgan kurslar bo'yicha filter
@@ -475,8 +482,8 @@ export function AssignmentWizard({ open, onClose }: Props) {
             </div>
           )}
 
-          {/* Supervisor (only if organization) */}
-          {organizationId && (
+          {/* Supervisor — tashkilot yoki hudud tanlangan bo'lsa */}
+          {(organizationId || areaId) && (
             <div>
               <Label>Supervizor</Label>
               <Select
@@ -489,7 +496,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
                 <SelectContent>
                   <SelectItem value={NONE}>—</SelectItem>
                   {(supervisorsQuery.data?.items ?? []).length === 0 ? (
-                    <SelectEmpty message="Bu tashkilotda supervizor yo'q" />
+                    <SelectEmpty message="Faol supervizor topilmadi" />
                   ) : (
                     (supervisorsQuery.data?.items ?? []).map((s) => (
                       <SelectItem key={s.id} value={s.id}>

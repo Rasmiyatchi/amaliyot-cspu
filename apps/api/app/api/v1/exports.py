@@ -6,14 +6,17 @@ Hammasi admin / super_admin uchun. Filtr parametrlari list endpoint'lari bilan b
 from datetime import date, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 
 from app.api.deps import RequireAdmin
 from app.db.session import SessionDep
 from app.models.enums import AttendanceDayStatus, FinalReportStatus, StudentStatus
 from app.services import exports as svc
+from app.services.import_templates import build_student_credentials_xlsx
 
 router = APIRouter(prefix="/exports", tags=["exports"])
+
+_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def _csv_response(content: bytes, prefix: str) -> Response:
@@ -23,6 +26,62 @@ def _csv_response(content: bytes, prefix: str) -> Response:
         content=content,
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/credentials.xlsx",
+    summary="Talabalar login/parol jadvali (Excel) — filtrlar bilan",
+)
+async def export_credentials(
+    request: Request,
+    db: SessionDep,
+    user: RequireAdmin,
+    faculty_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    group_id: UUID | None = None,
+    course: int | None = Query(None, ge=1, le=5),
+    academic_year_id: UUID | None = None,
+    status: StudentStatus | None = None,
+    search: str | None = None,
+) -> Response:
+    from app.services import audit_log as audit
+
+    rows = await svc.export_student_credentials(
+        db,
+        faculty_id=faculty_id,
+        direction_id=direction_id,
+        group_id=group_id,
+        course=course,
+        academic_year_id=academic_year_id,
+        status=status,
+        search=search,
+    )
+    # Ommaviy login/parol eksporti — maxfiy amal, albatta loglanadi
+    await audit.log(
+        db,
+        actor=user,
+        action="export",
+        entity_type="student_credentials",
+        entity_id=None,
+        summary=f"Login/parol eksporti ({len(rows)} ta talaba)",
+        metadata={
+            "count": len(rows),
+            "faculty_id": str(faculty_id) if faculty_id else None,
+            "group_id": str(group_id) if group_id else None,
+            "course": course,
+        },
+        request=request,
+    )
+    await db.commit()
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return Response(
+        content=build_student_credentials_xlsx(rows),
+        media_type=_XLSX_MIME,
+        headers={
+            "Content-Disposition": f'attachment; filename="login_parol_{ts}.xlsx"'
+        },
     )
 
 

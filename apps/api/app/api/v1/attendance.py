@@ -144,24 +144,50 @@ async def student_today(
 async def supervisor_approve(
     day_id: UUID,
     payload: AttendanceApproveRequest,
+    request: Request,
     db: SessionDep,
     user: RequireSupervisor,
 ) -> AttendanceDayDetail:
-    return AttendanceDayDetail.model_validate(
-        await svc.supervisor_approve(db, day_id, user.id, payload)
+    from app.services import audit_log as audit
+
+    result = await svc.supervisor_approve(db, day_id, user.id, payload)
+    await audit.log(
+        db,
+        actor=user,
+        action="approve",
+        entity_type="attendance_day",
+        entity_id=day_id,
+        summary="Davomat tasdiqlandi (yashil)",
+        metadata={"new_status": "green"},
+        request=request,
     )
+    await db.commit()
+    return AttendanceDayDetail.model_validate(result)
 
 
 @router.post("/days/{day_id}/reject", response_model=AttendanceDayDetail)
 async def supervisor_reject(
     day_id: UUID,
     payload: AttendanceRejectRequest,
+    request: Request,
     db: SessionDep,
     user: RequireSupervisor,
 ) -> AttendanceDayDetail:
-    return AttendanceDayDetail.model_validate(
-        await svc.supervisor_reject(db, day_id, user.id, payload)
+    from app.services import audit_log as audit
+
+    result = await svc.supervisor_reject(db, day_id, user.id, payload)
+    await audit.log(
+        db,
+        actor=user,
+        action="reject",
+        entity_type="attendance_day",
+        entity_id=day_id,
+        summary="Davomat rad etildi (qizil)",
+        metadata={"new_status": "red", "note": payload.note},
+        request=request,
     )
+    await db.commit()
+    return AttendanceDayDetail.model_validate(result)
 
 
 # ─── Admin: mark red ───────────────────────────────────
@@ -175,12 +201,30 @@ async def supervisor_reject(
 async def admin_mark_red(
     assignment_id: UUID,
     payload: AttendanceMarkRedRequest,
+    request: Request,
     db: SessionDep,
-    _: RequireAdmin,
+    user: RequireAdmin,
 ) -> AttendanceDayDetail:
-    return AttendanceDayDetail.model_validate(
-        await svc.admin_mark_red(db, assignment_id, payload)
+    from app.services import audit_log as audit
+
+    result = await svc.admin_mark_red(db, assignment_id, payload)
+    await audit.log(
+        db,
+        actor=user,
+        action="update",
+        entity_type="attendance_day",
+        entity_id=result.get("id") if isinstance(result, dict) else None,
+        summary=f"Admin davomatni qizil qildi ({payload.date})",
+        metadata={
+            "new_status": "red",
+            "date": str(payload.date),
+            "assignment_id": str(assignment_id),
+            "note": payload.note,
+        },
+        request=request,
     )
+    await db.commit()
+    return AttendanceDayDetail.model_validate(result)
 
 
 # ─── Super Admin: override ─────────────────────────────

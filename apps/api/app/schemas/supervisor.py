@@ -67,7 +67,9 @@ class SupervisorRead(BaseModel):
     last_name: str
     middle_name: str | None
     full_name: str
-    email: EmailStr | None
+    # Read'da EmailStr EMAS: import qilingan buzuq email ("yo'q", "-") butun
+    # ro'yxatni 500 qilmasin. Validatsiya Create/Update'da qoladi.
+    email: str | None
     phone: str | None
     is_active: bool
     last_login_at: datetime | None

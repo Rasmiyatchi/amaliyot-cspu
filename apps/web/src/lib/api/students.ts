@@ -93,6 +93,9 @@ export type StudentCreatePayload = {
 };
 
 export type StudentUpdatePayload = Partial<Omit<StudentCreatePayload, "hemis_id">> & {
+  /** Amaliyot ID — import xato ID bilan kelsa admin tuzatadi (unique) */
+  hemis_id?: string;
+  enrollment_year?: number | null;
   status?: StudentStatus;
 };
 
@@ -118,6 +121,24 @@ export function useDeleteStudent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: UUID) => api.delete(`v1/students/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+  });
+}
+
+export type StudentBulkDeleteResult = {
+  requested: number;
+  deleted: number;
+  failed: { id: UUID; full_name: string | null; error: string }[];
+};
+
+/** Ko'p tanlangan talabalarni o'chirish — qisman muvaffaqiyat bo'lishi mumkin. */
+export function useBulkDeleteStudents() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: UUID[]) =>
+      api
+        .post("v1/students/bulk-delete", { json: { ids }, timeout: 120_000 })
+        .json<StudentBulkDeleteResult>(),
     onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
   });
 }

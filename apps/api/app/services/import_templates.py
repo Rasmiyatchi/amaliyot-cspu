@@ -131,6 +131,61 @@ def build_credentials_xlsx(credentials: list) -> bytes:
     return _to_bytes(wb)
 
 
+_STUDENT_CREDENTIALS_HEADERS = [
+    "№",
+    "Amaliyot ID",
+    "F.I.SH.",
+    "Fakultet",
+    "Yo'nalish",
+    "Guruh",
+    "Kurs",
+    "Login",
+    "Boshlang'ich parol",
+    "Parol o'zgartirilganmi",
+]
+
+
+def build_student_credentials_xlsx(rows: list) -> bytes:
+    """Talabalar login/parol jadvali (DB'dan, filtrlar bilan).
+
+    Boshlang'ich parol = login (tizim shunday generatsiya qiladi). Agar talaba
+    parolni allaqachon o'zgartirgan bo'lsa — "Ha" ustuni buni ko'rsatadi va
+    boshlang'ich parol endi ishlamaydi.
+    """
+
+    def _g(obj, key):
+        return obj.get(key) if isinstance(obj, dict) else getattr(obj, key, None)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Login va parollar"
+    for i, h in enumerate(_STUDENT_CREDENTIALS_HEADERS, start=1):
+        c = ws.cell(row=1, column=i, value=h)
+        c.fill = _HEADER_FILL
+        c.font = _HEADER_FONT
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for idx, r in enumerate(rows, start=1):
+        row = idx + 1
+        login = _g(r, "username")
+        changed = _g(r, "password_changed")
+        ws.cell(row=row, column=1, value=idx)
+        ws.cell(row=row, column=2, value=_g(r, "amaliyot_id"))
+        ws.cell(row=row, column=3, value=_g(r, "full_name"))
+        ws.cell(row=row, column=4, value=_g(r, "faculty_name"))
+        ws.cell(row=row, column=5, value=_g(r, "direction_name"))
+        ws.cell(row=row, column=6, value=_g(r, "group_name"))
+        ws.cell(row=row, column=7, value=_g(r, "course"))
+        ws.cell(row=row, column=8, value=login)
+        # Parol o'zgartirilgan bo'lsa boshlang'ich parol endi amal qilmaydi
+        ws.cell(row=row, column=9, value="—" if changed else login)
+        ws.cell(row=row, column=10, value="Ha" if changed else "Yo'q")
+
+    _autosize(ws, _STUDENT_CREDENTIALS_HEADERS)
+    ws.freeze_panes = "A2"
+    return _to_bytes(wb)
+
+
 _RECORDS_HEADERS = [
     "№",
     "Talaba",

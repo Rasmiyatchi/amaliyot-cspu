@@ -296,6 +296,8 @@ async def update_student(
 
     # Student maydonlari
     student_keys = (
+        "hemis_id",
+        "enrollment_year",
         "gender",
         "region", "district", "group_id", "current_semester",
         "is_graduating", "education_language", "education_form",
@@ -309,7 +311,10 @@ async def update_student(
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "Konflikt") from e
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Bu Amaliyot ID boshqa talabada mavjud yoki ma'lumot mos emas",
+        ) from e
 
     return await get_student(db, id_)
 

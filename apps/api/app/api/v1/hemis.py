@@ -1,6 +1,6 @@
 """Talabalar Excel import endpoint."""
 
-from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile, status
 
 from app.api.deps import RequireAdmin
 from app.db.session import SessionDep
@@ -69,8 +69,9 @@ async def export_credentials(
     ),
 )
 async def hemis_import(
+    request: Request,
     db: SessionDep,
-    _: RequireAdmin,
+    user: RequireAdmin,
     file: UploadFile = File(...),  # noqa: B008
 ) -> HemisImportResponse:
     if file.content_type and file.content_type not in ALLOWED_MIME:
@@ -88,4 +89,27 @@ async def hemis_import(
     if not content:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fayl bo'sh")
 
-    return await import_students(db, content)
+    from app.services import audit_log as audit
+
+    result = await import_students(db, content)
+    await audit.log(
+        db,
+        actor=user,
+        action="import",
+        entity_type="student",
+        entity_id=None,
+        summary=(
+            f"Talabalar importi: {result.created} qo'shildi, "
+            f"{result.skipped} o'tkazildi, {len(result.errors)} xato"
+        ),
+        metadata={
+            "file": file.filename,
+            "total_rows": result.total_rows,
+            "created": result.created,
+            "skipped": result.skipped,
+            "errors": len(result.errors),
+        },
+        request=request,
+    )
+    await db.commit()
+    return result

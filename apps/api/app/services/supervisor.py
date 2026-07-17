@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -105,6 +105,7 @@ async def list_supervisors(
     search: str | None = None,
     is_active: bool | None = None,
     faculty_id: UUID | None = None,
+    include_unassigned: bool = False,
 ) -> tuple[list[dict[str, Any]], int]:
     base = _supervisor_base_select()
     count_stmt = (
@@ -117,7 +118,7 @@ async def list_supervisors(
         if faculty_id:
             stmt = stmt.where(Supervisor.faculty_id == faculty_id)
         if organization_id:
-            stmt = stmt.where(
+            belongs = (
                 select(SupervisorOrganization.id)
                 .where(
                     SupervisorOrganization.supervisor_id == Supervisor.id,
@@ -125,6 +126,18 @@ async def list_supervisors(
                 )
                 .exists()
             )
+            if include_unassigned:
+                # Biriktirish qoidasiga mos bo'lsin: tashkilotga umuman bog'lanmagan
+                # supervizorni istalgan tashkilotga biriktirish mumkin
+                # (services/practice_assignment.py: `if sup_org_ids and ...`).
+                has_any_org = (
+                    select(SupervisorOrganization.id)
+                    .where(SupervisorOrganization.supervisor_id == Supervisor.id)
+                    .exists()
+                )
+                stmt = stmt.where(or_(belongs, ~has_any_org))
+            else:
+                stmt = stmt.where(belongs)
         if is_active is not None:
             stmt = stmt.where(User.is_active.is_(is_active))
         if search:

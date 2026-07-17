@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  ClipboardCheck,
   Clock,
   Download,
   FileText,
@@ -377,6 +378,22 @@ export function SupervisorDashboard() {
             )}
             {selectedAssignmentId === "all" && assignments.length === 1 && assignments[0] && (
               <SupervisorReviewPanel assignmentId={assignments[0].id} />
+            )}
+            {/* 2+ talaba bo'lsa "Barchasi" da panel yo'q — ko'rsatma beramiz,
+                aks holda tasdiqlash UI'si umuman topilmay qoladi. */}
+            {selectedAssignmentId === "all" && assignments.length > 1 && (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <ClipboardCheck className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm font-medium">
+                    Topshiriq, kundalik va tahlilni tasdiqlash
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Yuqoridan talabani tanlang — uning topshiriqlari, kundaligi va dars
+                    tahlillari shu yerda chiqadi va tasdiqlaysiz.
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </>
         )}

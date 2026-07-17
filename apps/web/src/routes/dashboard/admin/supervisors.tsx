@@ -39,12 +39,18 @@ export function SupervisorsPage() {
   const [status, setStatus] = useState<string>(ALL);
   const faculties = useFaculties(1, 100);
   const orgs = useOrganizations({}, 1, 200);
-  const { data, isPending, error } = useSupervisors({
-    search: search || undefined,
-    faculty_id: facultyId === ALL ? undefined : (facultyId as UUID),
-    organization_id: orgId === ALL ? undefined : (orgId as UUID),
-    is_active: status === ALL ? undefined : status === "active",
-  });
+  // pageSize=200 — import'dan keyin 20 tadan ortiq supervizor ko'rinmay qolmasin
+  // (backend limiti le=200; paginatsiya keyinroq qo'shiladi).
+  const { data, isPending, error } = useSupervisors(
+    {
+      search: search || undefined,
+      faculty_id: facultyId === ALL ? undefined : (facultyId as UUID),
+      organization_id: orgId === ALL ? undefined : (orgId as UUID),
+      is_active: status === ALL ? undefined : status === "active",
+    },
+    1,
+    200,
+  );
   const del = useDeleteSupervisor();
   const [editing, setEditing] = useState<Supervisor | null>(null);
   const [creating, setCreating] = useState(false);

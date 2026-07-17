@@ -27,6 +27,7 @@ import {
   SupervisorProgramsPage,
   SupervisorRegulationsPage,
 } from "@/routes/dashboard/supervisor/documents";
+import { SupervisorStudentsPage } from "@/routes/dashboard/supervisor/students";
 import { ChangePasswordPage } from "@/routes/change-password";
 import { Home } from "@/routes/home";
 import { Login } from "@/routes/login";
@@ -89,8 +90,8 @@ export const router = createBrowserRouter([
           { index: true, Component: SupervisorDashboard },
           { path: "regulations", Component: SupervisorRegulationsPage },
           { path: "programs", Component: SupervisorProgramsPage },
+          { path: "students", Component: SupervisorStudentsPage },
           // Eski single-page'da bor edi — alohida sahifalar keyingi iteratsiyada
-          { path: "students", Component: SupervisorDashboard },
           { path: "attendance", Component: SupervisorDashboard },
           { path: "tasks", Component: SupervisorDashboard },
         ],

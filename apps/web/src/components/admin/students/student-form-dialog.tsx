@@ -27,6 +27,7 @@ import {
   useCreateStudent,
   useUpdateStudent,
   type StudentCreatePayload,
+  type StudentUpdatePayload,
 } from "@/lib/api/students";
 import type { Student, UUID } from "@/lib/api/types";
 
@@ -50,6 +51,14 @@ type FormState = {
   faculty_id: string;
   direction_id: string;
   group_id: string;
+  // Akademik/ta'lim ma'lumotlari — backend allaqachon qabul qiladi
+  current_semester: string;
+  enrollment_year: string;
+  education_language: string;
+  education_form: string;
+  degree_type: string;
+  is_graduating: boolean;
+  status: string;
 };
 
 const EMPTY: FormState = {
@@ -65,7 +74,32 @@ const EMPTY: FormState = {
   faculty_id: "",
   direction_id: "",
   group_id: "",
+  current_semester: "",
+  enrollment_year: "",
+  education_language: "",
+  education_form: "",
+  degree_type: "",
+  is_graduating: false,
+  status: "",
 };
+
+const EDU_FORMS = [
+  { value: "daytime", label: "Kunduzgi" },
+  { value: "evening", label: "Kechki" },
+  { value: "correspondence", label: "Sirtqi" },
+  { value: "distance", label: "Masofaviy" },
+];
+const DEGREE_TYPES = [
+  { value: "bachelor", label: "Bakalavr" },
+  { value: "master", label: "Magistr" },
+  { value: "phd", label: "PhD / Doktorantura" },
+];
+const STUDENT_STATUSES = [
+  { value: "studying", label: "O'qiyapti" },
+  { value: "graduated", label: "Bitirgan" },
+  { value: "expelled", label: "Chetlashtirilgan" },
+  { value: "academic_leave", label: "Akademik ta'til" },
+];
 
 export function StudentFormDialog({ open, student, onClose }: Props) {
   const isEdit = !!student;
@@ -95,6 +129,13 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
         faculty_id: student.faculty_id ?? "",
         direction_id: student.direction_id ?? "",
         group_id: student.group_id ?? "",
+        current_semester: student.current_semester ? String(student.current_semester) : "",
+        enrollment_year: student.enrollment_year ? String(student.enrollment_year) : "",
+        education_language: student.education_language ?? "",
+        education_form: student.education_form ?? "",
+        degree_type: student.degree_type ?? "",
+        is_graduating: student.is_graduating ?? false,
+        status: student.status ?? "",
       });
     } else {
       setForm(EMPTY);
@@ -118,10 +159,9 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
     if (!form.first_name.trim()) return "Ism majburiy";
     if (!form.last_name.trim()) return "Familiya majburiy";
     if (!form.group_id) return "Guruh tanlang";
-    if (!isEdit) {
-      if (!form.hemis_id.trim()) return "Talaba ID majburiy";
-      if (form.hemis_id.length < 4) return "Talaba ID kamida 4 ta belgi";
-    }
+    // Amaliyot ID endi tahrirlashda ham o'zgartiriladi
+    if (!form.hemis_id.trim()) return "Amaliyot ID majburiy";
+    if (form.hemis_id.trim().length < 4) return "Amaliyot ID kamida 4 ta belgi";
     return null;
   };
 
@@ -136,6 +176,7 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
         await update.mutateAsync({
           id: student.id,
           data: {
+            hemis_id: form.hemis_id.trim() || undefined,
             first_name: form.first_name,
             last_name: form.last_name,
             middle_name: form.middle_name || null,
@@ -145,6 +186,13 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
             region: form.region || null,
             district: form.district || null,
             group_id: (form.group_id || undefined) as UUID | undefined,
+            current_semester: form.current_semester ? Number(form.current_semester) : null,
+            enrollment_year: form.enrollment_year ? Number(form.enrollment_year) : null,
+            education_language: form.education_language || null,
+            education_form: form.education_form || null,
+            degree_type: form.degree_type || null,
+            is_graduating: form.is_graduating,
+            status: (form.status || undefined) as StudentUpdatePayload["status"],
           },
         });
         toast.success("Talaba ma'lumotlari yangilandi");
@@ -199,16 +247,19 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
                   </AlertDescription>
                 </Alert>
               </div>
-              <div className="sm:col-span-2">
-                <Label>Talaba ID *</Label>
-                <Input
-                  value={form.hemis_id}
-                  onChange={(e) => set("hemis_id", e.target.value)}
-                  placeholder="354231100489 (Amaliyot ID yoki o'z raqamingiz)"
-                />
-              </div>
             </>
           )}
+
+          {/* Amaliyot ID — yaratishda ham, tahrirlashda ham (import xato ID bilan
+              kelsa admin tuzata olsin; unique — band bo'lsa 409 chiqadi) */}
+          <div className="sm:col-span-2">
+            <Label>Amaliyot ID *</Label>
+            <Input
+              value={form.hemis_id}
+              onChange={(e) => set("hemis_id", e.target.value)}
+              placeholder="354231100489"
+            />
+          </div>
 
           {/* F.I.SH. */}
           <div>
@@ -332,6 +383,98 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
               value={form.district}
               onChange={(e) => set("district", e.target.value)}
             />
+          </div>
+
+          {/* Ta'lim ma'lumotlari — backend allaqachon qabul qiladi */}
+          <div>
+            <Label>Ta'lim shakli</Label>
+            <Select
+              value={form.education_form}
+              onValueChange={(v) => set("education_form", v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Tanlang" />
+              </SelectTrigger>
+              <SelectContent>
+                {EDU_FORMS.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>
+                    {f.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Ta'lim turi</Label>
+            <Select value={form.degree_type} onValueChange={(v) => set("degree_type", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tanlang" />
+              </SelectTrigger>
+              <SelectContent>
+                {DEGREE_TYPES.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Ta'lim tili</Label>
+            <Input
+              value={form.education_language}
+              onChange={(e) => set("education_language", e.target.value)}
+              placeholder="O'zbek"
+            />
+          </div>
+          <div>
+            <Label>Semestr</Label>
+            <Input
+              type="number"
+              min={1}
+              max={8}
+              value={form.current_semester}
+              onChange={(e) => set("current_semester", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label>Qabul yili</Label>
+            <Input
+              type="number"
+              min={2000}
+              max={2100}
+              value={form.enrollment_year}
+              onChange={(e) => set("enrollment_year", e.target.value)}
+              placeholder="2022"
+            />
+          </div>
+          {isEdit && (
+            <div>
+              <Label>Holat</Label>
+              <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tanlang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STUDENT_STATUSES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="flex items-end sm:col-span-2">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={form.is_graduating}
+                onChange={(e) => setForm((p) => ({ ...p, is_graduating: e.target.checked }))}
+              />
+              <span className="text-sm">Bitiruvchi</span>
+            </label>
           </div>
         </div>
 

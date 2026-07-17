@@ -11,6 +11,7 @@ yo'q bo'lsa avto-yaratiladi). Tashkilotlar nomi bo'yicha topiladi.
 """
 
 import io
+import re
 from typing import Any
 
 from loguru import logger
@@ -134,6 +135,21 @@ def _parse_excel(
             rec[key] = val
         rows.append(rec)
     return rows, errors
+
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _clean_email(value: Any) -> str | None:
+    """Excel'dagi email — faqat to'g'ri formatdagisi saqlanadi.
+
+    Aks holda None (masalan "yo'q", "-", ism). Buzuq qiymat DB'ga tushsa,
+    SupervisorRead butun ro'yxatni 500 qilardi.
+    """
+    if not value:
+        return None
+    s = str(value).strip()
+    return s if _EMAIL_RE.match(s) else None
 
 
 async def _find_faculty(db: AsyncSession, name: str) -> Faculty | None:
@@ -265,7 +281,7 @@ async def import_supervisors(
                     last_name=str(last_name),
                     middle_name=(str(middle_name) if middle_name else None),
                     phone=(str(rec["phone"]) if rec.get("phone") else None),
-                    email=(str(rec["email"]) if rec.get("email") else None),
+                    email=_clean_email(rec.get("email")),
                     must_change_password=True,
                 )
                 db.add(user)

@@ -61,11 +61,6 @@ HEADER_MAP: dict[str, str] = {
 REQUIRED_KEYS = {"full_name", "direction_code", "group_name", "course"}
 
 
-def _generate_password(length: int = 10) -> str:
-    alphabet = string.ascii_letters + string.digits
-    return "".join(secrets.choice(alphabet) for _ in range(length))
-
-
 async def _generate_unique_login(db: AsyncSession, prefix: str) -> str:
     """{prefix}{8 random digits} formatida unikal login generatsiya qiladi.
 

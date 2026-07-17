@@ -9,6 +9,8 @@ export type SupervisorFilters = {
   search?: string;
   is_active?: boolean;
   faculty_id?: UUID;
+  /** organization_id bilan: tashkilotga bog'lanmagan supervizorlarni ham ko'rsatish */
+  include_unassigned?: boolean;
 };
 
 export const supervisorKeys = {
@@ -25,6 +27,7 @@ function qs(filters: SupervisorFilters, page: number, pageSize: number): string 
   if (filters.search) p.set("search", filters.search);
   if (filters.is_active !== undefined) p.set("is_active", String(filters.is_active));
   if (filters.faculty_id) p.set("faculty_id", filters.faculty_id);
+  if (filters.include_unassigned) p.set("include_unassigned", "true");
   return p.toString();
 }
 

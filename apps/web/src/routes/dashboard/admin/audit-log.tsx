@@ -36,6 +36,8 @@ const ACTION_LABEL: Record<string, string> = {
   reject: "Rad etdi",
   override: "Override",
   login_reset: "Parol reset",
+  import: "Import qildi",
+  export: "Eksport qildi",
 };
 
 const ACTION_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -46,10 +48,13 @@ const ACTION_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   reject: "destructive",
   override: "destructive",
   login_reset: "secondary",
+  import: "secondary",
+  export: "outline",
 };
 
 const ENTITY_LABEL: Record<string, string> = {
   student: "Talaba",
+  student_credentials: "Login/parol",
   supervisor: "Supervizor",
   contract: "Shartnoma",
   attendance_day: "Davomat",

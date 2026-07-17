@@ -34,6 +34,108 @@ def _to_csv(headers: list[str], rows: list[list[Any]]) -> bytes:
     return ("﻿" + buf.getvalue()).encode("utf-8")
 
 
+def _apply_student_filters(  # type: ignore[no-untyped-def]
+    stmt,
+    *,
+    faculty_id: UUID | None,
+    direction_id: UUID | None,
+    group_id: UUID | None,
+    course: int | None,
+    academic_year_id: UUID | None,
+    status: StudentStatus | None,
+    search: str | None,
+):
+    """Talabalar ro'yxati/eksporti uchun umumiy filtrlar."""
+    if faculty_id:
+        stmt = stmt.where(Direction.faculty_id == faculty_id)
+    if direction_id:
+        stmt = stmt.where(Group.direction_id == direction_id)
+    if group_id:
+        stmt = stmt.where(Student.group_id == group_id)
+    if course is not None:
+        stmt = stmt.where(Group.course == course)
+    if academic_year_id:
+        stmt = stmt.where(Group.academic_year_id == academic_year_id)
+    if status:
+        stmt = stmt.where(Student.status == status)
+    if search:
+        from sqlalchemy import func, or_
+
+        like = f"%{search.lower()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(User.first_name).like(like),
+                func.lower(User.last_name).like(like),
+                Student.hemis_id.like(f"%{search}%"),
+            )
+        )
+    return stmt
+
+
+async def export_student_credentials(
+    db: AsyncSession,
+    *,
+    faculty_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    group_id: UUID | None = None,
+    course: int | None = None,
+    academic_year_id: UUID | None = None,
+    status: StudentStatus | None = None,
+    search: str | None = None,
+) -> list[dict[str, Any]]:
+    """Talabalar login/parol jadvali uchun ma'lumot (DB'dan, istalgan vaqtda).
+
+    Boshlang'ich parol = login (services/hemis.py va services/student.py shunday
+    yaratadi). `must_change_password` False bo'lsa — talaba parolni o'zgartirgan,
+    boshlang'ich parol endi amal qilmaydi.
+    """
+    stmt = (
+        select(
+            Student.hemis_id.label("amaliyot_id"),
+            User.username,
+            User.must_change_password,
+            User.last_name,
+            User.first_name,
+            User.middle_name,
+            Faculty.name.label("faculty_name"),
+            Direction.name.label("direction_name"),
+            Group.name.label("group_name"),
+            Group.course,
+        )
+        .join(User, User.id == Student.user_id)
+        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Direction, Direction.id == Group.direction_id)
+        .outerjoin(Faculty, Faculty.id == Direction.faculty_id)
+        .order_by(Faculty.name, Group.name, User.last_name, User.first_name)
+    )
+    stmt = _apply_student_filters(
+        stmt,
+        faculty_id=faculty_id,
+        direction_id=direction_id,
+        group_id=group_id,
+        course=course,
+        academic_year_id=academic_year_id,
+        status=status,
+        search=search,
+    )
+    rows = (await db.execute(stmt)).all()
+    return [
+        {
+            "amaliyot_id": r.amaliyot_id,
+            "full_name": " ".join(
+                p for p in (r.last_name, r.first_name, r.middle_name) if p
+            ),
+            "faculty_name": r.faculty_name,
+            "direction_name": r.direction_name,
+            "group_name": r.group_name,
+            "course": r.course,
+            "username": r.username,
+            "password_changed": not r.must_change_password,
+        }
+        for r in rows
+    ]
+
+
 async def export_students(
     db: AsyncSession,
     *,
@@ -72,33 +174,20 @@ async def export_students(
         .order_by(User.last_name, User.first_name)
     )
 
-    if faculty_id:
-        stmt = stmt.where(Direction.faculty_id == faculty_id)
-    if direction_id:
-        stmt = stmt.where(Group.direction_id == direction_id)
-    if group_id:
-        stmt = stmt.where(Student.group_id == group_id)
-    if course is not None:
-        stmt = stmt.where(Group.course == course)
-    if academic_year_id:
-        stmt = stmt.where(Group.academic_year_id == academic_year_id)
-    if status:
-        stmt = stmt.where(Student.status == status)
-    if search:
-        from sqlalchemy import func, or_
-
-        like = f"%{search.lower()}%"
-        stmt = stmt.where(
-            or_(
-                func.lower(User.first_name).like(like),
-                func.lower(User.last_name).like(like),
-                Student.hemis_id.like(f"%{search}%"),
-            )
-        )
+    stmt = _apply_student_filters(
+        stmt,
+        faculty_id=faculty_id,
+        direction_id=direction_id,
+        group_id=group_id,
+        course=course,
+        academic_year_id=academic_year_id,
+        status=status,
+        search=search,
+    )
 
     rows = (await db.execute(stmt)).all()
     headers = [
-        "HEMIS ID",
+        "Amaliyot ID",
         "Familiya",
         "Ism",
         "Otasining ismi",

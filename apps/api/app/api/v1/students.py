@@ -2,13 +2,20 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 
 from app.api.deps import RequireAdmin
 from app.db.session import SessionDep
 from app.models.enums import StudentStatus
 from app.schemas.common import CredentialsUpdate, Paginated
-from app.schemas.student import StudentCreate, StudentRead, StudentUpdate
+from app.schemas.student import (
+    StudentBulkDeleteError,
+    StudentBulkDeleteRequest,
+    StudentBulkDeleteResult,
+    StudentCreate,
+    StudentRead,
+    StudentUpdate,
+)
 from app.services import audit_log as audit
 from app.services.student import create_student as svc_create_student
 from app.services.student import delete_student as svc_delete_student
@@ -114,6 +121,55 @@ async def update_student(
     )
     await db.commit()
     return StudentRead.model_validate(result)
+
+
+@router.post(
+    "/bulk-delete",
+    response_model=StudentBulkDeleteResult,
+    summary="Admin: ko'p tanlangan talabalarni o'chirish",
+)
+async def bulk_delete_students(
+    payload: StudentBulkDeleteRequest,
+    request: Request,
+    db: SessionDep,
+    user: RequireAdmin,
+) -> StudentBulkDeleteResult:
+    """Har bir talaba alohida o'chiriladi — biri xato bersa (masalan amaliyoti bor)
+    qolganlari o'chaveradi va xatolar ro'yxatda qaytariladi."""
+    deleted = 0
+    failed: list[StudentBulkDeleteError] = []
+
+    for sid in payload.ids:
+        full_name: str | None = None
+        try:
+            student = await svc_get_student(db, sid)
+            full_name = student.get("full_name")
+            await svc_delete_student(db, sid)
+            await audit.log(
+                db,
+                actor=user,
+                action="delete",
+                entity_type="student",
+                entity_id=sid,
+                summary=f"Talaba o'chirildi (ommaviy): {full_name or sid}",
+                request=request,
+            )
+            await db.commit()
+            deleted += 1
+        except HTTPException as e:
+            await db.rollback()
+            failed.append(
+                StudentBulkDeleteError(id=sid, full_name=full_name, error=str(e.detail))
+            )
+        except Exception as e:  # noqa: BLE001
+            await db.rollback()
+            failed.append(
+                StudentBulkDeleteError(id=sid, full_name=full_name, error=str(e))
+            )
+
+    return StudentBulkDeleteResult(
+        requested=len(payload.ids), deleted=deleted, failed=failed
+    )
 
 
 @router.delete(

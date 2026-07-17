@@ -89,8 +89,32 @@ class StudentCreate(BaseModel):
     degree_type: DegreeType | None = None
 
 
+class StudentBulkDeleteRequest(BaseModel):
+    """Ko'p tanlab o'chirish — bir so'rovda maksimum 200 ta."""
+
+    ids: list[UUID] = Field(..., min_length=1, max_length=200)
+
+
+class StudentBulkDeleteError(BaseModel):
+    id: UUID
+    full_name: str | None = None
+    error: str
+
+
+class StudentBulkDeleteResult(BaseModel):
+    """Qisman muvaffaqiyat: amaliyot/topshirig'i bor talaba o'chmaydi."""
+
+    requested: int
+    deleted: int
+    failed: list[StudentBulkDeleteError]
+
+
 class StudentUpdate(BaseModel):
     """Admin: talaba ma'lumotlarini tahrirlash (login/parol alohida endpoint orqali)."""
+
+    # Amaliyot ID — import xato ID bilan kelsa admin tuzata olsin (unique)
+    hemis_id: str | None = Field(None, min_length=4, max_length=32)
+    enrollment_year: int | None = Field(None, ge=2000, le=2100)
 
     first_name: str | None = Field(None, min_length=1, max_length=100)
     last_name: str | None = Field(None, min_length=1, max_length=100)

@@ -57,6 +57,31 @@ async def _check_entity_access(  # type: ignore[no-untyped-def]
         raise HTTPException(status.HTTP_403_FORBIDDEN)
 
 
+async def _check_assignment_access(  # type: ignore[no-untyped-def]
+    db, assignment_id: UUID, user
+) -> None:
+    """Assignment bo'yicha ko'rish ruxsati: admin — hammasi, talaba/supervizor — o'ziniki."""
+    if user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+        return
+    if user.role == UserRole.STUDENT:
+        await _check_student_owns(db, assignment_id, user.id)
+    elif user.role == UserRole.SUPERVISOR:
+        await _check_supervisor_owns(db, assignment_id, user.id)
+    else:
+        raise HTTPException(status.HTTP_403_FORBIDDEN)
+
+
+@router.get(
+    "/assignments/{assignment_id}/all",
+    summary="Assignment bo'yicha barcha hujjatlar (topshiriq + kundalik + tahlil)",
+)
+async def list_assignment_attachments(
+    assignment_id: UUID, db: SessionDep, user: CurrentUser
+) -> list[dict]:
+    await _check_assignment_access(db, assignment_id, user)
+    return await svc.list_all_for_assignment(db, assignment_id)
+
+
 @router.post(
     "/standalone",
     summary="Mustaqil fayl yuklash (Document yoki Avatar uchun)",
