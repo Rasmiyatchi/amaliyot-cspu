@@ -4,9 +4,11 @@ Bir talaba + bir amaliyot turi + (tashkilot yoki hudud) + sana.
 """
 
 from datetime import date, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
+    ARRAY,
     CheckConstraint,
     Date,
     DateTime,
@@ -15,10 +17,11 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
-from app.models.enums import AssignmentStatus
+from app.models.enums import AssignmentStatus, Semester
 
 
 class PracticeAssignment(UUIDMixin, TimestampMixin, Base):
@@ -69,6 +72,28 @@ class PracticeAssignment(UUIDMixin, TimestampMixin, Base):
     start_date: Mapped[date] = mapped_column(Date)
     end_date: Mapped[date] = mapped_column(Date)
 
+    # Semestr — 4+2 kabi yillik amaliyotlarda kuzgi va bahorgi baho ALOHIDA chiqadi,
+    # shuning uchun har semestr o'z biriktirishi va o'z 100 balli bahosi bilan yuritiladi.
+    # Qisqa (dala, plener) amaliyotlar uchun NULL.
+    semester: Mapped[Semester | None] = mapped_column(
+        SAEnum(
+            Semester,
+            name="semester",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    # Talaba haftaning qaysi kunlari borishi shart — ISO raqamlash: 1=Dushanba ... 7=Yakshanba.
+    # Davomat foizining MAXRAJI shu kunlardan hisoblanadi (bo'sh bo'lsa — eski xatti-harakat:
+    # maxraj = mavjud yozuvlar soni).
+    required_weekdays: Mapped[list[int] | None] = mapped_column(
+        ARRAY(Integer),
+        nullable=True,
+        comment="ISO hafta kunlari (1=Du..7=Ya) — davomat foizi maxraji",
+    )
+
     # Holat
     status: Mapped[AssignmentStatus] = mapped_column(
         SAEnum(
@@ -81,10 +106,21 @@ class PracticeAssignment(UUIDMixin, TimestampMixin, Base):
         index=True,
     )
 
-    # Yakuniy baho (Phase 9 da to'ldiriladi)
+    # Yakuniy baho — grading.compute_breakdown() natijasi, finalize_grade() yozadi.
     final_grade: Mapped[int | None] = mapped_column(Integer, nullable=True)
     credit_earned: Mapped[bool] = mapped_column(
         default=False, server_default="false", nullable=False
+    )
+
+    # Qo'lda qo'yiladigan mezon ballari: {"events": 18, "defense": 9}.
+    # grader="system" mezonlar (davomat, topshiriqlar) bu yerda SAQLANMAYDI —
+    # ular har safar davomat/topshiriq ma'lumotidan qayta hisoblanadi.
+    criteria_scores: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        default=dict,
+        server_default="{}",
+        nullable=False,
+        comment="Qo'lda baholanadigan mezonlar: {mezon_key: ball}",
     )
 
     # Bekor qilingan holatlar

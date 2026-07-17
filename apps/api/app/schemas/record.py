@@ -19,6 +19,8 @@ class RecordRow(BaseModel):
     supervisor_name: str | None = None
     start_date: date
     end_date: date
+    semester: str | None = None
+    semester_label: str | None = None
     attendance_pct: int | None = None
     korxona_grade: int | None = None
     korxona_grade_max: int | None = None

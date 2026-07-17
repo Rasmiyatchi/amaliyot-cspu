@@ -24,6 +24,7 @@ from app.models.student import Student
 from app.models.supervisor import Supervisor
 from app.models.task import JournalEntry, LessonAnalysis, Task, TaskTemplate
 from app.models.user import User
+from app.services.attendance_stats import compute_percent, expected_days
 
 
 async def _capacity_alerts(db: AsyncSession) -> list[dict[str, Any]]:
@@ -177,10 +178,44 @@ async def admin_overview(db: AsyncSession) -> dict[str, Any]:
     for s, c in att_rows:
         att[s.value] = c
     att_total_recent = sum(att.values())
+
+    # Maxraj — oxirgi 30 kunda kutilgan kunlar: har bir aktiv biriktirishning majburiy
+    # kunlarini [30 kun oldin .. bugun] oralig'ida sanaymiz. Yozuvlar soniga bo'lish
+    # xato edi: kelmagan kunlar yozuv ham qoldirmaydi, shuning uchun foiz doim ~100%
+    # bo'lib chiqardi. Kunlari belgilanmagan biriktirishlar eski yo'lda qoladi.
+    today = datetime.now(UTC).date()
+    active_rows = (
+        await db.execute(
+            select(
+                PracticeAssignment.start_date,
+                PracticeAssignment.end_date,
+                PracticeAssignment.required_weekdays,
+            ).where(
+                PracticeAssignment.status.in_(
+                    [AssignmentStatus.ACTIVE, AssignmentStatus.COMPLETED]
+                ),
+                PracticeAssignment.end_date >= thirty_days_ago,
+                PracticeAssignment.start_date <= today,
+            )
+        )
+    ).all()
+    expected_total = 0
+    has_weekdays = False
+    for row in active_rows:
+        exp = expected_days(
+            row.start_date,
+            row.end_date,
+            row.required_weekdays,
+            upto=today,
+            since=thirty_days_ago,
+        )
+        if exp is not None:
+            has_weekdays = True
+            expected_total += exp
+
+    denominator = expected_total if has_weekdays else att_total_recent
     att_percent = (
-        int(round(att["green"] / att_total_recent * 100))
-        if att_total_recent
-        else None
+        min(100, int(round(att["green"] / denominator * 100))) if denominator else None
     )
 
     # Tasks overview
@@ -452,8 +487,12 @@ async def student_overview(db: AsyncSession, user: User) -> dict[str, Any] | Non
     for s, c in att_rows:
         att[s.value] = c
     att_total = sum(att.values())
-    att_percent = (
-        int(round(att["green"] / att_total * 100)) if att_total else None
+    att_percent = compute_percent(
+        green=att["green"],
+        record_total=att_total,
+        start=assignment.start_date,
+        end=assignment.end_date,
+        weekdays=assignment.required_weekdays,
     )
 
     # Tasks progress

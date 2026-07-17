@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.area import Area
-from app.models.enums import AssignmentStatus, ObjectKind
+from app.models.enums import AssignmentStatus, ObjectKind, Semester
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
@@ -29,6 +29,9 @@ ACTIVE_STATUSES = (AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE)
 
 class ValidationError(ValueError):
     """Assignment validation failure — API'ga 400 bo'lib chiqariladi."""
+
+
+_SEMESTER_LABEL = {Semester.FALL: "Kuzgi", Semester.SPRING: "Bahorgi"}
 
 
 def _base_read_select() -> Any:
@@ -54,9 +57,12 @@ def _base_read_select() -> Any:
             PracticeAssignment.supervisor_id,
             PracticeAssignment.start_date,
             PracticeAssignment.end_date,
+            PracticeAssignment.semester,
+            PracticeAssignment.required_weekdays,
             PracticeAssignment.status,
             PracticeAssignment.final_grade,
             PracticeAssignment.credit_earned,
+            PracticeAssignment.criteria_scores,
             PracticeAssignment.cancelled_reason,
             PracticeAssignment.cancelled_at,
             PracticeAssignment.notes,
@@ -112,6 +118,7 @@ async def _validate_and_resolve(
     supervisor_id: UUID | None,
     start_date: Any,
     end_date: Any,
+    semester: Semester | None = None,
     exclude_assignment_id: UUID | None = None,
 ) -> dict[str, Any]:
     """Barcha validatsiyani bajaradi. Xato bo'lsa ValidationError raise qiladi.
@@ -206,18 +213,23 @@ async def _validate_and_resolve(
                 f"(ruxsat: {pt.allowed_courses})"
             )
 
-    # Takroriy biriktirish yo'qligi
+    # Takroriy biriktirish yo'qligi. Semestr ham kalitning bir qismi: 4+2 da bir o'quv
+    # yilida kuzgi va bahorgi ALOHIDA biriktiriladi (har biri o'z 100 balli bahosi bilan).
+    # NULL semestr uchun IS NOT DISTINCT FROM kerak — oddiy `=` NULL'da hech qachon rost bo'lmaydi.
     dup_stmt = select(PracticeAssignment.id).where(
         PracticeAssignment.student_id == student_id,
         PracticeAssignment.practice_type_id == practice_type_id,
         PracticeAssignment.academic_year_id == academic_year_id,
+        PracticeAssignment.semester.is_not_distinct_from(semester),
         PracticeAssignment.status.in_(ACTIVE_STATUSES),
     )
     if exclude_assignment_id:
         dup_stmt = dup_stmt.where(PracticeAssignment.id != exclude_assignment_id)
     if (await db.execute(dup_stmt)).scalar_one_or_none():
+        sem_part = f" ({_SEMESTER_LABEL[semester]} semestr)" if semester else ""
         raise ValidationError(
-            "Ushbu talaba ushbu o'quv yilida shu amaliyot turiga allaqachon biriktirilgan"
+            f"Ushbu talaba ushbu o'quv yilida shu amaliyot turiga{sem_part} "
+            "allaqachon biriktirilgan"
         )
 
     # Capacity tekshirish
@@ -364,6 +376,7 @@ def _extract_validation_kwargs(
         "supervisor_id": payload.get("supervisor_id"),
         "start_date": payload["start_date"],
         "end_date": payload["end_date"],
+        "semester": payload.get("semester"),
     }
 
 
@@ -436,6 +449,7 @@ async def update_assignment(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
         "supervisor_id",
         "start_date",
         "end_date",
+        "semester",
     }
     if any(k in payload for k in revalidate_fields):
         # Merge current + new for validation
@@ -448,6 +462,7 @@ async def update_assignment(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
             "supervisor_id": payload.get("supervisor_id", assignment.supervisor_id),
             "start_date": payload.get("start_date", assignment.start_date),
             "end_date": payload.get("end_date", assignment.end_date),
+            "semester": payload.get("semester", assignment.semester),
             "exclude_assignment_id": assignment.id,
         }
         try:

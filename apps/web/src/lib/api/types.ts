@@ -289,9 +289,15 @@ export type PracticeAssignment = {
   supervisor_full_name: string | null;
   start_date: ISODate;
   end_date: ISODate;
+  /** 4+2 kabi yillik amaliyotlarda kuzgi/bahorgi baho alohida; qisqa amaliyotlarda null */
+  semester: Semester | null;
+  /** ISO hafta kunlari: 1=Dushanba ... 7=Yakshanba — davomat foizi maxraji */
+  required_weekdays: number[] | null;
   status: AssignmentStatus;
   final_grade: number | null;
   credit_earned: boolean;
+  /** Qo'lda baholanadigan mezonlar: {mezon_key: ball} */
+  criteria_scores: Record<string, number>;
   cancelled_reason: string | null;
   cancelled_at: ISODateTime | null;
   notes: string | null;
@@ -308,6 +314,8 @@ export type PracticeAssignmentCreate = {
   supervisor_id?: UUID | null;
   start_date: ISODate;
   end_date: ISODate;
+  semester?: Semester | null;
+  required_weekdays?: number[] | null;
   notes?: string | null;
 };
 

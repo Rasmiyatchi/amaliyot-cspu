@@ -35,9 +35,15 @@ import { useOrganizations } from "@/lib/api/organizations";
 import { usePracticeTypes } from "@/lib/api/practice-types";
 import { useStudents } from "@/lib/api/students";
 import { useSupervisors } from "@/lib/api/supervisors";
-import type { PracticeType } from "@/lib/api/types";
+import type { PracticeType, Semester } from "@/lib/api/types";
+import { WeekdayPicker } from "@/components/admin/assignments/weekday-picker";
 
 const NONE = "__none__";
+
+const SEMESTERS: { value: Semester; label: string }[] = [
+  { value: "fall", label: "Kuzgi" },
+  { value: "spring", label: "Bahorgi" },
+];
 
 type Props = {
   open: boolean;
@@ -69,6 +75,8 @@ export function AssignmentWizard({ open, onClose }: Props) {
   const [supervisorId, setSupervisorId] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [semester, setSemester] = useState<string>(NONE);
+  const [weekdays, setWeekdays] = useState<number[]>([]);
   const [notes, setNotes] = useState<string>("");
 
   const practiceType: PracticeType | undefined = useMemo(
@@ -134,6 +142,14 @@ export function AssignmentWizard({ open, onClose }: Props) {
     }
   }, [startDate, practiceType]);
 
+  // Semestr — boshlanish oyidan avto-taklif. Backend ham shu qoidani ishlatadi
+  // (task.py:_semester_for_date): 8-oy va undan keyin — kuzgi, aks holda bahorgi.
+  useEffect(() => {
+    if (!startDate) return;
+    const month = Number(startDate.slice(5, 7));
+    setSemester(month >= 8 ? "fall" : "spring");
+  }, [startDate]);
+
   // Amaliyot turi o'zgarganda — obyektni reset
   useEffect(() => {
     setOrganizationId("");
@@ -155,6 +171,8 @@ export function AssignmentWizard({ open, onClose }: Props) {
     setSupervisorId("");
     setStartDate("");
     setEndDate("");
+    setSemester(NONE);
+    setWeekdays([]);
     setNotes("");
     createOne.reset();
     createBulk.reset();
@@ -170,6 +188,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
     !!academicYearId &&
     !!startDate &&
     !!endDate &&
+    weekdays.length > 0 &&
     (!!organizationId || !!areaId) &&
     (mode === "single"
       ? !!singleStudentId
@@ -195,6 +214,8 @@ export function AssignmentWizard({ open, onClose }: Props) {
       supervisor_id: supervisorId || null,
       start_date: startDate,
       end_date: endDate,
+      semester: semester === NONE ? null : (semester as Semester),
+      required_weekdays: weekdays,
       notes: notes || null,
     };
 
@@ -533,6 +554,51 @@ export function AssignmentWizard({ open, onClose }: Props) {
                 className="mt-1.5"
               />
             </div>
+          </div>
+
+          {/* Semestr — 4+2 da kuzgi va bahorgi baho alohida chiqadi */}
+          <div>
+            <Label>Semestr</Label>
+            <Select value={semester} onValueChange={setSemester}>
+              <SelectTrigger className="mt-1.5">
+                <SelectValue placeholder="Tanlang" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>Belgilanmagan (qisqa amaliyot)</SelectItem>
+                {SEMESTERS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Yillik amaliyotlarda (4+2) kuzgi va bahorgi baho alohida chiqadi — har semestr
+              uchun alohida biriktirish qiling.
+            </p>
+          </div>
+
+          {/* Majburiy kunlar — davomat foizi maxraji shu kunlardan hisoblanadi */}
+          <div>
+            <Label>Amaliyot kunlari *</Label>
+            <div className="mt-1.5">
+              <WeekdayPicker value={weekdays} onChange={setWeekdays} disabled={busy} />
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Talaba haftaning qaysi kunlari borishi shart. Davomat foizi shu kunlar asosida
+              hisoblanadi.
+              {practiceType?.days_per_week
+                ? ` "${practiceType.name}" uchun tavsiya: ${practiceType.days_per_week} kun/hafta.`
+                : ""}
+            </p>
+            {!!practiceType?.days_per_week &&
+              weekdays.length > 0 &&
+              weekdays.length !== practiceType.days_per_week && (
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                  Diqqat: {weekdays.length} kun tanlandi, amaliyot turida esa{" "}
+                  {practiceType.days_per_week} kun/hafta ko'rsatilgan.
+                </p>
+              )}
           </div>
 
           <div>

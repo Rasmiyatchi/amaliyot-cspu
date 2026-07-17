@@ -23,12 +23,9 @@ from app.models.student import Student
 from app.models.supervisor import Supervisor
 from app.models.task import Task, TaskTemplate
 from app.models.user import User
+from app.services.attendance_stats import compute_percent
 
-
-def _attendance_pct(green: int, total: int) -> int | None:
-    if not total:
-        return None
-    return round(green / total * 100)
+_SEMESTER_LABEL = {"fall": "Kuzgi", "spring": "Bahorgi"}
 
 
 async def list_records(
@@ -61,6 +58,8 @@ async def list_records(
             Area.name.label("area_name"),
             PracticeAssignment.start_date,
             PracticeAssignment.end_date,
+            PracticeAssignment.semester,
+            PracticeAssignment.required_weekdays,
             PracticeAssignment.final_grade,
             PracticeAssignment.credit_earned,
             PracticeAssignment.status,
@@ -159,7 +158,15 @@ async def list_records(
                 "supervisor_name": (r.supervisor_name or "").strip() or None,
                 "start_date": r.start_date,
                 "end_date": r.end_date,
-                "attendance_pct": _attendance_pct(att["green"], att["total"]),
+                "semester": r.semester.value if r.semester else None,
+                "semester_label": _SEMESTER_LABEL.get(r.semester.value) if r.semester else None,
+                "attendance_pct": compute_percent(
+                    green=att["green"],
+                    record_total=att["total"],
+                    start=r.start_date,
+                    end=r.end_date,
+                    weekdays=r.required_weekdays,
+                ),
                 "korxona_grade": pts["earned"] if pts else None,
                 "korxona_grade_max": pts["max"] if pts else None,
                 "qaydnoma_grade": r.final_grade,

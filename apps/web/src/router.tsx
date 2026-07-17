@@ -54,7 +54,6 @@ export const router = createBrowserRouter([
           { path: "students", Component: StudentsPage },
           { path: "assignments", Component: AssignmentsPage },
           { path: "contracts", Component: ContractsPage },
-          { path: "contract-templates", Component: ContractTemplatesPage },
           { path: "applications", Component: ApplicationsPage },
           { path: "attendance", Component: AttendancePage },
           { path: "task-templates", Component: TaskTemplatesPage },
@@ -62,9 +61,19 @@ export const router = createBrowserRouter([
           { path: "reports", Component: ReportsPage },
           { path: "records", Component: RecordsPage },
           { path: "inquiries", Component: InquiriesPage },
-          { path: "admins", Component: AdminsPage },
-          { path: "audit-log", Component: AuditLogPage },
-          { path: "system-settings", Component: SystemSettingsPage },
+
+          // Faqat Super Admin. Sidebar bu linklarni yashiradi, lekin URL'ni qo'lda
+          // yozib kirish mumkin edi — backend 403 qaytarardi va sahifa tushunarsiz
+          // xato ko'rsatardi. Endi route darajasida to'xtatiladi.
+          {
+            element: <Protected allowed={["super_admin"]} />,
+            children: [
+              { path: "contract-templates", Component: ContractTemplatesPage },
+              { path: "admins", Component: AdminsPage },
+              { path: "audit-log", Component: AuditLogPage },
+              { path: "system-settings", Component: SystemSettingsPage },
+            ],
+          },
         ],
       },
     ],

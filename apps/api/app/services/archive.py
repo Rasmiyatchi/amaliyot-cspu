@@ -27,6 +27,7 @@ from app.models.student import Student
 from app.models.supervisor import Supervisor
 from app.models.task import JournalEntry, LessonAnalysis, Task, TaskTemplate
 from app.models.user import User
+from app.services.attendance_stats import compute_percent
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
@@ -172,7 +173,18 @@ async def _load_stats(db: AsyncSession, assignment_id: UUID) -> dict[str, Any]:
     att_total = sum(att.values())
     green = att["green"]
     red = att["red"]
-    att_percent = int(round((green / att_total) * 100)) if att_total else None
+    asn = await db.get(PracticeAssignment, assignment_id)
+    att_percent = (
+        compute_percent(
+            green=green,
+            record_total=att_total,
+            start=asn.start_date,
+            end=asn.end_date,
+            weekdays=asn.required_weekdays,
+        )
+        if asn
+        else None
+    )
 
     # Tasks
     task_rows = (

@@ -19,6 +19,7 @@ from app.models.supervisor import Supervisor, SupervisorOrganization
 from app.models.task import Task, TaskTemplate
 from app.models.user import User
 from app.services import pdf as pdf_svc
+from app.services.attendance_stats import compute_percent
 
 _STATUS_LABEL = {
     AssignmentStatus.DRAFT: "Qoralama",
@@ -86,6 +87,9 @@ async def build_context(db: AsyncSession, user: User) -> dict[str, Any]:
                     PracticeAssignment.status,
                     PracticeAssignment.final_grade,
                     PracticeAssignment.credit_earned,
+                    PracticeAssignment.start_date,
+                    PracticeAssignment.end_date,
+                    PracticeAssignment.required_weekdays,
                 )
                 .join(Student, Student.id == PracticeAssignment.student_id)
                 .join(User, User.id == Student.user_id)
@@ -142,7 +146,13 @@ async def build_context(db: AsyncSession, user: User) -> dict[str, Any]:
             middle = f" {r.middle_name}" if r.middle_name else ""
             att = att_map.get(r.id, {"green": 0, "total": 0})
             pts = pts_map.get(r.id, {"earned": 0, "max": 0})
-            att_pct = round(att["green"] / att["total"] * 100) if att["total"] else None
+            att_pct = compute_percent(
+                green=att["green"],
+                record_total=att["total"],
+                start=r.start_date,
+                end=r.end_date,
+                weekdays=r.required_weekdays,
+            )
             rows.append(
                 {
                     "student_name": f"{r.last_name} {r.first_name}{middle}".strip(),

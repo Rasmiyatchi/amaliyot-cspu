@@ -1,11 +1,27 @@
 """PracticeAssignment schemas."""
 
 from datetime import date, datetime
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
-from app.models.enums import AssignmentStatus
+from app.models.enums import AssignmentStatus, Semester
+
+
+def _clean_weekdays(v: list[int] | None) -> list[int] | None:
+    """ISO hafta kunlari: 1=Dushanba ... 7=Yakshanba. Tartiblab, takrorlarni olib tashlaymiz."""
+    if v is None:
+        return None
+    if not v:
+        raise ValueError("Kamida bitta hafta kuni tanlanishi kerak")
+    out = sorted(set(v))
+    if out[0] < 1 or out[-1] > 7:
+        raise ValueError("Hafta kuni 1 (Dushanba) va 7 (Yakshanba) oralig'ida bo'lishi kerak")
+    return out
+
+
+RequiredWeekdays = Annotated[list[int] | None, AfterValidator(_clean_weekdays)]
 
 
 class PracticeAssignmentCreate(BaseModel):
@@ -17,6 +33,8 @@ class PracticeAssignmentCreate(BaseModel):
     supervisor_id: UUID | None = None
     start_date: date
     end_date: date
+    semester: Semester | None = None
+    required_weekdays: RequiredWeekdays = None
     notes: str | None = None
 
 
@@ -31,6 +49,8 @@ class PracticeAssignmentBulkCreate(BaseModel):
     supervisor_id: UUID | None = None
     start_date: date
     end_date: date
+    semester: Semester | None = None
+    required_weekdays: RequiredWeekdays = None
     notes: str | None = None
 
 
@@ -40,6 +60,8 @@ class PracticeAssignmentUpdate(BaseModel):
     supervisor_id: UUID | None = None
     start_date: date | None = None
     end_date: date | None = None
+    semester: Semester | None = None
+    required_weekdays: RequiredWeekdays = None
     status: AssignmentStatus | None = None
     final_grade: int | None = Field(None, ge=0, le=100)
     credit_earned: bool | None = None
@@ -80,9 +102,12 @@ class PracticeAssignmentRead(BaseModel):
     # Sana + status
     start_date: date
     end_date: date
+    semester: Semester | None
+    required_weekdays: list[int] | None
     status: AssignmentStatus
     final_grade: int | None
     credit_earned: bool
+    criteria_scores: dict[str, int]
 
     cancelled_reason: str | None
     cancelled_at: datetime | None
