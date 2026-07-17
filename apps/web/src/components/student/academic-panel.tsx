@@ -74,7 +74,7 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                 </span>
               </div>
               <Progress value={pointsPercent} className="h-2" />
-              <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 <div className="rounded-md bg-muted/40 px-2 py-1.5 text-center">
                   <div className="text-muted-foreground">Tasdiqlangan</div>
                   <div className="font-semibold text-success">

@@ -235,7 +235,7 @@ export function GradingRulesDialog({ open, practiceType, onClose }: Props) {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 items-end gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 items-end gap-2">
             <div>
               <Label>Minimal kredit olish ball</Label>
               <Input

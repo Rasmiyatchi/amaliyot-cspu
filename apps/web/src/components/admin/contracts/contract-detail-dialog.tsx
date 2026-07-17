@@ -209,7 +209,7 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
         <Separator />
 
         {/* Meta */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
             <dt className="text-xs text-muted-foreground">Shablon</dt>
             <dd className="font-mono">{contract.template_ref}</dd>

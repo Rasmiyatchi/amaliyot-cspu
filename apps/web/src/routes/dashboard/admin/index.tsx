@@ -271,7 +271,7 @@ export function AdminHome() {
               <CardTitle className="text-base">Davomat (oxirgi 30 kun)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
                 <div className="rounded-md bg-success/10 p-3">
                   <div className="text-xs text-muted-foreground">Yashil</div>
                   <div className="text-2xl font-semibold text-success">

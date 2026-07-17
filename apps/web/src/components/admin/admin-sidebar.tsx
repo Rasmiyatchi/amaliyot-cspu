@@ -101,17 +101,24 @@ const navSections: NavSection[] = [
 
 const STORAGE_KEY = "admin-sidebar-collapsed";
 
-export function AdminSidebar() {
+/**
+ * @param inSheet - mobil drawer ichida render qilinyaptimi. Bunda sidebar
+ *   har doim ko'rinadi (yig'ilmaydi), desktopda esa `hidden md:flex`.
+ */
+export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
   const user = useAuthStore((s) => s.user);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
+  const [collapsedPref, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(STORAGE_KEY) === "1";
   });
 
+  // Mobil drawer ichida sidebar hech qachon yig'ilmaydi (yorliqlar ko'rinsin)
+  const collapsed = inSheet ? false : collapsedPref;
+
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
-  }, [collapsed]);
+    window.localStorage.setItem(STORAGE_KEY, collapsedPref ? "1" : "0");
+  }, [collapsedPref]);
 
   const handleLogout = async () => {
     await logout();
@@ -122,8 +129,11 @@ export function AdminSidebar() {
     <TooltipProvider delayDuration={150}>
       <aside
         className={cn(
-          "flex h-screen flex-col border-r border-border bg-card transition-[width] duration-200",
-          collapsed ? "w-16" : "w-64",
+          "h-screen flex-col border-r border-border bg-card transition-[width] duration-200",
+          // Mobilda sidebar 256px joyni yeb qo'yardi (375px ekranda kontentga ~55px
+          // qolardi) — endi faqat md+ da ko'rinadi, mobilda drawer ichida chiqadi.
+          inSheet ? "flex w-64 border-r-0" : "hidden md:flex",
+          !inSheet && (collapsed ? "w-16" : "w-64"),
         )}
       >
         {/* Header */}
@@ -296,24 +306,26 @@ export function AdminSidebar() {
             </div>
           )}
 
-          {/* Collapse toggle */}
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            className={cn(
-              "mt-3 flex h-8 w-full items-center justify-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-            )}
-            aria-label={collapsed ? "Yoyish" : "Yig'ish"}
-            title={collapsed ? "Yoyish" : "Yig'ish"}
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <>
-                <ChevronLeft className="h-4 w-4" />
-                Yig'ish
-              </>
-            )}
-          </button>
+          {/* Collapse toggle — drawer ichida ma'nosiz, shuning uchun yashiriladi */}
+          {!inSheet && (
+            <button
+              onClick={() => setCollapsed((c) => !c)}
+              className={cn(
+                "mt-3 flex h-8 w-full items-center justify-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              )}
+              aria-label={collapsed ? "Yoyish" : "Yig'ish"}
+              title={collapsed ? "Yoyish" : "Yig'ish"}
+            >
+              {collapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <>
+                  <ChevronLeft className="h-4 w-4" />
+                  Yig'ish
+                </>
+              )}
+            </button>
+          )}
         </div>
         <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
       </aside>

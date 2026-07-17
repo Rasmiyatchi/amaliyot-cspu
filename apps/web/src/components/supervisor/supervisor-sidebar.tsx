@@ -58,17 +58,23 @@ const navSections: NavSection[] = [
 
 const STORAGE_KEY = "supervisor-sidebar-collapsed";
 
-export function SupervisorSidebar() {
+/**
+ * @param inSheet - mobil drawer ichida render qilinyaptimi (admin sidebar bilan bir xil).
+ */
+export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
   const user = useAuthStore((s) => s.user);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
+  const [collapsedPref, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(STORAGE_KEY) === "1";
   });
 
+  // Drawer ichida yig'ilmaydi (yorliqlar ko'rinsin)
+  const collapsed = inSheet ? false : collapsedPref;
+
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
-  }, [collapsed]);
+    window.localStorage.setItem(STORAGE_KEY, collapsedPref ? "1" : "0");
+  }, [collapsedPref]);
 
   const handleLogout = async () => {
     await logout();
@@ -79,8 +85,10 @@ export function SupervisorSidebar() {
     <TooltipProvider delayDuration={150}>
       <aside
         className={cn(
-          "flex h-screen flex-col border-r border-border bg-card transition-[width] duration-200",
-          collapsed ? "w-16" : "w-64",
+          "h-screen flex-col border-r border-border bg-card transition-[width] duration-200",
+          // Mobilda sidebar kontent joyini yeb qo'yardi — endi drawer ichida chiqadi
+          inSheet ? "flex w-64 border-r-0" : "hidden md:flex",
+          !inSheet && (collapsed ? "w-16" : "w-64"),
         )}
       >
         <div
@@ -216,20 +224,22 @@ export function SupervisorSidebar() {
             </div>
           )}
 
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            className="mt-3 flex h-8 w-full items-center justify-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label={collapsed ? "Yoyish" : "Yig'ish"}
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <>
-                <ChevronLeft className="h-4 w-4" />
-                Yig'ish
-              </>
-            )}
-          </button>
+          {!inSheet && (
+            <button
+              onClick={() => setCollapsed((c) => !c)}
+              className="mt-3 flex h-8 w-full items-center justify-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label={collapsed ? "Yoyish" : "Yig'ish"}
+            >
+              {collapsed ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <>
+                  <ChevronLeft className="h-4 w-4" />
+                  Yig'ish
+                </>
+              )}
+            </button>
+          )}
         </div>
         <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
       </aside>

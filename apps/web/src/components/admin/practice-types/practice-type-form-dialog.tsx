@@ -145,7 +145,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="code"
@@ -226,7 +226,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="min_weeks"

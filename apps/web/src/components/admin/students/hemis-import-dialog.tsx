@@ -99,7 +99,7 @@ export function HemisImportDialog({ open, onClose }: Props) {
         {/* STATE: Results ─────────────────────────────── */}
         {result && (
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <StatBox label="Yaratildi" value={result.created} tone="success" />
               <StatBox label="O'tkazildi" value={result.skipped} tone="muted" />
               <StatBox label="Xatolar" value={result.errors.length} tone="destructive" />

@@ -147,7 +147,7 @@ export function StudentDashboard() {
               <CardHeader>
                 <CardTitle className="text-base">Amaliyot muddati</CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-3 text-sm">
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
                   <div className="text-xs text-muted-foreground">Boshlanish</div>
                   <div>{new Date(activeAssignment.start_date).toLocaleDateString("uz-UZ")}</div>
