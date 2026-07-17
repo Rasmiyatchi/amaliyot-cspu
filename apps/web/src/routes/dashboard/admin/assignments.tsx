@@ -80,7 +80,9 @@ export function AssignmentsPage() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      await downloadExport("assignments");
+      await downloadExport("assignments", {
+        academic_year_id: filters.academic_year_id,
+      });
       toast.success("CSV yuklab olindi");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Xatolik");

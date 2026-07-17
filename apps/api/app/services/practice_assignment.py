@@ -43,7 +43,7 @@ def _base_read_select() -> Any:
             (User.last_name + " " + User.first_name).label("student_full_name"),
             Student.hemis_id.label("student_hemis_id"),
             Group.name.label("student_group_name"),
-            Group.course.label("student_course"),
+            PracticeAssignment.course.label("student_course"),
             PracticeAssignment.practice_type_id,
             PracticeType.code.label("practice_type_code"),
             PracticeType.name.label("practice_type_name"),
@@ -73,7 +73,7 @@ def _base_read_select() -> Any:
         .join(User, User.id == Student.user_id)
         .join(PracticeType, PracticeType.id == PracticeAssignment.practice_type_id)
         .join(AcademicYear, AcademicYear.id == PracticeAssignment.academic_year_id)
-        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Group, Group.id == PracticeAssignment.group_id)
         .outerjoin(Direction, Direction.id == Group.direction_id)
         .outerjoin(Faculty, Faculty.id == Direction.faculty_id)
         .outerjoin(Organization, Organization.id == PracticeAssignment.organization_id)
@@ -204,14 +204,15 @@ async def _validate_and_resolve(
             f"(max: {pt.max_weeks}, ta'til bilan: {max_allowed:.0f})"
         )
 
+    # Guruh doim yuklanadi — biriktirishga snapshot (group_id/course) yozish uchun
+    group = await db.get(Group, student.group_id) if student.group_id else None
+
     # Course check (agar talaba guruhga biriktirilgan bo'lsa)
-    if pt.allowed_courses and student.group_id:
-        group = await db.get(Group, student.group_id)
-        if group and group.course not in pt.allowed_courses:
-            raise ValidationError(
-                f"{group.course}-kurs '{pt.name}' uchun ruxsat etilmagan "
-                f"(ruxsat: {pt.allowed_courses})"
-            )
+    if pt.allowed_courses and group and group.course not in pt.allowed_courses:
+        raise ValidationError(
+            f"{group.course}-kurs '{pt.name}' uchun ruxsat etilmagan "
+            f"(ruxsat: {pt.allowed_courses})"
+        )
 
     # Takroriy biriktirish yo'qligi. Semestr ham kalitning bir qismi: 4+2 da bir o'quv
     # yilida kuzgi va bahorgi ALOHIDA biriktiriladi (har biri o'z 100 balli bahosi bilan).
@@ -258,6 +259,7 @@ async def _validate_and_resolve(
 
     return {
         "student": student,
+        "group": group,
         "practice_type": pt,
         "academic_year": ay,
         "organization": organization,
@@ -297,7 +299,7 @@ async def list_assignments(
         select(func.count(PracticeAssignment.id))
         .join(Student, Student.id == PracticeAssignment.student_id)
         .join(User, User.id == Student.user_id)
-        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Group, Group.id == PracticeAssignment.group_id)
     )
 
     def apply(stmt: Any) -> Any:
@@ -314,11 +316,11 @@ async def list_assignments(
         if supervisor_id:
             stmt = stmt.where(PracticeAssignment.supervisor_id == supervisor_id)
         if group_id:
-            stmt = stmt.where(Student.group_id == group_id)
+            stmt = stmt.where(PracticeAssignment.group_id == group_id)
         if direction_id:
             stmt = stmt.where(Group.direction_id == direction_id)
         if course is not None:
-            stmt = stmt.where(Group.course == course)
+            stmt = stmt.where(PracticeAssignment.course == course)
         if status_filter:
             stmt = stmt.where(PracticeAssignment.status == status_filter)
         if search:
@@ -383,9 +385,14 @@ def _extract_validation_kwargs(
 async def create_assignment(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
     payload = data.model_dump()
     try:
-        await _validate_and_resolve(db, **_extract_validation_kwargs(payload))
+        resolved = await _validate_and_resolve(db, **_extract_validation_kwargs(payload))
     except ValidationError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+    # Biriktirish paytidagi guruh/kurs snapshot'i — tarixiy hisobotlar uchun muzlatiladi
+    group = resolved["group"]
+    payload["group_id"] = group.id if group else None
+    payload["course"] = group.course if group else None
 
     assignment = PracticeAssignment(**payload)
     db.add(assignment)
@@ -403,7 +410,7 @@ async def bulk_create_assignments(db: AsyncSession, data: BaseModel) -> BulkAssi
 
     for student_id in student_ids:
         try:
-            await _validate_and_resolve(
+            resolved = await _validate_and_resolve(
                 db,
                 **_extract_validation_kwargs(payload, student_id_override=student_id),
             )
@@ -411,7 +418,15 @@ async def bulk_create_assignments(db: AsyncSession, data: BaseModel) -> BulkAssi
             errors.append(BulkAssignmentError(student_id=student_id, error=str(e)))
             continue
 
-        assignment = PracticeAssignment(**{**payload, "student_id": student_id})
+        group = resolved["group"]
+        assignment = PracticeAssignment(
+            **{
+                **payload,
+                "student_id": student_id,
+                "group_id": group.id if group else None,
+                "course": group.course if group else None,
+            }
+        )
         db.add(assignment)
         try:
             await db.flush()

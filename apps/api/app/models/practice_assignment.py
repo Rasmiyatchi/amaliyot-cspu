@@ -94,6 +94,23 @@ class PracticeAssignment(UUIDMixin, TimestampMixin, Base):
         comment="ISO hafta kunlari (1=Du..7=Ya) — davomat foizi maxraji",
     )
 
+    # Biriktirish PAYTIDAGI guruh/kurs snapshot'i. Student.group_id o'zgaruvchan —
+    # talaba keyingi yilga o'tsa, tarixiy hisobotlar (qaydnoma, yig'ma jild, CSV)
+    # yangi guruh bilan qayta yozilib ketmasligi uchun shu yerda muzlatiladi.
+    # Contract._snapshot_students bilan bir xil pattern. Server o'zi to'ldiradi —
+    # API orqali yozilmaydi.
+    group_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("groups.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+        comment="Biriktirish paytidagi guruh (snapshot)",
+    )
+    course: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Biriktirish paytidagi kurs (snapshot)",
+    )
+
     # Holat
     status: Mapped[AssignmentStatus] = mapped_column(
         SAEnum(

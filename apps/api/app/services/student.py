@@ -11,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
 from app.models.academic import Direction, Faculty, Group
-from app.models.enums import StudentStatus, UserRole
+from app.models.enums import AssignmentStatus, StudentStatus, UserRole
+from app.models.practice_assignment import PracticeAssignment
 from app.models.student import Student
 from app.models.user import User
 
@@ -303,9 +304,32 @@ async def update_student(
         "is_graduating", "education_language", "education_form",
         "degree_type", "status",
     )
+    group_changed = "group_id" in payload and payload["group_id"] != student.group_id
     for key in student_keys:
         if key in payload:
             setattr(student, key, payload[key])
+
+    # Guruh XATO TUZATISH uchun o'zgartirilsa — faol (draft/active) biriktirishlar
+    # snapshot'i ham yangilanadi, lekin faqat O'SHA YIL doirasida: kelgusi yilga
+    # o'tkazish hech qachon eski yil tarixini qayta yozmaydi. Yakunlangan/bekor
+    # qilingan biriktirishlar muzlagan qoladi.
+    if group_changed:
+        new_group = (
+            await db.get(Group, payload["group_id"]) if payload["group_id"] else None
+        )
+        stmt = select(PracticeAssignment).where(
+            PracticeAssignment.student_id == student.id,
+            PracticeAssignment.status.in_(
+                [AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE]
+            ),
+        )
+        if new_group:
+            stmt = stmt.where(
+                PracticeAssignment.academic_year_id == new_group.academic_year_id
+            )
+        for asn in (await db.execute(stmt)).scalars():
+            asn.group_id = new_group.id if new_group else None
+            asn.course = new_group.course if new_group else None
 
     try:
         await db.commit()

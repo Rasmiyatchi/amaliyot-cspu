@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import Base
 from app.models.academic import AcademicYear, Department, Direction, Faculty, Group
+from app.models.practice_assignment import PracticeAssignment
 
 M = TypeVar("M", bound=Base)
 
@@ -284,6 +285,30 @@ async def create_group(db: AsyncSession, data: BaseModel) -> Group:
 
 async def update_group(db: AsyncSession, id_: UUID, data: BaseModel) -> Group:
     g = await _get_or_404(db, Group, id_, "Guruh")
+
+    # Tarixni himoya qilish: guruhga amaliyot biriktirishlari (snapshot FK) bog'langan
+    # bo'lsa, kurs/yil/yo'nalishni o'zgartirib bo'lmaydi — aks holda tarixiy qaydnoma va
+    # PDF'lardagi muzlatilgan qiymatlar FK orqali qayta yozilib ketardi. Nom tahriri
+    # ruxsat (xato tuzatish deb qaraladi). Yangi yil = yangi guruh.
+    payload = data.model_dump(exclude_unset=True)
+    frozen_fields = {"course", "academic_year_id", "direction_id"}
+    touched = {
+        k for k in frozen_fields if k in payload and payload[k] != getattr(g, k)
+    }
+    if touched:
+        has_history = (
+            await db.execute(
+                select(PracticeAssignment.id)
+                .where(PracticeAssignment.group_id == id_)
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if has_history:
+            raise _409(
+                "Guruhga amaliyot biriktirishlari bog'langan — kurs/yil/yo'nalishni "
+                "o'zgartirib bo'lmaydi. Yangi o'quv yili uchun yangi guruh yarating."
+            )
+
     _apply_updates(g, data)
     try:
         await db.commit()
@@ -301,4 +326,7 @@ async def delete_group(db: AsyncSession, id_: UUID) -> None:
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise _409("Guruhda talabalar bor — avval ularni boshqa guruhga ko'chiring") from e
+        raise _409(
+            "Guruhga talabalar yoki amaliyot biriktirishlari bog'langan — "
+            "tarixiy guruhni o'chirib bo'lmaydi"
+        ) from e

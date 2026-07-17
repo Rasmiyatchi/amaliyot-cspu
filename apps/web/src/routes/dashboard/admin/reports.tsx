@@ -36,7 +36,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useDirections, useFaculties, useGroups } from "@/lib/api/academic";
+import { useAcademicYears, useDirections, useFaculties, useGroups } from "@/lib/api/academic";
 import { downloadExport } from "@/lib/api/exports";
 import {
   useFinalReports,
@@ -279,6 +279,7 @@ function ReportsList({
 
 export function ReportsPage() {
   const [tab, setTab] = useState<string>("submitted");
+  const [academicYearId, setAcademicYearId] = useState<UUID | undefined>(undefined);
   const [facultyId, setFacultyId] = useState<UUID | undefined>(undefined);
   const [directionId, setDirectionId] = useState<UUID | undefined>(undefined);
   const [groupId, setGroupId] = useState<UUID | undefined>(undefined);
@@ -286,11 +287,13 @@ export function ReportsPage() {
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 300);
 
+  const academicYears = useAcademicYears();
   const faculties = useFaculties();
   const directions = useDirections(facultyId);
   const groups = useGroups({ directionId });
 
   const filters: FinalReportFilters = {
+    academic_year_id: academicYearId,
     faculty_id: facultyId,
     direction_id: directionId,
     group_id: groupId,
@@ -303,6 +306,7 @@ export function ReportsPage() {
     setExporting(true);
     try {
       await downloadExport("final-reports", {
+        academic_year_id: academicYearId,
         status: tab === "all" ? undefined : tab,
         faculty_id: facultyId,
         direction_id: directionId,
@@ -350,6 +354,23 @@ export function ReportsPage() {
           onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[220px] max-w-xs"
         />
+        <Select
+          value={academicYearId ?? ALL}
+          onValueChange={(v) => setAcademicYearId(v === ALL ? undefined : (v as UUID))}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="O'quv yili" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Barcha yillar</SelectItem>
+            {(academicYears.data ?? []).map((y) => (
+              <SelectItem key={y.id} value={y.id}>
+                {y.name}
+                {y.is_active ? " (aktiv)" : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select
           value={facultyId ?? ALL}
           onValueChange={(v) => {

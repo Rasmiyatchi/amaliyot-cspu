@@ -108,8 +108,10 @@ async def import_supervisors(
     "/me/report.pdf",
     summary="Supervizor: o'z talabalari bo'yicha yakuniy hisobot PDF",
 )
-async def my_report_pdf(db: SessionDep, user: RequireSupervisor) -> Response:
-    pdf_bytes = await report_svc.render_pdf(db, user)
+async def my_report_pdf(
+    db: SessionDep, user: RequireSupervisor, academic_year_id: UUID | None = None
+) -> Response:
+    pdf_bytes = await report_svc.render_pdf(db, user, academic_year_id)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"amaliyot_hisoboti_{ts}.pdf"
     return Response(

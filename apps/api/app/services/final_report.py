@@ -99,6 +99,7 @@ async def _hydrate(db: AsyncSession, fr: FinalReport) -> dict[str, Any]:
 async def list_reports(
     db: AsyncSession,
     *,
+    academic_year_id: UUID | None = None,
     status_filter: FinalReportStatus | None = None,
     assignment_id: UUID | None = None,
     group_id: UUID | None = None,
@@ -113,7 +114,9 @@ async def list_reports(
 
     stmt = select(FinalReport)
 
-    needs_join = any([group_id, direction_id, faculty_id, course, search])
+    needs_join = any(
+        [academic_year_id, group_id, direction_id, faculty_id, course, search]
+    )
     if needs_join:
         stmt = (
             stmt.join(
@@ -121,7 +124,7 @@ async def list_reports(
                 PracticeAssignment.id == FinalReport.assignment_id,
             )
             .join(Student, Student.id == PracticeAssignment.student_id)
-            .outerjoin(Group, Group.id == Student.group_id)
+            .outerjoin(Group, Group.id == PracticeAssignment.group_id)
         )
         if direction_id or faculty_id:
             stmt = stmt.outerjoin(Direction, Direction.id == Group.direction_id)
@@ -130,18 +133,20 @@ async def list_reports(
 
     stmt = stmt.order_by(FinalReport.created_at.desc())
 
+    if academic_year_id:
+        stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
     if status_filter:
         stmt = stmt.where(FinalReport.status == status_filter)
     if assignment_id:
         stmt = stmt.where(FinalReport.assignment_id == assignment_id)
     if group_id:
-        stmt = stmt.where(Student.group_id == group_id)
+        stmt = stmt.where(PracticeAssignment.group_id == group_id)
     if direction_id:
         stmt = stmt.where(Group.direction_id == direction_id)
     if faculty_id:
         stmt = stmt.where(Direction.faculty_id == faculty_id)
     if course is not None:
-        stmt = stmt.where(Group.course == course)
+        stmt = stmt.where(PracticeAssignment.course == course)
     if search:
         like = f"%{search.lower()}%"
         stmt = stmt.where(

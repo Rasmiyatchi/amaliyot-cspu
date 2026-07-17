@@ -212,6 +212,7 @@ async def export_students(
 async def export_attendance(
     db: AsyncSession,
     *,
+    academic_year_id: UUID | None = None,
     assignment_id: UUID | None = None,
     student_id: UUID | None = None,
     status: AttendanceDayStatus | None = None,
@@ -240,13 +241,15 @@ async def export_attendance(
         .join(PracticeAssignment, PracticeAssignment.id == AttendanceDay.assignment_id)
         .join(Student, Student.id == PracticeAssignment.student_id)
         .join(User, User.id == Student.user_id)
-        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Group, Group.id == PracticeAssignment.group_id)
         .outerjoin(Direction, Direction.id == Group.direction_id)
         .outerjoin(Faculty, Faculty.id == Direction.faculty_id)
         .outerjoin(Organization, Organization.id == PracticeAssignment.organization_id)
         .outerjoin(Area, Area.id == PracticeAssignment.area_id)
         .order_by(AttendanceDay.date.desc(), User.last_name)
     )
+    if academic_year_id:
+        stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
     if assignment_id:
         stmt = stmt.where(AttendanceDay.assignment_id == assignment_id)
     if student_id:
@@ -254,7 +257,7 @@ async def export_attendance(
     if status:
         stmt = stmt.where(AttendanceDay.status == status)
     if group_id:
-        stmt = stmt.where(Student.group_id == group_id)
+        stmt = stmt.where(PracticeAssignment.group_id == group_id)
     if direction_id:
         stmt = stmt.where(Group.direction_id == direction_id)
     if faculty_id:
@@ -286,6 +289,8 @@ async def export_attendance(
 
 async def export_assignments(
     db: AsyncSession,
+    *,
+    academic_year_id: UUID | None = None,
 ) -> bytes:
     stmt = (
         select(
@@ -294,7 +299,7 @@ async def export_assignments(
             User.first_name,
             Student.hemis_id,
             Group.name.label("group_name"),
-            Group.course,
+            PracticeAssignment.course,
             PracticeType.name.label("practice_type_name"),
             Organization.name.label("organization_name"),
             Area.name.label("area_name"),
@@ -306,12 +311,14 @@ async def export_assignments(
         )
         .join(Student, Student.id == PracticeAssignment.student_id)
         .join(User, User.id == Student.user_id)
-        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Group, Group.id == PracticeAssignment.group_id)
         .join(PracticeType, PracticeType.id == PracticeAssignment.practice_type_id)
         .outerjoin(Organization, Organization.id == PracticeAssignment.organization_id)
         .outerjoin(Area, Area.id == PracticeAssignment.area_id)
         .order_by(User.last_name, User.first_name)
     )
+    if academic_year_id:
+        stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
     rows = (await db.execute(stmt)).all()
     headers = [
         "Assignment ID",
@@ -346,6 +353,7 @@ _FINAL_REPORT_STATUS_LABEL = {
 async def export_final_reports(
     db: AsyncSession,
     *,
+    academic_year_id: UUID | None = None,
     status: FinalReportStatus | None = None,
     group_id: UUID | None = None,
     direction_id: UUID | None = None,
@@ -362,7 +370,7 @@ async def export_final_reports(
             Faculty.name.label("faculty_name"),
             Direction.name.label("direction_name"),
             Group.name.label("group_name"),
-            Group.course,
+            PracticeAssignment.course,
             PracticeType.name.label("practice_type_name"),
             FinalReport.title,
             FinalReport.status,
@@ -377,23 +385,25 @@ async def export_final_reports(
         .join(PracticeAssignment, PracticeAssignment.id == FinalReport.assignment_id)
         .join(Student, Student.id == PracticeAssignment.student_id)
         .join(User, User.id == Student.user_id)
-        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Group, Group.id == PracticeAssignment.group_id)
         .outerjoin(Direction, Direction.id == Group.direction_id)
         .outerjoin(Faculty, Faculty.id == Direction.faculty_id)
         .join(PracticeType, PracticeType.id == PracticeAssignment.practice_type_id)
         .outerjoin(reviewer, reviewer.id == FinalReport.reviewer_id)
         .order_by(Group.name, User.last_name, User.first_name)
     )
+    if academic_year_id:
+        stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
     if status:
         stmt = stmt.where(FinalReport.status == status)
     if group_id:
-        stmt = stmt.where(Student.group_id == group_id)
+        stmt = stmt.where(PracticeAssignment.group_id == group_id)
     if direction_id:
         stmt = stmt.where(Group.direction_id == direction_id)
     if faculty_id:
         stmt = stmt.where(Direction.faculty_id == faculty_id)
     if course is not None:
-        stmt = stmt.where(Group.course == course)
+        stmt = stmt.where(PracticeAssignment.course == course)
     if search:
         from sqlalchemy import func, or_
 

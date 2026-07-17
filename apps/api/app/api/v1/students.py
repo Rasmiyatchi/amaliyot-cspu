@@ -1,5 +1,6 @@
 """Students endpoints — list/get/create/update/delete (admin-only)."""
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
@@ -107,8 +108,22 @@ async def update_student(
     db: SessionDep,
     user: RequireAdmin,
 ) -> StudentRead:
+    # Guruh o'zgarishi tarixga ta'sir qiladi — oldingi qiymatni auditga yozib qo'yamiz,
+    # keyin "qachon qaysi guruhdan qaysi guruhga o'tgan"ni tiklab bo'lsin.
+    payload = data.model_dump(exclude_unset=True)
+    old_group_id = None
+    if "group_id" in payload:
+        before = await svc_get_student(db, id_)
+        old_group_id = before.get("group_id")
+
     result = await svc_update_student(db, id_, data)
     full_name = result.get("full_name", "")
+    metadata: dict[str, Any] = {"changed_fields": list(payload.keys())}
+    if "group_id" in payload and str(old_group_id) != str(payload["group_id"]):
+        metadata["group_change"] = {
+            "from": str(old_group_id) if old_group_id else None,
+            "to": str(payload["group_id"]) if payload["group_id"] else None,
+        }
     await audit.log(
         db,
         actor=user,
@@ -116,7 +131,7 @@ async def update_student(
         entity_type="student",
         entity_id=id_,
         summary=f"Talaba tahrirlandi: {full_name}",
-        metadata={"changed_fields": list(data.model_dump(exclude_unset=True).keys())},
+        metadata=metadata,
         request=request,
     )
     await db.commit()

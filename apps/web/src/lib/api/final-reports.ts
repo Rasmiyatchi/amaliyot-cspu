@@ -37,6 +37,7 @@ export type FinalReportReviewPayload = {
 };
 
 export type FinalReportFilters = {
+  academic_year_id?: UUID;
   group_id?: UUID;
   direction_id?: UUID;
   faculty_id?: UUID;
@@ -58,6 +59,7 @@ export function useFinalReports(status?: FinalReportStatus, filters: FinalReport
     queryFn: () => {
       const p = new URLSearchParams();
       if (status) p.set("status_filter", status);
+      if (filters.academic_year_id) p.set("academic_year_id", filters.academic_year_id);
       if (filters.group_id) p.set("group_id", filters.group_id);
       if (filters.direction_id) p.set("direction_id", filters.direction_id);
       if (filters.faculty_id) p.set("faculty_id", filters.faculty_id);

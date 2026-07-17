@@ -50,7 +50,7 @@ async def list_records(
             Direction.name.label("direction_name"),
             Direction.code.label("direction_code"),
             Group.name.label("group_name"),
-            Group.course,
+            PracticeAssignment.course,
             Student.education_form,
             Student.degree_type,
             PracticeType.name.label("practice_type_name"),
@@ -68,7 +68,7 @@ async def list_records(
         .join(Student, Student.id == PracticeAssignment.student_id)
         .join(User, User.id == Student.user_id)
         .join(PracticeType, PracticeType.id == PracticeAssignment.practice_type_id)
-        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Group, Group.id == PracticeAssignment.group_id)
         .outerjoin(Direction, Direction.id == Group.direction_id)
         .outerjoin(Organization, Organization.id == PracticeAssignment.organization_id)
         .outerjoin(Area, Area.id == PracticeAssignment.area_id)
@@ -81,9 +81,9 @@ async def list_records(
     if direction_id:
         stmt = stmt.where(Group.direction_id == direction_id)
     if course is not None:
-        stmt = stmt.where(Group.course == course)
+        stmt = stmt.where(PracticeAssignment.course == course)
     if group_id:
-        stmt = stmt.where(Student.group_id == group_id)
+        stmt = stmt.where(PracticeAssignment.group_id == group_id)
     if supervisor_id:
         stmt = stmt.where(PracticeAssignment.supervisor_id == supervisor_id)
     if education_form:

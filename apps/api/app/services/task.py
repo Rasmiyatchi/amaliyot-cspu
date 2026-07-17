@@ -93,7 +93,14 @@ async def _student_user_id_for_assignment(
 
 
 async def _assignment_course(db: AsyncSession, assignment: PracticeAssignment) -> int | None:
-    """Assignmentning talabasi qaysi kursda — Group.course dan."""
+    """Biriktirish paytidagi kurs — snapshot'dan.
+
+    Talaba keyingi yilga o'tsa ham eski biriktirishga o'sha paytdagi kursning
+    topshiriq shablonlari mos kelishi kerak. Snapshot'siz eski qatorlar uchun
+    jonli guruhdan fallback.
+    """
+    if assignment.course is not None:
+        return assignment.course
     if not assignment.student_id:
         return None
     stmt = (
@@ -502,7 +509,7 @@ async def list_overdue_tasks(
         .join(PracticeAssignment, PracticeAssignment.id == Task.assignment_id)
         .join(Student, Student.id == PracticeAssignment.student_id)
         .outerjoin(User, User.id == Student.user_id)
-        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Group, Group.id == PracticeAssignment.group_id)
         .where(
             Task.due_date.is_not(None),
             Task.due_date < today,

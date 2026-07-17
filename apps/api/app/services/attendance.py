@@ -529,9 +529,9 @@ async def list_days(
         if date_to:
             stmt = stmt.where(AttendanceDay.date <= date_to)
         if group_id:
-            stmt = stmt.where(Student.group_id == group_id)
+            stmt = stmt.where(PracticeAssignment.group_id == group_id)
         if direction_id or faculty_id:
-            stmt = stmt.join(Group, Group.id == Student.group_id)
+            stmt = stmt.join(Group, Group.id == PracticeAssignment.group_id)
             if direction_id:
                 stmt = stmt.where(Group.direction_id == direction_id)
             if faculty_id:

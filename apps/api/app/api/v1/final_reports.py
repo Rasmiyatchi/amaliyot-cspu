@@ -23,6 +23,7 @@ async def list_reports(
     db: SessionDep,
     _: RequireSuperAdmin,
     status_filter: FinalReportStatus | None = None,
+    academic_year_id: UUID | None = None,
     group_id: UUID | None = None,
     direction_id: UUID | None = None,
     faculty_id: UUID | None = None,
@@ -33,6 +34,7 @@ async def list_reports(
     items = await svc.list_reports(
         db,
         status_filter=status_filter,
+        academic_year_id=academic_year_id,
         group_id=group_id,
         direction_id=direction_id,
         faculty_id=faculty_id,

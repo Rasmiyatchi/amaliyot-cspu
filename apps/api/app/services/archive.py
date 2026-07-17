@@ -89,12 +89,12 @@ async def _load_assignment_context(
                     + func.coalesce(" " + User.middle_name, "")
                 ).label("full_name"),
                 Group.name.label("group_name"),
-                Group.course,
+                PracticeAssignment.course,
                 Direction.code.label("direction_code"),
                 Direction.name.label("direction_name"),
             )
             .join(User, User.id == Student.user_id)
-            .outerjoin(Group, Group.id == Student.group_id)
+            .outerjoin(Group, Group.id == assignment.group_id)
             .outerjoin(Direction, Direction.id == Group.direction_id)
             .where(Student.id == assignment.student_id)
         )

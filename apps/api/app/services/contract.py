@@ -168,14 +168,14 @@ async def _snapshot_students(
             Direction.code.label("direction_code"),
             Direction.name.label("direction_name"),
             Group.name.label("group_name"),
-            Group.course,
+            PracticeAssignment.course,
             PracticeAssignment.start_date,
             PracticeAssignment.end_date,
             PracticeAssignment.organization_id,
         )
         .join(Student, Student.id == PracticeAssignment.student_id)
         .join(User, User.id == Student.user_id)
-        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Group, Group.id == PracticeAssignment.group_id)
         .outerjoin(Direction, Direction.id == Group.direction_id)
         .where(PracticeAssignment.id.in_(assignment_ids))
     )

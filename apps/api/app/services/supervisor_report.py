@@ -2,12 +2,13 @@
 
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.academic import Group
+from app.models.academic import AcademicYear, Group
 from app.models.area import Area
 from app.models.attendance import AttendanceDay
 from app.models.enums import AssignmentStatus, AttendanceDayStatus
@@ -29,8 +30,20 @@ _STATUS_LABEL = {
 }
 
 
-async def build_context(db: AsyncSession, user: User) -> dict[str, Any]:
-    """Joriy supervizorning barcha talabalari bo'yicha hisobot konteksti."""
+async def build_context(
+    db: AsyncSession, user: User, academic_year_id: UUID | None = None
+) -> dict[str, Any]:
+    """Joriy supervizorning talabalari bo'yicha hisobot konteksti.
+
+    Yil bo'yicha filtrlanadi (default — aktiv o'quv yili), aks holda PDF
+    supervizor ishlagan BARCHA yillarni bitta ro'yxatga aralashtirib yuborardi.
+    """
+    if academic_year_id is None:
+        academic_year_id = (
+            await db.execute(
+                select(AcademicYear.id).where(AcademicYear.is_active.is_(True))
+            )
+        ).scalar_one_or_none()
     supervisor_ids = (
         (await db.execute(select(Supervisor.id).where(Supervisor.user_id == user.id)))
         .scalars()
@@ -70,37 +83,38 @@ async def build_context(db: AsyncSession, user: User) -> dict[str, Any]:
 
     rows: list[dict[str, Any]] = []
     if supervisor_ids:
-        # Asosiy biriktirishlar ro'yxati
-        result = (
-            await db.execute(
-                select(
-                    PracticeAssignment.id,
-                    User.last_name,
-                    User.first_name,
-                    User.middle_name,
-                    Student.hemis_id,
-                    Group.name.label("group_name"),
-                    Group.course,
-                    PracticeType.name.label("practice_type_name"),
-                    Organization.name.label("organization_name"),
-                    Area.name.label("area_name"),
-                    PracticeAssignment.status,
-                    PracticeAssignment.final_grade,
-                    PracticeAssignment.credit_earned,
-                    PracticeAssignment.start_date,
-                    PracticeAssignment.end_date,
-                    PracticeAssignment.required_weekdays,
-                )
-                .join(Student, Student.id == PracticeAssignment.student_id)
-                .join(User, User.id == Student.user_id)
-                .outerjoin(Group, Group.id == Student.group_id)
-                .join(PracticeType, PracticeType.id == PracticeAssignment.practice_type_id)
-                .outerjoin(Organization, Organization.id == PracticeAssignment.organization_id)
-                .outerjoin(Area, Area.id == PracticeAssignment.area_id)
-                .where(PracticeAssignment.supervisor_id.in_(supervisor_ids))
-                .order_by(Group.name, User.last_name, User.first_name)
+        # Asosiy biriktirishlar ro'yxati — snapshot guruh (tarixiy to'g'ri) + yil filtri
+        stmt = (
+            select(
+                PracticeAssignment.id,
+                User.last_name,
+                User.first_name,
+                User.middle_name,
+                Student.hemis_id,
+                Group.name.label("group_name"),
+                Group.course,
+                PracticeType.name.label("practice_type_name"),
+                Organization.name.label("organization_name"),
+                Area.name.label("area_name"),
+                PracticeAssignment.status,
+                PracticeAssignment.final_grade,
+                PracticeAssignment.credit_earned,
+                PracticeAssignment.start_date,
+                PracticeAssignment.end_date,
+                PracticeAssignment.required_weekdays,
             )
-        ).all()
+            .join(Student, Student.id == PracticeAssignment.student_id)
+            .join(User, User.id == Student.user_id)
+            .outerjoin(Group, Group.id == PracticeAssignment.group_id)
+            .join(PracticeType, PracticeType.id == PracticeAssignment.practice_type_id)
+            .outerjoin(Organization, Organization.id == PracticeAssignment.organization_id)
+            .outerjoin(Area, Area.id == PracticeAssignment.area_id)
+            .where(PracticeAssignment.supervisor_id.in_(supervisor_ids))
+            .order_by(Group.name, User.last_name, User.first_name)
+        )
+        if academic_year_id:
+            stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
+        result = (await db.execute(stmt)).all()
 
         assignment_ids = [r.id for r in result]
 
@@ -188,6 +202,8 @@ async def build_context(db: AsyncSession, user: User) -> dict[str, Any]:
     }
 
 
-async def render_pdf(db: AsyncSession, user: User) -> bytes:
-    context = await build_context(db, user)
+async def render_pdf(
+    db: AsyncSession, user: User, academic_year_id: UUID | None = None
+) -> bytes:
+    context = await build_context(db, user, academic_year_id)
     return pdf_svc.render_supervisor_report_pdf(context)

@@ -114,6 +114,7 @@ async def export_students(
 async def export_attendance(
     db: SessionDep,
     _: RequireAdmin,
+    academic_year_id: UUID | None = None,
     assignment_id: UUID | None = None,
     student_id: UUID | None = None,
     status: AttendanceDayStatus | None = None,
@@ -125,6 +126,7 @@ async def export_attendance(
 ) -> Response:
     content = await svc.export_attendance(
         db,
+        academic_year_id=academic_year_id,
         assignment_id=assignment_id,
         student_id=student_id,
         status=status,
@@ -138,8 +140,10 @@ async def export_attendance(
 
 
 @router.get("/assignments.csv", summary="Biriktirishlar CSV")
-async def export_assignments(db: SessionDep, _: RequireAdmin) -> Response:
-    content = await svc.export_assignments(db)
+async def export_assignments(
+    db: SessionDep, _: RequireAdmin, academic_year_id: UUID | None = None
+) -> Response:
+    content = await svc.export_assignments(db, academic_year_id=academic_year_id)
     return _csv_response(content, "biriktirishlar")
 
 
@@ -147,6 +151,7 @@ async def export_assignments(db: SessionDep, _: RequireAdmin) -> Response:
 async def export_final_reports(
     db: SessionDep,
     _: RequireAdmin,
+    academic_year_id: UUID | None = None,
     status: FinalReportStatus | None = None,
     group_id: UUID | None = None,
     direction_id: UUID | None = None,
@@ -156,6 +161,7 @@ async def export_final_reports(
 ) -> Response:
     content = await svc.export_final_reports(
         db,
+        academic_year_id=academic_year_id,
         status=status,
         group_id=group_id,
         direction_id=direction_id,
