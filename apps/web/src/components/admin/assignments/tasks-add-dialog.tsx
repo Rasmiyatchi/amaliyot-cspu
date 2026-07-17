@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { Calendar, Check, Loader2, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import {
@@ -51,6 +52,7 @@ function todayDate(): string {
 }
 
 export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
+  const { t } = useTranslation();
   const { data: templates, isPending } = useAvailableTemplates(
     open ? assignmentId : null,
   );
@@ -113,7 +115,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
 
   const applyBulkDueDate = () => {
     if (!bulkDueDate) {
-      toast.error("Avval umumiy deadline tanlang");
+      toast.error(t("assignmentsTasksAddDialog.selectBulkDeadlineFirst"));
       return;
     }
     setConfigs((prev) => {
@@ -125,7 +127,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
       }
       return next;
     });
-    toast.success("Tanlangan topshiriqlarga qo'llandi");
+    toast.success(t("assignmentsTasksAddDialog.bulkApplied"));
   };
 
   const handleSave = async () => {
@@ -136,11 +138,11 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
     for (const [id, cfg] of Object.entries(configs)) {
       if (!cfg.selected) continue;
       if (!cfg.due_date) {
-        toast.error("Har bir tanlangan topshiriqqa deadline kiriting");
+        toast.error(t("assignmentsTasksAddDialog.deadlineRequired"));
         return;
       }
       if (cfg.due_date < today) {
-        toast.error("Deadline o'tgan sana bo'lishi mumkin emas");
+        toast.error(t("assignmentsTasksAddDialog.deadlinePast"));
         return;
       }
       items.push({
@@ -151,18 +153,18 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
     }
 
     if (items.length === 0) {
-      toast.error("Kamida bitta topshiriq tanlang");
+      toast.error(t("assignmentsTasksAddDialog.selectAtLeastOne"));
       return;
     }
 
     try {
       const res = await addTasks.mutateAsync({ assignmentId, items });
-      toast.success(`${res.created} ta topshiriq qo'shildi`);
+      toast.success(t("assignmentsTasksAddDialog.tasksAdded", { count: res.created }));
       setConfigs({});
       setBulkDueDate("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -178,11 +180,10 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
-            Topshiriq qo'shish
+            {t("assignmentsTasksAddDialog.title")}
           </DialogTitle>
           <DialogDescription>
-            Topshiriqni tanlang, har biriga deadline va izoh kiriting. Allaqachon
-            qo'shilganlar bu ro'yxatda yo'q.
+            {t("assignmentsTasksAddDialog.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -195,7 +196,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
         {templates && templates.length === 0 && (
           <Alert>
             <AlertDescription>
-              Barcha mos topshiriqlar allaqachon qo'shilgan.
+              {t("assignmentsTasksAddDialog.allAlreadyAdded")}
             </AlertDescription>
           </Alert>
         )}
@@ -204,17 +205,22 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
           <>
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span className="text-muted-foreground">
-                Tanlangan: <strong>{selectedCount}</strong> / {templates.length}
+                {t("assignmentsTasksAddDialog.selectedLabel")}{" "}
+                <strong>{selectedCount}</strong> / {templates.length}
               </span>
               <Button size="sm" variant="outline" onClick={toggleAll}>
-                {selectedCount === templates.length ? "Hech birini" : "Barchasini"}
+                {selectedCount === templates.length
+                  ? t("assignmentsTasksAddDialog.selectNone")
+                  : t("assignmentsTasksAddDialog.selectAll")}
               </Button>
             </div>
 
             {selectedCount > 0 && (
               <div className="flex flex-wrap items-end gap-2 rounded-md border border-dashed border-border bg-muted/30 p-3">
                 <div className="flex-1 min-w-[180px]">
-                  <Label className="text-xs">Tanlanganlarga umumiy deadline</Label>
+                  <Label className="text-xs">
+                    {t("assignmentsTasksAddDialog.bulkDeadlineLabel")}
+                  </Label>
                   <Input
                     type="date"
                     value={bulkDueDate}
@@ -224,7 +230,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
                 </div>
                 <Button size="sm" variant="outline" onClick={applyBulkDueDate}>
                   <Calendar className="h-4 w-4" />
-                  Qo'llash
+                  {t("assignmentsTasksAddDialog.apply")}
                 </Button>
               </div>
             )}
@@ -241,29 +247,33 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
                     <div key={key} className="rounded-md border border-border">
                       <div className="flex items-center gap-2 border-b border-border px-3 py-2 text-sm">
                         <span className="font-medium">
-                          {sem === "fall" ? "Kuzgi" : "Bahorgi"}
+                          {sem === "fall"
+                            ? t("common.semesterFall")
+                            : t("common.semesterSpring")}
                         </span>
                         <TaskCategoryBadge
                           category={cat as "spiritual" | "academic" | "report"}
                         />
                         <span className="ml-auto text-xs text-muted-foreground">
-                          {items.reduce((a, t) => a + t.points, 0)} ball
+                          {t("assignmentsTasksAddDialog.points", {
+                            points: items.reduce((a, x) => a + x.points, 0),
+                          })}
                         </span>
                       </div>
                       <div>
-                        {items.map((t) => {
-                          const cfg = configs[t.id];
+                        {items.map((tpl) => {
+                          const cfg = configs[tpl.id];
                           const isChecked = cfg?.selected ?? false;
                           return (
                             <div
-                              key={t.id}
+                              key={tpl.id}
                               className={
                                 "border-b border-border last:border-0 " +
                                 (isChecked ? "bg-primary/5" : "")
                               }
                             >
                               <button
-                                onClick={() => toggle(t.id)}
+                                onClick={() => toggle(tpl.id)}
                                 className="flex w-full items-start gap-3 p-3 text-left transition-colors hover:bg-muted/30"
                               >
                                 <div
@@ -278,21 +288,27 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium leading-snug">
-                                    {t.title}
+                                    {tpl.title}
                                   </div>
                                   <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                    <TaskTypeLabel type={t.type} />
-                                    {t.quantity > 1 && (
-                                      <Badge variant="outline">{t.quantity} ta</Badge>
+                                    <TaskTypeLabel type={tpl.type} />
+                                    {tpl.quantity > 1 && (
+                                      <Badge variant="outline">
+                                        {t("assignmentsTasksAddDialog.quantity", {
+                                          count: tpl.quantity,
+                                        })}
+                                      </Badge>
                                     )}
-                                    {t.month_hint && <span>{t.month_hint}</span>}
+                                    {tpl.month_hint && <span>{tpl.month_hint}</span>}
                                   </div>
                                 </div>
                                 <Badge
                                   variant="secondary"
                                   className="shrink-0 font-mono"
                                 >
-                                  {t.points} ball
+                                  {t("assignmentsTasksAddDialog.points", {
+                                    points: tpl.points,
+                                  })}
                                 </Badge>
                               </button>
 
@@ -300,27 +316,28 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
                                 <div className="grid gap-2 border-t border-border bg-muted/20 px-3 py-3 sm:grid-cols-2">
                                   <div>
                                     <Label className="text-xs">
-                                      Deadline <span className="text-destructive">*</span>
+                                      {t("assignmentsTasksAddDialog.deadline")}{" "}
+                                      <span className="text-destructive">*</span>
                                     </Label>
                                     <Input
                                       type="date"
                                       value={cfg.due_date}
                                       min={todayDate()}
                                       onChange={(e) =>
-                                        updateConfig(t.id, { due_date: e.target.value })
+                                        updateConfig(tpl.id, { due_date: e.target.value })
                                       }
                                       className="h-9"
                                     />
                                   </div>
                                   <div>
                                     <Label className="text-xs">
-                                      Bayon (ixtiyoriy)
+                                      {t("assignmentsTasksAddDialog.notesOptional")}
                                     </Label>
                                     <Input
-                                      placeholder="Qo'shimcha izoh..."
+                                      placeholder={t("assignmentsTasksAddDialog.notesPlaceholder")}
                                       value={cfg.notes}
                                       onChange={(e) =>
-                                        updateConfig(t.id, { notes: e.target.value })
+                                        updateConfig(tpl.id, { notes: e.target.value })
                                       }
                                       maxLength={2000}
                                       className="h-9"
@@ -341,7 +358,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
 
         <DialogFooter>
           <Button variant="ghost" onClick={handleClose}>
-            Bekor
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleSave}
@@ -349,7 +366,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
           >
             {addTasks.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             <Plus className="h-4 w-4" />
-            Qo'shish ({selectedCount})
+            {t("common.add")} ({selectedCount})
           </Button>
         </DialogFooter>
       </DialogContent>

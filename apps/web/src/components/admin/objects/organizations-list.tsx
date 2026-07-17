@@ -1,5 +1,6 @@
 import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { OrganizationFormDialog } from "@/components/admin/objects/organization-form-dialog";
@@ -32,17 +33,18 @@ import type { Organization, OrganizationKind } from "@/lib/api/types";
 
 const ALL = "__all__";
 
-const KIND_LABEL: Record<OrganizationKind, string> = {
-  school: "Maktab",
-  mtt: "MTT",
-  lyceum: "Litsey",
-  college: "Kolleji",
-  company: "Korxona",
-  university: "OTM",
-  other: "Boshqa",
+const KIND_LABEL_KEY: Record<OrganizationKind, string> = {
+  school: "objectsOrganizationsList.kinds.school",
+  mtt: "objectsOrganizationsList.kinds.mtt",
+  lyceum: "objectsOrganizationsList.kinds.lyceum",
+  college: "objectsOrganizationsList.kinds.college",
+  company: "objectsOrganizationsList.kinds.company",
+  university: "objectsOrganizationsList.kinds.university",
+  other: "objectsOrganizationsList.kinds.other",
 };
 
 export function OrganizationsList() {
+  const { t } = useTranslation();
   const [searchInput, setSearchInput] = useState("");
   const [regionInput, setRegionInput] = useState("");
   const [kind, setKind] = useState<OrganizationKind | undefined>(undefined);
@@ -58,12 +60,12 @@ export function OrganizationsList() {
   const [creating, setCreating] = useState(false);
 
   const handleDelete = async (org: Organization) => {
-    if (!confirm(`"${org.name}" ni o'chirishni tasdiqlang?`)) return;
+    if (!confirm(t("objectsOrganizationsList.deleteConfirm", { name: org.name }))) return;
     try {
       await del.mutateAsync(org.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -71,7 +73,7 @@ export function OrganizationsList() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Qidiruv (nomi/direktor)"
+          placeholder={t("objectsOrganizationsList.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[200px] max-w-[240px]"
@@ -79,7 +81,7 @@ export function OrganizationsList() {
         <div className="relative">
           <MapPin className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Viloyat (joylashuv)"
+            placeholder={t("objectsOrganizationsList.regionPlaceholder")}
             value={regionInput}
             onChange={(e) => setRegionInput(e.target.value)}
             className="min-w-[180px] max-w-[200px] pl-8"
@@ -90,20 +92,20 @@ export function OrganizationsList() {
           onValueChange={(v) => setKind(v === ALL ? undefined : (v as OrganizationKind))}
         >
           <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Turi" />
+            <SelectValue placeholder={t("objectsOrganizationsList.kindLabel")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha turlar</SelectItem>
-            {(Object.keys(KIND_LABEL) as OrganizationKind[]).map((k) => (
+            <SelectItem value={ALL}>{t("objectsOrganizationsList.allKinds")}</SelectItem>
+            {(Object.keys(KIND_LABEL_KEY) as OrganizationKind[]).map((k) => (
               <SelectItem key={k} value={k}>
-                {KIND_LABEL[k]}
+                {t(KIND_LABEL_KEY[k])}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Button className="ml-auto" onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Yangi tashkilot
+          {t("objectsOrganizationsList.newOrganization")}
         </Button>
       </div>
 
@@ -119,12 +121,12 @@ export function OrganizationsList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nomi</TableHead>
-                <TableHead className="w-[100px]">Turi</TableHead>
-                <TableHead>Direktor</TableHead>
-                <TableHead>Viloyat</TableHead>
-                <TableHead className="w-[80px]">Sig'im</TableHead>
-                <TableHead className="w-[80px]">Status</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead className="w-[100px]">{t("objectsOrganizationsList.kindLabel")}</TableHead>
+                <TableHead>{t("objectsOrganizationsList.columns.director")}</TableHead>
+                <TableHead>{t("objectsOrganizationsList.columns.region")}</TableHead>
+                <TableHead className="w-[80px]">{t("objectsOrganizationsList.columns.capacity")}</TableHead>
+                <TableHead className="w-[80px]">{t("common.status")}</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -132,7 +134,7 @@ export function OrganizationsList() {
               {data.items.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Tashkilotlar topilmadi. "Yangi tashkilot" tugmasini bosing.
+                    {t("objectsOrganizationsList.emptyText")}
                   </TableCell>
                 </TableRow>
               )}
@@ -140,7 +142,7 @@ export function OrganizationsList() {
                 <TableRow key={o.id}>
                   <TableCell className="font-medium">{o.name}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{KIND_LABEL[o.kind]}</Badge>
+                    <Badge variant="secondary">{t(KIND_LABEL_KEY[o.kind])}</Badge>
                   </TableCell>
                   <TableCell className="text-sm">
                     {o.director_full_name}
@@ -157,9 +159,9 @@ export function OrganizationsList() {
                   <TableCell className="text-sm">{o.capacity}</TableCell>
                   <TableCell>
                     {o.is_active ? (
-                      <Badge variant="success">Aktiv</Badge>
+                      <Badge variant="success">{t("objectsOrganizationsList.activeBadge")}</Badge>
                     ) : (
-                      <Badge variant="outline">Deaktiv</Badge>
+                      <Badge variant="outline">{t("objectsOrganizationsList.inactiveBadge")}</Badge>
                     )}
                   </TableCell>
                   <TableCell>
@@ -168,7 +170,7 @@ export function OrganizationsList() {
                         size="icon"
                         variant="ghost"
                         onClick={() => setEditing(o)}
-                        aria-label="Tahrirlash"
+                        aria-label={t("common.edit")}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -176,7 +178,7 @@ export function OrganizationsList() {
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDelete(o)}
-                        aria-label="O'chirish"
+                        aria-label={t("common.delete")}
                         disabled={del.isPending}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />

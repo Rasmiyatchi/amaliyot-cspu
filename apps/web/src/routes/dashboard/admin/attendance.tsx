@@ -6,6 +6,7 @@ import {
   Loader2,
   XCircle,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { downloadExport } from "@/lib/api/exports";
@@ -35,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { dateLocale } from "@/i18n";
 import { useAttendanceDays, type AttendanceFilters } from "@/lib/api/attendance";
 import { useAssignments } from "@/lib/api/assignments";
 import { useDirections, useFaculties, useGroups } from "@/lib/api/academic";
@@ -47,6 +49,7 @@ import type {
 const ALL = "__all__";
 
 export function AttendancePage() {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<AttendanceFilters>({});
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<AttendanceDay | null>(null);
@@ -86,9 +89,9 @@ export function AttendancePage() {
         date_from: filters.date_from,
         date_to: filters.date_to,
       });
-      toast.success("CSV yuklab olindi");
+      toast.success(t("common.csvDownloaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setExporting(false);
     }
@@ -102,9 +105,9 @@ export function AttendancePage() {
             <CalendarCheck className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Davomat</h1>
+            <h1 className="text-2xl font-semibold">{t("adminAttendance.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Kunlik davomat: kelish, ketish va tasdiqlash
+              {t("adminAttendance.subtitle")}
             </p>
           </div>
         </div>
@@ -115,7 +118,7 @@ export function AttendancePage() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            CSV eksport
+            {t("adminAttendance.csvExport")}
           </Button>
           {selectedAssignment && (
             <Button
@@ -123,7 +126,7 @@ export function AttendancePage() {
               onClick={() => setMarkRedFor(selectedAssignment)}
             >
               <XCircle className="h-4 w-4" />
-              Qizilga belgilash
+              {t("adminAttendance.markRed")}
             </Button>
           )}
         </div>
@@ -132,7 +135,7 @@ export function AttendancePage() {
       {/* Filtrlar */}
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <Label className="text-xs">Fakultet</Label>
+          <Label className="text-xs">{t("common.faculty")}</Label>
           <Select
             value={filters.faculty_id ?? ALL}
             onValueChange={(v) => {
@@ -146,10 +149,10 @@ export function AttendancePage() {
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Fakultet" />
+              <SelectValue placeholder={t("common.faculty")} />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
-              <SelectItem value={ALL}>Barcha fakultetlar</SelectItem>
+              <SelectItem value={ALL}>{t("adminAttendance.allFaculties")}</SelectItem>
               {(faculties.data?.items ?? []).map((f) => (
                 <SelectItem key={f.id} value={f.id}>
                   {f.name}
@@ -160,7 +163,7 @@ export function AttendancePage() {
         </div>
 
         <div>
-          <Label className="text-xs">Yo'nalish</Label>
+          <Label className="text-xs">{t("common.direction")}</Label>
           <Select
             value={filters.direction_id ?? ALL}
             onValueChange={(v) => {
@@ -173,10 +176,10 @@ export function AttendancePage() {
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Yo'nalish" />
+              <SelectValue placeholder={t("common.direction")} />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
-              <SelectItem value={ALL}>Barcha yo'nalishlar</SelectItem>
+              <SelectItem value={ALL}>{t("adminAttendance.allDirections")}</SelectItem>
               {(directions.data?.items ?? []).map((d) => (
                 <SelectItem key={d.id} value={d.id}>
                   {d.code} — {d.name}
@@ -187,7 +190,7 @@ export function AttendancePage() {
         </div>
 
         <div>
-          <Label className="text-xs">Guruh</Label>
+          <Label className="text-xs">{t("common.group")}</Label>
           <Select
             value={filters.group_id ?? ALL}
             onValueChange={(v) => {
@@ -196,13 +199,13 @@ export function AttendancePage() {
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Guruh" />
+              <SelectValue placeholder={t("common.group")} />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
-              <SelectItem value={ALL}>Barcha guruhlar</SelectItem>
+              <SelectItem value={ALL}>{t("adminAttendance.allGroups")}</SelectItem>
               {(groups.data?.items ?? []).map((g) => (
                 <SelectItem key={g.id} value={g.id}>
-                  {g.name} ({g.course}-kurs)
+                  {g.name} ({t("common.courseN", { n: g.course })})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -210,7 +213,7 @@ export function AttendancePage() {
         </div>
 
         <div>
-          <Label className="text-xs">Biriktirish</Label>
+          <Label className="text-xs">{t("adminAttendance.assignment")}</Label>
           <Select
             value={filters.assignment_id ?? ALL}
             onValueChange={(v) => {
@@ -222,13 +225,13 @@ export function AttendancePage() {
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Biriktirish tanlang" />
+              <SelectValue placeholder={t("adminAttendance.assignmentPlaceholder")} />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
-              <SelectItem value={ALL}>Barcha biriktirishlar</SelectItem>
+              <SelectItem value={ALL}>{t("adminAttendance.allAssignments")}</SelectItem>
               {activeAssignments.length === 0 && (
                 <SelectItem value="__empty__" disabled>
-                  Aktiv biriktirish yo'q
+                  {t("adminAttendance.noActiveAssignments")}
                 </SelectItem>
               )}
               {activeAssignments.map((a) => (
@@ -241,7 +244,7 @@ export function AttendancePage() {
         </div>
 
         <div>
-          <Label className="text-xs">Status</Label>
+          <Label className="text-xs">{t("common.status")}</Label>
           <Select
             value={filters.status ?? ALL}
             onValueChange={(v) => {
@@ -253,19 +256,19 @@ export function AttendancePage() {
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t("common.status")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Barchasi</SelectItem>
-              <SelectItem value="pending">Kutilmoqda</SelectItem>
-              <SelectItem value="green">Yashil</SelectItem>
-              <SelectItem value="red">Qizil</SelectItem>
+              <SelectItem value={ALL}>{t("common.all")}</SelectItem>
+              <SelectItem value="pending">{t("adminAttendance.status.pending")}</SelectItem>
+              <SelectItem value="green">{t("adminAttendance.status.green")}</SelectItem>
+              <SelectItem value="red">{t("adminAttendance.status.red")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div>
-          <Label className="text-xs">Sana (dan)</Label>
+          <Label className="text-xs">{t("adminAttendance.dateFrom")}</Label>
           <Input
             type="date"
             value={filters.date_from ?? ""}
@@ -277,7 +280,7 @@ export function AttendancePage() {
         </div>
 
         <div>
-          <Label className="text-xs">Sana (gacha)</Label>
+          <Label className="text-xs">{t("adminAttendance.dateTo")}</Label>
           <Input
             type="date"
             value={filters.date_to ?? ""}
@@ -303,7 +306,7 @@ export function AttendancePage() {
                 setPage(1);
               }}
             >
-              Tozalash
+              {t("common.clear")}
             </Button>
           )}
         </div>
@@ -320,11 +323,11 @@ export function AttendancePage() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={CalendarCheck}
-            title="Davomat yozuvlari yo'q"
+            title={t("adminAttendance.emptyTitle")}
             description={
               filters.assignment_id
-                ? "Bu biriktirishda hali hech kim check-in qilmagan"
-                : "Talaba check-in qilgach yoki qizilga belgilangach bu yerda paydo bo'ladi"
+                ? t("adminAttendance.emptyAssignment")
+                : t("adminAttendance.emptyDefault")
             }
           />
         </div>
@@ -336,12 +339,12 @@ export function AttendancePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[120px]">Sana</TableHead>
-                  <TableHead>Talaba</TableHead>
-                  <TableHead>Obyekt</TableHead>
-                  <TableHead className="w-[100px]">Kelish</TableHead>
-                  <TableHead className="w-[100px]">Ketish</TableHead>
-                  <TableHead className="w-[120px]">Status</TableHead>
+                  <TableHead className="w-[120px]">{t("common.date")}</TableHead>
+                  <TableHead>{t("common.student")}</TableHead>
+                  <TableHead>{t("adminAttendance.object")}</TableHead>
+                  <TableHead className="w-[100px]">{t("adminAttendance.checkIn")}</TableHead>
+                  <TableHead className="w-[100px]">{t("adminAttendance.checkOut")}</TableHead>
+                  <TableHead className="w-[120px]">{t("common.status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -363,7 +366,7 @@ export function AttendancePage() {
                     </TableCell>
                     <TableCell className="text-xs">
                       {d.check_in_at
-                        ? new Date(d.check_in_at).toLocaleTimeString("uz-UZ", {
+                        ? new Date(d.check_in_at).toLocaleTimeString(dateLocale(), {
                             hour: "2-digit",
                             minute: "2-digit",
                           })
@@ -371,7 +374,7 @@ export function AttendancePage() {
                     </TableCell>
                     <TableCell className="text-xs">
                       {d.check_out_at
-                        ? new Date(d.check_out_at).toLocaleTimeString("uz-UZ", {
+                        ? new Date(d.check_out_at).toLocaleTimeString(dateLocale(), {
                             hour: "2-digit",
                             minute: "2-digit",
                           })
@@ -389,7 +392,7 @@ export function AttendancePage() {
           {data.total > 0 && (
             <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
               <div>
-                Jami: <span className="font-medium text-foreground">{data.total}</span>
+                {t("common.total")}: <span className="font-medium text-foreground">{data.total}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -399,7 +402,7 @@ export function AttendancePage() {
                   disabled={page <= 1 || isFetching}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Oldingi
+                  {t("common.previous")}
                 </Button>
                 <span className="px-2">
                   {page} / {totalPages}
@@ -410,7 +413,7 @@ export function AttendancePage() {
                   onClick={() => setPage(page + 1)}
                   disabled={page >= totalPages || isFetching}
                 >
-                  Keyingi
+                  {t("common.next")}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

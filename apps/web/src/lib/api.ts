@@ -1,5 +1,6 @@
 import ky, { HTTPError } from "ky";
 
+import i18n from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 
 const AUTH_PATH_PREFIX = "auth/"; // login/refresh/logout — retry cyclini oldini olish uchun
@@ -23,6 +24,8 @@ export const api = ky.create({
       (request) => {
         const token = useAuthStore.getState().accessToken;
         if (token) request.headers.set("Authorization", `Bearer ${token}`);
+        // Backend xato xabarlarini joriy tilda qaytarsin
+        request.headers.set("Accept-Language", i18n.language.startsWith("ru") ? "ru" : "uz");
       },
     ],
     beforeError: [

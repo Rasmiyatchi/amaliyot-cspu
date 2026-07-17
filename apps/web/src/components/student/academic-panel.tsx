@@ -1,5 +1,6 @@
 import { BookOpen, NotebookPen, Plus, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   JournalStatusBadge,
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { dateLocale } from "@/i18n";
 import {
   useAssignmentProgress,
   useAssignmentTasks,
@@ -30,6 +32,7 @@ type Props = {
 };
 
 export function StudentAcademicPanel({ assignmentId }: Props) {
+  const { t } = useTranslation();
   const { data: tasks } = useAssignmentTasks(assignmentId);
   const { data: progress } = useAssignmentProgress(assignmentId);
   const { data: journal } = useJournal(assignmentId);
@@ -62,13 +65,17 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">O'quv ishlari progress</CardTitle>
+          <CardTitle className="text-base">
+            {t("studentAcademicPanel.progressTitle")}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {progress && (
             <>
               <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Jami ball</span>
+                <span className="text-muted-foreground">
+                  {t("studentAcademicPanel.totalPoints")}
+                </span>
                 <span className="font-mono font-semibold">
                   {progress.tasks_earned_points} / {progress.tasks_max_points}
                 </span>
@@ -76,19 +83,25 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
               <Progress value={pointsPercent} className="h-2" />
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                 <div className="rounded-md bg-muted/40 px-2 py-1.5 text-center">
-                  <div className="text-muted-foreground">Tasdiqlangan</div>
+                  <div className="text-muted-foreground">
+                    {t("studentAcademicPanel.approved")}
+                  </div>
                   <div className="font-semibold text-success">
                     {progress.tasks_by_status.approved}
                   </div>
                 </div>
                 <div className="rounded-md bg-muted/40 px-2 py-1.5 text-center">
-                  <div className="text-muted-foreground">Yuborilgan</div>
+                  <div className="text-muted-foreground">
+                    {t("studentAcademicPanel.submitted")}
+                  </div>
                   <div className="font-semibold text-info">
                     {progress.tasks_by_status.submitted}
                   </div>
                 </div>
                 <div className="rounded-md bg-muted/40 px-2 py-1.5 text-center">
-                  <div className="text-muted-foreground">Rad etilgan</div>
+                  <div className="text-muted-foreground">
+                    {t("studentAcademicPanel.rejected")}
+                  </div>
                   <div className="font-semibold text-destructive">
                     {progress.tasks_by_status.rejected}
                   </div>
@@ -105,15 +118,17 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
             <TabsList>
               <TabsTrigger value="tasks">
                 <BookOpen className="h-3.5 w-3.5" />
-                Topshiriqlar {tasks ? `(${tasks.length})` : ""}
+                {t("studentAcademicPanel.tasksTab")} {tasks ? `(${tasks.length})` : ""}
               </TabsTrigger>
               <TabsTrigger value="journal">
                 <NotebookPen className="h-3.5 w-3.5" />
-                Kundalik {journal ? `(${journal.length})` : ""}
+                {t("studentAcademicPanel.journalTab")}{" "}
+                {journal ? `(${journal.length})` : ""}
               </TabsTrigger>
               <TabsTrigger value="analyses">
                 <Sparkles className="h-3.5 w-3.5" />
-                Dars tahlillari {analyses ? `(${analyses.length})` : ""}
+                {t("studentAcademicPanel.analysesTab")}{" "}
+                {analyses ? `(${analyses.length})` : ""}
               </TabsTrigger>
             </TabsList>
 
@@ -121,7 +136,7 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
             <TabsContent value="tasks" className="space-y-3">
               {(!tasks || tasks.length === 0) && (
                 <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Topshiriqlar yo'q. Admin bilan bog'laning.
+                  {t("studentAcademicPanel.noTasks")}
                 </div>
               )}
               {tasks && tasks.length > 0 && (
@@ -135,49 +150,57 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                         <div key={key} className="rounded-md border border-border">
                           <div className="flex items-center gap-2 border-b border-border px-3 py-2 text-sm">
                             <span className="font-medium">
-                              {sem === "fall" ? "Kuzgi" : "Bahorgi"}
+                              {sem === "fall"
+                                ? t("common.semesterFall")
+                                : t("common.semesterSpring")}
                             </span>
                             <TaskCategoryBadge category={cat as "spiritual" | "academic" | "report"} />
                           </div>
                           <div>
-                            {items.map((t) => (
+                            {items.map((task) => (
                               <button
-                                key={t.id}
-                                onClick={() => setSelectedTask(t)}
+                                key={task.id}
+                                onClick={() => setSelectedTask(task)}
                                 className="flex w-full items-start gap-3 border-b border-border p-3 text-left last:border-0 hover:bg-muted/30"
                               >
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-medium leading-snug">{t.template_title}</div>
+                                  <div className="font-medium leading-snug">{task.template_title}</div>
                                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                    <TaskTypeLabel type={t.template_type} />
-                                    {t.template_quantity > 1 && (
-                                      <Badge variant="outline">{t.template_quantity} ta</Badge>
+                                    <TaskTypeLabel type={task.template_type} />
+                                    {task.template_quantity > 1 && (
+                                      <Badge variant="outline">
+                                        {t("studentAcademicPanel.quantity", {
+                                          count: task.template_quantity,
+                                        })}
+                                      </Badge>
                                     )}
-                                    {t.template_month_hint && <span>{t.template_month_hint}</span>}
-                                    {t.due_date && (
+                                    {task.template_month_hint && <span>{task.template_month_hint}</span>}
+                                    {task.due_date && (
                                       <Badge
                                         variant="outline"
                                         className={
-                                          new Date(t.due_date) < new Date() &&
-                                          t.status !== "approved"
+                                          new Date(task.due_date) < new Date() &&
+                                          task.status !== "approved"
                                             ? "border-destructive/50 text-destructive"
                                             : ""
                                         }
                                       >
-                                        Deadline: {t.due_date}
+                                        {t("studentAcademicPanel.deadline", {
+                                          date: task.due_date,
+                                        })}
                                       </Badge>
                                     )}
                                   </div>
-                                  {t.notes && (
+                                  {task.notes && (
                                     <div className="mt-1 text-xs text-muted-foreground">
-                                      {t.notes}
+                                      {task.notes}
                                     </div>
                                   )}
                                 </div>
                                 <div className="flex shrink-0 flex-col items-end gap-1">
-                                  <TaskStatusBadge status={t.status} />
+                                  <TaskStatusBadge status={task.status} />
                                   <span className="font-mono text-xs">
-                                    {t.points_earned ?? "—"}/{t.template_points}
+                                    {task.points_earned ?? "—"}/{task.template_points}
                                   </span>
                                 </div>
                               </button>
@@ -200,12 +223,12 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                 }}
               >
                 <Plus className="h-3.5 w-3.5" />
-                Yangi kundalik
+                {t("studentAcademicPanel.newJournal")}
               </Button>
 
               {(!journal || journal.length === 0) && (
                 <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Kundalik yozuvlari yo'q
+                  {t("studentAcademicPanel.noJournal")}
                 </div>
               )}
               {journal?.map((j) => (
@@ -219,14 +242,16 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                 >
                   <div className="flex items-center gap-2">
                     <div className="font-mono text-xs text-muted-foreground">
-                      {new Date(j.date).toLocaleDateString("uz-UZ")}
+                      {new Date(j.date).toLocaleDateString(dateLocale())}
                     </div>
                     <JournalStatusBadge status={j.status} />
                   </div>
                   <div className="mt-2 line-clamp-2 text-sm">{j.content_md}</div>
                   {j.rejection_reason && (
                     <div className="mt-2 rounded-md bg-destructive/5 px-2 py-1 text-xs text-destructive">
-                      Sabab: {j.rejection_reason}
+                      {t("studentAcademicPanel.reason", {
+                        reason: j.rejection_reason,
+                      })}
                     </div>
                   )}
                 </button>
@@ -243,12 +268,12 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                 }}
               >
                 <Plus className="h-3.5 w-3.5" />
-                Yangi dars tahlili
+                {t("studentAcademicPanel.newAnalysis")}
               </Button>
 
               {(!analyses || analyses.length === 0) && (
                 <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Dars tahlili yo'q
+                  {t("studentAcademicPanel.noAnalyses")}
                 </div>
               )}
               {analyses?.map((a) => (
@@ -269,17 +294,19 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                       </Badge>
                     )}
                     <Badge variant="secondary" className="text-xs">
-                      {a.quarter}-chorak
+                      {t("studentAcademicPanel.quarterN", { n: a.quarter })}
                     </Badge>
                     <JournalStatusBadge status={a.status} />
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {new Date(a.date).toLocaleDateString("uz-UZ")}
+                    {new Date(a.date).toLocaleDateString(dateLocale())}
                   </div>
                   <div className="mt-1 line-clamp-2 text-sm">{a.analysis_md}</div>
                   {a.rejection_reason && (
                     <div className="mt-2 rounded-md bg-destructive/5 px-2 py-1 text-xs text-destructive">
-                      Sabab: {a.rejection_reason}
+                      {t("studentAcademicPanel.reason", {
+                        reason: a.rejection_reason,
+                      })}
                     </div>
                   )}
                 </button>

@@ -1,6 +1,8 @@
 import { ChevronLeft, ChevronRight, History, Shield } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
+import { dateLocale } from "@/i18n";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,16 +30,16 @@ import {
 
 const ALL = "__all__";
 
-const ACTION_LABEL: Record<string, string> = {
-  create: "Yaratdi",
-  update: "Tahrirladi",
-  delete: "O'chirdi",
-  approve: "Tasdiqladi",
-  reject: "Rad etdi",
-  override: "Override",
-  login_reset: "Parol reset",
-  import: "Import qildi",
-  export: "Eksport qildi",
+const ACTION_LABEL_KEY: Record<string, string> = {
+  create: "adminAuditLog.action.create",
+  update: "adminAuditLog.action.update",
+  delete: "adminAuditLog.action.delete",
+  approve: "adminAuditLog.action.approve",
+  reject: "adminAuditLog.action.reject",
+  override: "adminAuditLog.action.override",
+  login_reset: "adminAuditLog.action.loginReset",
+  import: "adminAuditLog.action.import",
+  export: "adminAuditLog.action.export",
 };
 
 const ACTION_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -52,23 +54,24 @@ const ACTION_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   export: "outline",
 };
 
-const ENTITY_LABEL: Record<string, string> = {
-  student: "Talaba",
-  student_credentials: "Login/parol",
-  supervisor: "Supervizor",
-  contract: "Shartnoma",
-  attendance_day: "Davomat",
-  final_report: "Yakuniy hisobot",
-  practice_assignment: "Biriktirish",
-  task_template: "Topshiriq shabloni",
-  document: "Hujjat",
-  organization: "Tashkilot",
-  area: "Hudud",
-  admin: "Admin",
-  system_settings: "Sozlama",
+const ENTITY_LABEL_KEY: Record<string, string> = {
+  student: "common.student",
+  student_credentials: "adminAuditLog.entity.studentCredentials",
+  supervisor: "common.supervisor",
+  contract: "adminAuditLog.entity.contract",
+  attendance_day: "adminAuditLog.entity.attendanceDay",
+  final_report: "adminAuditLog.entity.finalReport",
+  practice_assignment: "adminAuditLog.entity.practiceAssignment",
+  task_template: "adminAuditLog.entity.taskTemplate",
+  document: "adminAuditLog.entity.document",
+  organization: "common.organization",
+  area: "common.area",
+  admin: "adminAuditLog.entity.admin",
+  system_settings: "adminAuditLog.entity.systemSettings",
 };
 
 export function AuditLogPage() {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<AuditLogFilters>({});
   const [page, setPage] = useState(1);
   const pageSize = 30;
@@ -83,9 +86,9 @@ export function AuditLogPage() {
           <Shield className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold">Audit log</h1>
+          <h1 className="text-2xl font-semibold">{t("adminAuditLog.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Adminlar va super adminlarning muhim amallari tarixi
+            {t("adminAuditLog.subtitle")}
           </p>
         </div>
       </div>
@@ -99,13 +102,13 @@ export function AuditLogPage() {
           }}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Amal turi" />
+            <SelectValue placeholder={t("adminAuditLog.actionFilter")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha amallar</SelectItem>
-            {Object.keys(ACTION_LABEL).map((a) => (
+            <SelectItem value={ALL}>{t("adminAuditLog.allActions")}</SelectItem>
+            {Object.keys(ACTION_LABEL_KEY).map((a) => (
               <SelectItem key={a} value={a}>
-                {ACTION_LABEL[a]}
+                {t(ACTION_LABEL_KEY[a]!)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -118,13 +121,13 @@ export function AuditLogPage() {
           }}
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Entity turi" />
+            <SelectValue placeholder={t("adminAuditLog.entityFilter")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha entity</SelectItem>
-            {Object.keys(ENTITY_LABEL).map((e) => (
+            <SelectItem value={ALL}>{t("adminAuditLog.allEntities")}</SelectItem>
+            {Object.keys(ENTITY_LABEL_KEY).map((e) => (
               <SelectItem key={e} value={e}>
-                {ENTITY_LABEL[e]}
+                {t(ENTITY_LABEL_KEY[e]!)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -141,8 +144,8 @@ export function AuditLogPage() {
       {data && data.items.length === 0 && (
         <EmptyState
           icon={History}
-          title="Hozircha yozuv yo'q"
-          description="Adminlar amal qilganida shu yerda paydo bo'ladi"
+          title={t("adminAuditLog.emptyTitle")}
+          description={t("adminAuditLog.emptyDescription")}
           accent="muted"
         />
       )}
@@ -152,18 +155,18 @@ export function AuditLogPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[150px]">Vaqt</TableHead>
-                <TableHead className="w-[160px]">Kim</TableHead>
-                <TableHead className="w-[120px]">Amal</TableHead>
-                <TableHead className="w-[140px]">Entity</TableHead>
-                <TableHead>Tafsilot</TableHead>
+                <TableHead className="w-[150px]">{t("adminAuditLog.timeColumn")}</TableHead>
+                <TableHead className="w-[160px]">{t("adminAuditLog.whoColumn")}</TableHead>
+                <TableHead className="w-[120px]">{t("adminAuditLog.actionColumn")}</TableHead>
+                <TableHead className="w-[140px]">{t("adminAuditLog.entityColumn")}</TableHead>
+                <TableHead>{t("adminAuditLog.detailColumn")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.items.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell className="font-mono text-xs text-muted-foreground">
-                    {new Date(log.created_at).toLocaleString("uz-UZ", {
+                    {new Date(log.created_at).toLocaleString(dateLocale(), {
                       year: "2-digit",
                       month: "2-digit",
                       day: "2-digit",
@@ -179,11 +182,13 @@ export function AuditLogPage() {
                   </TableCell>
                   <TableCell>
                     <Badge variant={ACTION_VARIANT[log.action] ?? "outline"}>
-                      {ACTION_LABEL[log.action] ?? log.action}
+                      {ACTION_LABEL_KEY[log.action] ? t(ACTION_LABEL_KEY[log.action]!) : log.action}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm">
-                    {ENTITY_LABEL[log.entity_type] ?? log.entity_type}
+                    {ENTITY_LABEL_KEY[log.entity_type]
+                      ? t(ENTITY_LABEL_KEY[log.entity_type]!)
+                      : log.entity_type}
                   </TableCell>
                   <TableCell className="text-sm">
                     <div>{log.summary}</div>

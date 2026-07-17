@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -34,10 +35,10 @@ export function PromptDialog({
   open,
   title,
   description,
-  label = "Sabab",
+  label,
   placeholder,
-  confirmText = "Tasdiqlash",
-  cancelText = "Bekor",
+  confirmText,
+  cancelText,
   minLength = 3,
   maxLength = 2000,
   rows = 3,
@@ -46,6 +47,7 @@ export function PromptDialog({
   onConfirm,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   const [value, setValue] = useState("");
 
   useEffect(() => {
@@ -55,7 +57,7 @@ export function PromptDialog({
   const handleConfirm = () => {
     const trimmed = value.trim();
     if (trimmed.length < minLength) {
-      toast.error(`Kamida ${minLength} belgi kerak`);
+      toast.error(t("uiPromptDialog.minLengthError", { n: minLength }));
       return;
     }
     onConfirm(trimmed);
@@ -70,7 +72,7 @@ export function PromptDialog({
         </DialogHeader>
 
         <div>
-          <Label htmlFor="prompt-value">{label}</Label>
+          <Label htmlFor="prompt-value">{label ?? t("uiPromptDialog.reasonLabel")}</Label>
           <textarea
             id="prompt-value"
             value={value}
@@ -88,7 +90,7 @@ export function PromptDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={isPending}>
-            {cancelText}
+            {cancelText ?? t("common.cancel")}
           </Button>
           <Button
             variant={variant === "destructive" ? "destructive" : "default"}
@@ -96,7 +98,7 @@ export function PromptDialog({
             disabled={isPending || value.trim().length < minLength}
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {confirmText}
+            {confirmText ?? t("common.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -31,17 +32,18 @@ import { useOrganizations } from "@/lib/api/organizations";
 import { usePracticeTypes } from "@/lib/api/practice-types";
 import type { ContractTemplate } from "@/lib/api/types";
 
-const TEMPLATES: { value: ContractTemplate; label: string }[] = [
-  { value: "4_plus_2", label: "4+2 amaliyoti" },
-  { value: "pedagogical", label: "Pedagogik amaliyot" },
-  { value: "qualifying", label: "Malakaviy amaliyot" },
-  { value: "internship_production", label: "Ishlab chiqarish" },
-  { value: "partnership", label: "Dastlabki hamkorlik" },
+const TEMPLATES: { value: ContractTemplate; labelKey: string }[] = [
+  { value: "4_plus_2", labelKey: "contractsContractFormDialog.templates.fourPlusTwo" },
+  { value: "pedagogical", labelKey: "contractsContractFormDialog.templates.pedagogical" },
+  { value: "qualifying", labelKey: "contractsContractFormDialog.templates.qualifying" },
+  { value: "internship_production", labelKey: "contractsContractFormDialog.templates.production" },
+  { value: "partnership", labelKey: "contractsContractFormDialog.templates.partnership" },
 ];
 
 type Props = { open: boolean; onClose: () => void };
 
 export function ContractFormDialog({ open, onClose }: Props) {
+  const { t } = useTranslation();
   const create = useCreateContract();
 
   const [templateRef, setTemplateRef] = useState<ContractTemplate>("4_plus_2");
@@ -125,10 +127,10 @@ export function ContractFormDialog({ open, onClose }: Props) {
         end_date: endDate,
         notes: notes || null,
       });
-      toast.success("Shartnoma yaratildi — PDF generatsiyaga tayyor");
+      toast.success(t("contractsContractFormDialog.createdToast"));
       handleClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -136,9 +138,9 @@ export function ContractFormDialog({ open, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Yangi shartnoma</DialogTitle>
+          <DialogTitle>{t("contractsContractFormDialog.title")}</DialogTitle>
           <DialogDescription>
-            Tashkilot va amaliyot turi tanlab, mavjud biriktirishlardan shartnoma yarating
+            {t("contractsContractFormDialog.subtitle")}
           </DialogDescription>
         </DialogHeader>
 
@@ -146,33 +148,33 @@ export function ContractFormDialog({ open, onClose }: Props) {
           {/* Template + AY */}
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <Label>Shartnoma shabloni *</Label>
+              <Label>{t("contractsContractFormDialog.templateLabel")} *</Label>
               <Select value={templateRef} onValueChange={(v) => setTemplateRef(v as ContractTemplate)}>
                 <SelectTrigger className="mt-1.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TEMPLATES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
+                  {TEMPLATES.map((tpl) => (
+                    <SelectItem key={tpl.value} value={tpl.value}>
+                      {t(tpl.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>O'quv yili *</Label>
+              <Label>{t("common.academicYear")} *</Label>
               <Select value={academicYearId} onValueChange={setAcademicYearId}>
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Tanlang..." />
+                  <SelectValue placeholder={t("contractsContractFormDialog.selectPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {(academicYears.data ?? []).length === 0 ? (
-                    <SelectEmpty message="O'quv yillari yo'q" />
+                    <SelectEmpty message={t("contractsContractFormDialog.noAcademicYears")} />
                   ) : (
                     (academicYears.data ?? []).map((ay) => (
                       <SelectItem key={ay.id} value={ay.id}>
-                        {ay.name} {ay.is_active && "(aktiv)"}
+                        {ay.name} {ay.is_active && t("common.activeSuffix").trim()}
                       </SelectItem>
                     ))
                   )}
@@ -184,14 +186,14 @@ export function ContractFormDialog({ open, onClose }: Props) {
           {/* Organization + Practice type */}
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <Label>Tashkilot *</Label>
+              <Label>{t("common.organization")} *</Label>
               <Select value={organizationId} onValueChange={setOrganizationId}>
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Tanlang..." />
+                  <SelectValue placeholder={t("contractsContractFormDialog.selectPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {(organizations.data?.items ?? []).length === 0 ? (
-                    <SelectEmpty message="Tashkilotlar yo'q" />
+                    <SelectEmpty message={t("contractsContractFormDialog.noOrganizations")} />
                   ) : (
                     (organizations.data?.items ?? []).map((o) => (
                       <SelectItem key={o.id} value={o.id}>
@@ -203,10 +205,10 @@ export function ContractFormDialog({ open, onClose }: Props) {
               </Select>
             </div>
             <div>
-              <Label>Amaliyot turi *</Label>
+              <Label>{t("common.practiceType")} *</Label>
               <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Tanlang..." />
+                  <SelectValue placeholder={t("contractsContractFormDialog.selectPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {(practiceTypes.data ?? []).map((pt) => (
@@ -224,17 +226,19 @@ export function ContractFormDialog({ open, onClose }: Props) {
           {/* Assignments picker */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <Label>Biriktirishlar *</Label>
+              <Label>{t("contractsContractFormDialog.assignmentsLabel")} *</Label>
               {canShowAssignments && (assignments.data?.items ?? []).length > 0 && (
                 <Button type="button" size="sm" variant="outline" onClick={selectAll}>
-                  Hammasi ({assignments.data?.items.length})
+                  {t("contractsContractFormDialog.selectAllWithCount", {
+                    n: assignments.data?.items.length,
+                  })}
                 </Button>
               )}
             </div>
             {!canShowAssignments && (
               <Alert>
                 <AlertDescription className="text-xs">
-                  Avval tashkilot, amaliyot turi va o'quv yilini tanlang
+                  {t("contractsContractFormDialog.selectFiltersFirst")}
                 </AlertDescription>
               </Alert>
             )}
@@ -242,7 +246,7 @@ export function ContractFormDialog({ open, onClose }: Props) {
               <div className="max-h-60 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
                 {(assignments.data?.items ?? []).length === 0 ? (
                   <div className="py-6 text-center text-sm text-muted-foreground">
-                    Tanlangan tashkilot va amaliyot turi uchun biriktirishlar yo'q
+                    {t("contractsContractFormDialog.noAssignmentsForFilter")}
                   </div>
                 ) : (
                   (assignments.data?.items ?? []).map((a) => (
@@ -267,7 +271,11 @@ export function ContractFormDialog({ open, onClose }: Props) {
             )}
             {selectedIds.size > 0 && (
               <p className="mt-1 text-xs text-muted-foreground">
-                Tanlandi: <strong>{selectedIds.size}</strong>
+                <Trans
+                  i18nKey="contractsContractFormDialog.selectedCount"
+                  values={{ n: selectedIds.size }}
+                  components={[<strong key="0" />]}
+                />
               </p>
             )}
           </div>
@@ -277,7 +285,7 @@ export function ContractFormDialog({ open, onClose }: Props) {
           {/* Dates */}
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <Label htmlFor="s">Boshlanish *</Label>
+              <Label htmlFor="s">{t("contractsContractFormDialog.startDateLabel")} *</Label>
               <Input
                 id="s"
                 type="date"
@@ -287,7 +295,7 @@ export function ContractFormDialog({ open, onClose }: Props) {
               />
             </div>
             <div>
-              <Label htmlFor="e">Tugash *</Label>
+              <Label htmlFor="e">{t("contractsContractFormDialog.endDateLabel")} *</Label>
               <Input
                 id="e"
                 type="date"
@@ -299,19 +307,19 @@ export function ContractFormDialog({ open, onClose }: Props) {
           </div>
 
           <div>
-            <Label htmlFor="n">Izoh</Label>
+            <Label htmlFor="n">{t("common.note")}</Label>
             <Input
               id="n"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="mt-1.5"
-              placeholder="Ixtiyoriy"
+              placeholder={t("contractsContractFormDialog.optionalPlaceholder")}
             />
           </div>
 
           {create.isError && (
             <Alert variant="destructive">
-              <AlertTitle>Xatolik</AlertTitle>
+              <AlertTitle>{t("common.error")}</AlertTitle>
               <AlertDescription>
                 {(create.error as Error).message}
               </AlertDescription>
@@ -321,11 +329,12 @@ export function ContractFormDialog({ open, onClose }: Props) {
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleClose} disabled={create.isPending}>
-            Bekor qilish
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || create.isPending}>
             {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Yaratish {selectedIds.size > 0 && <span className="opacity-80">({selectedIds.size})</span>}
+            {t("contractsContractFormDialog.create")}{" "}
+            {selectedIds.size > 0 && <span className="opacity-80">({selectedIds.size})</span>}
           </Button>
         </DialogFooter>
       </DialogContent>

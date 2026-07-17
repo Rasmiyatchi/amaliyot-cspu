@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ type Props = {
 };
 
 export function OverrideDialog({ day, onClose }: Props) {
+  const { t } = useTranslation();
   const [newStatus, setNewStatus] = useState<AttendanceDayStatus>("green");
   const [reason, setReason] = useState("");
   const mutation = useOverrideDay();
@@ -36,7 +38,7 @@ export function OverrideDialog({ day, onClose }: Props) {
   const handleSubmit = async () => {
     if (!day) return;
     if (reason.trim().length < 3) {
-      toast.error("Sabab (kamida 3 belgi) majburiy");
+      toast.error(t("attendanceOverrideDialog.reasonRequired"));
       return;
     }
     try {
@@ -44,11 +46,11 @@ export function OverrideDialog({ day, onClose }: Props) {
         id: day.id,
         data: { new_status: newStatus, reason: reason.trim() },
       });
-      toast.success("Override saqlandi");
+      toast.success(t("attendanceOverrideDialog.overrideSaved"));
       setReason("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -58,18 +60,22 @@ export function OverrideDialog({ day, onClose }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" />
-            Super admin override
+            {t("attendanceOverrideDialog.title")}
           </DialogTitle>
           <DialogDescription>
             {day?.student_full_name} · {day?.date}
             <br />
-            Hozirgi status: <strong>{day?.status}</strong>. Bu amal audit jurnalga yoziladi.
+            <Trans
+              i18nKey="attendanceOverrideDialog.description"
+              values={{ status: day?.status }}
+              components={[<strong key="0" />]}
+            />
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <div>
-            <Label htmlFor="override-status">Yangi status</Label>
+            <Label htmlFor="override-status">{t("attendanceOverrideDialog.newStatus")}</Label>
             <Select
               value={newStatus}
               onValueChange={(v) => setNewStatus(v as AttendanceDayStatus)}
@@ -78,21 +84,23 @@ export function OverrideDialog({ day, onClose }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="green">Yashil</SelectItem>
-                <SelectItem value="red">Qizil</SelectItem>
-                <SelectItem value="pending">Kutilmoqda</SelectItem>
+                <SelectItem value="green">{t("attendanceOverrideDialog.statusGreen")}</SelectItem>
+                <SelectItem value="red">{t("attendanceOverrideDialog.statusRed")}</SelectItem>
+                <SelectItem value="pending">
+                  {t("attendanceOverrideDialog.statusPending")}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label htmlFor="override-reason">
-              Sabab <span className="text-destructive">*</span>
+              {t("attendanceOverrideDialog.reason")} <span className="text-destructive">*</span>
             </Label>
             <textarea
               id="override-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Masalan: tibbiy ma'lumotnoma taqdim etdi (№123, 2026-04-20)"
+              placeholder={t("attendanceOverrideDialog.reasonPlaceholder")}
               rows={4}
               className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
             />
@@ -101,14 +109,14 @@ export function OverrideDialog({ day, onClose }: Props) {
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            Bekor
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={mutation.isPending || reason.trim().length < 3}
           >
             {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Override tasdiqlash
+            {t("attendanceOverrideDialog.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

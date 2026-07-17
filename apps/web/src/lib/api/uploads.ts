@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import i18n from "@/i18n";
 
 import { useAuthStore } from "@/stores/auth";
 import type { UUID } from "@/lib/api/types";
@@ -20,7 +21,7 @@ async function postFile(
   file: File,
 ): Promise<{ attachment: Attachment; all: Attachment[] }> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
   const fd = new FormData();
   fd.append("file", file);
   const res = await fetch(url, {
@@ -63,7 +64,7 @@ export function useDeleteAttachment(kind: AttachmentKind, entityId: UUID) {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      if (!res.ok) throw new Error("O'chirishda xato");
+      if (!res.ok) throw new Error(i18n.t("common.deleteError"));
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
@@ -86,7 +87,7 @@ export function useAssignmentAttachments(assignmentId: UUID | null) {
         `/api/v1/uploads/assignments/${assignmentId}/all`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      if (!res.ok) throw new Error("Yuklab olinmadi");
+      if (!res.ok) throw new Error(i18n.t("common.downloadFailed"));
       return res.json() as Promise<AttachmentWithSource[]>;
     },
   });
@@ -98,7 +99,7 @@ export async function downloadAttachment(att: Attachment): Promise<void> {
   const res = await fetch(`/api/v1/uploads/file/${att.path}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error("Yuklab olishda xato");
+  if (!res.ok) throw new Error(i18n.t("common.downloadError"));
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

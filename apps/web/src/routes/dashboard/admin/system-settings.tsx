@@ -9,6 +9,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -25,6 +26,7 @@ import {
 import { useAuthStore } from "@/stores/auth";
 
 export function SystemSettingsPage() {
+  const { t } = useTranslation();
   const me = useAuthStore((s) => s.user);
   const isSuperAdmin = me?.role === "super_admin";
   const { data, isPending, error } = useSystemSettings();
@@ -64,9 +66,9 @@ export function SystemSettingsPage() {
           .filter(Boolean),
         email_notifications_enabled: emailNotif,
       });
-      toast.success("Sozlamalar saqlandi");
+      toast.success(t("adminSystemSettings.settingsSaved"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -77,10 +79,14 @@ export function SystemSettingsPage() {
         maintenance_mode: confirmMaintenance,
         maintenance_message: confirmMaintenance ? maintenanceMsg.trim() || null : null,
       });
-      toast.success(confirmMaintenance ? "Profilaktika yoqildi" : "Profilaktika o'chirildi");
+      toast.success(
+        confirmMaintenance
+          ? t("adminSystemSettings.maintenanceEnabled")
+          : t("adminSystemSettings.maintenanceDisabled"),
+      );
       setConfirmMaintenance(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -89,7 +95,7 @@ export function SystemSettingsPage() {
       <div className="container py-8">
         <Alert variant="destructive">
           <AlertDescription>
-            Bu sahifaga faqat Super Admin kira oladi
+            {t("adminSystemSettings.superAdminOnly")}
           </AlertDescription>
         </Alert>
       </div>
@@ -103,9 +109,9 @@ export function SystemSettingsPage() {
           <Settings className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold">Tizim sozlamalari</h1>
+          <h1 className="text-2xl font-semibold">{t("adminSystemSettings.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Platforma global konfiguratsiyasi
+            {t("adminSystemSettings.subtitle")}
           </p>
         </div>
       </div>
@@ -132,28 +138,28 @@ export function SystemSettingsPage() {
                     maintenance ? "h-4 w-4 text-destructive" : "h-4 w-4 text-success"
                   }
                 />
-                Profilaktika rejimi
+                {t("adminSystemSettings.maintenanceTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {maintenance && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Saytni faqat Super Admin ko'ra oladi</AlertTitle>
+                  <AlertTitle>{t("adminSystemSettings.maintenanceAlertTitle")}</AlertTitle>
                   <AlertDescription>
-                    Boshqa foydalanuvchilarga 503 xatosi qaytariladi.
+                    {t("adminSystemSettings.maintenanceAlertDesc")}
                   </AlertDescription>
                 </Alert>
               )}
 
               <div>
-                <Label htmlFor="maint-msg">Foydalanuvchilarga xabar</Label>
+                <Label htmlFor="maint-msg">{t("adminSystemSettings.maintenanceMsgLabel")}</Label>
                 <textarea
                   id="maint-msg"
                   value={maintenanceMsg}
                   onChange={(e) => setMaintenanceMsg(e.target.value)}
                   rows={2}
-                  placeholder="Tizim yangilanmoqda. 30 daqiqada ochiladi."
+                  placeholder={t("adminSystemSettings.maintenanceMsgPlaceholder")}
                   className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                 />
               </div>
@@ -166,7 +172,7 @@ export function SystemSettingsPage() {
                     disabled={update.isPending}
                   >
                     {update.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Profilaktikani o'chirish
+                    {t("adminSystemSettings.disableMaintenance")}
                   </Button>
                 ) : (
                   <Button
@@ -176,7 +182,7 @@ export function SystemSettingsPage() {
                   >
                     {update.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                     <Power className="h-4 w-4" />
-                    Profilaktikani yoqish
+                    {t("adminSystemSettings.enableMaintenance")}
                   </Button>
                 )}
               </div>
@@ -188,12 +194,12 @@ export function SystemSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Settings className="h-4 w-4" />
-                Umumiy sozlamalar
+                {t("adminSystemSettings.generalTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="site-name">Sayt nomi *</Label>
+                <Label htmlFor="site-name">{t("adminSystemSettings.siteNameLabel")}</Label>
                 <Input
                   id="site-name"
                   value={siteName}
@@ -201,7 +207,7 @@ export function SystemSettingsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="site-desc">Sayt tavsifi</Label>
+                <Label htmlFor="site-desc">{t("adminSystemSettings.siteDescLabel")}</Label>
                 <textarea
                   id="site-desc"
                   value={siteDesc}
@@ -218,13 +224,13 @@ export function SystemSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <FileText className="h-4 w-4" />
-                Fayl yuklash limitlari
+                {t("adminSystemSettings.fileLimitsTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor="max-size">Maksimal hajm (MB)</Label>
+                  <Label htmlFor="max-size">{t("adminSystemSettings.maxSizeLabel")}</Label>
                   <Input
                     id="max-size"
                     type="number"
@@ -236,13 +242,13 @@ export function SystemSettingsPage() {
                 </div>
                 <div>
                   <Label htmlFor="allowed-types">
-                    Ruxsat etilgan turlar (vergul bilan)
+                    {t("adminSystemSettings.allowedTypesLabel")}
                   </Label>
                   <Input
                     id="allowed-types"
                     value={allowedTypes}
                     onChange={(e) => setAllowedTypes(e.target.value)}
-                    placeholder="pdf, jpg, png, docx"
+                    placeholder={t("adminSystemSettings.allowedTypesPlaceholder")}
                   />
                 </div>
               </div>
@@ -254,7 +260,7 @@ export function SystemSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Bell className="h-4 w-4" />
-                Bildirishnomalar
+                {t("adminSystemSettings.notificationsTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -266,9 +272,9 @@ export function SystemSettingsPage() {
                   className="h-4 w-4"
                 />
                 <div>
-                  <div className="text-sm font-medium">Email bildirishnomalar</div>
+                  <div className="text-sm font-medium">{t("adminSystemSettings.emailNotifLabel")}</div>
                   <div className="text-xs text-muted-foreground">
-                    SMTP sozlangandan keyin ishlaydi (hozircha placeholder)
+                    {t("adminSystemSettings.emailNotifHint")}
                   </div>
                 </div>
               </label>
@@ -281,7 +287,7 @@ export function SystemSettingsPage() {
             <Button onClick={handleSave} disabled={update.isPending}>
               {update.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               <Save className="h-4 w-4" />
-              Sozlamalarni saqlash
+              {t("adminSystemSettings.saveButton")}
             </Button>
           </div>
         </div>
@@ -291,22 +297,20 @@ export function SystemSettingsPage() {
         open={confirmMaintenance !== null}
         title={
           confirmMaintenance
-            ? "Profilaktikani yoqish?"
-            : "Profilaktikani o'chirish?"
+            ? t("adminSystemSettings.confirmEnableTitle")
+            : t("adminSystemSettings.confirmDisableTitle")
         }
         description={
-          confirmMaintenance ? (
-            <>
-              Hamma foydalanuvchilarga (Super Admin tashqari) tizim vaqtincha mavjud
-              emasligini ko'rsatish boshlanadi. Talabalar va supervizorlar ishlay
-              olmaydilar.
-            </>
-          ) : (
-            "Tizim hammaga ochiladi va normal ishlay boshlaydi."
-          )
+          confirmMaintenance
+            ? t("adminSystemSettings.confirmEnableDesc")
+            : t("adminSystemSettings.confirmDisableDesc")
         }
         variant={confirmMaintenance ? "destructive" : "default"}
-        confirmText={confirmMaintenance ? "Yoqish" : "O'chirish"}
+        confirmText={
+          confirmMaintenance
+            ? t("adminSystemSettings.enableShort")
+            : t("adminSystemSettings.disableShort")
+        }
         isPending={update.isPending}
         onConfirm={handleMaintenanceToggle}
         onClose={() => setConfirmMaintenance(null)}

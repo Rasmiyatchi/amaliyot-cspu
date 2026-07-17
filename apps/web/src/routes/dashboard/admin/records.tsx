@@ -1,8 +1,10 @@
 import { ChevronLeft, ChevronRight, ClipboardCheck, Download, FileText, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useDebounce } from "@/hooks/use-debounce";
+import { dateLocale } from "@/i18n";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -39,19 +41,20 @@ const ALL = "__all__";
 const COURSES = [1, 2, 3, 4, 5];
 
 const EDU_FORMS = [
-  { value: "daytime", label: "Kunduzgi" },
-  { value: "evening", label: "Kechki" },
-  { value: "correspondence", label: "Sirtqi" },
-  { value: "distance", label: "Masofaviy" },
+  { value: "daytime", labelKey: "adminRecords.eduForm.daytime" },
+  { value: "evening", labelKey: "adminRecords.eduForm.evening" },
+  { value: "correspondence", labelKey: "adminRecords.eduForm.correspondence" },
+  { value: "distance", labelKey: "adminRecords.eduForm.distance" },
 ];
 const DEGREE_TYPES = [
-  { value: "bachelor", label: "Bakalavr" },
-  { value: "master", label: "Magistr" },
-  { value: "phd", label: "PhD / Doktorantura" },
+  { value: "bachelor", labelKey: "adminRecords.degreeType.bachelor" },
+  { value: "master", labelKey: "adminRecords.degreeType.master" },
+  { value: "phd", labelKey: "adminRecords.degreeType.phd" },
 ];
 const PAGE_SIZE = 20;
 
 export function RecordsPage() {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<RecordFilters>({});
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -88,7 +91,7 @@ export function RecordsPage() {
       if (kind === "xlsx") await downloadRecordsXlsx(effectiveFilters);
       else await downloadRecordsPdf(effectiveFilters);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Yuklab bo'lmadi");
+      toast.error(e instanceof Error ? e.message : t("adminRecords.downloadFailed"));
     } finally {
       setExporting(null);
     }
@@ -102,9 +105,9 @@ export function RecordsPage() {
             <ClipboardCheck className="h-5 w-5 text-success" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Qaydnomalar</h1>
+            <h1 className="text-2xl font-semibold">{t("adminRecords.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Amaliyotdagi talabalar ro'yxati va baholari
+              {t("adminRecords.subtitle")}
             </p>
           </div>
         </div>
@@ -119,7 +122,7 @@ export function RecordsPage() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            Excel yuklab olish
+            {t("adminRecords.downloadExcel")}
           </Button>
           <Button
             onClick={() => handleExport("pdf")}
@@ -130,7 +133,7 @@ export function RecordsPage() {
             ) : (
               <FileText className="h-4 w-4" />
             )}
-            Baholash qaydnomasi
+            {t("adminRecords.downloadPdf")}
           </Button>
         </div>
       </div>
@@ -138,7 +141,7 @@ export function RecordsPage() {
       {/* Filters */}
       <div className="mb-4 space-y-2 rounded-lg border border-border p-3">
         <Input
-          placeholder="Ism yoki familiya bo'yicha qidiring..."
+          placeholder={t("adminRecords.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
@@ -148,13 +151,13 @@ export function RecordsPage() {
             onValueChange={(v) => setFilter({ degree_type: v === ALL ? undefined : v })}
           >
             <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Ta'lim turi" />
+              <SelectValue placeholder={t("adminRecords.degreeTypeFilter")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Barcha ta'lim turi</SelectItem>
+              <SelectItem value={ALL}>{t("adminRecords.allDegreeTypes")}</SelectItem>
               {DEGREE_TYPES.map((d) => (
                 <SelectItem key={d.value} value={d.value}>
-                  {d.label}
+                  {t(d.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -164,13 +167,13 @@ export function RecordsPage() {
             onValueChange={(v) => setFilter({ education_form: v === ALL ? undefined : v })}
           >
             <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Ta'lim shakli" />
+              <SelectValue placeholder={t("adminRecords.eduFormFilter")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Barcha ta'lim shakli</SelectItem>
+              <SelectItem value={ALL}>{t("adminRecords.allEduForms")}</SelectItem>
               {EDU_FORMS.map((f) => (
                 <SelectItem key={f.value} value={f.value}>
-                  {f.label}
+                  {t(f.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -182,10 +185,10 @@ export function RecordsPage() {
             }
           >
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Mutaxassislik" />
+              <SelectValue placeholder={t("adminRecords.specialty")} />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
-              <SelectItem value={ALL}>Barcha mutaxassislik</SelectItem>
+              <SelectItem value={ALL}>{t("adminRecords.allSpecialties")}</SelectItem>
               {(directionsQ.data?.items ?? []).map((d) => (
                 <SelectItem key={d.id} value={d.id}>
                   {d.code} · {d.name}
@@ -200,13 +203,13 @@ export function RecordsPage() {
             }
           >
             <SelectTrigger className="w-[130px]">
-              <SelectValue placeholder="Kurs" />
+              <SelectValue placeholder={t("common.course")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Barcha kurs</SelectItem>
+              <SelectItem value={ALL}>{t("adminRecords.allCourses")}</SelectItem>
               {COURSES.map((c) => (
                 <SelectItem key={c} value={String(c)}>
-                  {c}-kurs
+                  {t("common.courseN", { n: c })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -216,10 +219,10 @@ export function RecordsPage() {
             onValueChange={(v) => setFilter({ group_id: v === ALL ? undefined : (v as UUID) })}
           >
             <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Guruh" />
+              <SelectValue placeholder={t("common.group")} />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
-              <SelectItem value={ALL}>Barcha guruh</SelectItem>
+              <SelectItem value={ALL}>{t("adminRecords.allGroups")}</SelectItem>
               {(groupsQ.data?.items ?? []).map((g) => (
                 <SelectItem key={g.id} value={g.id}>
                   {g.name}
@@ -232,10 +235,10 @@ export function RecordsPage() {
             onValueChange={(v) => setFilter({ supervisor_id: v === ALL ? undefined : (v as UUID) })}
           >
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Rahbar" />
+              <SelectValue placeholder={t("adminRecords.supervisorFilter")} />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
-              <SelectItem value={ALL}>Barcha rahbar</SelectItem>
+              <SelectItem value={ALL}>{t("adminRecords.allSupervisors")}</SelectItem>
               {(supervisorsQ.data?.items ?? []).map((s) => (
                 <SelectItem key={s.id} value={s.id}>
                   {s.full_name}
@@ -259,7 +262,7 @@ export function RecordsPage() {
       </div>
 
       <div className="mb-2 text-sm text-muted-foreground">
-        {rows.length} ta amaliyot topildi
+        {t("adminRecords.foundCount", { count: rows.length })}
       </div>
 
       {isPending && !data && <TableSkeleton columns={11} rows={8} />}
@@ -275,16 +278,16 @@ export function RecordsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">№</TableHead>
-                <TableHead>Talaba</TableHead>
-                <TableHead>Mutaxassislik</TableHead>
-                <TableHead>Guruh</TableHead>
-                <TableHead className="w-[70px]">Kurs</TableHead>
-                <TableHead>Amaliyot nomi</TableHead>
-                <TableHead>Korxona</TableHead>
-                <TableHead className="w-[160px]">Muddat</TableHead>
-                <TableHead className="w-[100px]">Davomat %</TableHead>
-                <TableHead className="w-[120px]">Korxona bahosi</TableHead>
-                <TableHead className="w-[130px]">Qaydnoma bahosi</TableHead>
+                <TableHead>{t("common.student")}</TableHead>
+                <TableHead>{t("adminRecords.specialty")}</TableHead>
+                <TableHead>{t("common.group")}</TableHead>
+                <TableHead className="w-[70px]">{t("common.course")}</TableHead>
+                <TableHead>{t("adminRecords.practiceName")}</TableHead>
+                <TableHead>{t("adminRecords.organizationColumn")}</TableHead>
+                <TableHead className="w-[160px]">{t("adminRecords.durationColumn")}</TableHead>
+                <TableHead className="w-[100px]">{t("adminRecords.attendancePct")}</TableHead>
+                <TableHead className="w-[120px]">{t("adminRecords.orgGrade")}</TableHead>
+                <TableHead className="w-[130px]">{t("adminRecords.recordGrade")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -293,8 +296,8 @@ export function RecordsPage() {
                   <TableCell colSpan={11} className="p-0">
                     <EmptyState
                       icon={ClipboardCheck}
-                      title="Ma'lumot yo'q"
-                      description="Tanlangan filtrlar bo'yicha qaydnoma topilmadi"
+                      title={t("adminRecords.emptyTitle")}
+                      description={t("adminRecords.emptyDescription")}
                       compact
                     />
                   </TableCell>
@@ -314,8 +317,8 @@ export function RecordsPage() {
                   <TableCell className="text-sm">{r.practice_type_name}</TableCell>
                   <TableCell className="text-sm">{r.object_name ?? "—"}</TableCell>
                   <TableCell className="text-xs">
-                    {new Date(r.start_date).toLocaleDateString("uz-UZ")} —{" "}
-                    {new Date(r.end_date).toLocaleDateString("uz-UZ")}
+                    {new Date(r.start_date).toLocaleDateString(dateLocale())} —{" "}
+                    {new Date(r.end_date).toLocaleDateString(dateLocale())}
                   </TableCell>
                   <TableCell>
                     {r.attendance_pct !== null ? `${r.attendance_pct}%` : "—"}
@@ -350,7 +353,7 @@ export function RecordsPage() {
             disabled={page <= 1}
           >
             <ChevronLeft className="h-4 w-4" />
-            Oldingi
+            {t("common.previous")}
           </Button>
           <span className="px-2">
             {page} / {totalPages}
@@ -361,7 +364,7 @@ export function RecordsPage() {
             onClick={() => setPage(page + 1)}
             disabled={page >= totalPages}
           >
-            Keyingi
+            {t("common.next")}
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,7 @@ export function StudentsTable({
   onToggleSelect,
   onTogglePage,
 }: Props) {
+  const { t } = useTranslation();
   const q = useStudents(filters, page, pageSize);
   const selectable = !!selectedIds && !!onToggleSelect && !!onTogglePage;
 
@@ -71,17 +73,17 @@ export function StudentsTable({
                   <input
                     type="checkbox"
                     className="h-4 w-4 cursor-pointer"
-                    aria-label="Sahifadagi hammasini tanlash"
+                    aria-label={t("studentsStudentsTable.selectAllOnPage")}
                     checked={allOnPageSelected}
                     onChange={(e) => onTogglePage!(pageIds, e.target.checked)}
                   />
                 </TableHead>
               )}
-              <TableHead className="w-[280px]">Talaba</TableHead>
-              <TableHead>Yo'nalish</TableHead>
-              <TableHead className="w-[120px]">Guruh</TableHead>
-              <TableHead>Viloyat</TableHead>
-              <TableHead className="w-[140px]">Status</TableHead>
+              <TableHead className="w-[280px]">{t("common.student")}</TableHead>
+              <TableHead>{t("common.direction")}</TableHead>
+              <TableHead className="w-[120px]">{t("common.group")}</TableHead>
+              <TableHead>{t("studentsStudentsTable.region")}</TableHead>
+              <TableHead className="w-[140px]">{t("common.status")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -91,7 +93,7 @@ export function StudentsTable({
                   colSpan={selectable ? 6 : 5}
                   className="text-center text-muted-foreground"
                 >
-                  Talabalar topilmadi
+                  {t("studentsStudentsTable.empty")}
                 </TableCell>
               </TableRow>
             )}
@@ -106,7 +108,7 @@ export function StudentsTable({
                     <input
                       type="checkbox"
                       className="h-4 w-4 cursor-pointer"
-                      aria-label="Tanlash"
+                      aria-label={t("studentsStudentsTable.selectRow")}
                       checked={selectedIds!.has(s.id)}
                       onChange={() => onToggleSelect!(s.id)}
                     />
@@ -146,7 +148,9 @@ export function StudentsTable({
                     <div className="text-sm">
                       {s.group_name}
                       {s.course ? (
-                        <div className="text-xs text-muted-foreground">{s.course}-kurs</div>
+                        <div className="text-xs text-muted-foreground">
+                          {t("common.courseN", { n: s.course })}
+                        </div>
                       ) : null}
                     </div>
                   ) : (
@@ -181,7 +185,7 @@ export function StudentsTable({
               disabled={page <= 1 || q.isFetching}
             >
               <ChevronLeft className="h-4 w-4" />
-              Oldingi
+              {t("common.previous")}
             </Button>
             <span className="px-2">
               {page} / {totalPages}
@@ -192,7 +196,7 @@ export function StudentsTable({
               onClick={() => onPageChange(page + 1)}
               disabled={page >= totalPages || q.isFetching}
             >
-              Keyingi
+              {t("common.next")}
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

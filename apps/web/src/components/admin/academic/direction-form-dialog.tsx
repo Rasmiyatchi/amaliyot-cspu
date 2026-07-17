@@ -1,8 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { TFunction } from "i18next";
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -22,17 +24,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCreateDirection, useFaculties, useUpdateDirection } from "@/lib/api/academic";
 import type { Direction } from "@/lib/api/types";
 
-const schema = z.object({
-  faculty_id: z.string().uuid("Fakultet tanlang"),
-  code: z.string().regex(/^\d{8}$/, "8 raqamli yo'nalish kodi"),
-  name: z.string().min(2).max(200),
-});
+const makeSchema = (t: TFunction) =>
+  z.object({
+    faculty_id: z.string().uuid(t("academicDirectionFormDialog.facultyRequired")),
+    code: z
+      .string()
+      .regex(/^\d{8}$/, t("academicDirectionFormDialog.codeInvalid")),
+    name: z.string().min(2).max(200),
+  });
 
-type Values = z.infer<typeof schema>;
+type Values = z.infer<ReturnType<typeof makeSchema>>;
 
 type Props = { open: boolean; existing: Direction | null; onClose: () => void };
 
 export function DirectionFormDialog({ open, existing, onClose }: Props) {
+  const { t } = useTranslation();
   const create = useCreateDirection();
   const update = useUpdateDirection();
   const faculties = useFaculties();
@@ -40,7 +46,7 @@ export function DirectionFormDialog({ open, existing, onClose }: Props) {
 
   const form = useForm<Values>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(makeSchema(t)) as any,
     defaultValues: { faculty_id: "", code: "", name: "" },
   });
 
@@ -60,14 +66,14 @@ export function DirectionFormDialog({ open, existing, onClose }: Props) {
     try {
       if (isEdit && existing) {
         await update.mutateAsync({ id: existing.id, data: v });
-        toast.success("Yo'nalish yangilandi");
+        toast.success(t("academicDirectionFormDialog.updatedToast"));
       } else {
         await create.mutateAsync(v);
-        toast.success("Yo'nalish yaratildi");
+        toast.success(t("academicDirectionFormDialog.createdToast"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -78,9 +84,13 @@ export function DirectionFormDialog({ open, existing, onClose }: Props) {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Yo'nalishni tahrirlash" : "Yangi yo'nalish"}
+            {isEdit
+              ? t("academicDirectionFormDialog.editTitle")
+              : t("academicDirectionFormDialog.createTitle")}
           </DialogTitle>
-          <DialogDescription>Yo'nalish kodi va nomi</DialogDescription>
+          <DialogDescription>
+            {t("academicDirectionFormDialog.description")}
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
@@ -89,16 +99,20 @@ export function DirectionFormDialog({ open, existing, onClose }: Props) {
               name="faculty_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Fakultet *</FormLabel>
+                  <FormLabel>{t("common.faculty")} *</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Fakultetni tanlang..." />
+                        <SelectValue
+                          placeholder={t("academicDirectionFormDialog.facultyPlaceholder")}
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {(faculties.data?.items ?? []).length === 0 ? (
-                        <SelectEmpty message="Fakultetlar yo'q — avval qo'shing" />
+                        <SelectEmpty
+                          message={t("academicDirectionFormDialog.facultiesEmpty")}
+                        />
                       ) : (
                         (faculties.data?.items ?? []).map((f) => (
                           <SelectItem key={f.id} value={f.id}>
@@ -117,7 +131,7 @@ export function DirectionFormDialog({ open, existing, onClose }: Props) {
               name="code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Yo'nalish kodi *</FormLabel>
+                  <FormLabel>{t("academicDirectionFormDialog.codeLabel")} *</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="60110900"
@@ -135,9 +149,12 @@ export function DirectionFormDialog({ open, existing, onClose }: Props) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nomi *</FormLabel>
+                  <FormLabel>{t("common.name")} *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Biologiya" {...field} />
+                    <Input
+                      placeholder={t("academicDirectionFormDialog.namePlaceholder")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -145,11 +162,11 @@ export function DirectionFormDialog({ open, existing, onClose }: Props) {
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
-                Bekor qilish
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={busy}>
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isEdit ? "Saqlash" : "Yaratish"}
+                {isEdit ? t("common.save") : t("academicDirectionFormDialog.create")}
               </Button>
             </DialogFooter>
           </form>

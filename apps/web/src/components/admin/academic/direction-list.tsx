@@ -1,5 +1,6 @@
 import { GraduationCap, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { DirectionFormDialog } from "@/components/admin/academic/direction-form-dialog";
@@ -22,6 +23,7 @@ import type { Direction, UUID } from "@/lib/api/types";
 const ALL = "__all__";
 
 export function DirectionList() {
+  const { t } = useTranslation();
   const faculties = useFaculties();
   const [facultyId, setFacultyId] = useState<UUID | undefined>(undefined);
   const [search, setSearch] = useState("");
@@ -40,12 +42,12 @@ export function DirectionList() {
   }, [directions.data, search]);
 
   const handleDelete = async (d: Direction) => {
-    if (!confirm(`"${d.name}" ni o'chirishni tasdiqlang?`)) return;
+    if (!confirm(t("academicDirectionList.deleteConfirm", { name: d.name }))) return;
     try {
       await del.mutateAsync(d.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -55,7 +57,7 @@ export function DirectionList() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Qidiruv (nomi yoki kod)"
+          placeholder={t("academicDirectionList.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="min-w-[200px] max-w-xs"
@@ -65,10 +67,10 @@ export function DirectionList() {
           onValueChange={(v) => setFacultyId(v === ALL ? undefined : (v as UUID))}
         >
           <SelectTrigger className="w-[240px]">
-            <SelectValue placeholder="Fakultet" />
+            <SelectValue placeholder={t("common.faculty")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha fakultetlar</SelectItem>
+            <SelectItem value={ALL}>{t("academicDirectionList.allFaculties")}</SelectItem>
             {(faculties.data?.items ?? []).map((f) => (
               <SelectItem key={f.id} value={f.id}>
                 {f.name}
@@ -78,7 +80,7 @@ export function DirectionList() {
         </Select>
         <Button className="ml-auto" onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Yangi yo'nalish
+          {t("academicDirectionList.newDirection")}
         </Button>
       </div>
 
@@ -97,11 +99,11 @@ export function DirectionList() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={GraduationCap}
-            title="Yo'nalishlar yo'q"
+            title={t("academicDirectionList.emptyTitle")}
             description={
               search || facultyId
-                ? "Filtrga mos yo'nalish topilmadi"
-                : "Yo'nalish kodi bilan yo'nalish qo'shing"
+                ? t("academicDirectionList.emptyFiltered")
+                : t("academicDirectionList.emptyHint")
             }
           />
         </div>
@@ -112,9 +114,9 @@ export function DirectionList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px]">Kod</TableHead>
-                <TableHead>Nomi</TableHead>
-                <TableHead>Fakultet</TableHead>
+                <TableHead className="w-[120px]">{t("academicDirectionList.colCode")}</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("common.faculty")}</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -132,14 +134,14 @@ export function DirectionList() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => setEditing(d)} aria-label="Tahrirlash">
+                      <Button size="icon" variant="ghost" onClick={() => setEditing(d)} aria-label={t("common.edit")}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDelete(d)}
-                        aria-label="O'chirish"
+                        aria-label={t("common.delete")}
                         disabled={del.isPending}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />

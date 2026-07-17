@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -37,24 +38,24 @@ type Props = {
 };
 
 const CATEGORY_LABEL: Record<TaskCategory, string> = {
-  spiritual: "Ma'naviy-marifiy",
-  academic: "Akademik",
-  report: "Hisobot",
+  spiritual: "taskTemplatesTaskTemplateFormDialog.category.spiritual",
+  academic: "taskTemplatesTaskTemplateFormDialog.category.academic",
+  report: "taskTemplatesTaskTemplateFormDialog.category.report",
 };
 
 const TYPE_LABEL: Record<TaskType, string> = {
-  essay: "Insho",
-  event_scenario: "Tadbir ssenariysi",
-  event_participation: "Tadbir ishtiroki",
-  analytical_note: "Analitik xulosa",
-  plan: "Reja",
-  protocol: "Protokol",
-  presentation: "Prezentatsiya",
-  open_lesson: "Ochiq dars",
-  test_lesson: "Sinov darsi",
-  lesson_analysis_batch: "Dars tahlili to'plami",
-  interactive_pack: "Interaktiv to'plam",
-  other: "Boshqa",
+  essay: "taskTemplatesTaskTemplateFormDialog.type.essay",
+  event_scenario: "taskTemplatesTaskTemplateFormDialog.type.eventScenario",
+  event_participation: "taskTemplatesTaskTemplateFormDialog.type.eventParticipation",
+  analytical_note: "taskTemplatesTaskTemplateFormDialog.type.analyticalNote",
+  plan: "taskTemplatesTaskTemplateFormDialog.type.plan",
+  protocol: "taskTemplatesTaskTemplateFormDialog.type.protocol",
+  presentation: "taskTemplatesTaskTemplateFormDialog.type.presentation",
+  open_lesson: "taskTemplatesTaskTemplateFormDialog.type.openLesson",
+  test_lesson: "taskTemplatesTaskTemplateFormDialog.type.testLesson",
+  lesson_analysis_batch: "taskTemplatesTaskTemplateFormDialog.type.lessonAnalysisBatch",
+  interactive_pack: "taskTemplatesTaskTemplateFormDialog.type.interactivePack",
+  other: "taskTemplatesTaskTemplateFormDialog.type.other",
 };
 
 type FormState = {
@@ -93,6 +94,7 @@ export function TaskTemplateFormDialog({
   defaultPracticeTypeId,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   const isEdit = !!template;
   const [form, setForm] = useState<FormState>(EMPTY);
   const create = useCreateTaskTemplate();
@@ -126,16 +128,16 @@ export function TaskTemplateFormDialog({
 
   const handleSubmit = async () => {
     if (!form.title.trim()) {
-      toast.error("Sarlavha majburiy");
+      toast.error(t("taskTemplatesTaskTemplateFormDialog.errors.titleRequired"));
       return;
     }
     if (!form.practice_type_id) {
-      toast.error("Amaliyot turini tanlang");
+      toast.error(t("taskTemplatesTaskTemplateFormDialog.errors.practiceTypeRequired"));
       return;
     }
     const points = Number(form.points);
     if (Number.isNaN(points) || points < 0) {
-      toast.error("Ball noto'g'ri");
+      toast.error(t("taskTemplatesTaskTemplateFormDialog.errors.invalidPoints"));
       return;
     }
 
@@ -159,14 +161,14 @@ export function TaskTemplateFormDialog({
         const { practice_type_id: _ignore, ...rest } = payload;
         void _ignore;
         await update.mutateAsync({ id: template.id, data: rest });
-        toast.success("Topshiriq shabloni yangilandi");
+        toast.success(t("taskTemplatesTaskTemplateFormDialog.toasts.updated"));
       } else {
         await create.mutateAsync(payload);
-        toast.success("Topshiriq shabloni yaratildi");
+        toast.success(t("taskTemplatesTaskTemplateFormDialog.toasts.created"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -177,24 +179,27 @@ export function TaskTemplateFormDialog({
       <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Shablonni tahrirlash" : "Yangi topshiriq shabloni"}
+            {isEdit
+              ? t("taskTemplatesTaskTemplateFormDialog.editTitle")
+              : t("taskTemplatesTaskTemplateFormDialog.createTitle")}
           </DialogTitle>
           <DialogDescription>
-            Sillabusdan namunaviy topshiriq. Yaratilganda bu turdagi barcha
-            biriktirishlarga tarqatish mumkin bo'ladi.
+            {t("taskTemplatesTaskTemplateFormDialog.description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Label>Amaliyot turi *</Label>
+            <Label>{t("common.practiceType")} *</Label>
             <Select
               value={form.practice_type_id}
               onValueChange={(v) => set("practice_type_id", v)}
               disabled={isEdit}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Tanlang" />
+                <SelectValue
+                  placeholder={t("taskTemplatesTaskTemplateFormDialog.selectPlaceholder")}
+                />
               </SelectTrigger>
               <SelectContent>
                 {(practiceTypes.data ?? []).map((p) => (
@@ -207,7 +212,7 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>Kurs *</Label>
+            <Label>{t("common.course")} *</Label>
             <Select value={form.course} onValueChange={(v) => set("course", v)}>
               <SelectTrigger>
                 <SelectValue />
@@ -215,7 +220,7 @@ export function TaskTemplateFormDialog({
               <SelectContent>
                 {[1, 2, 3, 4, 5].map((c) => (
                   <SelectItem key={c} value={String(c)}>
-                    {c}-kurs
+                    {t("common.courseN", { n: c })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -223,7 +228,7 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>Semestr *</Label>
+            <Label>{t("common.semester")} *</Label>
             <Select
               value={form.semester}
               onValueChange={(v) => set("semester", v as "fall" | "spring")}
@@ -232,14 +237,14 @@ export function TaskTemplateFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="fall">Kuzgi</SelectItem>
-                <SelectItem value="spring">Bahorgi</SelectItem>
+                <SelectItem value="fall">{t("common.semesterFall")}</SelectItem>
+                <SelectItem value="spring">{t("common.semesterSpring")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label>Kategoriya *</Label>
+            <Label>{t("taskTemplatesTaskTemplateFormDialog.categoryLabel")} *</Label>
             <Select
               value={form.category}
               onValueChange={(v) => set("category", v as TaskCategory)}
@@ -250,7 +255,7 @@ export function TaskTemplateFormDialog({
               <SelectContent>
                 {(Object.keys(CATEGORY_LABEL) as TaskCategory[]).map((c) => (
                   <SelectItem key={c} value={c}>
-                    {CATEGORY_LABEL[c]}
+                    {t(CATEGORY_LABEL[c])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -258,7 +263,7 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>Tur *</Label>
+            <Label>{t("taskTemplatesTaskTemplateFormDialog.typeLabel")} *</Label>
             <Select
               value={form.type}
               onValueChange={(v) => set("type", v as TaskType)}
@@ -267,9 +272,9 @@ export function TaskTemplateFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(TYPE_LABEL) as TaskType[]).map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {TYPE_LABEL[t]}
+                {(Object.keys(TYPE_LABEL) as TaskType[]).map((ty) => (
+                  <SelectItem key={ty} value={ty}>
+                    {t(TYPE_LABEL[ty])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -277,27 +282,27 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div className="sm:col-span-2">
-            <Label>Sarlavha *</Label>
+            <Label>{t("taskTemplatesTaskTemplateFormDialog.titleLabel")} *</Label>
             <Input
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
-              placeholder="Topshiriq nomi"
+              placeholder={t("taskTemplatesTaskTemplateFormDialog.titlePlaceholder")}
               maxLength={500}
             />
           </div>
 
           <div className="sm:col-span-2">
-            <Label>Tavsif</Label>
+            <Label>{t("taskTemplatesTaskTemplateFormDialog.descriptionLabel")}</Label>
             <Input
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
-              placeholder="Qo'shimcha izoh (ixtiyoriy)"
+              placeholder={t("taskTemplatesTaskTemplateFormDialog.descriptionPlaceholder")}
               maxLength={10000}
             />
           </div>
 
           <div>
-            <Label>Maksimal ball *</Label>
+            <Label>{t("taskTemplatesTaskTemplateFormDialog.pointsLabel")} *</Label>
             <Input
               type="number"
               min={0}
@@ -308,7 +313,7 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>Soni</Label>
+            <Label>{t("taskTemplatesTaskTemplateFormDialog.quantityLabel")}</Label>
             <Input
               type="number"
               min={1}
@@ -319,17 +324,17 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>Oy ko'rsatkichi</Label>
+            <Label>{t("taskTemplatesTaskTemplateFormDialog.monthHintLabel")}</Label>
             <Input
               value={form.month_hint}
               onChange={(e) => set("month_hint", e.target.value)}
-              placeholder="masalan: Sentyabr-Oktyabr"
+              placeholder={t("taskTemplatesTaskTemplateFormDialog.monthHintPlaceholder")}
               maxLength={50}
             />
           </div>
 
           <div>
-            <Label>Tartib raqami</Label>
+            <Label>{t("taskTemplatesTaskTemplateFormDialog.displayOrderLabel")}</Label>
             <Input
               type="number"
               min={0}
@@ -345,17 +350,21 @@ export function TaskTemplateFormDialog({
               checked={form.is_active}
               onChange={(e) => set("is_active", e.target.checked)}
             />
-            <Label htmlFor="is_active">Faol (yangi biriktirishlarda paydo bo'ladi)</Label>
+            <Label htmlFor="is_active">
+              {t("taskTemplatesTaskTemplateFormDialog.isActiveLabel")}
+            </Label>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Bekor
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={busy}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isEdit ? "Saqlash" : "Yaratish"}
+            {isEdit
+              ? t("common.save")
+              : t("taskTemplatesTaskTemplateFormDialog.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

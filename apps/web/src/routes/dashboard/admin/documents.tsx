@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { DocumentFormDialog } from "@/components/admin/documents/document-form-dialog";
@@ -28,6 +29,7 @@ import {
 import { downloadAttachment } from "@/lib/api/uploads";
 
 function DocumentList({ kind }: { kind: DocumentKind }) {
+  const { t } = useTranslation();
   const { data, isPending, error } = useDocuments({ kind });
   const [editing, setEditing] = useState<DocumentEntity | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -37,10 +39,10 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
     if (!deletingId) return;
     try {
       await del.mutateAsync(deletingId as never);
-      toast.success("Hujjat o'chirildi");
+      toast.success(t("adminDocuments.deletedToast"));
       setDeletingId(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -48,7 +50,7 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
     try {
       await downloadAttachment(doc.file_attachment);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Yuklab olishda xato");
+      toast.error(e instanceof Error ? e.message : t("adminDocuments.downloadError"));
     }
   };
 
@@ -71,8 +73,12 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
     return (
       <EmptyState
         icon={kind === "regulation" ? ScrollText : BookOpen}
-        title={kind === "regulation" ? "Normativ hujjatlar yo'q" : "Amaliyot dasturlari yo'q"}
-        description="Yangi hujjat qo'shish uchun yuqoridagi tugmani bosing"
+        title={
+          kind === "regulation"
+            ? t("adminDocuments.emptyRegulations")
+            : t("adminDocuments.emptyPrograms")
+        }
+        description={t("adminDocuments.emptyDesc")}
         accent="muted"
       />
     );
@@ -116,13 +122,13 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
                   className="flex-1"
                 >
                   <Download className="h-4 w-4" />
-                  Yuklab olish
+                  {t("common.download")}
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
                   onClick={() => setEditing(doc)}
-                  title="Tahrirlash"
+                  title={t("common.edit")}
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -131,7 +137,7 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
                   variant="ghost"
                   className="text-destructive hover:bg-destructive/10"
                   onClick={() => setDeletingId(doc.id)}
-                  title="O'chirish"
+                  title={t("common.delete")}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -148,9 +154,9 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
       />
       <ConfirmDialog
         open={!!deletingId}
-        title="Hujjatni o'chirish"
-        description="Bu amal qaytarilmaydi. Fayl ham o'chiriladimi?"
-        confirmText="Ha, o'chirish"
+        title={t("adminDocuments.deleteTitle")}
+        description={t("adminDocuments.deleteDesc")}
+        confirmText={t("adminDocuments.deleteConfirmBtn")}
         variant="destructive"
         onConfirm={handleDelete}
         onClose={() => setDeletingId(null)}
@@ -161,6 +167,7 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
 }
 
 export function DocumentsPage() {
+  const { t } = useTranslation();
   const [createOpen, setCreateOpen] = useState(false);
   const [createKind, setCreateKind] = useState<DocumentKind>("regulation");
   const [tab, setTab] = useState<DocumentKind>("regulation");
@@ -178,15 +185,15 @@ export function DocumentsPage() {
             <FileText className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Hujjatlar</h1>
+            <h1 className="text-2xl font-semibold">{t("adminDocuments.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Normativ hujjatlar va amaliyot dasturlari
+              {t("adminDocuments.subtitle")}
             </p>
           </div>
         </div>
         <Button onClick={handleNew}>
           <Plus className="h-4 w-4" />
-          Yangi hujjat
+          {t("adminDocuments.newDocument")}
         </Button>
       </div>
 
@@ -194,11 +201,11 @@ export function DocumentsPage() {
         <TabsList>
           <TabsTrigger value="regulation">
             <ScrollText className="h-4 w-4" />
-            Normativ hujjatlar
+            {t("adminDocuments.tabRegulations")}
           </TabsTrigger>
           <TabsTrigger value="program">
             <BookOpen className="h-4 w-4" />
-            Amaliyot dasturlari
+            {t("adminDocuments.tabPrograms")}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="regulation">

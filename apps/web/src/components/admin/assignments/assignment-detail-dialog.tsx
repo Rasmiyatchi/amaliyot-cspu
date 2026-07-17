@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
@@ -45,6 +46,7 @@ import { Progress } from "@/components/ui/progress";
 import { PromptDialog } from "@/components/ui/prompt-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { dateLocale } from "@/i18n";
 import { useUpdateAssignment } from "@/lib/api/assignments";
 import {
   useApproveJournal,
@@ -66,6 +68,7 @@ type Props = {
 };
 
 export function AssignmentDetailDialog({ assignment, onClose }: Props) {
+  const { t } = useTranslation();
   const assignmentId = assignment?.id ?? null;
 
   const { data: tasks } = useAssignmentTasks(assignmentId);
@@ -95,10 +98,10 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
   const tasksByGroup = useMemo(() => {
     if (!tasks) return new Map<string, Task[]>();
     const m = new Map<string, Task[]>();
-    for (const t of tasks) {
-      const key = `${t.template_semester}|${t.template_category}`;
+    for (const item of tasks) {
+      const key = `${item.template_semester}|${item.template_category}`;
       const arr = m.get(key) ?? [];
-      arr.push(t);
+      arr.push(item);
       m.set(key, arr);
     }
     return m;
@@ -109,9 +112,9 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
   const handleEnsure = async () => {
     try {
       const res = await ensureTasks.mutateAsync(assignment.id);
-      toast.success(`${res.created} ta topshiriq yaratildi`);
+      toast.success(t("assignmentsAssignmentDetailDialog.tasksCreated", { n: res.created }));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -119,19 +122,19 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
     if (!taskToDelete) return;
     try {
       await deleteTask.mutateAsync(taskToDelete.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
       setTaskToDelete(null);
     } catch (err) {
-      toast.error(err instanceof HTTPError ? err.message : "Xatolik");
+      toast.error(err instanceof HTTPError ? err.message : t("common.error"));
     }
   };
 
   const handleJournalApprove = async (id: string) => {
     try {
       await approveJournal.mutateAsync(id);
-      toast.success("Kundalik tasdiqlandi");
+      toast.success(t("assignmentsAssignmentDetailDialog.journalApproved"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -142,19 +145,19 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
         id: journalRejectId,
         data: { rejection_reason: reason },
       });
-      toast.success("Rad etildi");
+      toast.success(t("assignmentsAssignmentDetailDialog.rejectedToast"));
       setJournalRejectId(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const handleAnalysisApprove = async (id: string) => {
     try {
       await approveAnalysis.mutateAsync(id);
-      toast.success("Tahlil tasdiqlandi");
+      toast.success(t("assignmentsAssignmentDetailDialog.analysisApproved"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -166,20 +169,24 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
         data: {
           status: confirmAction.status,
           ...(confirmAction.status === "cancelled"
-            ? { cancelled_reason: cancelReason.trim() || "Bekor qilindi" }
+            ? {
+                cancelled_reason:
+                  cancelReason.trim() ||
+                  t("assignmentsAssignmentDetailDialog.cancelledDefault"),
+              }
             : {}),
         },
       });
-      const labels = {
-        active: "boshlandi",
-        completed: "yakunlandi",
-        cancelled: "bekor qilindi",
+      const toastKeys = {
+        active: "assignmentsAssignmentDetailDialog.toastStarted",
+        completed: "assignmentsAssignmentDetailDialog.toastCompleted",
+        cancelled: "assignmentsAssignmentDetailDialog.toastCancelled",
       };
-      toast.success(`Amaliyot ${labels[confirmAction.status]}`);
+      toast.success(t(toastKeys[confirmAction.status]));
       setConfirmAction(null);
       setCancelReason("");
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -190,10 +197,10 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
         id: analysisRejectId,
         data: { rejection_reason: reason },
       });
-      toast.success("Rad etildi");
+      toast.success(t("assignmentsAssignmentDetailDialog.rejectedToast"));
       setAnalysisRejectId(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -224,8 +231,8 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
               ID: {assignment.student_hemis_id}
               {assignment.student_group_name && ` · ${assignment.student_group_name}`}
               {" · "}
-              {new Date(assignment.start_date).toLocaleDateString("uz-UZ")} —{" "}
-              {new Date(assignment.end_date).toLocaleDateString("uz-UZ")}
+              {new Date(assignment.start_date).toLocaleDateString(dateLocale())} —{" "}
+              {new Date(assignment.end_date).toLocaleDateString(dateLocale())}
             </DialogDescription>
           </DialogHeader>
 
@@ -238,7 +245,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                 disabled={updateAssignment.isPending}
               >
                 <Play className="h-3.5 w-3.5" />
-                Amaliyotni boshlash
+                {t("assignmentsAssignmentDetailDialog.startPractice")}
               </Button>
             )}
             {assignment.status === "active" && (
@@ -249,7 +256,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                 disabled={updateAssignment.isPending}
               >
                 <CircleCheck className="h-3.5 w-3.5" />
-                Yakunlash
+                {t("assignmentsAssignmentDetailDialog.finish")}
               </Button>
             )}
             {(assignment.status === "draft" || assignment.status === "active") && (
@@ -261,12 +268,14 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                 disabled={updateAssignment.isPending}
               >
                 <XCircle className="h-3.5 w-3.5" />
-                Bekor qilish
+                {t("assignmentsAssignmentDetailDialog.cancelAction")}
               </Button>
             )}
             {assignment.status === "cancelled" && assignment.cancelled_reason && (
               <div className="rounded-md bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
-                Sabab: {assignment.cancelled_reason}
+                {t("assignmentsAssignmentDetailDialog.reasonLabel", {
+                  reason: assignment.cancelled_reason,
+                })}
               </div>
             )}
           </div>
@@ -275,31 +284,42 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
           {progress && (
             <div className="rounded-lg border border-border p-4">
               <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">O'quv ishlari progress</span>
+                <span className="text-muted-foreground">
+                  {t("assignmentsAssignmentDetailDialog.progressTitle")}
+                </span>
                 <span className="font-mono font-semibold">
-                  {progress.tasks_earned_points} / {progress.tasks_max_points} ball
+                  {t("assignmentsAssignmentDetailDialog.pointsOf", {
+                    earned: progress.tasks_earned_points,
+                    max: progress.tasks_max_points,
+                  })}
                 </span>
               </div>
               <Progress value={pointsPercent} className="h-2" />
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
                 <div className="rounded-md bg-muted/40 px-2 py-1.5">
-                  <div className="text-muted-foreground">Jami</div>
+                  <div className="text-muted-foreground">{t("common.total")}</div>
                   <div className="font-semibold">{progress.tasks_total}</div>
                 </div>
                 <div className="rounded-md bg-muted/40 px-2 py-1.5">
-                  <div className="text-muted-foreground">Tasdiqlangan</div>
+                  <div className="text-muted-foreground">
+                    {t("assignmentsAssignmentDetailDialog.approvedLabel")}
+                  </div>
                   <div className="font-semibold text-success">
                     {progress.tasks_by_status.approved}
                   </div>
                 </div>
                 <div className="rounded-md bg-muted/40 px-2 py-1.5">
-                  <div className="text-muted-foreground">Yuborilgan</div>
+                  <div className="text-muted-foreground">
+                    {t("assignmentsAssignmentDetailDialog.submittedLabel")}
+                  </div>
                   <div className="font-semibold text-info">
                     {progress.tasks_by_status.submitted}
                   </div>
                 </div>
                 <div className="rounded-md bg-muted/40 px-2 py-1.5">
-                  <div className="text-muted-foreground">Rad etilgan</div>
+                  <div className="text-muted-foreground">
+                    {t("assignmentsAssignmentDetailDialog.rejectedLabel")}
+                  </div>
                   <div className="font-semibold text-destructive">
                     {progress.tasks_by_status.rejected}
                   </div>
@@ -312,19 +332,21 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
             <TabsList>
               <TabsTrigger value="tasks">
                 <BookOpen className="h-3.5 w-3.5" />
-                Topshiriqlar
+                {t("assignmentsAssignmentDetailDialog.tabs.tasks")}
               </TabsTrigger>
               <TabsTrigger value="journal">
                 <NotebookPen className="h-3.5 w-3.5" />
-                Kundalik {journal ? `(${journal.length})` : ""}
+                {t("assignmentsAssignmentDetailDialog.tabs.journal")}{" "}
+                {journal ? `(${journal.length})` : ""}
               </TabsTrigger>
               <TabsTrigger value="analyses">
                 <Sparkles className="h-3.5 w-3.5" />
-                Dars tahlillari {analyses ? `(${analyses.length})` : ""}
+                {t("assignmentsAssignmentDetailDialog.tabs.analyses")}{" "}
+                {analyses ? `(${analyses.length})` : ""}
               </TabsTrigger>
               <TabsTrigger value="grade">
                 <Award className="h-3.5 w-3.5" />
-                Baholash
+                {t("assignmentsAssignmentDetailDialog.tabs.grade")}
               </TabsTrigger>
             </TabsList>
 
@@ -338,7 +360,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
               {(!tasks || tasks.length === 0) && (
                 <Alert>
                   <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
-                    <span>Topshiriqlar hali qo'shilmagan</span>
+                    <span>{t("assignmentsAssignmentDetailDialog.noTasksYet")}</span>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
@@ -346,13 +368,13 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                         onClick={() => setAddTasksOpen(true)}
                       >
                         <Plus className="h-4 w-4" />
-                        Tanlab qo'shish
+                        {t("assignmentsAssignmentDetailDialog.addSelected")}
                       </Button>
                       <Button size="sm" onClick={handleEnsure} disabled={ensureTasks.isPending}>
                         {ensureTasks.isPending && (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         )}
-                        Barchasini qo'shish
+                        {t("assignmentsAssignmentDetailDialog.addAll")}
                       </Button>
                     </div>
                   </AlertDescription>
@@ -368,7 +390,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                       onClick={() => setAddTasksOpen(true)}
                     >
                       <Plus className="h-4 w-4" />
-                      Topshiriq qo'shish
+                      {t("assignmentsAssignmentDetailDialog.addTask")}
                     </Button>
                   </div>
                   {Array.from(tasksByGroup.keys())
@@ -381,48 +403,54 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                           <div className="flex items-center gap-2 border-b border-border px-3 py-2 text-sm">
                             <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="font-medium">
-                              {sem === "fall" ? "Kuzgi" : "Bahorgi"}
+                              {sem === "fall"
+                                ? t("common.semesterFall")
+                                : t("common.semesterSpring")}
                             </span>
                             <TaskCategoryBadge category={cat as "spiritual" | "academic" | "report"} />
                           </div>
                           <div>
-                            {items.map((t) => (
+                            {items.map((task) => (
                               <div
-                                key={t.id}
+                                key={task.id}
                                 className="flex items-start gap-3 border-b border-border last:border-0 hover:bg-muted/30"
                               >
                                 <button
-                                  onClick={() => setSelectedTask(t)}
+                                  onClick={() => setSelectedTask(task)}
                                   className="flex flex-1 items-start gap-3 p-3 text-left"
                                 >
                                   <div className="flex-1 min-w-0">
-                                    <div className="font-medium leading-snug">{t.template_title}</div>
+                                    <div className="font-medium leading-snug">{task.template_title}</div>
                                     <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                      <TaskTypeLabel type={t.template_type} />
-                                      {t.template_quantity > 1 && (
-                                        <Badge variant="outline">{t.template_quantity} ta</Badge>
+                                      <TaskTypeLabel type={task.template_type} />
+                                      {task.template_quantity > 1 && (
+                                        <Badge variant="outline">
+                                          {t("assignmentsAssignmentDetailDialog.qtyN", {
+                                            n: task.template_quantity,
+                                          })}
+                                        </Badge>
                                       )}
-                                      {t.template_month_hint && <span>{t.template_month_hint}</span>}
+                                      {task.template_month_hint && <span>{task.template_month_hint}</span>}
                                     </div>
                                   </div>
                                   <div className="flex shrink-0 flex-col items-end gap-1">
-                                    <TaskStatusBadge status={t.status} />
+                                    <TaskStatusBadge status={task.status} />
                                     <span className="font-mono text-xs">
-                                      {t.points_earned ?? "—"}/{t.template_points}
+                                      {task.points_earned ?? "—"}/{task.template_points}
                                     </span>
                                   </div>
                                 </button>
-                                {t.status !== "approved" && (
+                                {task.status !== "approved" && (
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     className="mr-2 mt-2 h-7 w-7 text-muted-foreground hover:text-destructive"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setTaskToDelete(t);
+                                      setTaskToDelete(task);
                                     }}
                                     disabled={deleteTask.isPending}
-                                    title="O'chirish"
+                                    title={t("common.delete")}
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
@@ -441,14 +469,14 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
             <TabsContent value="journal" className="space-y-2">
               {(!journal || journal.length === 0) && (
                 <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Kundalik yozuvlari yo'q
+                  {t("assignmentsAssignmentDetailDialog.noJournal")}
                 </div>
               )}
               {journal?.map((j) => (
                 <div key={j.id} className="rounded-md border border-border p-3">
                   <div className="flex items-center gap-2">
                     <div className="font-mono text-xs text-muted-foreground">
-                      {new Date(j.date).toLocaleDateString("uz-UZ")}
+                      {new Date(j.date).toLocaleDateString(dateLocale())}
                     </div>
                     <JournalStatusBadge status={j.status} />
                     {j.approved_by_name && (
@@ -480,7 +508,9 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                   <div className="mt-2 whitespace-pre-wrap text-sm">{j.content_md}</div>
                   {j.rejection_reason && (
                     <div className="mt-2 rounded-md bg-destructive/5 px-2 py-1 text-xs text-destructive">
-                      Sabab: {j.rejection_reason}
+                      {t("assignmentsAssignmentDetailDialog.reasonLabel", {
+                        reason: j.rejection_reason,
+                      })}
                     </div>
                   )}
                 </div>
@@ -491,7 +521,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
             <TabsContent value="analyses" className="space-y-2">
               {(!analyses || analyses.length === 0) && (
                 <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Dars tahlili yo'q
+                  {t("assignmentsAssignmentDetailDialog.noAnalyses")}
                 </div>
               )}
               {analyses?.map((a) => (
@@ -507,7 +537,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                       </Badge>
                     )}
                     <Badge variant="secondary" className="text-xs">
-                      {a.quarter}-chorak
+                      {t("assignmentsAssignmentDetailDialog.quarterN", { n: a.quarter })}
                     </Badge>
                     <JournalStatusBadge status={a.status} />
                     <div className="ml-auto flex gap-1">
@@ -532,12 +562,14 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                     </div>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {new Date(a.date).toLocaleDateString("uz-UZ")}
+                    {new Date(a.date).toLocaleDateString(dateLocale())}
                   </div>
                   <div className="mt-2 whitespace-pre-wrap text-sm">{a.analysis_md}</div>
                   {a.rejection_reason && (
                     <div className="mt-2 rounded-md bg-destructive/5 px-2 py-1 text-xs text-destructive">
-                      Sabab: {a.rejection_reason}
+                      {t("assignmentsAssignmentDetailDialog.reasonLabel", {
+                        reason: a.rejection_reason,
+                      })}
                     </div>
                   )}
                 </div>
@@ -549,7 +581,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
 
           <div>
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Yig'ma jild
+              {t("assignmentsAssignmentDetailDialog.archiveTitle")}
             </div>
             <ArchiveCard assignmentId={assignment.id} compact />
           </div>
@@ -558,7 +590,11 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
 
           <div className="text-xs text-muted-foreground">
             {assignment.supervisor_full_name && (
-              <span>Rahbar: {assignment.supervisor_full_name}</span>
+              <span>
+                {t("assignmentsAssignmentDetailDialog.supervisorLabel", {
+                  name: assignment.supervisor_full_name,
+                })}
+              </span>
             )}
           </div>
         </DialogContent>
@@ -573,16 +609,17 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
 
       <ConfirmDialog
         open={!!taskToDelete}
-        title="Topshiriqni o'chirish"
+        title={t("assignmentsAssignmentDetailDialog.deleteTaskTitle")}
         description={
           taskToDelete ? (
-            <>
-              <strong>{taskToDelete.template_title}</strong> — bu amal bekor qilib
-              bo'lmaydi.
-            </>
+            <Trans
+              i18nKey="assignmentsAssignmentDetailDialog.deleteTaskDesc"
+              values={{ title: taskToDelete.template_title }}
+              components={[<strong key="0" />]}
+            />
           ) : undefined
         }
-        confirmText="O'chirish"
+        confirmText={t("common.delete")}
         variant="destructive"
         isPending={deleteTask.isPending}
         onConfirm={handleDeleteConfirm}
@@ -591,11 +628,11 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
 
       <PromptDialog
         open={!!journalRejectId}
-        title="Kundalikni rad etish"
-        description="Talabaga sababni ko'rsating"
-        label="Rad etish sababi"
-        placeholder="Masalan: matn juda qisqa, yanada batafsil yozing..."
-        confirmText="Rad etish"
+        title={t("assignmentsAssignmentDetailDialog.rejectJournalTitle")}
+        description={t("assignmentsAssignmentDetailDialog.rejectDesc")}
+        label={t("assignmentsAssignmentDetailDialog.rejectReasonLabel")}
+        placeholder={t("assignmentsAssignmentDetailDialog.rejectJournalPlaceholder")}
+        confirmText={t("common.reject")}
         variant="destructive"
         isPending={rejectJournal.isPending}
         onConfirm={handleJournalRejectSubmit}
@@ -604,10 +641,10 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
 
       <PromptDialog
         open={!!analysisRejectId}
-        title="Dars tahlilini rad etish"
-        description="Talabaga sababni ko'rsating"
-        label="Rad etish sababi"
-        confirmText="Rad etish"
+        title={t("assignmentsAssignmentDetailDialog.rejectAnalysisTitle")}
+        description={t("assignmentsAssignmentDetailDialog.rejectDesc")}
+        label={t("assignmentsAssignmentDetailDialog.rejectReasonLabel")}
+        confirmText={t("common.reject")}
         variant="destructive"
         isPending={rejectAnalysis.isPending}
         onConfirm={handleAnalysisRejectSubmit}
@@ -619,22 +656,19 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
           open={true}
           title={
             confirmAction.status === "active"
-              ? "Amaliyotni boshlash?"
-              : "Amaliyotni yakunlash?"
+              ? t("assignmentsAssignmentDetailDialog.startConfirmTitle")
+              : t("assignmentsAssignmentDetailDialog.finishConfirmTitle")
           }
           description={
-            confirmAction.status === "active" ? (
-              <>
-                Status DRAFT'dan ACTIVE'ga o'tadi. Talaba check-in qila boshlashi
-                mumkin.
-              </>
-            ) : (
-              <>
-                Status ACTIVE'dan COMPLETED'ga o'tadi. Yakuniy baholash kutiladi.
-              </>
-            )
+            confirmAction.status === "active"
+              ? t("assignmentsAssignmentDetailDialog.startConfirmDesc")
+              : t("assignmentsAssignmentDetailDialog.finishConfirmDesc")
           }
-          confirmText={confirmAction.status === "active" ? "Boshlash" : "Yakunlash"}
+          confirmText={
+            confirmAction.status === "active"
+              ? t("assignmentsAssignmentDetailDialog.start")
+              : t("assignmentsAssignmentDetailDialog.finish")
+          }
           isPending={updateAssignment.isPending}
           onConfirm={handleStatusChange}
           onClose={() => setConfirmAction(null)}
@@ -643,11 +677,11 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
 
       <PromptDialog
         open={confirmAction?.status === "cancelled"}
-        title="Amaliyotni bekor qilish"
-        description="Bekor qilish sababini yozing — talabaga ko'rsatiladi"
-        label="Sabab"
-        placeholder="Masalan: tashkilot rad etdi, yoki..."
-        confirmText="Bekor qilish"
+        title={t("assignmentsAssignmentDetailDialog.cancelPromptTitle")}
+        description={t("assignmentsAssignmentDetailDialog.cancelPromptDesc")}
+        label={t("assignmentsAssignmentDetailDialog.reasonShort")}
+        placeholder={t("assignmentsAssignmentDetailDialog.cancelPromptPlaceholder")}
+        confirmText={t("assignmentsAssignmentDetailDialog.cancelAction")}
         variant="destructive"
         isPending={updateAssignment.isPending}
         onConfirm={(reason) => {

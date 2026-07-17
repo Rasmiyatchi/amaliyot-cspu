@@ -1,5 +1,6 @@
 import { Menu } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Outlet, useLocation } from "react-router-dom";
 
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 export function AdminLayout() {
+  const { t } = useTranslation();
   const [navOpen, setNavOpen] = useState(false);
   const location = useLocation();
 
@@ -27,7 +29,7 @@ export function AdminLayout() {
         {/* Mobil navigatsiya drawer */}
         <Sheet open={navOpen} onOpenChange={setNavOpen}>
           <SheetContent side="left" className="w-64 p-0" showClose={false}>
-            <SheetTitle className="sr-only">Navigatsiya</SheetTitle>
+            <SheetTitle className="sr-only">{t("adminAdminLayout.navTitle")}</SheetTitle>
             <AdminSidebar inSheet />
           </SheetContent>
         </Sheet>
@@ -41,7 +43,7 @@ export function AdminLayout() {
               variant="ghost"
               size="icon"
               onClick={() => setNavOpen(true)}
-              aria-label="Menyu"
+              aria-label={t("adminAdminLayout.menuLabel")}
             >
               <Menu className="h-5 w-5" />
             </Button>

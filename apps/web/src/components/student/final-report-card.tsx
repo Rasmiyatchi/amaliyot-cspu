@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -28,39 +29,41 @@ import type { Attachment } from "@/lib/api/uploads";
 import type { UUID } from "@/lib/api/types";
 
 const STATUS_LABEL: Record<FinalReportStatus, string> = {
-  draft: "Qoralama",
-  submitted: "Tasdiqlash kutilmoqda",
-  approved: "Tasdiqlangan",
-  rejected: "Rad etilgan",
+  draft: "studentFinalReportCard.status.draft",
+  submitted: "studentFinalReportCard.status.submitted",
+  approved: "studentFinalReportCard.status.approved",
+  rejected: "studentFinalReportCard.status.rejected",
 };
 
 function StatusBadge({ status }: { status: FinalReportStatus }) {
+  const { t } = useTranslation();
   if (status === "approved")
     return (
       <Badge className="bg-success text-success-foreground">
         <CheckCircle2 className="mr-1 h-3 w-3" />
-        {STATUS_LABEL[status]}
+        {t(STATUS_LABEL[status])}
       </Badge>
     );
   if (status === "rejected")
     return (
       <Badge variant="destructive">
         <XCircle className="mr-1 h-3 w-3" />
-        {STATUS_LABEL[status]}
+        {t(STATUS_LABEL[status])}
       </Badge>
     );
   return (
     <Badge variant="secondary">
       <Clock className="mr-1 h-3 w-3" />
-      {STATUS_LABEL[status]}
+      {t(STATUS_LABEL[status])}
     </Badge>
   );
 }
 
 export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
+  const { t } = useTranslation();
   const { data: report, isPending } = useFinalReportForAssignment(assignmentId);
   const submit = useSubmitFinalReport();
-  const [title, setTitle] = useState("Yakuniy hisobot");
+  const [title, setTitle] = useState(() => t("studentFinalReportCard.title"));
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -70,9 +73,11 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
     try {
       const att = await uploadStandaloneFile(file);
       setAttachment(att);
-      toast.success("Fayl yuklandi");
+      toast.success(t("studentFinalReportCard.toasts.fileUploaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Yuklashda xato");
+      toast.error(
+        e instanceof Error ? e.message : t("studentFinalReportCard.errors.uploadError"),
+      );
     } finally {
       setUploading(false);
     }
@@ -80,11 +85,11 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
 
   const handleSubmit = async () => {
     if (!attachment) {
-      toast.error("Fayl yuklang");
+      toast.error(t("studentFinalReportCard.errors.fileRequired"));
       return;
     }
     if (!title.trim()) {
-      toast.error("Sarlavha kiriting");
+      toast.error(t("studentFinalReportCard.errors.titleRequired"));
       return;
     }
     try {
@@ -92,10 +97,10 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
         assignmentId,
         data: { title: title.trim(), file_attachment: attachment },
       });
-      toast.success("Hisobot yuborildi");
+      toast.success(t("studentFinalReportCard.toasts.submitted"));
       setAttachment(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -108,7 +113,7 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <FileText className="h-4 w-4 text-primary" />
-          Yakuniy hisobot
+          {t("studentFinalReportCard.title")}
           {report && <StatusBadge status={report.status} />}
         </CardTitle>
       </CardHeader>
@@ -143,7 +148,9 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
             {report.status === "rejected" && report.reviewer_note && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  <div className="font-medium">Rad etish sababi</div>
+                  <div className="font-medium">
+                    {t("studentFinalReportCard.rejectReason")}
+                  </div>
                   <div className="mt-1 text-sm">{report.reviewer_note}</div>
                 </AlertDescription>
               </Alert>
@@ -152,7 +159,7 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
             {isApproved && (
               <Alert>
                 <AlertDescription className="text-sm">
-                  Hisobot tasdiqlangan. Endi yig'ma jildni yuklab olishingiz mumkin.
+                  {t("studentFinalReportCard.approvedInfo")}
                 </AlertDescription>
               </Alert>
             )}
@@ -162,7 +169,7 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
         {!isPending && canResubmit && (
           <div className="space-y-3 border-t border-border pt-3">
             <div>
-              <Label>Hisobot nomi</Label>
+              <Label>{t("studentFinalReportCard.reportTitleLabel")}</Label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -170,7 +177,7 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
               />
             </div>
             <div>
-              <Label>Hisobot fayli (PDF yoki PPTX) *</Label>
+              <Label>{t("studentFinalReportCard.fileLabel")} *</Label>
               <input
                 ref={fileRef}
                 type="file"
@@ -196,7 +203,7 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
                     variant="ghost"
                     onClick={() => setAttachment(null)}
                   >
-                    Olib tashlash
+                    {t("studentFinalReportCard.removeFile")}
                   </Button>
                 </div>
               ) : (
@@ -209,12 +216,12 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
                   {uploading ? (
                     <>
                       <Loader2 className="h-5 w-5 animate-spin" />
-                      Yuklanmoqda...
+                      {t("common.loading")}
                     </>
                   ) : (
                     <>
                       <Upload className="h-5 w-5" />
-                      Fayl tanlash
+                      {t("studentFinalReportCard.chooseFile")}
                     </>
                   )}
                 </Button>
@@ -226,7 +233,9 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
               disabled={busy || !attachment}
             >
               {submit.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {report ? "Qayta yuborish" : "Yuborish"}
+              {report
+                ? t("studentFinalReportCard.resubmit")
+                : t("studentFinalReportCard.submit")}
             </Button>
           </div>
         )}

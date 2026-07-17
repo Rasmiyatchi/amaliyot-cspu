@@ -1,5 +1,6 @@
 import { Download, KeyRound, Loader2, Plus, Trash2, Upload, Users } from "lucide-react";
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { HemisImportDialog } from "@/components/admin/students/hemis-import-dialog";
@@ -13,6 +14,7 @@ import { useBulkDeleteStudents, type StudentFilters } from "@/lib/api/students";
 import type { Student, UUID } from "@/lib/api/types";
 
 export function StudentsPage() {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<StudentFilters>({});
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Student | null>(null);
@@ -43,27 +45,25 @@ export function StudentsPage() {
 
   const handleBulkDelete = async () => {
     const ids = [...selectedIds];
-    if (
-      !confirm(
-        `${ids.length} ta talabani o'chirishni tasdiqlaysizmi?\n\n` +
-          "Amaliyot/topshiriq yozuvlari bor talabalar o'chmaydi — ular ro'yxatda qoladi.",
-      )
-    )
-      return;
+    if (!confirm(t("adminStudents.bulkDeleteConfirm", { n: ids.length }))) return;
     try {
       const res = await bulkDelete.mutateAsync(ids as UUID[]);
       setSelectedIds(new Set());
       if (res.failed.length === 0) {
-        toast.success(`${res.deleted} ta talaba o'chirildi`);
+        toast.success(t("adminStudents.bulkDeleted", { n: res.deleted }));
       } else {
         toast.warning(
-          `${res.deleted} ta o'chirildi, ${res.failed.length} tasi o'chmadi ` +
-            `(masalan: ${res.failed[0]?.full_name ?? "—"} — ${res.failed[0]?.error})`,
+          t("adminStudents.bulkDeletePartial", {
+            deleted: res.deleted,
+            failed: res.failed.length,
+            name: res.failed[0]?.full_name ?? "—",
+            error: res.failed[0]?.error,
+          }),
           { duration: 10000 },
         );
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -84,9 +84,9 @@ export function StudentsPage() {
         status: filters.status,
         search: filters.search,
       });
-      toast.success("CSV yuklab olindi");
+      toast.success(t("common.csvDownloaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setExporting(false);
     }
@@ -104,9 +104,9 @@ export function StudentsPage() {
         status: filters.status,
         search: filters.search,
       });
-      toast.success("Login/parol jadvali yuklab olindi");
+      toast.success(t("adminStudents.credentialsDownloaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setCredExporting(false);
     }
@@ -120,9 +120,9 @@ export function StudentsPage() {
             <Users className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Talabalar</h1>
+            <h1 className="text-2xl font-semibold">{t("common.students")}</h1>
             <p className="text-sm text-muted-foreground">
-              Excel'dan import, ro'yxat va tafsilotlar
+              {t("adminStudents.subtitle")}
             </p>
           </div>
         </div>
@@ -134,28 +134,28 @@ export function StudentsPage() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            CSV eksport
+            {t("adminStudents.csvExport")}
           </Button>
           <Button
             variant="outline"
             onClick={handleCredentialsExport}
             disabled={credExporting}
-            title="Filtrlangan talabalarning login va boshlang'ich parollari (Excel)"
+            title={t("adminStudents.credentialsTitle")}
           >
             {credExporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <KeyRound className="h-4 w-4" />
             )}
-            Login/parol
+            {t("adminStudents.credentials")}
           </Button>
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" />
-            Excel Import
+            {t("adminStudents.excelImport")}
           </Button>
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
-            Yangi talaba
+            {t("adminStudents.newStudent")}
           </Button>
         </div>
       </div>
@@ -167,11 +167,15 @@ export function StudentsPage() {
       {selectedIds.size > 0 && (
         <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
           <span className="text-sm">
-            <span className="font-medium">{selectedIds.size}</span> ta talaba tanlandi
+            <Trans
+              i18nKey="adminStudents.selectedCount"
+              values={{ n: selectedIds.size }}
+              components={[<span key="0" className="font-medium" />]}
+            />
           </span>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
-              Bekor qilish
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -184,7 +188,7 @@ export function StudentsPage() {
               ) : (
                 <Trash2 className="h-4 w-4" />
               )}
-              Tanlanganlarni o'chirish ({selectedIds.size})
+              {t("adminStudents.deleteSelected", { n: selectedIds.size })}
             </Button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { AlertCircle, Download, FileText, Loader2, Upload, XCircle } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { ContractStatusBadge } from "@/components/admin/contracts/contract-status-badge";
@@ -22,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { dateLocale } from "@/i18n";
 import {
   useGenerateContractPdf,
   useRevokeContract,
@@ -33,6 +35,7 @@ import { useAuthStore } from "@/stores/auth";
 type Props = { contract: Contract | null; onClose: () => void };
 
 export function ContractDetailDialog({ contract, onClose }: Props) {
+  const { t } = useTranslation();
   const gen = useGenerateContractPdf();
   const upload = useUploadContractScan();
   const revoke = useRevokeContract();
@@ -45,23 +48,23 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
   const handleGenerate = async () => {
     try {
       await gen.mutateAsync(contract.id);
-      toast.success("PDF generatsiya qilindi");
+      toast.success(t("contractsContractDetailDialog.pdfGenerated"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const handleDownloadPdf = async () => {
     const token = useAuthStore.getState().accessToken;
     if (!token) {
-      toast.error("Sessiya tugagan, qayta kiring");
+      toast.error(t("contractsContractDetailDialog.sessionExpired"));
       return;
     }
     const res = await fetch(`/api/v1/contracts/${contract.id}/pdf`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) {
-      toast.error("PDF yuklab olinmadi");
+      toast.error(t("contractsContractDetailDialog.pdfDownloadFailed"));
       return;
     }
     const blob = await res.blob();
@@ -77,24 +80,24 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
     if (!file) return;
     try {
       await upload.mutateAsync({ id: contract.id, file });
-      toast.success("Skan yuklandi");
+      toast.success(t("contractsContractDetailDialog.scanUploaded"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const handleRevoke = async () => {
     if (revokeReason.length < 3) {
-      toast.error("Sababni yozing");
+      toast.error(t("contractsContractDetailDialog.reasonRequired"));
       return;
     }
     try {
       await revoke.mutateAsync({ id: contract.id, reason: revokeReason });
-      toast.success("Shartnoma bekor qilindi");
+      toast.success(t("contractsContractDetailDialog.revokedToast"));
       setRevokeMode(false);
       setRevokeReason("");
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -117,16 +120,18 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
             <ContractStatusBadge status={contract.status} />
           </DialogTitle>
           <DialogDescription>
-            {new Date(contract.start_date).toLocaleDateString("uz-UZ")} —{" "}
-            {new Date(contract.end_date).toLocaleDateString("uz-UZ")} ·{" "}
-            {contract.students_count} talaba
+            {new Date(contract.start_date).toLocaleDateString(dateLocale())} —{" "}
+            {new Date(contract.end_date).toLocaleDateString(dateLocale())} ·{" "}
+            {t("contractsContractDetailDialog.studentsCount", {
+              count: contract.students_count,
+            })}
           </DialogDescription>
         </DialogHeader>
 
         {contract.revoked_reason && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Bekor qilingan</AlertTitle>
+            <AlertTitle>{t("contractsContractDetailDialog.revokedTitle")}</AlertTitle>
             <AlertDescription>{contract.revoked_reason}</AlertDescription>
           </Alert>
         )}
@@ -137,13 +142,13 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
             <Button onClick={handleGenerate} disabled={gen.isPending}>
               {gen.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               <FileText className="h-4 w-4" />
-              PDF generatsiya
+              {t("contractsContractDetailDialog.generatePdf")}
             </Button>
           )}
           {contract.pdf_path && (
             <Button variant="outline" onClick={handleDownloadPdf}>
               <Download className="h-4 w-4" />
-              PDF yuklab olish
+              {t("contractsContractDetailDialog.downloadPdf")}
             </Button>
           )}
           {(contract.status === "generated" || contract.status === "active") && (
@@ -155,7 +160,9 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
               >
                 {upload.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <Upload className="h-4 w-4" />
-                {contract.scan_path ? "Skan almashtirish" : "Skan yuklash"}
+                {contract.scan_path
+                  ? t("contractsContractDetailDialog.replaceScan")
+                  : t("contractsContractDetailDialog.uploadScan")}
               </Button>
               <input
                 ref={fileRef}
@@ -173,19 +180,19 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
               onClick={() => setRevokeMode(!revokeMode)}
             >
               <XCircle className="h-4 w-4" />
-              Bekor qilish
+              {t("contractsContractDetailDialog.revoke")}
             </Button>
           )}
         </div>
 
         {revokeMode && (
           <Alert>
-            <AlertTitle>Bekor qilish sababi</AlertTitle>
+            <AlertTitle>{t("contractsContractDetailDialog.revokeReasonTitle")}</AlertTitle>
             <AlertDescription className="space-y-2">
               <textarea
                 value={revokeReason}
                 onChange={(e) => setRevokeReason(e.target.value)}
-                placeholder="Sababni kiriting..."
+                placeholder={t("contractsContractDetailDialog.reasonPlaceholder")}
                 rows={2}
                 className="w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
               />
@@ -196,10 +203,10 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
                   onClick={handleRevoke}
                   disabled={revoke.isPending || revokeReason.length < 3}
                 >
-                  Tasdiqlash
+                  {t("common.confirm")}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setRevokeMode(false)}>
-                  Bekor
+                  {t("common.cancel")}
                 </Button>
               </div>
             </AlertDescription>
@@ -211,31 +218,39 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
         {/* Meta */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
-            <dt className="text-xs text-muted-foreground">Shablon</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("contractsContractDetailDialog.template")}
+            </dt>
             <dd className="font-mono">{contract.template_ref}</dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">O'quv yili</dt>
+            <dt className="text-xs text-muted-foreground">{t("common.academicYear")}</dt>
             <dd>{contract.academic_year_name}</dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">PDF yaratildi</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("contractsContractDetailDialog.pdfCreatedAt")}
+            </dt>
             <dd>
               {contract.generated_at
-                ? new Date(contract.generated_at).toLocaleString("uz-UZ")
+                ? new Date(contract.generated_at).toLocaleString(dateLocale())
                 : "—"}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">Skan yuklangan</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("contractsContractDetailDialog.scanUploadedAt")}
+            </dt>
             <dd>
               {contract.signed_at_org
-                ? new Date(contract.signed_at_org).toLocaleString("uz-UZ")
+                ? new Date(contract.signed_at_org).toLocaleString(dateLocale())
                 : "—"}
             </dd>
           </div>
           <div className="col-span-2">
-            <dt className="text-xs text-muted-foreground">QR public URL</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("contractsContractDetailDialog.qrPublicUrl")}
+            </dt>
             <dd className="break-all font-mono text-xs">{verifyUrl}</dd>
           </div>
         </div>
@@ -244,15 +259,17 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
 
         {/* Students table */}
         <div>
-          <h3 className="mb-2 text-sm font-semibold">Talabalar ({contract.students_count})</h3>
+          <h3 className="mb-2 text-sm font-semibold">
+            {t("common.students")} ({contract.students_count})
+          </h3>
           <div className="max-h-60 overflow-y-auto rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[40px]">#</TableHead>
-                  <TableHead>F.I.SH.</TableHead>
-                  <TableHead>Yo'nalish</TableHead>
-                  <TableHead className="w-[80px]">Kurs</TableHead>
+                  <TableHead>{t("common.fullName")}</TableHead>
+                  <TableHead>{t("common.direction")}</TableHead>
+                  <TableHead className="w-[80px]">{t("common.course")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

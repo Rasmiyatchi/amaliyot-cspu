@@ -1,9 +1,10 @@
 import { useAuthStore } from "@/stores/auth";
+import i18n from "@/i18n";
 
 /** Supervizorning o'z talabalari bo'yicha yakuniy hisobotini PDF sifatida yuklab oladi. */
 export async function downloadSupervisorReport(): Promise<void> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
 
   const res = await fetch("/api/v1/supervisors/me/report.pdf", {
     headers: { Authorization: `Bearer ${token}` },

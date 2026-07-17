@@ -1,5 +1,6 @@
 import { Loader2, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { GroupFormDialog } from "@/components/admin/academic/group-form-dialog";
@@ -27,6 +28,7 @@ import type { Group, UUID } from "@/lib/api/types";
 const ALL = "__all__";
 
 export function GroupList() {
+  const { t } = useTranslation();
   const [directionId, setDirectionId] = useState<UUID | undefined>(undefined);
   const [academicYearId, setAcademicYearId] = useState<UUID | undefined>(undefined);
   const [course, setCourse] = useState<number | undefined>(undefined);
@@ -46,12 +48,12 @@ export function GroupList() {
   }, [groups.data, search]);
 
   const handleDelete = async (g: Group) => {
-    if (!confirm(`"${g.name}" ni o'chirishni tasdiqlang?`)) return;
+    if (!confirm(t("academicGroupList.deleteConfirm", { name: g.name }))) return;
     try {
       await del.mutateAsync(g.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -62,7 +64,7 @@ export function GroupList() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Qidiruv (guruh nomi)"
+          placeholder={t("academicGroupList.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="min-w-[180px] max-w-[220px]"
@@ -72,10 +74,10 @@ export function GroupList() {
           onValueChange={(v) => setDirectionId(v === ALL ? undefined : (v as UUID))}
         >
           <SelectTrigger className="w-[240px]">
-            <SelectValue placeholder="Yo'nalish" />
+            <SelectValue placeholder={t("common.direction")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha yo'nalishlar</SelectItem>
+            <SelectItem value={ALL}>{t("academicGroupList.allDirections")}</SelectItem>
             {(directions.data?.items ?? []).map((d) => (
               <SelectItem key={d.id} value={d.id}>
                 {d.code} — {d.name}
@@ -88,10 +90,10 @@ export function GroupList() {
           onValueChange={(v) => setAcademicYearId(v === ALL ? undefined : (v as UUID))}
         >
           <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="O'quv yili" />
+            <SelectValue placeholder={t("common.academicYear")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha yillar</SelectItem>
+            <SelectItem value={ALL}>{t("common.allYears")}</SelectItem>
             {(academicYears.data ?? []).map((ay) => (
               <SelectItem key={ay.id} value={ay.id}>
                 {ay.name}
@@ -104,20 +106,20 @@ export function GroupList() {
           onValueChange={(v) => setCourse(v === ALL ? undefined : Number(v))}
         >
           <SelectTrigger className="w-[130px]">
-            <SelectValue placeholder="Kurs" />
+            <SelectValue placeholder={t("common.course")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha kurs</SelectItem>
+            <SelectItem value={ALL}>{t("academicGroupList.allCourses")}</SelectItem>
             {[1, 2, 3, 4, 5].map((c) => (
               <SelectItem key={c} value={String(c)}>
-                {c}-kurs
+                {t("common.courseN", { n: c })}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Button className="ml-auto" onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Yangi guruh
+          {t("academicGroupList.newGroup")}
         </Button>
       </div>
 
@@ -136,11 +138,11 @@ export function GroupList() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={Users}
-            title="Guruhlar yo'q"
+            title={t("academicGroupList.emptyTitle")}
             description={
               search || directionId || academicYearId || course !== undefined
-                ? "Filtrga mos guruh topilmadi"
-                : "Yo'nalish va o'quv yili tanlab yangi guruh yarating"
+                ? t("academicGroupList.emptyFiltered")
+                : t("academicGroupList.emptyDescription")
             }
           />
         </div>
@@ -151,10 +153,10 @@ export function GroupList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Guruh</TableHead>
-                <TableHead>Kurs</TableHead>
-                <TableHead>Yo'nalish</TableHead>
-                <TableHead>Akademik yil</TableHead>
+                <TableHead>{t("common.group")}</TableHead>
+                <TableHead>{t("common.course")}</TableHead>
+                <TableHead>{t("common.direction")}</TableHead>
+                <TableHead>{t("academicGroupList.academicYearHeader")}</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -165,7 +167,9 @@ export function GroupList() {
                   <TableRow key={g.id}>
                     <TableCell className="font-medium">{g.name}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{g.course}-kurs</Badge>
+                      <Badge variant="secondary">
+                        {t("common.courseN", { n: g.course })}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {d ? `${d.code} — ${d.name}` : "—"}
@@ -175,14 +179,14 @@ export function GroupList() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => setEditing(g)} aria-label="Tahrirlash">
+                        <Button size="icon" variant="ghost" onClick={() => setEditing(g)} aria-label={t("common.edit")}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           size="icon"
                           variant="ghost"
                           onClick={() => handleDelete(g)}
-                          aria-label="O'chirish"
+                          aria-label={t("common.delete")}
                           disabled={del.isPending}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />

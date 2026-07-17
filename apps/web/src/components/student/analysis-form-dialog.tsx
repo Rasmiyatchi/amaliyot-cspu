@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { FileText, Loader2, Save, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -47,6 +48,7 @@ export function LessonAnalysisFormDialog({
   analysis,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   const [date, setDate] = useState(today());
   const [subject, setSubject] = useState("");
   const [teacher, setTeacher] = useState("");
@@ -86,9 +88,11 @@ export function LessonAnalysisFormDialog({
     try {
       const att = await uploadStandaloneFile(file);
       setAttachments((prev) => [...prev, att]);
-      toast.success("PDF yuklandi");
+      toast.success(t("studentAnalysisFormDialog.pdfUploaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Yuklashda xato");
+      toast.error(
+        e instanceof Error ? e.message : t("studentAnalysisFormDialog.uploadError"),
+      );
     } finally {
       setUploading(false);
     }
@@ -100,11 +104,11 @@ export function LessonAnalysisFormDialog({
 
   const handleSave = async () => {
     if (subject.trim().length < 1 || teacher.trim().length < 1) {
-      toast.error("Fan va o'qituvchi majburiy");
+      toast.error(t("studentAnalysisFormDialog.requiredFields"));
       return;
     }
     if (attachments.length === 0) {
-      toast.error("Dars tahlili PDF faylini yuklang");
+      toast.error(t("studentAnalysisFormDialog.pdfRequired"));
       return;
     }
 
@@ -120,14 +124,14 @@ export function LessonAnalysisFormDialog({
     try {
       if (isEdit && analysis) {
         await update.mutateAsync({ id: analysis.id, data: base });
-        toast.success("Yangilandi");
+        toast.success(t("common.updated"));
       } else {
         await create.mutateAsync({ assignmentId, data: base });
-        toast.success("Yuborildi");
+        toast.success(t("studentAnalysisFormDialog.submittedToast"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -138,17 +142,19 @@ export function LessonAnalysisFormDialog({
       <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Dars tahlilini tahrirlash" : "Yangi dars tahlili"}
+            {isEdit
+              ? t("studentAnalysisFormDialog.editTitle")
+              : t("studentAnalysisFormDialog.newTitle")}
           </DialogTitle>
           <DialogDescription>
-            Sinf, fan, o'qituvchi va sanani kiriting, tahlil PDF faylini yuklang
+            {t("studentAnalysisFormDialog.subtitle")}
           </DialogDescription>
         </DialogHeader>
 
         {analysis?.status === "rejected" && analysis.rejection_reason && (
           <Alert variant="destructive">
             <AlertDescription>
-              <div className="font-medium">Rad etilgan</div>
+              <div className="font-medium">{t("studentAnalysisFormDialog.rejected")}</div>
               <div className="mt-1 text-sm">{analysis.rejection_reason}</div>
             </AlertDescription>
           </Alert>
@@ -157,7 +163,7 @@ export function LessonAnalysisFormDialog({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <Label htmlFor="analysis-date">
-              Sana <span className="text-destructive">*</span>
+              {t("common.date")} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="analysis-date"
@@ -169,61 +175,74 @@ export function LessonAnalysisFormDialog({
           </div>
           <div>
             <Label htmlFor="analysis-quarter">
-              Chorak <span className="text-destructive">*</span>
+              {t("studentAnalysisFormDialog.quarter")}{" "}
+              <span className="text-destructive">*</span>
             </Label>
             <Select value={quarter} onValueChange={setQuarter} disabled={isApproved}>
               <SelectTrigger id="analysis-quarter">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">1-chorak</SelectItem>
-                <SelectItem value="2">2-chorak</SelectItem>
-                <SelectItem value="3">3-chorak</SelectItem>
-                <SelectItem value="4">4-chorak</SelectItem>
+                <SelectItem value="1">
+                  {t("studentAnalysisFormDialog.quarterN", { n: 1 })}
+                </SelectItem>
+                <SelectItem value="2">
+                  {t("studentAnalysisFormDialog.quarterN", { n: 2 })}
+                </SelectItem>
+                <SelectItem value="3">
+                  {t("studentAnalysisFormDialog.quarterN", { n: 3 })}
+                </SelectItem>
+                <SelectItem value="4">
+                  {t("studentAnalysisFormDialog.quarterN", { n: 4 })}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label htmlFor="analysis-grade">
-              Sinf <span className="text-destructive">*</span>
+              {t("studentAnalysisFormDialog.gradeLevel")}{" "}
+              <span className="text-destructive">*</span>
             </Label>
             <Input
               id="analysis-grade"
               value={gradeLevel}
               onChange={(e) => setGradeLevel(e.target.value)}
               disabled={isApproved}
-              placeholder="7-B"
+              placeholder={t("studentAnalysisFormDialog.gradePlaceholder")}
             />
           </div>
           <div>
             <Label htmlFor="analysis-subject">
-              Fan <span className="text-destructive">*</span>
+              {t("studentAnalysisFormDialog.subject")}{" "}
+              <span className="text-destructive">*</span>
             </Label>
             <Input
               id="analysis-subject"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               disabled={isApproved}
-              placeholder="Biologiya"
+              placeholder={t("studentAnalysisFormDialog.subjectPlaceholder")}
             />
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="analysis-teacher">
-              O'qituvchi <span className="text-destructive">*</span>
+              {t("studentAnalysisFormDialog.teacher")}{" "}
+              <span className="text-destructive">*</span>
             </Label>
             <Input
               id="analysis-teacher"
               value={teacher}
               onChange={(e) => setTeacher(e.target.value)}
               disabled={isApproved}
-              placeholder="Karimova Oygul"
+              placeholder={t("studentAnalysisFormDialog.teacherPlaceholder")}
             />
           </div>
         </div>
 
         <div>
           <Label>
-            Tahlil fayli <span className="text-destructive">*</span>
+            {t("studentAnalysisFormDialog.fileLabel")}{" "}
+            <span className="text-destructive">*</span>
           </Label>
           <input
             ref={fileInputRef}
@@ -257,7 +276,7 @@ export function LessonAnalysisFormDialog({
                       variant="ghost"
                       onClick={() => removeAttachment(att.id)}
                     >
-                      Olib tashlash
+                      {t("studentAnalysisFormDialog.remove")}
                     </Button>
                   )}
                 </div>
@@ -276,12 +295,12 @@ export function LessonAnalysisFormDialog({
               {uploading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  Yuklanmoqda...
+                  {t("common.loading")}
                 </>
               ) : (
                 <>
                   <Upload className="h-5 w-5" />
-                  PDF tanlash
+                  {t("studentAnalysisFormDialog.choosePdf")}
                 </>
               )}
             </Button>
@@ -290,7 +309,7 @@ export function LessonAnalysisFormDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            Yopish
+            {t("common.close")}
           </Button>
           {!isApproved && (
             <Button
@@ -301,7 +320,7 @@ export function LessonAnalysisFormDialog({
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
               <Save className="h-4 w-4" />
-              {isEdit ? "Saqlash" : "Yuborish"}
+              {isEdit ? t("common.save") : t("studentAnalysisFormDialog.submit")}
             </Button>
           )}
         </DialogFooter>

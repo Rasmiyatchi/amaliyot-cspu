@@ -1,4 +1,5 @@
 import { useAuthStore } from "@/stores/auth";
+import i18n from "@/i18n";
 import type { UUID } from "@/lib/api/types";
 
 type ArchiveVariant = "zip" | "cover" | "journal" | "analyses" | "tasks";
@@ -18,7 +19,7 @@ export async function downloadArchive(
 ): Promise<void> {
   const token = useAuthStore.getState().accessToken;
   if (!token) {
-    throw new Error("Kirish tokeni yo'q");
+    throw new Error(i18n.t("common.noAccessToken"));
   }
   const res = await fetch(
     `/api/v1/assignments/${assignmentId}/${PATHS[variant]}`,

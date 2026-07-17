@@ -23,10 +23,12 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
 import { NotificationsBell } from "@/components/notifications-bell";
 import { ProfileDialog } from "@/components/profile-dialog";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -37,64 +39,64 @@ import { useAuthStore } from "@/stores/auth";
 
 type NavItem = {
   to: string;
-  label: string;
+  labelKey: string;
   icon: typeof LayoutDashboard;
   end?: boolean;
   superAdminOnly?: boolean;
 };
 
 type NavSection = {
-  label?: string; // section heading; undefined = no heading
+  labelKey?: string; // section heading; undefined = no heading
   items: NavItem[];
 };
 
 const navSections: NavSection[] = [
   {
     items: [
-      { to: "/admin", label: "Bosh sahifa", icon: LayoutDashboard, end: true },
+      { to: "/admin", labelKey: "adminAdminSidebar.nav.dashboard", icon: LayoutDashboard, end: true },
     ],
   },
   {
-    label: "Akademik",
+    labelKey: "adminAdminSidebar.sections.academic",
     items: [
-      { to: "/admin/academic", label: "Fakultet/guruh", icon: School },
-      { to: "/admin/students", label: "Talabalar", icon: Users },
-      { to: "/admin/supervisors", label: "Rahbarlar", icon: UserCog },
+      { to: "/admin/academic", labelKey: "adminAdminSidebar.nav.academic", icon: School },
+      { to: "/admin/students", labelKey: "common.students", icon: Users },
+      { to: "/admin/supervisors", labelKey: "adminAdminSidebar.nav.supervisors", icon: UserCog },
     ],
   },
   {
-    label: "Amaliyotlar",
+    labelKey: "adminAdminSidebar.sections.practices",
     items: [
-      { to: "/admin/practice-types", label: "Amaliyot turlari", icon: BookOpen },
-      { to: "/admin/objects", label: "Obyektlar", icon: Building2 },
-      { to: "/admin/assignments", label: "Biriktirishlar", icon: ClipboardList },
-      { to: "/admin/applications", label: "Arizalar", icon: ClipboardEdit },
-      { to: "/admin/contracts", label: "Shartnomalar", icon: FileCheck2 },
+      { to: "/admin/practice-types", labelKey: "adminAdminSidebar.nav.practiceTypes", icon: BookOpen },
+      { to: "/admin/objects", labelKey: "adminAdminSidebar.nav.objects", icon: Building2 },
+      { to: "/admin/assignments", labelKey: "adminAdminSidebar.nav.assignments", icon: ClipboardList },
+      { to: "/admin/applications", labelKey: "adminAdminSidebar.nav.applications", icon: ClipboardEdit },
+      { to: "/admin/contracts", labelKey: "adminAdminSidebar.nav.contracts", icon: FileCheck2 },
       {
         to: "/admin/contract-templates",
-        label: "Shartnoma shablonlari",
+        labelKey: "adminAdminSidebar.nav.contractTemplates",
         icon: FileText,
         superAdminOnly: true,
       },
-      { to: "/admin/attendance", label: "Davomat", icon: CalendarCheck },
+      { to: "/admin/attendance", labelKey: "adminAdminSidebar.nav.attendance", icon: CalendarCheck },
     ],
   },
   {
-    label: "O'quv jarayoni",
+    labelKey: "adminAdminSidebar.sections.studyProcess",
     items: [
-      { to: "/admin/task-templates", label: "Topshiriqlar", icon: LibraryBig },
-      { to: "/admin/documents", label: "Hujjatlar", icon: FileText },
-      { to: "/admin/reports", label: "Yakuniy hisobotlar", icon: FileCheck2 },
-      { to: "/admin/records", label: "Qaydnomalar", icon: ClipboardCheck },
-      { to: "/admin/inquiries", label: "Murojaatlar", icon: MessageSquare },
+      { to: "/admin/task-templates", labelKey: "adminAdminSidebar.nav.taskTemplates", icon: LibraryBig },
+      { to: "/admin/documents", labelKey: "adminAdminSidebar.nav.documents", icon: FileText },
+      { to: "/admin/reports", labelKey: "adminAdminSidebar.nav.reports", icon: FileCheck2 },
+      { to: "/admin/records", labelKey: "adminAdminSidebar.nav.records", icon: ClipboardCheck },
+      { to: "/admin/inquiries", labelKey: "adminAdminSidebar.nav.inquiries", icon: MessageSquare },
     ],
   },
   {
-    label: "Tizim",
+    labelKey: "adminAdminSidebar.sections.system",
     items: [
-      { to: "/admin/admins", label: "Adminlar", icon: ShieldCheck, superAdminOnly: true },
-      { to: "/admin/audit-log", label: "Audit log", icon: Shield, superAdminOnly: true },
-      { to: "/admin/system-settings", label: "Sozlamalar", icon: Settings, superAdminOnly: true },
+      { to: "/admin/admins", labelKey: "adminAdminSidebar.nav.admins", icon: ShieldCheck, superAdminOnly: true },
+      { to: "/admin/audit-log", labelKey: "adminAdminSidebar.nav.auditLog", icon: Shield, superAdminOnly: true },
+      { to: "/admin/system-settings", labelKey: "adminAdminSidebar.nav.settings", icon: Settings, superAdminOnly: true },
     ],
   },
 ];
@@ -106,6 +108,7 @@ const STORAGE_KEY = "admin-sidebar-collapsed";
  *   har doim ko'rinadi (yig'ilmaydi), desktopda esa `hidden md:flex`.
  */
 export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [profileOpen, setProfileOpen] = useState(false);
   const [collapsedPref, setCollapsed] = useState<boolean>(() => {
@@ -163,7 +166,7 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
               className="flex w-full items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <Search className="h-3.5 w-3.5" />
-              <span className="flex-1 text-left">Qidiruv...</span>
+              <span className="flex-1 text-left">{t("adminAdminSidebar.searchHint")}</span>
               <kbd className="hidden rounded border border-border bg-background px-1 py-0.5 font-mono text-[10px] sm:inline">
                 ⌘K
               </kbd>
@@ -186,12 +189,12 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
                   secIdx > 0 && (collapsed ? "mt-2 border-t border-border pt-2" : "mt-3"),
                 )}
               >
-                {section.label && !collapsed && (
+                {section.labelKey && !collapsed && (
                   <div className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {section.label}
+                    {t(section.labelKey)}
                   </div>
                 )}
-                {visibleItems.map(({ to, label, icon: Icon, end }) => {
+                {visibleItems.map(({ to, labelKey, icon: Icon, end }) => {
                   const link = (
                     <NavLink
                       key={to}
@@ -208,7 +211,7 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
                       }
                     >
                       <Icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span className="truncate">{label}</span>}
+                      {!collapsed && <span className="truncate">{t(labelKey)}</span>}
                     </NavLink>
                   );
 
@@ -216,7 +219,7 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
                   return (
                     <Tooltip key={to}>
                       <TooltipTrigger asChild>{link}</TooltipTrigger>
-                      <TooltipContent side="right">{label}</TooltipContent>
+                      <TooltipContent side="right">{t(labelKey)}</TooltipContent>
                     </Tooltip>
                   );
                 })}
@@ -229,6 +232,7 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
         <div className={cn("border-t border-border", collapsed ? "p-2" : "p-3")}>
           <div className={cn("mb-3 flex justify-center gap-2", collapsed && "flex-col items-center")}>
             <NotificationsBell />
+            <LanguageSwitcher />
             <ThemeToggle />
           </div>
           <Separator className="my-2" />
@@ -239,7 +243,7 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
                   <button
                     onClick={() => setProfileOpen(true)}
                     className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary transition-opacity hover:opacity-80"
-                    title="Profilim"
+                    title={t("adminAdminSidebar.myProfile")}
                   >
                     {user?.avatar_url ? (
                       <img
@@ -253,7 +257,7 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  {user?.full_name ?? "Profilim"}
+                  {user?.full_name ?? t("adminAdminSidebar.myProfile")}
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
@@ -262,12 +266,12 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
                     variant="ghost"
                     size="icon"
                     onClick={handleLogout}
-                    aria-label="Chiqish"
+                    aria-label={t("adminAdminSidebar.logout")}
                   >
                     <LogOut className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right">Chiqish</TooltipContent>
+                <TooltipContent side="right">{t("adminAdminSidebar.logout")}</TooltipContent>
               </Tooltip>
             </div>
           ) : (
@@ -275,7 +279,7 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
               <button
                 onClick={() => setProfileOpen(true)}
                 className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary transition-opacity hover:opacity-80"
-                title="Profilim"
+                title={t("adminAdminSidebar.myProfile")}
               >
                 {user?.avatar_url ? (
                   <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
@@ -298,8 +302,8 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                aria-label="Chiqish"
-                title="Chiqish"
+                aria-label={t("adminAdminSidebar.logout")}
+                title={t("adminAdminSidebar.logout")}
               >
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -313,15 +317,15 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
               className={cn(
                 "mt-3 flex h-8 w-full items-center justify-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
               )}
-              aria-label={collapsed ? "Yoyish" : "Yig'ish"}
-              title={collapsed ? "Yoyish" : "Yig'ish"}
+              aria-label={collapsed ? t("adminAdminSidebar.expand") : t("adminAdminSidebar.collapse")}
+              title={collapsed ? t("adminAdminSidebar.expand") : t("adminAdminSidebar.collapse")}
             >
               {collapsed ? (
                 <ChevronRight className="h-4 w-4" />
               ) : (
                 <>
                   <ChevronLeft className="h-4 w-4" />
-                  Yig'ish
+                  {t("adminAdminSidebar.collapse")}
                 </>
               )}
             </button>

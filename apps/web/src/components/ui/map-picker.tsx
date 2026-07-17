@@ -5,6 +5,7 @@ import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 import "leaflet/dist/leaflet.css";
 import { Crosshair, MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { toast } from "sonner";
 
@@ -108,6 +109,7 @@ export function MapPicker({
     : [defaultCenter.lat, defaultCenter.lng];
   const initialZoom = value ? 12 : defaultZoom;
 
+  const { t } = useTranslation();
   const [linkInput, setLinkInput] = useState("");
 
   const useGeolocation = () => {
@@ -126,7 +128,7 @@ export function MapPicker({
       onChange(parsed);
       setLinkInput("");
     } else {
-      toast.error("Koordinata topilmadi. Google Maps linkini yoki '41.31, 69.28' ko'rinishida kiriting");
+      toast.error(t("uiMapPicker.parseError"));
     }
   };
 
@@ -134,7 +136,7 @@ export function MapPicker({
     <div className="space-y-2">
       <div className="flex gap-2">
         <Input
-          placeholder="Google Maps link yoki 41.31, 69.28"
+          placeholder={t("uiMapPicker.linkPlaceholder")}
           value={linkInput}
           onChange={(e) => setLinkInput(e.target.value)}
           onKeyDown={(e) => {
@@ -145,7 +147,7 @@ export function MapPicker({
           }}
         />
         <Button type="button" variant="outline" onClick={applyLink} disabled={!linkInput.trim()}>
-          Qo'llash
+          {t("uiMapPicker.apply")}
         </Button>
       </div>
       <div
@@ -178,7 +180,7 @@ export function MapPicker({
           </div>
         ) : (
           <div className="text-xs text-muted-foreground">
-            Xaritaga bosib joyni belgilang
+            {t("uiMapPicker.clickHint")}
           </div>
         )}
         <Button
@@ -186,10 +188,10 @@ export function MapPicker({
           size="sm"
           variant="outline"
           onClick={useGeolocation}
-          title="Mening joylashuvim"
+          title={t("uiMapPicker.myLocationTitle")}
         >
           <Crosshair className="h-3.5 w-3.5" />
-          Joyim
+          {t("uiMapPicker.myLocation")}
         </Button>
       </div>
     </div>

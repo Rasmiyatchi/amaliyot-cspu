@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import i18n from "@/i18n";
 
 import { api } from "@/lib/api";
 import { useAuthStore, type User } from "@/stores/auth";
@@ -39,7 +40,7 @@ export function useUploadAvatar() {
   return useMutation({
     mutationFn: async (file: File) => {
       const token = useAuthStore.getState().accessToken;
-      if (!token) throw new Error("Sessiya tugagan");
+      if (!token) throw new Error(i18n.t("common.sessionExpired"));
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/v1/auth/me/avatar", {
@@ -49,7 +50,7 @@ export function useUploadAvatar() {
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        let msg = "Avatar yuklab bo'lmadi";
+        let msg = i18n.t("common.avatarUploadFailed");
         try {
           const j = JSON.parse(text);
           if (j.detail) msg = j.detail;

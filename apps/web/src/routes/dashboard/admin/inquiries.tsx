@@ -1,5 +1,6 @@
 import { Loader2, MessageSquare } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { InquiryThread } from "@/components/inquiry-thread";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { dateLocale } from "@/i18n";
 import {
   useInquiries,
   useResolveInquiry,
@@ -21,12 +23,13 @@ import {
 } from "@/lib/api/inquiries";
 
 const TABS = [
-  { value: "open", label: "Ochiq" },
-  { value: "resolved", label: "Yopilgan" },
-  { value: "all", label: "Barchasi" },
+  { value: "open", labelKey: "adminInquiries.tabs.open" },
+  { value: "resolved", labelKey: "adminInquiries.tabs.resolved" },
+  { value: "all", labelKey: "common.all" },
 ];
 
 export function InquiriesPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState("open");
   const resolved = tab === "all" ? undefined : tab === "resolved";
   const { data, isPending, error } = useInquiries(resolved);
@@ -36,9 +39,11 @@ export function InquiriesPage() {
   const toggleResolved = async (q: Inquiry) => {
     try {
       await resolveMut.mutateAsync({ id: q.id, resolved: !q.is_resolved });
-      toast.success(q.is_resolved ? "Qayta ochildi" : "Yopildi");
+      toast.success(
+        q.is_resolved ? t("adminInquiries.reopened") : t("adminInquiries.closedToast"),
+      );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -49,18 +54,18 @@ export function InquiriesPage() {
           <MessageSquare className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold">Talaba murojaatlari</h1>
+          <h1 className="text-2xl font-semibold">{t("adminInquiries.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Talabalarning xato/savol murojaatlariga javob bering
+            {t("adminInquiries.subtitle")}
           </p>
         </div>
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="mb-4">
         <TabsList>
-          {TABS.map((t) => (
-            <TabsTrigger key={t.value} value={t.value}>
-              {t.label}
+          {TABS.map((item) => (
+            <TabsTrigger key={item.value} value={item.value}>
+              {t(item.labelKey)}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -81,8 +86,8 @@ export function InquiriesPage() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={MessageSquare}
-            title="Murojaat yo'q"
-            description="Tanlangan holat bo'yicha murojaat topilmadi"
+            title={t("adminInquiries.emptyTitle")}
+            description={t("adminInquiries.emptyDesc")}
           />
         </div>
       )}
@@ -101,12 +106,15 @@ export function InquiriesPage() {
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{q.subject}</span>
                   <Badge variant={q.is_resolved ? "secondary" : "success"}>
-                    {q.is_resolved ? "Yopilgan" : "Ochiq"}
+                    {q.is_resolved
+                      ? t("adminInquiries.tabs.resolved")
+                      : t("adminInquiries.tabs.open")}
                   </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {q.student_name ?? "—"} · {q.message_count} ta xabar ·{" "}
-                  {new Date(q.updated_at).toLocaleDateString("uz-UZ")}
+                  {q.student_name ?? "—"} ·{" "}
+                  {t("adminInquiries.messageCount", { n: q.message_count })} ·{" "}
+                  {new Date(q.updated_at).toLocaleDateString(dateLocale())}
                 </div>
               </button>
               <Button
@@ -115,7 +123,7 @@ export function InquiriesPage() {
                 disabled={resolveMut.isPending}
                 onClick={() => toggleResolved(q)}
               >
-                {q.is_resolved ? "Qayta ochish" : "Yopish"}
+                {q.is_resolved ? t("adminInquiries.reopenBtn") : t("common.close")}
               </Button>
             </div>
           ))}

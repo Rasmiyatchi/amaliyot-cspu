@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, FileCheck2, FileText, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useDebounce } from "@/hooks/use-debounce";
@@ -21,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { dateLocale } from "@/i18n";
 import {
   downloadContractPdf,
   useContracts,
@@ -30,15 +32,16 @@ import type { Contract, ContractStatus } from "@/lib/api/types";
 
 const ALL = "__all__";
 
-const STATUS_TABS: { value: string; label: string; statuses?: ContractStatus[] }[] = [
-  { value: ALL, label: "Barchasi" },
-  { value: "yangi", label: "Yangi", statuses: ["draft", "generated"] },
-  { value: "imzolangan", label: "Imzolangan", statuses: ["active"] },
-  { value: "rad", label: "Rad etilgan", statuses: ["revoked"] },
-  { value: "arxiv", label: "Arxiv", statuses: ["expired"] },
+const STATUS_TABS: { value: string; labelKey: string; statuses?: ContractStatus[] }[] = [
+  { value: ALL, labelKey: "common.all" },
+  { value: "yangi", labelKey: "adminContracts.tabs.new", statuses: ["draft", "generated"] },
+  { value: "imzolangan", labelKey: "adminContracts.tabs.signed", statuses: ["active"] },
+  { value: "rad", labelKey: "adminContracts.tabs.rejected", statuses: ["revoked"] },
+  { value: "arxiv", labelKey: "adminContracts.tabs.archive", statuses: ["expired"] },
 ];
 
 export function ContractsPage() {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<ContractFilters>({});
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -54,7 +57,7 @@ export function ContractsPage() {
     try {
       await downloadContractPdf(c.id, c.number);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "PDF yuklab bo'lmadi");
+      toast.error(e instanceof Error ? e.message : t("adminContracts.pdfDownloadFailed"));
     } finally {
       setPdfBusyId(null);
     }
@@ -77,15 +80,15 @@ export function ContractsPage() {
             <FileCheck2 className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Shartnomalar</h1>
+            <h1 className="text-2xl font-semibold">{t("adminContracts.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              O'quv amaliyot shartnomalari bilan ishlash
+              {t("adminContracts.subtitle")}
             </p>
           </div>
         </div>
         <Button onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Yangi shartnoma
+          {t("adminContracts.newContract")}
         </Button>
       </div>
 
@@ -93,16 +96,16 @@ export function ContractsPage() {
         value={statusTab}
         onValueChange={(v) => {
           setStatusTab(v);
-          const tab = STATUS_TABS.find((t) => t.value === v);
+          const tab = STATUS_TABS.find((s) => s.value === v);
           setFilters((f) => ({ ...f, status: tab?.statuses }));
           setPage(1);
         }}
         className="mb-4"
       >
         <TabsList className="flex-wrap">
-          {STATUS_TABS.map((t) => (
-            <TabsTrigger key={t.value} value={t.value}>
-              {t.label}
+          {STATUS_TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {t(tab.labelKey)}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -110,7 +113,7 @@ export function ContractsPage() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Shartnoma raqami yoki kompaniya nomi bo'yicha qidirish"
+          placeholder={t("adminContracts.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[280px] flex-1 max-w-md"
@@ -128,8 +131,8 @@ export function ContractsPage() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={FileCheck2}
-            title="Shartnomalar yo'q"
-            description="Avval Biriktirish qiling, keyin shartnoma yarating"
+            title={t("adminContracts.emptyTitle")}
+            description={t("adminContracts.emptyDescription")}
           />
         </div>
       )}
@@ -141,12 +144,12 @@ export function ContractsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px]">№</TableHead>
-                  <TableHead>Shartnoma raqami</TableHead>
-                  <TableHead>Kompaniya nomi</TableHead>
-                  <TableHead className="w-[200px]">O'quv yili / Muddati</TableHead>
-                  <TableHead className="w-[130px]">Yaratilgan sana</TableHead>
-                  <TableHead className="w-[140px]">Shartnoma</TableHead>
-                  <TableHead className="w-[120px]">Holat</TableHead>
+                  <TableHead>{t("adminContracts.colNumber")}</TableHead>
+                  <TableHead>{t("adminContracts.colCompany")}</TableHead>
+                  <TableHead className="w-[200px]">{t("adminContracts.colPeriod")}</TableHead>
+                  <TableHead className="w-[130px]">{t("adminContracts.colCreated")}</TableHead>
+                  <TableHead className="w-[140px]">{t("adminContracts.colContract")}</TableHead>
+                  <TableHead className="w-[120px]">{t("common.status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -164,12 +167,12 @@ export function ContractsPage() {
                     <TableCell className="text-xs">
                       <div className="font-medium">{c.academic_year_name}</div>
                       <div className="text-muted-foreground">
-                        {new Date(c.start_date).toLocaleDateString("uz-UZ")} —{" "}
-                        {new Date(c.end_date).toLocaleDateString("uz-UZ")}
+                        {new Date(c.start_date).toLocaleDateString(dateLocale())} —{" "}
+                        {new Date(c.end_date).toLocaleDateString(dateLocale())}
                       </div>
                     </TableCell>
                     <TableCell className="text-xs">
-                      {new Date(c.created_at).toLocaleDateString("uz-UZ")}
+                      {new Date(c.created_at).toLocaleDateString(dateLocale())}
                     </TableCell>
                     <TableCell>
                       {c.pdf_path ? (
@@ -184,7 +187,7 @@ export function ContractsPage() {
                           }}
                         >
                           <FileText className="h-4 w-4" />
-                          Shartnoma PDF
+                          {t("adminContracts.pdfButton")}
                         </Button>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
@@ -202,7 +205,7 @@ export function ContractsPage() {
           {data.total > 0 && (
             <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
               <div>
-                Jami: <span className="font-medium text-foreground">{data.total}</span>
+                {t("common.total")}: <span className="font-medium text-foreground">{data.total}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -212,7 +215,7 @@ export function ContractsPage() {
                   disabled={page <= 1 || isFetching}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Oldingi
+                  {t("common.previous")}
                 </Button>
                 <span className="px-2">
                   {page} / {totalPages}
@@ -223,7 +226,7 @@ export function ContractsPage() {
                   onClick={() => setPage(page + 1)}
                   disabled={page >= totalPages || isFetching}
                 >
-                  Keyingi
+                  {t("common.next")}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

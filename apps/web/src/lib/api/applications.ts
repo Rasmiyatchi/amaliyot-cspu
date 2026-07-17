@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import i18n from "@/i18n";
 
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
@@ -94,7 +95,7 @@ export function useContractTypes() {
 /** Tasdiqlangan shartnoma DOCX faylini yuklab oladi. */
 export async function downloadContract(id: UUID, number: string | null): Promise<void> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
   const res = await fetch(`/api/v1/practice-applications/${id}/contract.docx`, {
     headers: { Authorization: `Bearer ${token}` },
   });

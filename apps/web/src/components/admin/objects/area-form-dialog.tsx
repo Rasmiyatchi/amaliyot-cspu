@@ -3,6 +3,7 @@ import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -45,6 +46,7 @@ type Props = {
 };
 
 export function AreaFormDialog({ open, existing, onClose }: Props) {
+  const { t } = useTranslation();
   const create = useCreateArea();
   const update = useUpdateArea();
   const isEdit = !!existing;
@@ -96,14 +98,14 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
     try {
       if (isEdit && existing) {
         await update.mutateAsync({ id: existing.id, data: payload });
-        toast.success("Hudud yangilandi");
+        toast.success(t("objectsAreaFormDialog.areaUpdated"));
       } else {
         await create.mutateAsync(payload);
-        toast.success("Hudud yaratildi");
+        toast.success(t("objectsAreaFormDialog.areaCreated"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik yuz berdi");
+      toast.error(e instanceof HTTPError ? e.message : t("common.unexpectedError"));
     }
   };
 
@@ -113,9 +115,11 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Hududni tahrirlash" : "Yangi hudud"}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? t("objectsAreaFormDialog.editTitle") : t("objectsAreaFormDialog.createTitle")}
+          </DialogTitle>
           <DialogDescription>
-            Dala/zoologiya/botanika amaliyoti uchun (shartnomasiz)
+            {t("objectsAreaFormDialog.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -126,9 +130,9 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nomi *</FormLabel>
+                  <FormLabel>{t("common.name")} *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Chimyon togʻi" {...field} />
+                    <Input placeholder={t("objectsAreaFormDialog.namePlaceholder")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -139,7 +143,7 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tavsif</FormLabel>
+                  <FormLabel>{t("objectsAreaFormDialog.descriptionLabel")}</FormLabel>
                   <FormControl>
                     <Input {...field} value={field.value ?? ""} />
                   </FormControl>
@@ -153,7 +157,7 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
                 name="region"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Viloyat *</FormLabel>
+                    <FormLabel>{t("objectsAreaFormDialog.region")} *</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -166,7 +170,7 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
                 name="district"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tuman</FormLabel>
+                    <FormLabel>{t("objectsAreaFormDialog.district")}</FormLabel>
                     <FormControl>
                       <Input {...field} value={field.value ?? ""} />
                     </FormControl>
@@ -179,7 +183,7 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
                 name="capacity"
                 render={({ field }) => (
                   <FormItem className="col-span-2">
-                    <FormLabel>Sig'imi (talabalar) *</FormLabel>
+                    <FormLabel>{t("objectsAreaFormDialog.capacity")} *</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -190,17 +194,17 @@ export function AreaFormDialog({ open, existing, onClose }: Props) {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Xaritadagi joylashuv</label>
+              <label className="text-sm font-medium">{t("objectsAreaFormDialog.mapLocation")}</label>
               <MapPicker value={geo} onChange={setGeo} />
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
-                Bekor qilish
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={busy}>
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isEdit ? "Saqlash" : "Yaratish"}
+                {isEdit ? t("common.save") : t("objectsAreaFormDialog.create")}
               </Button>
             </DialogFooter>
           </form>

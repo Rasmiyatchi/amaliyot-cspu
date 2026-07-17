@@ -1,4 +1,5 @@
 import { BookOpen, FileText, Users } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,17 +12,17 @@ import {
 import { Separator } from "@/components/ui/separator";
 import type { PracticeType } from "@/lib/api/types";
 
-const OBJECT_KIND_LABEL = {
-  organization: "Tashkilot (maktab/MTT)",
-  area: "Hudud (dala)",
-  any: "Tashkilot yoki hudud",
+const OBJECT_KIND_LABEL_KEY = {
+  organization: "practiceTypesPracticeTypeDetailDialog.objectKind.organization",
+  area: "practiceTypesPracticeTypeDetailDialog.objectKind.area",
+  any: "practiceTypesPracticeTypeDetailDialog.objectKind.any",
 };
 
-const GRADER_LABEL: Record<string, string> = {
-  system: "Tizim (avto)",
-  supervisor: "Amaliyot rahbari",
-  organization: "Tashkilot rahbariyati",
-  department_head: "Kafedra mudiri",
+const GRADER_LABEL_KEY: Record<string, string> = {
+  system: "practiceTypesPracticeTypeDetailDialog.graders.system",
+  supervisor: "practiceTypesPracticeTypeDetailDialog.graders.supervisor",
+  organization: "practiceTypesPracticeTypeDetailDialog.graders.organization",
+  department_head: "practiceTypesPracticeTypeDetailDialog.graders.departmentHead",
 };
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
@@ -39,6 +40,7 @@ type Props = {
 };
 
 export function PracticeTypeDetailDialog({ practiceType, onClose }: Props) {
+  const { t } = useTranslation();
   return (
     <Dialog open={!!practiceType} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
@@ -55,7 +57,11 @@ export function PracticeTypeDetailDialog({ practiceType, onClose }: Props) {
                     {practiceType.code}
                   </div>
                 </div>
-                {!practiceType.is_active && <Badge variant="outline">Deaktiv</Badge>}
+                {!practiceType.is_active && (
+                  <Badge variant="outline">
+                    {t("practiceTypesPracticeTypeDetailDialog.inactive")}
+                  </Badge>
+                )}
               </DialogTitle>
               {practiceType.description && (
                 <DialogDescription>{practiceType.description}</DialogDescription>
@@ -66,22 +72,27 @@ export function PracticeTypeDetailDialog({ practiceType, onClose }: Props) {
               {/* Asosiy ma'lumot */}
               <section className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <FileText className="mr-1 inline h-3 w-3" /> Shartnoma va obyekt
+                  <FileText className="mr-1 inline h-3 w-3" />{" "}
+                  {t("practiceTypesPracticeTypeDetailDialog.contractAndObject")}
                 </h3>
                 <dl className="space-y-1.5">
                   <Row
-                    label="Shartnoma"
+                    label={t("practiceTypesPracticeTypeDetailDialog.contract")}
                     value={
                       practiceType.requires_contract ? (
-                        <Badge variant="default">Majburiy</Badge>
+                        <Badge variant="default">
+                          {t("practiceTypesPracticeTypeDetailDialog.required")}
+                        </Badge>
                       ) : (
-                        <Badge variant="secondary">Talab qilinmaydi</Badge>
+                        <Badge variant="secondary">
+                          {t("practiceTypesPracticeTypeDetailDialog.notRequired")}
+                        </Badge>
                       )
                     }
                   />
                   {practiceType.contract_template_ref && (
                     <Row
-                      label="Shartnoma shabloni"
+                      label={t("practiceTypesPracticeTypeDetailDialog.contractTemplate")}
                       value={
                         <Badge variant="outline" className="font-mono">
                           {practiceType.contract_template_ref}
@@ -89,7 +100,10 @@ export function PracticeTypeDetailDialog({ practiceType, onClose }: Props) {
                       }
                     />
                   )}
-                  <Row label="Obyekt turi" value={OBJECT_KIND_LABEL[practiceType.object_kind]} />
+                  <Row
+                    label={t("practiceTypesPracticeTypeDetailDialog.objectType")}
+                    value={t(OBJECT_KIND_LABEL_KEY[practiceType.object_kind])}
+                  />
                 </dl>
               </section>
 
@@ -98,30 +112,46 @@ export function PracticeTypeDetailDialog({ practiceType, onClose }: Props) {
               {/* Davomiylik */}
               <section className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Users className="mr-1 inline h-3 w-3" /> Davomiylik va kurslar
+                  <Users className="mr-1 inline h-3 w-3" />{" "}
+                  {t("practiceTypesPracticeTypeDetailDialog.durationAndCourses")}
                 </h3>
                 <dl className="space-y-1.5">
                   <Row
-                    label="Haftalar"
+                    label={t("practiceTypesPracticeTypeDetailDialog.weeks")}
                     value={
                       practiceType.min_weeks === practiceType.max_weeks
-                        ? `${practiceType.min_weeks} hafta`
-                        : `${practiceType.min_weeks}–${practiceType.max_weeks} hafta`
+                        ? t("practiceTypesPracticeTypeDetailDialog.weeksValue", {
+                            n: practiceType.min_weeks,
+                          })
+                        : t("practiceTypesPracticeTypeDetailDialog.weeksRange", {
+                            min: practiceType.min_weeks,
+                            max: practiceType.max_weeks,
+                          })
                     }
                   />
                   {practiceType.days_per_week && (
-                    <Row label="Haftada kun" value={`${practiceType.days_per_week} kun`} />
+                    <Row
+                      label={t("practiceTypesPracticeTypeDetailDialog.daysPerWeek")}
+                      value={t("practiceTypesPracticeTypeDetailDialog.daysValue", {
+                        n: practiceType.days_per_week,
+                      })}
+                    />
                   )}
                   {practiceType.hours_per_day && (
-                    <Row label="Kunlik soat" value={`${practiceType.hours_per_day} soat`} />
+                    <Row
+                      label={t("practiceTypesPracticeTypeDetailDialog.hoursPerDay")}
+                      value={t("practiceTypesPracticeTypeDetailDialog.hoursValue", {
+                        n: practiceType.hours_per_day,
+                      })}
+                    />
                   )}
                   <Row
-                    label="Ruxsat etilgan kurslar"
+                    label={t("practiceTypesPracticeTypeDetailDialog.allowedCourses")}
                     value={
                       <div className="flex flex-wrap gap-1">
                         {practiceType.allowed_courses.map((c) => (
                           <Badge key={c} variant="secondary">
-                            {c}-kurs
+                            {t("common.courseN", { n: c })}
                           </Badge>
                         ))}
                       </div>
@@ -135,15 +165,21 @@ export function PracticeTypeDetailDialog({ practiceType, onClose }: Props) {
               {/* Baholash */}
               <section className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Baholash qoidalari (100 ball tizimi)
+                  {t("practiceTypesPracticeTypeDetailDialog.gradingTitle")}
                 </h3>
                 <div className="rounded-lg border border-border">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
-                        <th className="px-3 py-2 font-medium">Mezon</th>
-                        <th className="px-3 py-2 font-medium">Baholaydi</th>
-                        <th className="px-3 py-2 text-right font-medium">Maks ball</th>
+                        <th className="px-3 py-2 font-medium">
+                          {t("practiceTypesPracticeTypeDetailDialog.criterion")}
+                        </th>
+                        <th className="px-3 py-2 font-medium">
+                          {t("practiceTypesPracticeTypeDetailDialog.grader")}
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium">
+                          {t("practiceTypesPracticeTypeDetailDialog.maxPoints")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -151,14 +187,14 @@ export function PracticeTypeDetailDialog({ practiceType, onClose }: Props) {
                         <tr key={c.key} className="border-b last:border-0">
                           <td className="px-3 py-2 font-medium">{c.name}</td>
                           <td className="px-3 py-2 text-xs text-muted-foreground">
-                            {GRADER_LABEL[c.grader] ?? c.grader}
+                            {GRADER_LABEL_KEY[c.grader] ? t(GRADER_LABEL_KEY[c.grader]!) : c.grader}
                           </td>
                           <td className="px-3 py-2 text-right font-mono">{c.max}</td>
                         </tr>
                       ))}
                       <tr className="bg-muted/30">
                         <td colSpan={2} className="px-3 py-2 text-xs font-medium">
-                          Minimal kredit olish uchun
+                          {t("practiceTypesPracticeTypeDetailDialog.minTotal")}
                         </td>
                         <td className="px-3 py-2 text-right font-mono font-semibold">
                           {practiceType.grading_rules.min_total}

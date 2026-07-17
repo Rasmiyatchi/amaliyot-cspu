@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { FileText, Loader2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -41,11 +42,12 @@ type Props = {
 };
 
 const KIND_LABEL: Record<DocumentKind, string> = {
-  regulation: "Normativ hujjat",
-  program: "Amaliyot dasturi",
+  regulation: "documentsDocumentFormDialog.kind.regulation",
+  program: "documentsDocumentFormDialog.kind.program",
 };
 
 export function DocumentFormDialog({ open, document, defaultKind, onClose }: Props) {
+  const { t } = useTranslation();
   const isEdit = !!document;
   const [kind, setKind] = useState<DocumentKind>("regulation");
   const [practiceTypeId, setPracticeTypeId] = useState<string>("");
@@ -81,9 +83,11 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
     try {
       const att = await uploadStandaloneFile(file);
       setAttachment(att);
-      toast.success("Fayl yuklandi");
+      toast.success(t("documentsDocumentFormDialog.toasts.fileUploaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Yuklash xatosi");
+      toast.error(
+        e instanceof Error ? e.message : t("documentsDocumentFormDialog.errors.uploadError"),
+      );
     } finally {
       setUploading(false);
     }
@@ -91,15 +95,15 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      toast.error("Sarlavha majburiy");
+      toast.error(t("documentsDocumentFormDialog.errors.titleRequired"));
       return;
     }
     if (kind === "program" && !practiceTypeId) {
-      toast.error("Amaliyot dasturi uchun amaliyot turi tanlash shart");
+      toast.error(t("documentsDocumentFormDialog.errors.practiceTypeRequired"));
       return;
     }
     if (!attachment) {
-      toast.error("Fayl yuklang");
+      toast.error(t("documentsDocumentFormDialog.errors.fileRequired"));
       return;
     }
 
@@ -114,7 +118,7 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
             file_attachment: attachment,
           },
         });
-        toast.success("Hujjat yangilandi");
+        toast.success(t("documentsDocumentFormDialog.toasts.updated"));
       } else {
         await create.mutateAsync({
           kind,
@@ -123,11 +127,11 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
           description: description.trim() || null,
           file_attachment: attachment,
         });
-        toast.success("Hujjat qo'shildi");
+        toast.success(t("documentsDocumentFormDialog.toasts.created"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -138,16 +142,18 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
       <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Hujjatni tahrirlash" : "Yangi hujjat"}
+            {isEdit
+              ? t("documentsDocumentFormDialog.editTitle")
+              : t("documentsDocumentFormDialog.createTitle")}
           </DialogTitle>
           <DialogDescription>
-            Normativ hujjatlar — umumiy. Amaliyot dasturlari — har turga alohida.
+            {t("documentsDocumentFormDialog.description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4">
           <div>
-            <Label>Hujjat turi *</Label>
+            <Label>{t("documentsDocumentFormDialog.kindLabel")} *</Label>
             <Select
               value={kind}
               onValueChange={(v) => setKind(v as DocumentKind)}
@@ -157,18 +163,20 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="regulation">{KIND_LABEL.regulation}</SelectItem>
-                <SelectItem value="program">{KIND_LABEL.program}</SelectItem>
+                <SelectItem value="regulation">{t(KIND_LABEL.regulation)}</SelectItem>
+                <SelectItem value="program">{t(KIND_LABEL.program)}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {kind === "program" && (
             <div>
-              <Label>Amaliyot turi *</Label>
+              <Label>{t("common.practiceType")} *</Label>
               <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Tanlang" />
+                  <SelectValue
+                    placeholder={t("documentsDocumentFormDialog.selectPlaceholder")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {(practiceTypes.data ?? []).map((p) => (
@@ -182,28 +190,28 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
           )}
 
           <div>
-            <Label>Sarlavha *</Label>
+            <Label>{t("documentsDocumentFormDialog.titleLabel")} *</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Hujjat nomi"
+              placeholder={t("documentsDocumentFormDialog.titlePlaceholder")}
               maxLength={500}
             />
           </div>
 
           <div>
-            <Label>Tavsif</Label>
+            <Label>{t("documentsDocumentFormDialog.descriptionLabel")}</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Qo'shimcha izoh (ixtiyoriy)"
+              placeholder={t("documentsDocumentFormDialog.descriptionPlaceholder")}
               rows={3}
               maxLength={10000}
             />
           </div>
 
           <div>
-            <Label>Fayl *</Label>
+            <Label>{t("documentsDocumentFormDialog.fileLabel")} *</Label>
             <input
               ref={fileInputRef}
               type="file"
@@ -235,7 +243,7 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
                   disabled={busy}
                 >
                   <Upload className="h-4 w-4" />
-                  Almashtirish
+                  {t("documentsDocumentFormDialog.replaceFile")}
                 </Button>
               </div>
             ) : (
@@ -249,12 +257,12 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
                 {uploading ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Yuklanmoqda...
+                    {t("common.loading")}
                   </>
                 ) : (
                   <>
                     <Upload className="h-5 w-5" />
-                    Fayl tanlash (PDF, DOC, XLS, PPT)
+                    {t("documentsDocumentFormDialog.chooseFile")}
                   </>
                 )}
               </Button>
@@ -264,11 +272,11 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Bekor
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={busy}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isEdit ? "Saqlash" : "Qo'shish"}
+            {isEdit ? t("common.save") : t("common.add")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import i18n from "@/i18n";
 
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
@@ -41,7 +42,7 @@ function qs(filters: ContractFilters, page: number, pageSize: number): string {
 /** Shartnoma PDF'ini autentifikatsiya bilan yuklab oladi. */
 export async function downloadContractPdf(id: UUID, number: string): Promise<void> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
   const res = await fetch(`/api/v1/contracts/${id}/pdf`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -130,7 +131,7 @@ export function useVerifyContract(token: string | null) {
     enabled: !!token,
     queryFn: async () => {
       const res = await fetch(`/verify/${token}`, { credentials: "omit" });
-      if (!res.ok) throw new Error("Shartnoma topilmadi");
+      if (!res.ok) throw new Error(i18n.t("common.contractNotFound"));
       return (await res.json()) as ContractVerifyResponse;
     },
   });

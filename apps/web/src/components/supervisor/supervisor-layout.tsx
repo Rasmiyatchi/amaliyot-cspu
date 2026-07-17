@@ -1,5 +1,6 @@
 import { Menu } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Outlet, useLocation } from "react-router-dom";
 
 import { MaintenanceGuard } from "@/components/maintenance-guard";
@@ -9,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 export function SupervisorLayout() {
+  const { t } = useTranslation();
   const [navOpen, setNavOpen] = useState(false);
   const location = useLocation();
 
@@ -26,7 +28,9 @@ export function SupervisorLayout() {
         {/* Mobil navigatsiya drawer */}
         <Sheet open={navOpen} onOpenChange={setNavOpen}>
           <SheetContent side="left" className="w-64 p-0" showClose={false}>
-            <SheetTitle className="sr-only">Navigatsiya</SheetTitle>
+            <SheetTitle className="sr-only">
+              {t("supervisorSupervisorLayout.navTitle")}
+            </SheetTitle>
             <SupervisorSidebar inSheet />
           </SheetContent>
         </Sheet>
@@ -38,11 +42,13 @@ export function SupervisorLayout() {
               variant="ghost"
               size="icon"
               onClick={() => setNavOpen(true)}
-              aria-label="Menyu"
+              aria-label={t("supervisorSupervisorLayout.menuLabel")}
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="font-semibold">CHDPU Amaliyot</span>
+            <span className="font-semibold">
+              {t("supervisorSupervisorLayout.brand")}
+            </span>
           </header>
 
           <main className="flex-1 overflow-auto">

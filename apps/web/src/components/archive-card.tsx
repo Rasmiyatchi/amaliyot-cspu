@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,24 +24,26 @@ type Props = {
 
 type Variant = "zip" | "cover" | "journal" | "analyses" | "tasks";
 
-const LABELS: Record<Variant, { label: string; icon: typeof Download }> = {
-  zip: { label: "Yig'ma jild (ZIP)", icon: Package },
-  cover: { label: "Umumiy hisobot", icon: FileText },
-  journal: { label: "Kundalik", icon: NotebookPen },
-  analyses: { label: "Dars tahlillari", icon: Sparkles },
-  tasks: { label: "Topshiriqlar", icon: FileText },
+const LABELS: Record<Variant, { labelKey: string; icon: typeof Download }> = {
+  zip: { labelKey: "archiveCard.variants.zip", icon: Package },
+  cover: { labelKey: "archiveCard.variants.cover", icon: FileText },
+  journal: { labelKey: "archiveCard.variants.journal", icon: NotebookPen },
+  analyses: { labelKey: "archiveCard.variants.analyses", icon: Sparkles },
+  tasks: { labelKey: "archiveCard.variants.tasks", icon: FileText },
 };
 
 export function ArchiveCard({ assignmentId, compact }: Props) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState<Variant | null>(null);
 
   const handle = async (variant: Variant) => {
     setBusy(variant);
     try {
       await downloadArchive(assignmentId, variant);
-      toast.success("Yuklab olindi");
+      toast.success(t("archiveCard.downloaded"));
     } catch (e) {
-      const msg = e instanceof HTTPError ? e.message : e instanceof Error ? e.message : "Xatolik";
+      const msg =
+        e instanceof HTTPError ? e.message : e instanceof Error ? e.message : t("common.error");
       toast.error(msg);
     } finally {
       setBusy(null);
@@ -68,7 +71,7 @@ export function ArchiveCard({ assignmentId, compact }: Props) {
               ) : (
                 <Icon className="h-4 w-4" />
               )}
-              {LABELS[v].label}
+              {t(LABELS[v].labelKey)}
             </Button>
           );
         })}
@@ -81,13 +84,12 @@ export function ArchiveCard({ assignmentId, compact }: Props) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Archive className="h-4 w-4 text-primary" />
-          Yig'ma jild
+          {t("archiveCard.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         <p className="text-sm text-muted-foreground">
-          Amaliyot natijalari: umumiy hisobot, kundalik, dars tahlillari va topshiriqlar.
-          Shartnoma (agar bo'lsa) ZIP'ga avtomatik qo'shiladi.
+          {t("archiveCard.description")}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => handle("zip")} disabled={busy !== null}>
@@ -96,7 +98,7 @@ export function ArchiveCard({ assignmentId, compact }: Props) {
             ) : (
               <Package className="h-4 w-4" />
             )}
-            Yig'ma jildni yuklab olish
+            {t("archiveCard.downloadZip")}
           </Button>
         </div>
         <div className="flex flex-wrap gap-2 pt-2">
@@ -115,7 +117,7 @@ export function ArchiveCard({ assignmentId, compact }: Props) {
                 ) : (
                   <Icon className="h-3.5 w-3.5" />
                 )}
-                {LABELS[v].label}
+                {t(LABELS[v].labelKey)}
               </Button>
             );
           })}

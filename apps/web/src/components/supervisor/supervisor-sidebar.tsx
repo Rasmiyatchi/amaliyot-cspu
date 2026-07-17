@@ -11,10 +11,12 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
 import { NotificationsBell } from "@/components/notifications-bell";
 import { ProfileDialog } from "@/components/profile-dialog";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -30,28 +32,30 @@ import { useAuthStore } from "@/stores/auth";
 
 type NavItem = {
   to: string;
-  label: string;
+  labelKey: string;
   icon: typeof LayoutDashboard;
   end?: boolean;
 };
 
 type NavSection = {
-  label?: string;
+  labelKey?: string;
   items: NavItem[];
 };
 
 const navSections: NavSection[] = [
   {
-    items: [{ to: "/supervisor", label: "Bosh sahifa", icon: LayoutDashboard, end: true }],
+    items: [
+      { to: "/supervisor", labelKey: "supervisorSupervisorSidebar.nav.dashboard", icon: LayoutDashboard, end: true },
+    ],
   },
   {
-    label: "Amaliyotlar",
+    labelKey: "supervisorSupervisorSidebar.sections.practices",
     items: [
-      { to: "/supervisor/regulations", label: "Normativ hujjatlar", icon: ScrollText },
-      { to: "/supervisor/programs", label: "Amaliyot dasturlari", icon: BookOpen },
-      { to: "/supervisor/students", label: "Talabalarim", icon: Users },
-      { to: "/supervisor/attendance", label: "Davomat", icon: CalendarCheck },
-      { to: "/supervisor/tasks", label: "Topshiriqlar", icon: ClipboardList },
+      { to: "/supervisor/regulations", labelKey: "supervisorSupervisorSidebar.nav.regulations", icon: ScrollText },
+      { to: "/supervisor/programs", labelKey: "supervisorSupervisorSidebar.nav.programs", icon: BookOpen },
+      { to: "/supervisor/students", labelKey: "supervisorSupervisorSidebar.nav.myStudents", icon: Users },
+      { to: "/supervisor/attendance", labelKey: "supervisorSupervisorSidebar.nav.attendance", icon: CalendarCheck },
+      { to: "/supervisor/tasks", labelKey: "supervisorSupervisorSidebar.nav.tasks", icon: ClipboardList },
     ],
   },
 ];
@@ -62,6 +66,7 @@ const STORAGE_KEY = "supervisor-sidebar-collapsed";
  * @param inSheet - mobil drawer ichida render qilinyaptimi (admin sidebar bilan bir xil).
  */
 export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [profileOpen, setProfileOpen] = useState(false);
   const [collapsedPref, setCollapsed] = useState<boolean>(() => {
@@ -100,7 +105,7 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
           <GraduationCap className="h-5 w-5 shrink-0 text-primary" />
           {!collapsed && (
             <span className="truncate font-semibold tracking-tight">
-              Amaliyot rahbari
+              {t("supervisorSupervisorSidebar.title")}
             </span>
           )}
         </div>
@@ -114,12 +119,12 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
                 secIdx > 0 && (collapsed ? "mt-2 border-t border-border pt-2" : "mt-3"),
               )}
             >
-              {section.label && !collapsed && (
+              {section.labelKey && !collapsed && (
                 <div className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {section.label}
+                  {t(section.labelKey)}
                 </div>
               )}
-              {section.items.map(({ to, label, icon: Icon, end }) => {
+              {section.items.map(({ to, labelKey, icon: Icon, end }) => {
                 const link = (
                   <NavLink
                     key={to}
@@ -136,7 +141,7 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
                     }
                   >
                     <Icon className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span className="truncate">{label}</span>}
+                    {!collapsed && <span className="truncate">{t(labelKey)}</span>}
                   </NavLink>
                 );
 
@@ -144,7 +149,7 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
                 return (
                   <Tooltip key={to}>
                     <TooltipTrigger asChild>{link}</TooltipTrigger>
-                    <TooltipContent side="right">{label}</TooltipContent>
+                    <TooltipContent side="right">{t(labelKey)}</TooltipContent>
                   </Tooltip>
                 );
               })}
@@ -160,6 +165,7 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
             )}
           >
             <NotificationsBell />
+            <LanguageSwitcher />
             <ThemeToggle />
           </div>
           <Separator className="my-2" />
@@ -170,7 +176,7 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
                   <button
                     onClick={() => setProfileOpen(true)}
                     className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary transition-opacity hover:opacity-80"
-                    title="Profilim"
+                    title={t("supervisorSupervisorSidebar.myProfile")}
                   >
                     {user?.avatar_url ? (
                       <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
@@ -179,15 +185,22 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
                     )}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="right">{user?.full_name ?? "Profilim"}</TooltipContent>
+                <TooltipContent side="right">
+                  {user?.full_name ?? t("supervisorSupervisorSidebar.myProfile")}
+                </TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Chiqish">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    aria-label={t("supervisorSupervisorSidebar.logout")}
+                  >
                     <LogOut className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right">Chiqish</TooltipContent>
+                <TooltipContent side="right">{t("supervisorSupervisorSidebar.logout")}</TooltipContent>
               </Tooltip>
             </div>
           ) : (
@@ -195,7 +208,7 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
               <button
                 onClick={() => setProfileOpen(true)}
                 className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary transition-opacity hover:opacity-80"
-                title="Profilim"
+                title={t("supervisorSupervisorSidebar.myProfile")}
               >
                 {user?.avatar_url ? (
                   <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
@@ -210,14 +223,16 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
                 <div className="truncate text-sm font-medium">
                   {user?.full_name ?? "—"}
                 </div>
-                <div className="truncate text-xs text-muted-foreground">Supervisor</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {t("common.supervisor")}
+                </div>
               </button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                aria-label="Chiqish"
-                title="Chiqish"
+                aria-label={t("supervisorSupervisorSidebar.logout")}
+                title={t("supervisorSupervisorSidebar.logout")}
               >
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -228,14 +243,18 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
             <button
               onClick={() => setCollapsed((c) => !c)}
               className="mt-3 flex h-8 w-full items-center justify-center gap-1.5 rounded-md text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label={collapsed ? "Yoyish" : "Yig'ish"}
+              aria-label={
+                collapsed
+                  ? t("supervisorSupervisorSidebar.expand")
+                  : t("supervisorSupervisorSidebar.collapse")
+              }
             >
               {collapsed ? (
                 <ChevronRight className="h-4 w-4" />
               ) : (
                 <>
                   <ChevronLeft className="h-4 w-4" />
-                  Yig'ish
+                  {t("supervisorSupervisorSidebar.collapse")}
                 </>
               )}
             </button>

@@ -8,6 +8,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import {
@@ -34,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { dateLocale } from "@/i18n";
 import {
   useApproveJournal,
   useApproveLessonAnalysis,
@@ -52,6 +54,7 @@ type Props = {
 };
 
 export function SupervisorReviewPanel({ assignmentId }: Props) {
+  const { t } = useTranslation();
   const { data: tasks } = useAssignmentTasks(assignmentId);
   const { data: journal } = useJournal(assignmentId);
   const { data: analyses } = useLessonAnalyses(assignmentId);
@@ -82,9 +85,11 @@ export function SupervisorReviewPanel({ assignmentId }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <span>Ko'rib chiqish</span>
+            <span>{t("supervisorReviewPanel.title")}</span>
             {pendingCount > 0 && (
-              <Badge variant="warning">{pendingCount} kutilmoqda</Badge>
+              <Badge variant="warning">
+                {t("supervisorReviewPanel.pendingCount", { count: pendingCount })}
+              </Badge>
             )}
           </CardTitle>
         </CardHeader>
@@ -93,15 +98,15 @@ export function SupervisorReviewPanel({ assignmentId }: Props) {
             <TabsList>
               <TabsTrigger value="tasks">
                 <BookOpen className="h-3.5 w-3.5" />
-                Topshiriqlar
+                {t("supervisorReviewPanel.tabs.tasks")}
               </TabsTrigger>
               <TabsTrigger value="journal">
                 <NotebookPen className="h-3.5 w-3.5" />
-                Kundalik {journal ? `(${journal.length})` : ""}
+                {t("supervisorReviewPanel.tabs.journal")} {journal ? `(${journal.length})` : ""}
               </TabsTrigger>
               <TabsTrigger value="analyses">
                 <Sparkles className="h-3.5 w-3.5" />
-                Dars tahlillari {analyses ? `(${analyses.length})` : ""}
+                {t("supervisorReviewPanel.tabs.analyses")} {analyses ? `(${analyses.length})` : ""}
               </TabsTrigger>
             </TabsList>
 
@@ -109,7 +114,7 @@ export function SupervisorReviewPanel({ assignmentId }: Props) {
             <TabsContent value="tasks" className="space-y-2">
               {sortedTasks.length === 0 && (
                 <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Topshiriqlar yo'q
+                  {t("supervisorReviewPanel.emptyTasks")}
                 </div>
               )}
               {sortedTasks.map((t) => (
@@ -139,7 +144,7 @@ export function SupervisorReviewPanel({ assignmentId }: Props) {
             <TabsContent value="journal" className="space-y-2">
               {(!journal || journal.length === 0) && (
                 <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Kundalik yozuvlari yo'q
+                  {t("supervisorReviewPanel.emptyJournal")}
                 </div>
               )}
               {journal?.map((j) => (
@@ -150,7 +155,7 @@ export function SupervisorReviewPanel({ assignmentId }: Props) {
                 >
                   <div className="flex items-center gap-2">
                     <div className="font-mono text-xs text-muted-foreground">
-                      {new Date(j.date).toLocaleDateString("uz-UZ")}
+                      {new Date(j.date).toLocaleDateString(dateLocale())}
                     </div>
                     <JournalStatusBadge status={j.status} />
                   </div>
@@ -163,7 +168,7 @@ export function SupervisorReviewPanel({ assignmentId }: Props) {
             <TabsContent value="analyses" className="space-y-2">
               {(!analyses || analyses.length === 0) && (
                 <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  Dars tahlili yo'q
+                  {t("supervisorReviewPanel.emptyAnalyses")}
                 </div>
               )}
               {analyses?.map((a) => (
@@ -181,7 +186,7 @@ export function SupervisorReviewPanel({ assignmentId }: Props) {
                       </Badge>
                     )}
                     <Badge variant="secondary" className="text-xs">
-                      {a.quarter}-chorak
+                      {t("supervisorReviewPanel.quarterN", { n: a.quarter })}
                     </Badge>
                     <JournalStatusBadge status={a.status} />
                   </div>
@@ -204,6 +209,7 @@ export function SupervisorReviewPanel({ assignmentId }: Props) {
 // ─── Task review ────────────────────────────────────────
 
 function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () => void }) {
+  const { t } = useTranslation();
   const [points, setPoints] = useState("");
   const [reason, setReason] = useState("");
   const approve = useApproveTask();
@@ -215,31 +221,31 @@ function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () =>
   const handleApprove = async () => {
     const parsed = points === "" ? null : Number(points);
     if (parsed !== null && (parsed < 0 || parsed > task.template_points)) {
-      toast.error(`Ball 0–${task.template_points} oralig'ida`);
+      toast.error(t("supervisorReviewPanel.pointsRange", { max: task.template_points }));
       return;
     }
     try {
       await approve.mutateAsync({ id: task.id, data: { points_earned: parsed } });
-      toast.success("Tasdiqlandi");
+      toast.success(t("supervisorReviewPanel.approvedToast"));
       setPoints("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const handleReject = async () => {
     if (reason.trim().length < 3) {
-      toast.error("Sababni yozing");
+      toast.error(t("supervisorReviewPanel.reasonRequired"));
       return;
     }
     try {
       await reject.mutateAsync({ id: task.id, data: { rejection_reason: reason.trim() } });
-      toast.success("Rad etildi");
+      toast.success(t("supervisorReviewPanel.rejectedToast"));
       setReason("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -249,14 +255,15 @@ function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () =>
         <DialogHeader>
           <DialogTitle>{task.template_title}</DialogTitle>
           <DialogDescription>
-            Max {task.template_points} ball{" "}
-            {task.template_quantity > 1 && `· ${task.template_quantity} ta`}
+            {t("supervisorReviewPanel.maxPoints", { points: task.template_points })}{" "}
+            {task.template_quantity > 1 &&
+              t("supervisorReviewPanel.quantityTimes", { count: task.template_quantity })}
           </DialogDescription>
         </DialogHeader>
 
         <div>
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Talaba javobi
+            {t("supervisorReviewPanel.studentAnswer")}
           </div>
           {task.submission_md ? (
             <div className="whitespace-pre-wrap rounded-md border border-border p-3 text-sm">
@@ -264,7 +271,7 @@ function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () =>
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-              Hali yuborilmagan
+              {t("supervisorReviewPanel.notSubmitted")}
             </div>
           )}
         </div>
@@ -274,7 +281,9 @@ function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () =>
             <Separator />
             <div className="space-y-3">
               <div>
-                <Label htmlFor="rev-points">Ball (0–{task.template_points})</Label>
+                <Label htmlFor="rev-points">
+                  {t("supervisorReviewPanel.pointsLabel", { max: task.template_points })}
+                </Label>
                 <Input
                   id="rev-points"
                   type="number"
@@ -286,7 +295,7 @@ function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () =>
                 />
               </div>
               <div>
-                <Label htmlFor="rev-reason">Rad etish sababi</Label>
+                <Label htmlFor="rev-reason">{t("supervisorReviewPanel.rejectReasonLabel")}</Label>
                 <textarea
                   id="rev-reason"
                   value={reason}
@@ -301,7 +310,7 @@ function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () =>
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            Yopish
+            {t("common.close")}
           </Button>
           {task.status !== "not_started" && (
             <>
@@ -312,12 +321,12 @@ function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () =>
               >
                 {reject.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <XCircle className="h-4 w-4" />
-                Rad etish
+                {t("common.reject")}
               </Button>
               <Button onClick={handleApprove} disabled={busy}>
                 {approve.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <CheckCircle2 className="h-4 w-4" />
-                Tasdiqlash
+                {t("common.approve")}
               </Button>
             </>
           )}
@@ -337,6 +346,7 @@ function JournalReviewDialog({
   entry: JournalEntry | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const approve = useApproveJournal();
   const reject = useRejectJournal();
@@ -347,25 +357,25 @@ function JournalReviewDialog({
   const handleApprove = async () => {
     try {
       await approve.mutateAsync(entry.id);
-      toast.success("Tasdiqlandi");
+      toast.success(t("supervisorReviewPanel.approvedToast"));
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const handleReject = async () => {
     if (reason.trim().length < 3) {
-      toast.error("Sababni yozing");
+      toast.error(t("supervisorReviewPanel.reasonRequired"));
       return;
     }
     try {
       await reject.mutateAsync({ id: entry.id, data: { rejection_reason: reason.trim() } });
-      toast.success("Rad etildi");
+      toast.success(t("supervisorReviewPanel.rejectedToast"));
       setReason("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -373,7 +383,11 @@ function JournalReviewDialog({
     <Dialog open={!!entry} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92vh] max-w-xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Kundalik ({new Date(entry.date).toLocaleDateString("uz-UZ")})</DialogTitle>
+          <DialogTitle>
+            {t("supervisorReviewPanel.journalDialogTitle", {
+              date: new Date(entry.date).toLocaleDateString(dateLocale()),
+            })}
+          </DialogTitle>
           <DialogDescription>
             <JournalStatusBadge status={entry.status} />
           </DialogDescription>
@@ -387,7 +401,9 @@ function JournalReviewDialog({
           <>
             <Separator />
             <div>
-              <Label htmlFor="jrev-reason">Rad etish sababi (agar kerak)</Label>
+              <Label htmlFor="jrev-reason">
+                {t("supervisorReviewPanel.rejectReasonOptionalLabel")}
+              </Label>
               <textarea
                 id="jrev-reason"
                 value={reason}
@@ -407,7 +423,7 @@ function JournalReviewDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            Yopish
+            {t("common.close")}
           </Button>
           {entry.status === "submitted" && (
             <>
@@ -417,11 +433,11 @@ function JournalReviewDialog({
                 disabled={busy || reason.trim().length < 3}
               >
                 <XCircle className="h-4 w-4" />
-                Rad etish
+                {t("common.reject")}
               </Button>
               <Button onClick={handleApprove} disabled={busy}>
                 <CheckCircle2 className="h-4 w-4" />
-                Tasdiqlash
+                {t("common.approve")}
               </Button>
             </>
           )}
@@ -441,6 +457,7 @@ function AnalysisReviewDialog({
   analysis: LessonAnalysis | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const approve = useApproveLessonAnalysis();
   const reject = useRejectLessonAnalysis();
@@ -451,16 +468,16 @@ function AnalysisReviewDialog({
   const handleApprove = async () => {
     try {
       await approve.mutateAsync(analysis.id);
-      toast.success("Tasdiqlandi");
+      toast.success(t("supervisorReviewPanel.approvedToast"));
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const handleReject = async () => {
     if (reason.trim().length < 3) {
-      toast.error("Sababni yozing");
+      toast.error(t("supervisorReviewPanel.reasonRequired"));
       return;
     }
     try {
@@ -468,11 +485,11 @@ function AnalysisReviewDialog({
         id: analysis.id,
         data: { rejection_reason: reason.trim() },
       });
-      toast.success("Rad etildi");
+      toast.success(t("supervisorReviewPanel.rejectedToast"));
       setReason("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -484,7 +501,8 @@ function AnalysisReviewDialog({
             {analysis.subject} — {analysis.teacher_name}
           </DialogTitle>
           <DialogDescription>
-            {new Date(analysis.date).toLocaleDateString("uz-UZ")} · {analysis.quarter}-chorak
+            {new Date(analysis.date).toLocaleDateString(dateLocale())} ·{" "}
+            {t("supervisorReviewPanel.quarterN", { n: analysis.quarter })}
             {analysis.grade_level && ` · ${analysis.grade_level}`}
           </DialogDescription>
         </DialogHeader>
@@ -497,7 +515,7 @@ function AnalysisReviewDialog({
           <>
             <Separator />
             <div>
-              <Label htmlFor="arev-reason">Rad etish sababi</Label>
+              <Label htmlFor="arev-reason">{t("supervisorReviewPanel.rejectReasonLabel")}</Label>
               <textarea
                 id="arev-reason"
                 value={reason}
@@ -517,7 +535,7 @@ function AnalysisReviewDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            Yopish
+            {t("common.close")}
           </Button>
           {analysis.status === "submitted" && (
             <>
@@ -527,11 +545,11 @@ function AnalysisReviewDialog({
                 disabled={busy || reason.trim().length < 3}
               >
                 <XCircle className="h-4 w-4" />
-                Rad etish
+                {t("common.reject")}
               </Button>
               <Button onClick={handleApprove} disabled={busy}>
                 <CheckCircle2 className="h-4 w-4" />
-                Tasdiqlash
+                {t("common.approve")}
               </Button>
             </>
           )}

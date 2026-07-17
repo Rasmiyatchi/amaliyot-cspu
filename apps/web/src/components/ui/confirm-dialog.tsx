@@ -1,5 +1,6 @@
 import { AlertTriangle, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -29,13 +30,14 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmText = "Tasdiqlash",
-  cancelText = "Bekor",
+  confirmText,
+  cancelText,
   variant = "default",
   isPending,
   onConfirm,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !isPending && onClose()}>
       <DialogContent className="max-w-md">
@@ -51,7 +53,7 @@ export function ConfirmDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={isPending}>
-            {cancelText}
+            {cancelText ?? t("common.cancel")}
           </Button>
           <Button
             variant={variant === "destructive" ? "destructive" : "default"}
@@ -59,7 +61,7 @@ export function ConfirmDialog({
             disabled={isPending}
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {confirmText}
+            {confirmText ?? t("common.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

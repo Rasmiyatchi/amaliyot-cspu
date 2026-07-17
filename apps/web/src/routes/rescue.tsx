@@ -10,9 +10,11 @@ import {
   User,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +23,7 @@ import { login, logout } from "@/lib/auth-api";
 import { useAuthStore } from "@/stores/auth";
 
 export function RescuePage() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -37,13 +40,13 @@ export function RescuePage() {
       const u = await login(username, password);
       if (u.role !== "super_admin") {
         await logout();
-        toast.error("Bu sahifa faqat Super Admin uchun");
+        toast.error(t("rescue.superAdminOnly"));
         return;
       }
-      toast.success(`Xush kelibsiz, ${u.full_name}!`);
+      toast.success(t("rescue.welcome", { name: u.full_name }));
       navigate("/admin", { replace: true });
     } catch (err) {
-      const msg = err instanceof HTTPError ? err.message : "Kutilmagan xatolik";
+      const msg = err instanceof HTTPError ? err.message : t("common.unexpectedError");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -67,7 +70,8 @@ export function RescuePage() {
       />
 
       <div className="absolute right-4 top-4">
-        <ThemeToggle />
+        <LanguageSwitcher />
+            <ThemeToggle />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
@@ -89,12 +93,11 @@ export function RescuePage() {
             </div>
             <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
               <AlertTriangle className="h-3 w-3" />
-              Maxfiy kirish
+              {t("rescue.badge")}
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Super Admin Rescue</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t("rescue.title")}</h1>
             <p className="mt-2 text-sm text-slate-300">
-              Faqat Super Admin loginini qabul qiladi. Profilaktika rejimida ham
-              ishlaydi.
+              {t("rescue.subtitle")}
             </p>
           </div>
 
@@ -106,7 +109,7 @@ export function RescuePage() {
           >
             <div className="space-y-2">
               <Label htmlFor="username" className="text-slate-200">
-                Login
+                {t("rescue.usernameLabel")}
               </Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -118,7 +121,7 @@ export function RescuePage() {
                   required
                   minLength={3}
                   disabled={loading}
-                  placeholder="Super Admin login"
+                  placeholder={t("rescue.usernamePlaceholder")}
                   className="h-11 border-white/10 bg-white/5 pl-10 text-white placeholder:text-slate-500 focus-visible:ring-amber-500/40"
                 />
               </div>
@@ -126,7 +129,7 @@ export function RescuePage() {
 
             <div className="space-y-2">
               <Label htmlFor="password" className="text-slate-200">
-                Parol
+                {t("rescue.passwordLabel")}
               </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -146,7 +149,7 @@ export function RescuePage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
-                  aria-label={showPassword ? "Yashirish" : "Ko'rsatish"}
+                  aria-label={showPassword ? t("rescue.hide") : t("rescue.show")}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -165,25 +168,24 @@ export function RescuePage() {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Kirilmoqda...
+                  {t("rescue.submitting")}
                 </>
               ) : (
                 <>
                   <KeyRound className="h-4 w-4" />
-                  Kirish
+                  {t("rescue.submit")}
                 </>
               )}
             </Button>
 
             <div className="rounded-lg border border-amber-400/20 bg-amber-400/5 p-3 text-xs leading-relaxed text-amber-100/80">
-              Bu sahifa profilaktika rejimida tizimga qayta kirish uchun. Faqat
-              Super Admin foydalanuvchilari kirishi mumkin.
+              {t("rescue.info")}
             </div>
           </form>
         </div>
 
         <div className="mt-4 text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} CHDPU
+          {t("rescue.copyright", { year: new Date().getFullYear() })}
         </div>
       </div>
     </div>

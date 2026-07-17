@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { Pencil, Smartphone, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { CredentialsSection } from "@/components/admin/credentials-section";
@@ -22,18 +23,26 @@ import {
   useResetStudentDevice,
   useUpdateStudentCredentials,
 } from "@/lib/api/students";
+import { dateLocale } from "@/i18n";
 import type { Student } from "@/lib/api/types";
 
 const EDUCATION_FORM_LABEL = {
-  daytime: "Kunduzgi",
-  evening: "Kechki",
-  correspondence: "Sirtqi",
-  distance: "Masofaviy",
+  daytime: "studentsStudentDetailDialog.educationForm.daytime",
+  evening: "studentsStudentDetailDialog.educationForm.evening",
+  correspondence: "studentsStudentDetailDialog.educationForm.correspondence",
+  distance: "studentsStudentDetailDialog.educationForm.distance",
 };
 
-const DEGREE_LABEL = { bachelor: "Bakalavr", master: "Magistr", phd: "PhD" };
+const DEGREE_LABEL = {
+  bachelor: "studentsStudentDetailDialog.degree.bachelor",
+  master: "studentsStudentDetailDialog.degree.master",
+  phd: "studentsStudentDetailDialog.degree.phd",
+};
 
-const GENDER_LABEL = { male: "Erkak", female: "Ayol" };
+const GENDER_LABEL = {
+  male: "studentsStudentDetailDialog.gender.male",
+  female: "studentsStudentDetailDialog.gender.female",
+};
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -61,6 +70,7 @@ type Props = {
 };
 
 export function StudentDetailDialog({ student, onClose }: Props) {
+  const { t } = useTranslation();
   const updateCreds = useUpdateStudentCredentials();
   const deleteStudent = useDeleteStudent();
   const resetDevice = useResetStudentDevice();
@@ -69,12 +79,12 @@ export function StudentDetailDialog({ student, onClose }: Props) {
 
   const handleResetDevice = async () => {
     if (!student) return;
-    if (!confirm("Talabaning bog'langan qurilmasini o'chirishni tasdiqlang? Shundan keyin u yangi qurilmadan kira oladi.")) return;
+    if (!confirm(t("studentsStudentDetailDialog.resetDeviceConfirm"))) return;
     try {
       await resetDevice.mutateAsync(student.id);
-      toast.success("Qurilma o'chirildi — talaba yangi qurilmadan kira oladi");
+      toast.success(t("studentsStudentDetailDialog.deviceReset"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -82,11 +92,11 @@ export function StudentDetailDialog({ student, onClose }: Props) {
     if (!student) return;
     try {
       await deleteStudent.mutateAsync(student.id);
-      toast.success("Talaba o'chirildi");
+      toast.success(t("studentsStudentDetailDialog.studentDeleted"));
       setConfirmDelete(false);
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -109,11 +119,11 @@ export function StudentDetailDialog({ student, onClose }: Props) {
                 </div>
                 <StudentStatusBadge status={student.status} />
               </DialogTitle>
-              <DialogDescription>To'liq talaba ma'lumoti</DialogDescription>
+              <DialogDescription>{t("studentsStudentDetailDialog.description")}</DialogDescription>
               <div className="flex gap-2 pt-2">
                 <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
                   <Pencil className="h-4 w-4" />
-                  Tahrirlash
+                  {t("common.edit")}
                 </Button>
                 <Button
                   size="sm"
@@ -122,29 +132,29 @@ export function StudentDetailDialog({ student, onClose }: Props) {
                   onClick={() => setConfirmDelete(true)}
                 >
                   <Trash2 className="h-4 w-4" />
-                  O'chirish
+                  {t("common.delete")}
                 </Button>
               </div>
             </DialogHeader>
 
             <div className="grid gap-6 md:grid-cols-2">
-              <Section title="Shaxsiy ma'lumot">
+              <Section title={t("studentsStudentDetailDialog.sectionPersonal")}>
                 <Field
-                  label="Jinsi"
-                  value={student.gender ? GENDER_LABEL[student.gender] : null}
+                  label={t("studentsStudentDetailDialog.genderLabel")}
+                  value={student.gender ? t(GENDER_LABEL[student.gender]) : null}
                 />
               </Section>
 
-              <Section title="Aloqa">
-                <Field label="Telefon" value={student.phone} />
-                <Field label="Email" value={student.email} />
-                <Field label="Viloyat" value={student.region} />
-                <Field label="Tuman" value={student.district} />
+              <Section title={t("studentsStudentDetailDialog.sectionContact")}>
+                <Field label={t("studentsStudentDetailDialog.phone")} value={student.phone} />
+                <Field label={t("studentsStudentDetailDialog.email")} value={student.email} />
+                <Field label={t("studentsStudentDetailDialog.region")} value={student.region} />
+                <Field label={t("studentsStudentDetailDialog.district")} value={student.district} />
               </Section>
 
-              <Section title="Akademik">
+              <Section title={t("studentsStudentDetailDialog.sectionAcademic")}>
                 <Field
-                  label="Yo'nalish"
+                  label={t("common.direction")}
                   value={
                     student.direction_code ? (
                       <>
@@ -156,32 +166,45 @@ export function StudentDetailDialog({ student, onClose }: Props) {
                     ) : null
                   }
                 />
-                <Field label="Fakultet" value={student.faculty_name} />
-                <Field label="Guruh" value={student.group_name} />
-                <Field label="Kurs" value={student.course ? `${student.course}-kurs` : null} />
+                <Field label={t("common.faculty")} value={student.faculty_name} />
+                <Field label={t("common.group")} value={student.group_name} />
                 <Field
-                  label="Joriy semestr"
-                  value={student.current_semester ? `${student.current_semester}-semestr` : null}
+                  label={t("common.course")}
+                  value={student.course ? t("common.courseN", { n: student.course }) : null}
                 />
                 <Field
-                  label="Bitiruvchi"
-                  value={student.is_graduating ? "Ha" : "Yo'q"}
-                />
-              </Section>
-
-              <Section title="Ta'lim turi">
-                <Field
-                  label="Ta'lim shakli"
+                  label={t("studentsStudentDetailDialog.currentSemester")}
                   value={
-                    student.education_form ? EDUCATION_FORM_LABEL[student.education_form] : null
+                    student.current_semester
+                      ? t("studentsStudentDetailDialog.semesterN", { n: student.current_semester })
+                      : null
                   }
                 />
                 <Field
-                  label="Daraja"
-                  value={student.degree_type ? DEGREE_LABEL[student.degree_type] : null}
+                  label={t("studentsStudentDetailDialog.graduating")}
+                  value={student.is_graduating ? t("common.yes") : t("common.no")}
                 />
-                <Field label="Ta'lim tili" value={student.education_language} />
-                <Field label="Qabul yili" value={student.enrollment_year} />
+              </Section>
+
+              <Section title={t("studentsStudentDetailDialog.sectionEducation")}>
+                <Field
+                  label={t("studentsStudentDetailDialog.educationFormLabel")}
+                  value={
+                    student.education_form ? t(EDUCATION_FORM_LABEL[student.education_form]) : null
+                  }
+                />
+                <Field
+                  label={t("studentsStudentDetailDialog.degreeLabel")}
+                  value={student.degree_type ? t(DEGREE_LABEL[student.degree_type]) : null}
+                />
+                <Field
+                  label={t("studentsStudentDetailDialog.educationLanguage")}
+                  value={student.education_language}
+                />
+                <Field
+                  label={t("studentsStudentDetailDialog.enrollmentYear")}
+                  value={student.enrollment_year}
+                />
               </Section>
             </div>
 
@@ -201,16 +224,18 @@ export function StudentDetailDialog({ student, onClose }: Props) {
             <div className="space-y-2">
               <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <Smartphone className="h-3.5 w-3.5" />
-                Bog'langan qurilma
+                {t("studentsStudentDetailDialog.boundDevice")}
               </h3>
               {student.device_id ? (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
                   <div className="min-w-0 text-sm">
-                    <div className="truncate">{student.device_label ?? "Noma'lum qurilma"}</div>
+                    <div className="truncate">
+                      {student.device_label ?? t("studentsStudentDetailDialog.unknownDevice")}
+                    </div>
                     <div className="text-xs text-muted-foreground">
-                      Bog'langan:{" "}
+                      {t("studentsStudentDetailDialog.boundAt")}{" "}
                       {student.device_bound_at
-                        ? new Date(student.device_bound_at).toLocaleString("uz-UZ")
+                        ? new Date(student.device_bound_at).toLocaleString(dateLocale())
                         : "—"}
                     </div>
                   </div>
@@ -222,20 +247,27 @@ export function StudentDetailDialog({ student, onClose }: Props) {
                     disabled={resetDevice.isPending}
                   >
                     <Trash2 className="h-4 w-4" />
-                    Qurilmani o'chirish
+                    {t("studentsStudentDetailDialog.resetDevice")}
                   </Button>
                 </div>
               ) : (
                 <div className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
-                  Qurilma bog'lanmagan — talaba keyingi kirishda istalgan qurilmaga bog'lanadi.
+                  {t("studentsStudentDetailDialog.noDevice")}
                 </div>
               )}
             </div>
 
             <div className="text-xs text-muted-foreground">
-              Yaratilgan: {new Date(student.created_at).toLocaleString("uz-UZ")}
+              {t("studentsStudentDetailDialog.createdAt", {
+                date: new Date(student.created_at).toLocaleString(dateLocale()),
+              })}
               {student.last_login_at && (
-                <> · Oxirgi kirish: {new Date(student.last_login_at).toLocaleString("uz-UZ")}</>
+                <>
+                  {" · "}
+                  {t("studentsStudentDetailDialog.lastLogin", {
+                    date: new Date(student.last_login_at).toLocaleString(dateLocale()),
+                  })}
+                </>
               )}
             </div>
           </>
@@ -250,9 +282,11 @@ export function StudentDetailDialog({ student, onClose }: Props) {
           />
           <ConfirmDialog
             open={confirmDelete}
-            title="Talabani o'chirish"
-            description={`${student.full_name} ni va u bilan bog'liq foydalanuvchi yozuvini o'chirishni tasdiqlang. Bu amal qaytarilmaydi.`}
-            confirmText="Ha, o'chirish"
+            title={t("studentsStudentDetailDialog.deleteTitle")}
+            description={t("studentsStudentDetailDialog.deleteDescription", {
+              name: student.full_name,
+            })}
+            confirmText={t("studentsStudentDetailDialog.deleteConfirmText")}
             variant="destructive"
             onConfirm={handleDelete}
             onClose={() => setConfirmDelete(false)}

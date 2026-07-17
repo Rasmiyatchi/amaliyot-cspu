@@ -13,6 +13,7 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -23,29 +24,29 @@ import { useAuthStore } from "@/stores/auth";
 const features = [
   {
     icon: CalendarCheck,
-    title: "Geo-fence davomat",
-    desc: "Talaba telefon GPS'i orqali check-in qiladi. Tashkilot hududidan tashqarida bo'lsa avtomatik rad etiladi.",
+    titleKey: "home.features.geoAttendance.title",
+    descKey: "home.features.geoAttendance.desc",
     accent: "from-emerald-500/20 to-teal-500/10",
     iconClass: "text-emerald-600 dark:text-emerald-400",
   },
   {
     icon: FileCheck2,
-    title: "QR shartnoma",
-    desc: "Bir bosishda PDF + QR kod generatsiya. Qabul qiluvchi tashkilot skanlab tekshiradi — public verify ishlaydi.",
+    titleKey: "home.features.qrContract.title",
+    descKey: "home.features.qrContract.desc",
     accent: "from-blue-500/20 to-indigo-500/10",
     iconClass: "text-blue-600 dark:text-blue-400",
   },
   {
     icon: ClipboardList,
-    title: "Sillabus topshiriqlar",
-    desc: "4+2 amaliyot sillabusidan 43 ta tayyor topshiriq. Talaba yuboradi, supervizor ball qo'yadi.",
+    titleKey: "home.features.syllabusTasks.title",
+    descKey: "home.features.syllabusTasks.desc",
     accent: "from-purple-500/20 to-pink-500/10",
     iconClass: "text-purple-600 dark:text-purple-400",
   },
   {
     icon: Package,
-    title: "Yig'ma jild ZIP",
-    desc: "Hisobot, kundalik, dars tahlillari va shartnoma — bir bosishda PDF'lar to'plami sifatida yuklab olish.",
+    titleKey: "home.features.archiveZip.title",
+    descKey: "home.features.archiveZip.desc",
     accent: "from-amber-500/20 to-orange-500/10",
     iconClass: "text-amber-600 dark:text-amber-400",
   },
@@ -54,31 +55,32 @@ const features = [
 const roles = [
   {
     icon: ShieldCheck,
-    label: "Super Admin",
-    desc: "Tizim sozlamalari, profilaktika rejimi, adminlar boshqaruvi, davomat override",
+    labelKey: "home.roles.superAdmin.label",
+    descKey: "home.roles.superAdmin.desc",
     color: "border-purple-500/30 bg-purple-500/5",
   },
   {
     icon: Shield,
-    label: "Admin",
-    desc: "Talaba/supervizor/tashkilot CRUD, biriktirish, shartnoma, davomat, hisobotlar",
+    labelKey: "home.roles.admin.label",
+    descKey: "home.roles.admin.desc",
     color: "border-indigo-500/30 bg-indigo-500/5",
   },
   {
     icon: UserCog,
-    label: "Supervizor",
-    desc: "O'z talabalari davomatini tasdiqlash, topshiriqlarni baholash, kundalikni o'qish",
+    labelKey: "common.supervisor",
+    descKey: "home.roles.supervisor.desc",
     color: "border-blue-500/30 bg-blue-500/5",
   },
   {
     icon: GraduationCap,
-    label: "Talaba",
-    desc: "Check-in/out, topshiriq submit, kundalik yozuvi, dars tahlili, yig'ma jild yuklab olish",
+    labelKey: "common.student",
+    descKey: "home.roles.student.desc",
     color: "border-emerald-500/30 bg-emerald-500/5",
   },
 ];
 
 export function Home() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const { data: settings } = usePublicSettings();
 
@@ -107,7 +109,7 @@ export function Home() {
           >
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             <span className="text-muted-foreground">
-              Chirchiq Davlat Pedagogika Universiteti
+              {t("home.badge")}
             </span>
           </div>
 
@@ -122,8 +124,7 @@ export function Home() {
             className="fade-in mx-auto mb-10 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg"
             style={{ animationDelay: "0.2s" }}
           >
-            {siteDesc ||
-              "Talabalar amaliyotini raqamlashtirilgan zamonaviy platforma — geo-fence davomat, QR shartnomalar, sillabus topshiriqlari va yig'ma jild eksporti bilan."}
+            {siteDesc || t("home.heroFallbackDesc")}
           </p>
 
           <div
@@ -133,7 +134,7 @@ export function Home() {
             {user ? (
               <Button asChild size="lg" className="gap-2">
                 <Link to={landingPathFor(user.role)}>
-                  Mening dashboard'im
+                  {t("home.myDashboard")}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -141,13 +142,13 @@ export function Home() {
               <Button asChild size="lg" className="gap-2">
                 <Link to="/login">
                   <LogIn className="h-4 w-4" />
-                  Tizimga kirish
+                  {t("home.login")}
                 </Link>
               </Button>
             )}
             <Button asChild size="lg" variant="outline" className="gap-2">
               <a href="#features">
-                Imkoniyatlar
+                {t("home.featuresLink")}
                 <ArrowRight className="h-4 w-4" />
               </a>
             </Button>
@@ -155,10 +156,10 @@ export function Home() {
 
           {/* Stats */}
           <div className="fade-in mt-16 grid grid-cols-2 gap-6 sm:grid-cols-4" style={{ animationDelay: "0.45s" }}>
-            <Stat value="123" label="Faol talaba" />
-            <Stat value="8" label="Amaliyot turi" />
-            <Stat value="43" label="Sillabus topshiriqlar" />
-            <Stat value="4" label="Foydalanuvchi roli" />
+            <Stat value="123" label={t("home.stats.activeStudents")} />
+            <Stat value="8" label={t("home.stats.practiceTypes")} />
+            <Stat value="43" label={t("home.stats.syllabusTasks")} />
+            <Stat value="4" label={t("home.stats.userRoles")} />
           </div>
         </div>
       </section>
@@ -168,18 +169,17 @@ export function Home() {
         <div className="container mx-auto max-w-6xl px-4">
           <div className="mb-14 text-center">
             <h2 className="mb-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              Imkoniyatlar
+              {t("home.featuresTitle")}
             </h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
-              Amaliyotning butun siklini qamrab oluvchi yagona platforma — talabani
-              biriktirishdan tortib, yig'ma jildgacha.
+              {t("home.featuresSubtitle")}
             </p>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {features.map((f, i) => (
               <div
-                key={f.title}
+                key={f.titleKey}
                 className="fade-in group relative overflow-hidden rounded-xl border border-border/50 bg-card/50 p-6 backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
                 style={{ animationDelay: `${0.1 + i * 0.05}s` }}
               >
@@ -192,9 +192,9 @@ export function Home() {
                   >
                     <f.icon className="h-5 w-5" />
                   </div>
-                  <h3 className="mb-2 font-semibold">{f.title}</h3>
+                  <h3 className="mb-2 font-semibold">{t(f.titleKey)}</h3>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    {f.desc}
+                    {t(f.descKey)}
                   </p>
                 </div>
               </div>
@@ -208,27 +208,26 @@ export function Home() {
         <div className="container mx-auto max-w-6xl px-4">
           <div className="mb-14 text-center">
             <h2 className="mb-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              4 xil foydalanuvchi
+              {t("home.rolesTitle")}
             </h2>
             <p className="mx-auto max-w-2xl text-muted-foreground">
-              Har rol o'ziga xos vazifalarni bajaradi. RBAC orqali himoyalangan,
-              audit yozuvlari saqlanadi.
+              {t("home.rolesSubtitle")}
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {roles.map((r, i) => (
               <div
-                key={r.label}
+                key={r.labelKey}
                 className={`fade-in rounded-xl border p-6 transition-all hover:-translate-y-1 ${r.color}`}
                 style={{ animationDelay: `${0.1 + i * 0.07}s` }}
               >
                 <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-background/80">
                   <r.icon className="h-5 w-5" />
                 </div>
-                <h3 className="mb-2 font-semibold">{r.label}</h3>
+                <h3 className="mb-2 font-semibold">{t(r.labelKey)}</h3>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  {r.desc}
+                  {t(r.descKey)}
                 </p>
               </div>
             ))}
@@ -244,14 +243,14 @@ export function Home() {
               <Users className="h-6 w-6 text-primary" />
             </div>
             <h2 className="mb-3 text-2xl font-bold tracking-tight sm:text-3xl">
-              Amaliyotni boshlash uchun tayyormisiz?
+              {t("home.ctaTitle")}
             </h2>
             <p className="mx-auto mb-6 max-w-md text-muted-foreground">
-              Tizimga kiring va sizning rolingizga mos dashboard ochiladi.
+              {t("home.ctaSubtitle")}
             </p>
             <Button asChild size="lg" className="gap-2">
               <Link to={user ? landingPathFor(user.role) : "/login"}>
-                {user ? "Dashboard'ga o'tish" : "Tizimga kirish"}
+                {user ? t("home.ctaGoDashboard") : t("home.login")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -264,9 +263,9 @@ export function Home() {
         <div className="container mx-auto flex flex-col items-center justify-between gap-3 px-4 text-xs text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
             <MapPin className="h-3.5 w-3.5" />
-            Chirchiq, Toshkent viloyati
+            {t("home.footerLocation")}
           </div>
-          <div>© {new Date().getFullYear()} Chirchiq Davlat Pedagogika Universiteti</div>
+          <div>{t("home.footerCopyright", { year: new Date().getFullYear() })}</div>
         </div>
       </footer>
     </div>

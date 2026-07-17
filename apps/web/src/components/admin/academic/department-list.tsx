@@ -1,5 +1,6 @@
 import { Building2, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { DepartmentFormDialog } from "@/components/admin/academic/department-form-dialog";
@@ -21,6 +22,7 @@ import type { Department, UUID } from "@/lib/api/types";
 const ALL = "__all__";
 
 export function DepartmentList() {
+  const { t } = useTranslation();
   const faculties = useFaculties();
   const [facultyId, setFacultyId] = useState<UUID | undefined>(undefined);
   const departments = useDepartments(facultyId);
@@ -31,12 +33,12 @@ export function DepartmentList() {
   const facultyById = new Map((faculties.data?.items ?? []).map((f) => [f.id, f]));
 
   const handleDelete = async (d: Department) => {
-    if (!confirm(`"${d.name}" kafedrani o'chirishni tasdiqlang?`)) return;
+    if (!confirm(t("academicDepartmentList.deleteConfirm", { name: d.name }))) return;
     try {
       await del.mutateAsync(d.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -50,10 +52,10 @@ export function DepartmentList() {
           onValueChange={(v) => setFacultyId(v === ALL ? undefined : (v as UUID))}
         >
           <SelectTrigger className="w-[240px]">
-            <SelectValue placeholder="Fakultet" />
+            <SelectValue placeholder={t("common.faculty")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha fakultetlar</SelectItem>
+            <SelectItem value={ALL}>{t("academicDepartmentList.allFaculties")}</SelectItem>
             {(faculties.data?.items ?? []).map((f) => (
               <SelectItem key={f.id} value={f.id}>
                 {f.name}
@@ -63,7 +65,7 @@ export function DepartmentList() {
         </Select>
         <Button className="ml-auto" onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Yangi kafedra
+          {t("academicDepartmentList.newDepartment")}
         </Button>
       </div>
 
@@ -82,8 +84,8 @@ export function DepartmentList() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={Building2}
-            title="Kafedralar yo'q"
-            description="Fakultet tanlab yangi kafedra qo'shing"
+            title={t("academicDepartmentList.emptyTitle")}
+            description={t("academicDepartmentList.emptyDescription")}
           />
         </div>
       )}
@@ -93,9 +95,9 @@ export function DepartmentList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nomi</TableHead>
-                <TableHead className="w-[120px]">Kod</TableHead>
-                <TableHead>Fakultet</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead className="w-[120px]">{t("academicDepartmentList.code")}</TableHead>
+                <TableHead>{t("common.faculty")}</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -117,14 +119,19 @@ export function DepartmentList() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => setEditing(d)} aria-label="Tahrirlash">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setEditing(d)}
+                        aria-label={t("common.edit")}
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDelete(d)}
-                        aria-label="O'chirish"
+                        aria-label={t("common.delete")}
                         disabled={del.isPending}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />

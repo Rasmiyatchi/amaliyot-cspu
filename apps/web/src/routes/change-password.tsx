@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { Eye, EyeOff, KeyRound, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -13,6 +14,7 @@ import { landingPathFor } from "@/lib/routing";
 import { useAuthStore } from "@/stores/auth";
 
 export function ChangePasswordPage() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const navigate = useNavigate();
@@ -27,15 +29,15 @@ export function ChangePasswordPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 6) {
-      toast.error("Parol kamida 6 ta belgi bo'lishi kerak");
+      toast.error(t("changePassword.tooShort"));
       return;
     }
     if (newPassword === user.username) {
-      toast.error("Yangi parol login bilan bir xil bo'lmasin");
+      toast.error(t("changePassword.sameAsLogin"));
       return;
     }
     if (newPassword !== confirm) {
-      toast.error("Parollar mos kelmadi");
+      toast.error(t("changePassword.mismatch"));
       return;
     }
     setLoading(true);
@@ -45,10 +47,10 @@ export function ChangePasswordPage() {
       });
       // Update store
       setUser({ ...user, must_change_password: false });
-      toast.success("Parol o'zgartirildi");
+      toast.success(t("changePassword.changed"));
       navigate(landingPathFor(user.role), { replace: true });
     } catch (err) {
-      const msg = err instanceof HTTPError ? err.message : "Kutilmagan xatolik";
+      const msg = err instanceof HTTPError ? err.message : t("common.unexpectedError");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -76,23 +78,26 @@ export function ChangePasswordPage() {
               <ShieldCheck className="h-8 w-8 text-white" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Parolni o'zgartiring</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("changePassword.title")}</h1>
           <p className="mt-2 text-sm text-slate-300">
-            Birinchi kirish uchun yangi parol o'rnatish majburiy
+            {t("changePassword.subtitle")}
           </p>
         </div>
 
         <Alert className="mb-4 border-amber-400/30 bg-amber-400/10 text-amber-100">
           <AlertDescription className="text-xs">
-            Login: <strong className="font-mono">{user.username}</strong> · Hozirgi parol login
-            bilan bir xil. Endi xavfsiz yangi parolni o'rnating.
+            <Trans
+              i18nKey="changePassword.hint"
+              values={{ username: user.username }}
+              components={[<strong key="0" className="font-mono" />]}
+            />
           </AlertDescription>
         </Alert>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="new-password" className="text-slate-200">
-              Yangi parol
+              {t("changePassword.newPassword")}
             </Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -104,7 +109,7 @@ export function ChangePasswordPage() {
                 required
                 minLength={6}
                 disabled={loading}
-                placeholder="Kamida 6 ta belgi"
+                placeholder={t("changePassword.newPasswordPlaceholder")}
                 className="h-11 border-white/10 bg-white/5 pl-10 pr-10 text-white placeholder:text-slate-500"
               />
               <button
@@ -119,7 +124,7 @@ export function ChangePasswordPage() {
 
           <div className="space-y-2">
             <Label htmlFor="confirm-password" className="text-slate-200">
-              Tasdiqlash
+              {t("common.confirm")}
             </Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -131,7 +136,7 @@ export function ChangePasswordPage() {
                 required
                 minLength={6}
                 disabled={loading}
-                placeholder="Yangi parolni qaytadan kiriting"
+                placeholder={t("changePassword.confirmPlaceholder")}
                 className="h-11 border-white/10 bg-white/5 pl-10 text-white placeholder:text-slate-500"
               />
             </div>
@@ -145,12 +150,12 @@ export function ChangePasswordPage() {
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Saqlanmoqda...
+                {t("changePassword.saving")}
               </>
             ) : (
               <>
                 <KeyRound className="h-4 w-4" />
-                Parolni o'zgartirish
+                {t("changePassword.submit")}
               </>
             )}
           </Button>

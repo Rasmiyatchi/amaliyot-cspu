@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { dateLocale } from "@/i18n";
 import {
   useMarkAllRead,
   useMarkRead,
@@ -94,7 +96,7 @@ function NotificationItem({
           </div>
         )}
         <div className="mt-0.5 text-xs text-muted-foreground">
-          {new Date(n.created_at).toLocaleString("uz-UZ")}
+          {new Date(n.created_at).toLocaleString(dateLocale())}
         </div>
       </div>
     </button>
@@ -102,6 +104,7 @@ function NotificationItem({
 }
 
 export function NotificationsBell() {
+  const { t } = useTranslation();
   const { data: count } = useUnreadCount();
   const { data: list } = useNotifications(false, 1, 15);
   const markRead = useMarkRead();
@@ -112,7 +115,12 @@ export function NotificationsBell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label="Xabarlar">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label={t("notificationsBell.title")}
+        >
           <Bell className="h-5 w-5" />
           {unread > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">
@@ -124,7 +132,14 @@ export function NotificationsBell() {
 
       <DropdownMenuContent align="end" className="w-96 max-w-[95vw] p-0">
         <DropdownMenuLabel className="flex items-center justify-between px-3 py-2">
-          <span>Xabarlar {unread > 0 && <span className="text-xs text-muted-foreground">({unread} yangi)</span>}</span>
+          <span>
+            {t("notificationsBell.title")}{" "}
+            {unread > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {t("notificationsBell.newCount", { n: unread })}
+              </span>
+            )}
+          </span>
           {unread > 0 && (
             <Button
               size="sm"
@@ -133,7 +148,7 @@ export function NotificationsBell() {
               disabled={markAllRead.isPending}
               className="h-7 text-xs"
             >
-              Barchasini o'qildi
+              {t("notificationsBell.markAllRead")}
             </Button>
           )}
         </DropdownMenuLabel>
@@ -142,7 +157,7 @@ export function NotificationsBell() {
         {!list || list.items.length === 0 ? (
           <div className="flex flex-col items-center gap-2 p-6 text-center text-sm text-muted-foreground">
             <Sparkles className="h-6 w-6 opacity-40" />
-            Xabarlar yo'q
+            {t("notificationsBell.empty")}
           </div>
         ) : (
           <div className="max-h-96 overflow-y-auto">

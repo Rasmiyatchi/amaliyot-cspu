@@ -3,6 +3,7 @@ import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -30,6 +31,7 @@ type Values = z.infer<typeof schema>;
 type Props = { open: boolean; existing: Faculty | null; onClose: () => void };
 
 export function FacultyFormDialog({ open, existing, onClose }: Props) {
+  const { t } = useTranslation();
   const create = useCreateFaculty();
   const update = useUpdateFaculty();
   const isEdit = !!existing;
@@ -53,14 +55,14 @@ export function FacultyFormDialog({ open, existing, onClose }: Props) {
     try {
       if (isEdit && existing) {
         await update.mutateAsync({ id: existing.id, data: payload });
-        toast.success("Fakultet yangilandi");
+        toast.success(t("academicFacultyFormDialog.updatedToast"));
       } else {
         await create.mutateAsync(payload);
-        toast.success("Fakultet yaratildi");
+        toast.success(t("academicFacultyFormDialog.createdToast"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -70,8 +72,12 @@ export function FacultyFormDialog({ open, existing, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Fakultetni tahrirlash" : "Yangi fakultet"}</DialogTitle>
-          <DialogDescription>Pedagogika, Tabiiy fanlar va h.k.</DialogDescription>
+          <DialogTitle>
+            {isEdit
+              ? t("academicFacultyFormDialog.editTitle")
+              : t("academicFacultyFormDialog.createTitle")}
+          </DialogTitle>
+          <DialogDescription>{t("academicFacultyFormDialog.description")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
@@ -80,9 +86,12 @@ export function FacultyFormDialog({ open, existing, onClose }: Props) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nomi *</FormLabel>
+                  <FormLabel>{t("common.name")} *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Tabiiy fanlar fakulteti" {...field} />
+                    <Input
+                      placeholder={t("academicFacultyFormDialog.namePlaceholder")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -93,9 +102,13 @@ export function FacultyFormDialog({ open, existing, onClose }: Props) {
               name="code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Qisqa kod</FormLabel>
+                  <FormLabel>{t("academicFacultyFormDialog.codeLabel")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="TF" {...field} value={field.value ?? ""} />
+                    <Input
+                      placeholder={t("academicFacultyFormDialog.codePlaceholder")}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -103,11 +116,11 @@ export function FacultyFormDialog({ open, existing, onClose }: Props) {
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
-                Bekor qilish
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={busy}>
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isEdit ? "Saqlash" : "Yaratish"}
+                {isEdit ? t("common.save") : t("academicFacultyFormDialog.createButton")}
               </Button>
             </DialogFooter>
           </form>

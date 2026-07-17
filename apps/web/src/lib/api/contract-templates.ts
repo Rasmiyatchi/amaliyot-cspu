@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import i18n from "@/i18n";
 
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
@@ -66,7 +67,7 @@ export function useDeleteContractTemplate() {
 
 export async function downloadContractTemplate(id: UUID, name: string): Promise<void> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
   const res = await fetch(`/api/v1/contract-templates/${id}/download`, {
     headers: { Authorization: `Bearer ${token}` },
   });

@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowLeft, Home, RotateCw } from "lucide-react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ export function ErrorScreen({
   error: Error;
   onReset?: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="landing-bg relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden px-4 py-16">
       <div className="blob pointer-events-none absolute -left-20 top-20 h-72 w-72 rounded-full bg-destructive/10 blur-3xl" />
@@ -62,22 +64,21 @@ export function ErrorScreen({
           className="fade-in mx-auto mb-3 inline-flex items-center gap-2 rounded-full border border-destructive/30 bg-destructive/5 px-4 py-1.5 text-xs font-medium text-destructive backdrop-blur-md"
           style={{ animationDelay: "0.1s" }}
         >
-          Kutilmagan xatolik
+          {t("common.unexpectedError")}
         </div>
 
         <h1
           className="fade-in mb-3 text-3xl font-bold tracking-tight sm:text-4xl"
           style={{ animationDelay: "0.2s" }}
         >
-          Nimadir noto'g'ri ketdi
+          {t("errorBoundary.title")}
         </h1>
 
         <p
           className="fade-in mx-auto mb-6 max-w-md text-muted-foreground"
           style={{ animationDelay: "0.3s" }}
         >
-          Ilovada kutilmagan xatolik yuz berdi. Qayta urinib ko'ring yoki bosh
-          sahifaga qayting.
+          {t("errorBoundary.description")}
         </p>
 
         {error.message && (
@@ -86,7 +87,7 @@ export function ErrorScreen({
             style={{ animationDelay: "0.4s" }}
           >
             <div className="mb-1 font-semibold text-destructive">
-              Texnik tafsilot:
+              {t("errorBoundary.technicalDetail")}
             </div>
             <code className="block break-words font-mono text-muted-foreground">
               {error.message}
@@ -101,17 +102,17 @@ export function ErrorScreen({
           {onReset && (
             <Button onClick={onReset} variant="outline">
               <RotateCw className="h-4 w-4" />
-              Qayta urinib ko'rish
+              {t("errorBoundary.retry")}
             </Button>
           )}
           <Button onClick={() => window.history.back()} variant="outline">
             <ArrowLeft className="h-4 w-4" />
-            Orqaga
+            {t("common.back")}
           </Button>
           <Button asChild>
             <Link to="/">
               <Home className="h-4 w-4" />
-              Bosh sahifa
+              {t("errorBoundary.home")}
             </Link>
           </Button>
         </div>

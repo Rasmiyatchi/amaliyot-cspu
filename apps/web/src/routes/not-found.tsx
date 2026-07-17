@@ -1,4 +1,5 @@
 import { ArrowLeft, Compass, Home, MapPinOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { landingPathFor } from "@/lib/routing";
 import { useAuthStore } from "@/stores/auth";
 
 export function NotFound() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
@@ -41,22 +43,21 @@ export function NotFound() {
           style={{ animationDelay: "0.1s" }}
         >
           <MapPinOff className="h-3.5 w-3.5 text-muted-foreground" />
-          Sahifa topilmadi
+          {t("notFound.badge")}
         </div>
 
         <h1
           className="fade-in mb-3 text-3xl font-bold tracking-tight sm:text-4xl"
           style={{ animationDelay: "0.2s" }}
         >
-          Yo'lni yo'qotdingizmi?
+          {t("notFound.title")}
         </h1>
 
         <p
           className="fade-in mx-auto mb-8 max-w-md text-muted-foreground"
           style={{ animationDelay: "0.3s" }}
         >
-          Siz qidirayotgan sahifa mavjud emas yoki ko'chirilgan. Bosh sahifaga
-          qaytishingiz yoki orqaga o'tishingiz mumkin.
+          {t("notFound.description")}
         </p>
 
         <div
@@ -65,12 +66,12 @@ export function NotFound() {
         >
           <Button onClick={() => navigate(-1)} variant="outline">
             <ArrowLeft className="h-4 w-4" />
-            Orqaga
+            {t("common.back")}
           </Button>
           <Button asChild>
             <Link to={user ? landingPathFor(user.role) : "/"}>
               <Home className="h-4 w-4" />
-              {user ? "Mening dashboard'im" : "Bosh sahifa"}
+              {user ? t("notFound.myDashboard") : t("notFound.homePage")}
             </Link>
           </Button>
         </div>

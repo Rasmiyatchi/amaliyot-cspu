@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -51,31 +52,32 @@ import type { UUID } from "@/lib/api/types";
 const ALL = "__all__";
 
 const STATUS_LABEL: Record<FinalReportStatus, string> = {
-  draft: "Qoralama",
-  submitted: "Kutilmoqda",
-  approved: "Tasdiqlangan",
-  rejected: "Rad etilgan",
+  draft: "adminReports.status.draft",
+  submitted: "adminReports.status.submitted",
+  approved: "adminReports.status.approved",
+  rejected: "adminReports.status.rejected",
 };
 
 function StatusBadge({ status }: { status: FinalReportStatus }) {
+  const { t } = useTranslation();
   if (status === "approved")
     return (
       <Badge className="bg-success text-success-foreground">
         <CheckCircle2 className="mr-1 h-3 w-3" />
-        {STATUS_LABEL[status]}
+        {t(STATUS_LABEL[status])}
       </Badge>
     );
   if (status === "rejected")
     return (
       <Badge variant="destructive">
         <XCircle className="mr-1 h-3 w-3" />
-        {STATUS_LABEL[status]}
+        {t(STATUS_LABEL[status])}
       </Badge>
     );
   return (
     <Badge variant="secondary">
       <Clock className="mr-1 h-3 w-3" />
-      {STATUS_LABEL[status]}
+      {t(STATUS_LABEL[status])}
     </Badge>
   );
 }
@@ -87,13 +89,14 @@ function ReviewDialog({
   report: FinalReport | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [note, setNote] = useState("");
   const review = useReviewFinalReport();
 
   const handle = async (approve: boolean) => {
     if (!report) return;
     if (!approve && note.trim().length < 3) {
-      toast.error("Rad etish sababi kerak");
+      toast.error(t("adminReports.rejectReasonRequired"));
       return;
     }
     try {
@@ -101,11 +104,13 @@ function ReviewDialog({
         id: report.id,
         data: { approve, note: note.trim() || null },
       });
-      toast.success(approve ? "Tasdiqlandi" : "Rad etildi");
+      toast.success(
+        approve ? t("adminReports.approvedToast") : t("adminReports.rejectedToast"),
+      );
       setNote("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -115,7 +120,7 @@ function ReviewDialog({
         {report && (
           <>
             <DialogHeader>
-              <DialogTitle>Yakuniy hisobotni ko'rib chiqish</DialogTitle>
+              <DialogTitle>{t("adminReports.reviewDialog.title")}</DialogTitle>
               <DialogDescription>
                 {report.student_full_name} · {report.practice_type_name}
               </DialogDescription>
@@ -136,17 +141,17 @@ function ReviewDialog({
                   onClick={() => downloadAttachment(report.file_attachment)}
                 >
                   <Download className="h-4 w-4" />
-                  Yuklab olish
+                  {t("common.download")}
                 </Button>
               </div>
 
               <div>
-                <Label>Izoh (rad etishda majburiy)</Label>
+                <Label>{t("adminReports.reviewDialog.noteLabel")}</Label>
                 <Textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={3}
-                  placeholder="Tasdiqlash uchun ixtiyoriy, rad etishda sababini yozing"
+                  placeholder={t("adminReports.reviewDialog.notePlaceholder")}
                 />
               </div>
             </div>
@@ -159,12 +164,12 @@ function ReviewDialog({
                 disabled={review.isPending}
               >
                 <XCircle className="h-4 w-4" />
-                Rad etish
+                {t("common.reject")}
               </Button>
               <Button onClick={() => handle(true)} disabled={review.isPending}>
                 {review.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <CheckCircle2 className="h-4 w-4" />
-                Tasdiqlash
+                {t("common.approve")}
               </Button>
             </DialogFooter>
           </>
@@ -181,6 +186,7 @@ function ReportsList({
   status?: FinalReportStatus;
   filters: FinalReportFilters;
 }) {
+  const { t } = useTranslation();
   const { data, isPending, error } = useFinalReports(status, filters);
   const [reviewing, setReviewing] = useState<FinalReport | null>(null);
 
@@ -202,11 +208,11 @@ function ReportsList({
     return (
       <EmptyState
         icon={FileCheck2}
-        title="Hisobotlar yo'q"
+        title={t("adminReports.emptyTitle")}
         description={
           status === "submitted"
-            ? "Tasdiqlash kutayotgan hisobot yo'q"
-            : "Bu holatda hisobot yo'q"
+            ? t("adminReports.emptySubmitted")
+            : t("adminReports.emptyStatus")
         }
         accent="muted"
       />
@@ -237,7 +243,7 @@ function ReportsList({
                 <div className="text-sm font-medium">{r.title}</div>
                 {r.final_grade != null && (
                   <Badge variant={r.credit_earned ? "success" : "secondary"} className="shrink-0">
-                    {r.final_grade} ball
+                    {t("adminReports.ballValue", { value: r.final_grade })}
                   </Badge>
                 )}
               </div>
@@ -249,7 +255,7 @@ function ReportsList({
               </div>
               {r.reviewer_note && (
                 <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
-                  <span className="font-medium">Izoh:</span> {r.reviewer_note}
+                  <span className="font-medium">{t("common.note")}:</span> {r.reviewer_note}
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
@@ -260,11 +266,11 @@ function ReportsList({
                   className="flex-1"
                 >
                   <Download className="h-4 w-4" />
-                  Yuklab olish
+                  {t("common.download")}
                 </Button>
                 {(r.status === "submitted" || r.status === "rejected") && (
                   <Button size="sm" onClick={() => setReviewing(r)}>
-                    Ko'rib chiqish
+                    {t("adminReports.review")}
                   </Button>
                 )}
               </div>
@@ -278,6 +284,7 @@ function ReportsList({
 }
 
 export function ReportsPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<string>("submitted");
   const [academicYearId, setAcademicYearId] = useState<UUID | undefined>(undefined);
   const [facultyId, setFacultyId] = useState<UUID | undefined>(undefined);
@@ -314,9 +321,9 @@ export function ReportsPage() {
         course,
         search: search || undefined,
       });
-      toast.success("CSV yuklab olindi");
+      toast.success(t("common.csvDownloaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setExporting(false);
     }
@@ -330,9 +337,9 @@ export function ReportsPage() {
             <FileCheck2 className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Yakuniy hisobotlar</h1>
+            <h1 className="text-2xl font-semibold">{t("adminReports.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Talabalar topshirgan yakuniy hisobotlarni ko'rib chiqing
+              {t("adminReports.subtitle")}
             </p>
           </div>
         </div>
@@ -342,14 +349,14 @@ export function ReportsPage() {
           ) : (
             <Download className="h-4 w-4" />
           )}
-          CSV eksport
+          {t("adminReports.csvExport")}
         </Button>
       </div>
 
       {/* Filtrlar (fakultet → yo'nalish → guruh) */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Qidiruv (F.I.SH. yoki Talaba ID)"
+          placeholder={t("adminReports.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[220px] max-w-xs"
@@ -359,14 +366,14 @@ export function ReportsPage() {
           onValueChange={(v) => setAcademicYearId(v === ALL ? undefined : (v as UUID))}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="O'quv yili" />
+            <SelectValue placeholder={t("common.academicYear")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha yillar</SelectItem>
+            <SelectItem value={ALL}>{t("common.allYears")}</SelectItem>
             {(academicYears.data ?? []).map((y) => (
               <SelectItem key={y.id} value={y.id}>
                 {y.name}
-                {y.is_active ? " (aktiv)" : ""}
+                {y.is_active ? t("common.activeSuffix") : ""}
               </SelectItem>
             ))}
           </SelectContent>
@@ -380,10 +387,10 @@ export function ReportsPage() {
           }}
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Fakultet" />
+            <SelectValue placeholder={t("common.faculty")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha fakultetlar</SelectItem>
+            <SelectItem value={ALL}>{t("adminReports.allFaculties")}</SelectItem>
             {(faculties.data?.items ?? []).map((f) => (
               <SelectItem key={f.id} value={f.id}>
                 {f.name}
@@ -399,10 +406,10 @@ export function ReportsPage() {
           }}
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Yo'nalish" />
+            <SelectValue placeholder={t("common.direction")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha yo'nalishlar</SelectItem>
+            <SelectItem value={ALL}>{t("adminReports.allDirections")}</SelectItem>
             {(directions.data?.items ?? []).map((d) => (
               <SelectItem key={d.id} value={d.id}>
                 {d.code} — {d.name}
@@ -415,13 +422,13 @@ export function ReportsPage() {
           onValueChange={(v) => setGroupId(v === ALL ? undefined : (v as UUID))}
         >
           <SelectTrigger className="w-[170px]">
-            <SelectValue placeholder="Guruh" />
+            <SelectValue placeholder={t("common.group")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha guruhlar</SelectItem>
+            <SelectItem value={ALL}>{t("adminReports.allGroups")}</SelectItem>
             {(groups.data?.items ?? []).map((g) => (
               <SelectItem key={g.id} value={g.id}>
-                {g.name} ({g.course}-kurs)
+                {g.name} ({t("common.courseN", { n: g.course })})
               </SelectItem>
             ))}
           </SelectContent>
@@ -431,13 +438,13 @@ export function ReportsPage() {
           onValueChange={(v) => setCourse(v === ALL ? undefined : Number(v))}
         >
           <SelectTrigger className="w-[130px]">
-            <SelectValue placeholder="Kurs" />
+            <SelectValue placeholder={t("common.course")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha kurs</SelectItem>
+            <SelectItem value={ALL}>{t("adminReports.allCourses")}</SelectItem>
             {[1, 2, 3, 4, 5].map((c) => (
               <SelectItem key={c} value={String(c)}>
-                {c}-kurs
+                {t("common.courseN", { n: c })}
               </SelectItem>
             ))}
           </SelectContent>
@@ -446,10 +453,10 @@ export function ReportsPage() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="submitted">Kutilmoqda</TabsTrigger>
-          <TabsTrigger value="approved">Tasdiqlangan</TabsTrigger>
-          <TabsTrigger value="rejected">Rad etilgan</TabsTrigger>
-          <TabsTrigger value="all">Hammasi</TabsTrigger>
+          <TabsTrigger value="submitted">{t("adminReports.status.submitted")}</TabsTrigger>
+          <TabsTrigger value="approved">{t("adminReports.status.approved")}</TabsTrigger>
+          <TabsTrigger value="rejected">{t("adminReports.status.rejected")}</TabsTrigger>
+          <TabsTrigger value="all">{t("adminReports.tabs.all")}</TabsTrigger>
         </TabsList>
         <TabsContent value="submitted">
           <ReportsList status="submitted" filters={filters} />

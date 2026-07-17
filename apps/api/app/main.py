@@ -3,9 +3,11 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from loguru import logger
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
 from app.api.v1 import api_router
@@ -50,6 +52,24 @@ def create_app() -> FastAPI:
     app.include_router(api_router, prefix="/api")
     # Public (no /api prefix) — QR verify, auth talab qilmaydi
     app.include_router(contracts_public_router)
+
+    # Xato xabarlari kodda o'zbekcha; Accept-Language: ru bo'lsa katalog orqali
+    # tarjima qilinadi (app/core/i18n.py). Katalogda yo'q xabar o'zbekcha qoladi.
+    @app.exception_handler(StarletteHTTPException)
+    async def localized_http_exception_handler(
+        request: Request, exc: StarletteHTTPException
+    ) -> JSONResponse:
+        from app.core.i18n import pick_lang, translate_detail
+
+        lang = pick_lang(request.headers.get("accept-language"))
+        detail = exc.detail
+        if isinstance(detail, str):
+            detail = translate_detail(detail, lang)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": detail},
+            headers=getattr(exc, "headers", None),
+        )
 
     @app.get("/", include_in_schema=False)
     async def root() -> dict[str, str]:

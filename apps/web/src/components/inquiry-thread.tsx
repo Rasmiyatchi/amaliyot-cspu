@@ -1,15 +1,18 @@
 import { Loader2, Send } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { dateLocale } from "@/i18n";
 import { useInquiry, useSendMessage } from "@/lib/api/inquiries";
 import { cn } from "@/lib/utils";
 import type { UUID } from "@/lib/api/types";
 
 /** Murojaat tredi — xabarlar ro'yxati + javob yozish. */
 export function InquiryThread({ inquiryId }: { inquiryId: UUID }) {
+  const { t } = useTranslation();
   const { data, isPending } = useInquiry(inquiryId);
   const send = useSendMessage();
   const [text, setText] = useState("");
@@ -20,7 +23,7 @@ export function InquiryThread({ inquiryId }: { inquiryId: UUID }) {
       await send.mutateAsync({ id: inquiryId, body: text.trim() });
       setText("");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Yuborilmadi");
+      toast.error(e instanceof Error ? e.message : t("inquiryThread.sendFailed"));
     }
   };
 
@@ -49,22 +52,26 @@ export function InquiryThread({ inquiryId }: { inquiryId: UUID }) {
               )}
             >
               <div className="mb-0.5 text-[10px] opacity-70">
-                {m.from_admin ? "Admin" : "Siz / Talaba"} ·{" "}
-                {new Date(m.created_at).toLocaleString("uz-UZ")}
+                {m.from_admin
+                  ? t("inquiryThread.fromAdmin")
+                  : t("inquiryThread.fromYou")}{" "}
+                · {new Date(m.created_at).toLocaleString(dateLocale())}
               </div>
               <div className="whitespace-pre-wrap">{m.body}</div>
             </div>
           </div>
         ))}
         {data && data.messages.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground">Xabar yo'q</p>
+          <p className="text-center text-sm text-muted-foreground">
+            {t("inquiryThread.noMessages")}
+          </p>
         )}
       </div>
       <div className="flex items-end gap-2">
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Xabar yozing..."
+          placeholder={t("inquiryThread.messagePlaceholder")}
           rows={2}
           className="flex-1"
           onKeyDown={(e) => {

@@ -1,5 +1,6 @@
 import { Download, FileText, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
 import { useState, type ChangeEvent } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -35,6 +36,7 @@ import { usePracticeTypes } from "@/lib/api/practice-types";
 const NONE = "__none__";
 
 export function ContractTemplatesPage() {
+  const { t } = useTranslation();
   const { data, isPending, error } = useContractTemplates();
   const practiceTypes = usePracticeTypes();
   const del = useDeleteContractTemplate();
@@ -43,13 +45,13 @@ export function ContractTemplatesPage() {
   const ptName = (id: string | null) =>
     id ? (practiceTypes.data ?? []).find((p) => p.id === id)?.name : null;
 
-  const handleDelete = async (t: ContractTemplateDoc) => {
-    if (!confirm(`"${t.name}" shablonini o'chirishni tasdiqlang?`)) return;
+  const handleDelete = async (tpl: ContractTemplateDoc) => {
+    if (!confirm(t("adminContractTemplates.deleteConfirm", { name: tpl.name }))) return;
     try {
-      await del.mutateAsync(t.id);
-      toast.success("O'chirildi");
+      await del.mutateAsync(tpl.id);
+      toast.success(t("common.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -61,15 +63,19 @@ export function ContractTemplatesPage() {
             <FileText className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Shartnoma shablonlari</h1>
+            <h1 className="text-2xl font-semibold">{t("adminContractTemplates.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              DOCX shablon yuklang — <code>{"{{ maydon }}"}</code> joylar avtomatik aniqlanadi
+              <Trans
+                i18nKey="adminContractTemplates.subtitle"
+                values={{ placeholder: "{{ maydon }}" }}
+                components={[<code key="0" />]}
+              />
             </p>
           </div>
         </div>
         <Button onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Shablon yuklash
+          {t("adminContractTemplates.uploadButton")}
         </Button>
       </div>
 
@@ -88,53 +94,59 @@ export function ContractTemplatesPage() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={FileText}
-            title="Shablon yo'q"
-            description="DOCX shablon yuklab boshlang"
+            title={t("adminContractTemplates.emptyTitle")}
+            description={t("adminContractTemplates.emptyDescription")}
           />
         </div>
       )}
 
       {data && data.length > 0 && (
         <div className="grid gap-3">
-          {data.map((t) => (
+          {data.map((tpl) => (
             <div
-              key={t.id}
+              key={tpl.id}
               className="flex items-start justify-between gap-4 rounded-lg border border-border p-4"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{t.name}</span>
-                  {!t.is_active && <Badge variant="secondary">Nofaol</Badge>}
-                  {ptName(t.practice_type_id) && (
-                    <Badge variant="outline">{ptName(t.practice_type_id)}</Badge>
+                  <span className="font-medium">{tpl.name}</span>
+                  {!tpl.is_active && (
+                    <Badge variant="secondary">{t("adminContractTemplates.inactive")}</Badge>
+                  )}
+                  {ptName(tpl.practice_type_id) && (
+                    <Badge variant="outline">{ptName(tpl.practice_type_id)}</Badge>
                   )}
                 </div>
-                {t.description && (
-                  <p className="mt-0.5 text-sm text-muted-foreground">{t.description}</p>
+                {tpl.description && (
+                  <p className="mt-0.5 text-sm text-muted-foreground">{tpl.description}</p>
                 )}
                 <div className="mt-2 flex flex-wrap items-center gap-1">
-                  <span className="text-xs text-muted-foreground">Maydonlar:</span>
-                  {t.placeholders.length === 0 && (
-                    <span className="text-xs text-muted-foreground">— topilmadi</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("adminContractTemplates.fields")}
+                  </span>
+                  {tpl.placeholders.length === 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {t("adminContractTemplates.noneFound")}
+                    </span>
                   )}
-                  {t.placeholders.map((p) => (
+                  {tpl.placeholders.map((p) => (
                     <Badge key={p} variant="outline" className="font-mono text-xs">
                       {`{{ ${p} }}`}
                     </Badge>
                   ))}
                 </div>
                 <div className="mt-1 truncate text-xs text-muted-foreground">
-                  {t.file_attachment.name} · {(t.file_attachment.size / 1024).toFixed(0)} KB
+                  {tpl.file_attachment.name} · {(tpl.file_attachment.size / 1024).toFixed(0)} KB
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <Button
                   size="icon"
                   variant="ghost"
-                  title="Yuklab olish"
+                  title={t("common.download")}
                   onClick={() =>
-                    downloadContractTemplate(t.id, t.file_attachment.name).catch((e) =>
-                      toast.error(e instanceof Error ? e.message : "Xatolik"),
+                    downloadContractTemplate(tpl.id, tpl.file_attachment.name).catch((e) =>
+                      toast.error(e instanceof Error ? e.message : t("common.error")),
                     )
                   }
                 >
@@ -143,9 +155,9 @@ export function ContractTemplatesPage() {
                 <Button
                   size="icon"
                   variant="ghost"
-                  title="O'chirish"
+                  title={t("common.delete")}
                   className="text-destructive"
-                  onClick={() => handleDelete(t)}
+                  onClick={() => handleDelete(tpl)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -161,6 +173,7 @@ export function ContractTemplatesPage() {
 }
 
 function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
   const create = useCreateContractTemplate();
   const practiceTypes = usePracticeTypes();
   const [file, setFile] = useState<File | null>(null);
@@ -183,7 +196,7 @@ function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void })
   const handleFile = (f: File | null) => {
     if (!f) return;
     if (!/\.docx$/i.test(f.name)) {
-      toast.error(".docx fayl yuklang");
+      toast.error(t("adminContractTemplates.docxOnly"));
       return;
     }
     setFile(f);
@@ -192,24 +205,24 @@ function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void })
 
   const handleSubmit = async () => {
     if (!file) {
-      toast.error("Fayl tanlang");
+      toast.error(t("adminContractTemplates.selectFile"));
       return;
     }
     if (!name.trim()) {
-      toast.error("Nom kiriting");
+      toast.error(t("adminContractTemplates.nameRequired"));
       return;
     }
     try {
-      const t = await create.mutateAsync({
+      const tpl = await create.mutateAsync({
         file,
         name: name.trim(),
         description: description.trim() || undefined,
         practice_type_id: practiceTypeId === NONE ? undefined : practiceTypeId,
       });
-      toast.success(`Shablon yuklandi — ${t.placeholders.length} ta maydon aniqlandi`);
+      toast.success(t("adminContractTemplates.uploaded", { n: tpl.placeholders.length }));
       handleClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -217,11 +230,13 @@ function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void })
     <Dialog open={open} onOpenChange={(o) => !o && !create.isPending && handleClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Shartnoma shabloni yuklash</DialogTitle>
+          <DialogTitle>{t("adminContractTemplates.uploadTitle")}</DialogTitle>
           <DialogDescription>
-            DOCX faylda to'ldiriladigan joylar <code>{"{{ ism }}"}</code>,{" "}
-            <code>{"{{ sana }}"}</code> ko'rinishida belgilanadi. QR uchun{" "}
-            <code>{"{{ qr }}"}</code> ishlating.
+            <Trans
+              i18nKey="adminContractTemplates.uploadDescription"
+              values={{ p1: "{{ ism }}", p2: "{{ sana }}", p3: "{{ qr }}" }}
+              components={[<code key="0" />, <code key="1" />, <code key="2" />]}
+            />
           </DialogDescription>
         </DialogHeader>
 
@@ -241,7 +256,7 @@ function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void })
                   <Upload className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <Button asChild size="sm" variant="outline">
-                  <span>.docx tanlash</span>
+                  <span>{t("adminContractTemplates.chooseDocx")}</span>
                 </Button>
                 <input
                   type="file"
@@ -255,21 +270,21 @@ function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void })
             )}
           </div>
           <div>
-            <Label>Nom *</Label>
+            <Label>{t("adminContractTemplates.nameLabel")} *</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Izoh</Label>
+            <Label>{t("common.note")}</Label>
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div>
-            <Label>Amaliyot turi (ixtiyoriy)</Label>
+            <Label>{t("adminContractTemplates.practiceTypeOptional")}</Label>
             <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
               <SelectTrigger>
-                <SelectValue placeholder="Tanlang" />
+                <SelectValue placeholder={t("adminContractTemplates.selectPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>Umumiy (turidan mustaqil)</SelectItem>
+                <SelectItem value={NONE}>{t("adminContractTemplates.generalOption")}</SelectItem>
                 {(practiceTypes.data ?? []).map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
@@ -282,11 +297,11 @@ function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void })
 
         <DialogFooter>
           <Button variant="ghost" onClick={handleClose} disabled={create.isPending}>
-            Bekor
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={create.isPending}>
             {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Yuklash
+            {t("common.upload")}
           </Button>
         </DialogFooter>
       </DialogContent>

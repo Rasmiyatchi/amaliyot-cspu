@@ -1,5 +1,6 @@
 import { Inbox, Loader2, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,20 +31,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { dateLocale } from "@/i18n";
 import { useMyAssignments } from "@/lib/api/assignments";
 import type { AssignmentStatus, PracticeAssignment } from "@/lib/api/types";
 
 const ALL = "__all__";
-const STATUSES: { value: string; label: string }[] = [
-  { value: ALL, label: "Barcha holat" },
-  { value: "active", label: "Faol" },
-  { value: "draft", label: "Yangi" },
-  { value: "completed", label: "Tugatilgan" },
-  { value: "cancelled", label: "Bekor qilingan" },
+const STATUSES: { value: string; labelKey: string }[] = [
+  { value: ALL, labelKey: "supervisorStudents.statuses.all" },
+  { value: "active", labelKey: "supervisorStudents.statuses.active" },
+  { value: "draft", labelKey: "supervisorStudents.statuses.draft" },
+  { value: "completed", labelKey: "supervisorStudents.statuses.completed" },
+  { value: "cancelled", labelKey: "supervisorStudents.statuses.cancelled" },
 ];
 
 /** Supervizorning "Talabalarim" sahifasi — guruh bo'yicha tartiblangan ro'yxat. */
 export function SupervisorStudentsPage() {
+  const { t } = useTranslation();
   const { data, isPending, error } = useMyAssignments();
   const [search, setSearch] = useState("");
   const [grading, setGrading] = useState<PracticeAssignment | null>(null);
@@ -73,13 +76,13 @@ export function SupervisorStudentsPage() {
   const grouped = useMemo(() => {
     const map = new Map<string, typeof rows>();
     for (const r of rows) {
-      const key = r.student_group_name ?? "— guruhsiz —";
+      const key = r.student_group_name ?? t("supervisorStudents.noGroup");
       const arr = map.get(key) ?? [];
       arr.push(r);
       map.set(key, arr);
     }
     return [...map.entries()];
-  }, [rows]);
+  }, [rows, t]);
 
   return (
     <main className="container py-8">
@@ -89,9 +92,9 @@ export function SupervisorStudentsPage() {
             <Users className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Talabalarim</h1>
+            <h1 className="text-2xl font-semibold">{t("supervisorStudents.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Menga biriktirilgan talabalar — guruh bo'yicha tartiblangan
+              {t("supervisorStudents.subtitle")}
             </p>
           </div>
         </div>
@@ -100,7 +103,7 @@ export function SupervisorStudentsPage() {
           <div className="relative min-w-[220px] flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="F.I.SH. yoki guruh bo'yicha qidiring"
+              placeholder={t("supervisorStudents.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -108,12 +111,12 @@ export function SupervisorStudentsPage() {
           </div>
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Holat" />
+              <SelectValue placeholder={t("common.status")} />
             </SelectTrigger>
             <SelectContent>
               {STATUSES.map((s) => (
                 <SelectItem key={s.value} value={s.value}>
-                  {s.label}
+                  {t(s.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -126,7 +129,7 @@ export function SupervisorStudentsPage() {
                 setStatus(ALL);
               }}
             >
-              Tozalash
+              {t("common.clear")}
             </Button>
           )}
         </div>
@@ -146,8 +149,8 @@ export function SupervisorStudentsPage() {
           <div className="rounded-lg border border-border">
             <EmptyState
               icon={Inbox}
-              title="Talaba topilmadi"
-              description="Sizga biriktirilgan talaba yo'q yoki filtrga mos kelmadi"
+              title={t("supervisorStudents.emptyTitle")}
+              description={t("supervisorStudents.emptyDescription")}
             />
           </div>
         )}
@@ -155,26 +158,35 @@ export function SupervisorStudentsPage() {
         {data && rows.length > 0 && (
           <>
             <div className="text-sm text-muted-foreground">
-              Jami: <span className="font-medium text-foreground">{rows.length}</span> ta
-              talaba · {grouped.length} ta guruh
+              <Trans
+                i18nKey="supervisorStudents.totalSummary"
+                values={{ count: rows.length, groups: grouped.length }}
+                components={[<span key="0" className="font-medium text-foreground" />]}
+              />
             </div>
             {grouped.map(([group, items]) => (
               <div key={group} className="rounded-lg border border-border">
                 <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-2">
                   <span className="font-medium">{group}</span>
-                  <Badge variant="outline">{items.length} ta</Badge>
+                  <Badge variant="outline">
+                    {t("supervisorStudents.countSuffix", { count: items.length })}
+                  </Badge>
                 </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[50px]">№</TableHead>
-                      <TableHead>Talaba</TableHead>
-                      <TableHead className="w-[70px]">Kurs</TableHead>
-                      <TableHead>Amaliyot turi</TableHead>
-                      <TableHead>Obyekt</TableHead>
-                      <TableHead className="w-[160px]">Muddat</TableHead>
-                      <TableHead className="w-[120px]">Holat</TableHead>
-                      <TableHead className="w-[80px]">Ball</TableHead>
+                      <TableHead>{t("common.student")}</TableHead>
+                      <TableHead className="w-[70px]">{t("common.course")}</TableHead>
+                      <TableHead>{t("common.practiceType")}</TableHead>
+                      <TableHead>{t("supervisorStudents.table.object")}</TableHead>
+                      <TableHead className="w-[160px]">
+                        {t("supervisorStudents.table.period")}
+                      </TableHead>
+                      <TableHead className="w-[120px]">{t("common.status")}</TableHead>
+                      <TableHead className="w-[80px]">
+                        {t("supervisorStudents.table.grade")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -183,7 +195,7 @@ export function SupervisorStudentsPage() {
                         key={a.id}
                         onClick={() => setGrading(a)}
                         className="cursor-pointer"
-                        title="Baholash uchun bosing"
+                        title={t("supervisorStudents.rowClickHint")}
                       >
                         <TableCell className="text-sm text-muted-foreground">
                           {i + 1}
@@ -200,8 +212,8 @@ export function SupervisorStudentsPage() {
                           {a.organization_name ?? a.area_name ?? "—"}
                         </TableCell>
                         <TableCell className="text-xs">
-                          {new Date(a.start_date).toLocaleDateString("uz-UZ")} —{" "}
-                          {new Date(a.end_date).toLocaleDateString("uz-UZ")}
+                          {new Date(a.start_date).toLocaleDateString(dateLocale())} —{" "}
+                          {new Date(a.end_date).toLocaleDateString(dateLocale())}
                         </TableCell>
                         <TableCell>
                           <AssignmentStatusBadge status={a.status} />

@@ -1,4 +1,5 @@
 import { School } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { AcademicYearList } from "@/components/admin/academic/academic-year-list";
 import { DepartmentList } from "@/components/admin/academic/department-list";
@@ -8,6 +9,7 @@ import { GroupList } from "@/components/admin/academic/group-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function AcademicPage() {
+  const { t } = useTranslation();
   return (
     <div className="container max-w-6xl py-8">
       <div className="mb-6 flex items-center gap-3">
@@ -15,20 +17,20 @@ export function AcademicPage() {
           <School className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold">Akademik tuzilma</h1>
+          <h1 className="text-2xl font-semibold">{t("adminAcademic.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Fakultetlar, yo'nalishlar, guruhlar va o'quv yillari
+            {t("adminAcademic.subtitle")}
           </p>
         </div>
       </div>
 
       <Tabs defaultValue="faculties">
         <TabsList>
-          <TabsTrigger value="faculties">Fakultetlar</TabsTrigger>
-          <TabsTrigger value="departments">Kafedralar</TabsTrigger>
-          <TabsTrigger value="directions">Yo'nalishlar</TabsTrigger>
-          <TabsTrigger value="groups">Guruhlar</TabsTrigger>
-          <TabsTrigger value="academic-years">O'quv yillari</TabsTrigger>
+          <TabsTrigger value="faculties">{t("adminAcademic.tabs.faculties")}</TabsTrigger>
+          <TabsTrigger value="departments">{t("adminAcademic.tabs.departments")}</TabsTrigger>
+          <TabsTrigger value="directions">{t("adminAcademic.tabs.directions")}</TabsTrigger>
+          <TabsTrigger value="groups">{t("adminAcademic.tabs.groups")}</TabsTrigger>
+          <TabsTrigger value="academic-years">{t("adminAcademic.tabs.academicYears")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="faculties">

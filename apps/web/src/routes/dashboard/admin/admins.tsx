@@ -8,6 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useDebounce } from "@/hooks/use-debounce";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ import { useAuthStore } from "@/stores/auth";
 const ALL = "__all__";
 
 export function AdminsPage() {
+  const { t } = useTranslation();
   const me = useAuthStore((s) => s.user);
   const [filters, setFilters] = useState<AdminFilters>({});
   const [searchInput, setSearchInput] = useState("");
@@ -66,10 +68,10 @@ export function AdminsPage() {
     if (!deleting) return;
     try {
       await deleteMut.mutateAsync(deleting.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
       setDeleting(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -79,7 +81,7 @@ export function AdminsPage() {
       <div className="container py-8">
         <Alert variant="destructive">
           <AlertDescription>
-            Bu sahifaga faqat Super Admin kira oladi
+            {t("adminAdmins.superAdminOnly")}
           </AlertDescription>
         </Alert>
       </div>
@@ -94,21 +96,21 @@ export function AdminsPage() {
             <ShieldCheck className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Adminlar</h1>
+            <h1 className="text-2xl font-semibold">{t("adminAdmins.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Admin va super admin foydalanuvchilarni boshqarish
+              {t("adminAdmins.subtitle")}
             </p>
           </div>
         </div>
         <Button onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Yangi admin
+          {t("adminAdmins.newAdmin")}
         </Button>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Qidiruv (username yoki F.I.SH.)"
+          placeholder={t("adminAdmins.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[240px] flex-1 max-w-xs"
@@ -130,12 +132,12 @@ export function AdminsPage() {
           }}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Holat" />
+            <SelectValue placeholder={t("common.status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha holat</SelectItem>
-            <SelectItem value="true">Aktiv</SelectItem>
-            <SelectItem value="false">Bloklangan</SelectItem>
+            <SelectItem value={ALL}>{t("adminAdmins.allStatuses")}</SelectItem>
+            <SelectItem value="true">{t("adminAdmins.statusActive")}</SelectItem>
+            <SelectItem value="false">{t("adminAdmins.statusBlocked")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -151,8 +153,8 @@ export function AdminsPage() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={Shield}
-            title="Adminlar yo'q"
-            description="Yangi admin qo'shish uchun yuqoridagi tugmani bosing"
+            title={t("adminAdmins.emptyTitle")}
+            description={t("adminAdmins.emptyDescription")}
           />
         </div>
       )}
@@ -163,11 +165,11 @@ export function AdminsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>F.I.SH.</TableHead>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead className="w-[140px]">Rol</TableHead>
-                  <TableHead className="w-[100px]">Holat</TableHead>
+                  <TableHead>{t("common.fullName")}</TableHead>
+                  <TableHead>{t("adminAdmins.colUsername")}</TableHead>
+                  <TableHead>{t("adminAdmins.colEmail")}</TableHead>
+                  <TableHead className="w-[140px]">{t("adminAdmins.colRole")}</TableHead>
+                  <TableHead className="w-[100px]">{t("common.status")}</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -188,16 +190,16 @@ export function AdminsPage() {
                     <TableCell className="text-sm">{a.email ?? "—"}</TableCell>
                     <TableCell>
                       {a.role === "super_admin" ? (
-                        <Badge variant="default">Super Admin</Badge>
+                        <Badge variant="default">{t("adminAdmins.roleSuperAdmin")}</Badge>
                       ) : (
-                        <Badge variant="secondary">Admin</Badge>
+                        <Badge variant="secondary">{t("adminAdmins.roleAdmin")}</Badge>
                       )}
                     </TableCell>
                     <TableCell>
                       {a.is_active ? (
-                        <Badge variant="success">Aktiv</Badge>
+                        <Badge variant="success">{t("adminAdmins.statusActive")}</Badge>
                       ) : (
-                        <Badge variant="destructive">Bloklangan</Badge>
+                        <Badge variant="destructive">{t("adminAdmins.statusBlocked")}</Badge>
                       )}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -210,7 +212,7 @@ export function AdminsPage() {
                             e.stopPropagation();
                             setDeleting(a);
                           }}
-                          title="O'chirish"
+                          title={t("common.delete")}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -225,7 +227,7 @@ export function AdminsPage() {
           {data.total > 0 && (
             <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
               <div>
-                Jami: <span className="font-medium text-foreground">{data.total}</span>
+                {t("common.total")}: <span className="font-medium text-foreground">{data.total}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -235,7 +237,7 @@ export function AdminsPage() {
                   disabled={page <= 1 || isFetching}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Oldingi
+                  {t("common.previous")}
                 </Button>
                 <span className="px-2">
                   {page} / {totalPages}
@@ -246,7 +248,7 @@ export function AdminsPage() {
                   onClick={() => setPage(page + 1)}
                   disabled={page >= totalPages || isFetching}
                 >
-                  Keyingi
+                  {t("common.next")}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -266,14 +268,17 @@ export function AdminsPage() {
 
       <ConfirmDialog
         open={!!deleting}
-        title="Adminni o'chirish"
+        title={t("adminAdmins.deleteTitle")}
         description={
           deleting
-            ? `${deleting.full_name} (${deleting.username}) o'chirilsinmi? Bu amalni qaytarib bo'lmaydi.`
+            ? t("adminAdmins.deleteConfirm", {
+                name: deleting.full_name,
+                username: deleting.username,
+              })
             : ""
         }
         variant="destructive"
-        confirmText="O'chirish"
+        confirmText={t("common.delete")}
         isPending={deleteMut.isPending}
         onConfirm={handleDelete}
         onClose={() => setDeleting(null)}

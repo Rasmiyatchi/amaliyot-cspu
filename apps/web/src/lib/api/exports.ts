@@ -1,4 +1,5 @@
 import { useAuthStore } from "@/stores/auth";
+import i18n from "@/i18n";
 
 export type ExportKind = "students" | "attendance" | "assignments" | "final-reports";
 
@@ -7,7 +8,7 @@ export async function downloadCredentialsExport(
   params: Record<string, string | number | undefined> = {},
 ): Promise<void> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
 
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -15,7 +16,7 @@ export async function downloadCredentialsExport(
   }
   const url = `/api/v1/exports/credentials.xlsx${qs.toString() ? "?" + qs.toString() : ""}`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`Eksport bo'lmadi (${res.status})`);
+  if (!res.ok) throw new Error(i18n.t("common.exportFailed", { status: res.status }));
 
   const disposition = res.headers.get("content-disposition") ?? "";
   const match = disposition.match(/filename="?([^";]+)"?/);
@@ -37,7 +38,7 @@ export async function downloadExport(
   params: Record<string, string | number | undefined> = {},
 ): Promise<void> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
 
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -46,7 +47,7 @@ export async function downloadExport(
   const url = `/api/v1/exports/${kind}.csv${qs.toString() ? "?" + qs.toString() : ""}`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) {
-    throw new Error(`Eksport bo'lmadi (${res.status})`);
+    throw new Error(i18n.t("common.exportFailed", { status: res.status }));
   }
 
   const disposition = res.headers.get("content-disposition") ?? "";

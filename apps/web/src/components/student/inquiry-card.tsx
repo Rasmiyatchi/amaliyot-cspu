@@ -1,5 +1,6 @@
 import { Loader2, MessageSquare, Plus } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { InquiryThread } from "@/components/inquiry-thread";
@@ -21,6 +22,7 @@ import { useCreateInquiry, useMyInquiries } from "@/lib/api/inquiries";
 import type { UUID } from "@/lib/api/types";
 
 export function StudentInquiryCard() {
+  const { t } = useTranslation();
   const { data, isPending } = useMyInquiries();
   const [creating, setCreating] = useState(false);
   const [openId, setOpenId] = useState<UUID | null>(null);
@@ -30,18 +32,18 @@ export function StudentInquiryCard() {
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="flex items-center gap-2 text-base">
           <MessageSquare className="h-4 w-4 text-primary" />
-          Adminga murojaat
+          {t("studentInquiryCard.title")}
         </CardTitle>
         <Button size="sm" onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Yangi murojaat
+          {t("studentInquiryCard.newInquiry")}
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
         {isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         {data && data.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            Xato yoki savol bo'lsa adminga murojaat qiling.
+            {t("studentInquiryCard.emptyHint")}
           </p>
         )}
         {data?.map((q) => (
@@ -53,11 +55,13 @@ export function StudentInquiryCard() {
             <div className="min-w-0">
               <div className="truncate font-medium">{q.subject}</div>
               <div className="text-xs text-muted-foreground">
-                {q.message_count} ta xabar
+                {t("studentInquiryCard.messageCount", { count: q.message_count })}
               </div>
             </div>
             <Badge variant={q.is_resolved ? "secondary" : "success"}>
-              {q.is_resolved ? "Yopilgan" : "Ochiq"}
+              {q.is_resolved
+                ? t("studentInquiryCard.closed")
+                : t("studentInquiryCard.open")}
             </Badge>
           </button>
         ))}
@@ -68,7 +72,7 @@ export function StudentInquiryCard() {
       <Dialog open={!!openId} onOpenChange={(o) => !o && setOpenId(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Murojaat</DialogTitle>
+            <DialogTitle>{t("studentInquiryCard.inquiryTitle")}</DialogTitle>
           </DialogHeader>
           {openId && <InquiryThread inquiryId={openId} />}
         </DialogContent>
@@ -78,23 +82,24 @@ export function StudentInquiryCard() {
 }
 
 function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
   const create = useCreateInquiry();
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
 
   const handleSubmit = async () => {
     if (!subject.trim() || !body.trim()) {
-      toast.error("Mavzu va xabar majburiy");
+      toast.error(t("studentInquiryCard.subjectBodyRequired"));
       return;
     }
     try {
       await create.mutateAsync({ subject: subject.trim(), body: body.trim() });
-      toast.success("Murojaat yuborildi");
+      toast.success(t("studentInquiryCard.sentToast"));
       setSubject("");
       setBody("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -102,26 +107,28 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
     <Dialog open={open} onOpenChange={(o) => !o && !create.isPending && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Yangi murojaat</DialogTitle>
-          <DialogDescription>Xato yoki savolingizni yozing.</DialogDescription>
+          <DialogTitle>{t("studentInquiryCard.newInquiry")}</DialogTitle>
+          <DialogDescription>
+            {t("studentInquiryCard.createDescription")}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label>Mavzu *</Label>
+            <Label>{t("studentInquiryCard.subjectLabel")} *</Label>
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
           <div>
-            <Label>Xabar *</Label>
+            <Label>{t("studentInquiryCard.bodyLabel")} *</Label>
             <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} />
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={create.isPending}>
-            Bekor
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={create.isPending}>
             {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Yuborish
+            {t("studentInquiryCard.send")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,7 +1,9 @@
 import { ChevronLeft, ChevronRight, ClipboardList, Download, Loader2, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { dateLocale } from "@/i18n";
 import { downloadExport } from "@/lib/api/exports";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -43,17 +45,18 @@ import type { AssignmentStatus, PracticeAssignment, UUID } from "@/lib/api/types
 
 const ALL = "__all__";
 
-const STATUS_TABS: { value: string; label: string }[] = [
-  { value: ALL, label: "Barchasi" },
-  { value: "draft", label: "Yangi" },
-  { value: "active", label: "Faol" },
-  { value: "cancelled", label: "Rad etilgan" },
-  { value: "completed", label: "Tugatilgan" },
+const STATUS_TABS: { value: string; labelKey: string }[] = [
+  { value: ALL, labelKey: "common.all" },
+  { value: "draft", labelKey: "adminAssignments.tabs.draft" },
+  { value: "active", labelKey: "adminAssignments.tabs.active" },
+  { value: "cancelled", labelKey: "adminAssignments.tabs.cancelled" },
+  { value: "completed", labelKey: "adminAssignments.tabs.completed" },
 ];
 
 const COURSES = [1, 2, 3, 4, 5];
 
 export function AssignmentsPage() {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<AssignmentFilters>({});
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -83,9 +86,9 @@ export function AssignmentsPage() {
       await downloadExport("assignments", {
         academic_year_id: filters.academic_year_id,
       });
-      toast.success("CSV yuklab olindi");
+      toast.success(t("common.csvDownloaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setExporting(false);
     }
@@ -109,9 +112,9 @@ export function AssignmentsPage() {
             <ClipboardList className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Amaliyotlar Monitoringi</h1>
+            <h1 className="text-2xl font-semibold">{t("adminAssignments.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Talabalarning amaliyot jarayonlarini kuzatish va boshqarish
+              {t("adminAssignments.subtitle")}
             </p>
           </div>
         </div>
@@ -122,11 +125,11 @@ export function AssignmentsPage() {
             ) : (
               <Download className="h-4 w-4" />
             )}
-            CSV eksport
+            {t("adminAssignments.exportCsv")}
           </Button>
           <Button onClick={() => setWizardOpen(true)}>
             <Plus className="h-4 w-4" />
-            Yangi biriktirish
+            {t("adminAssignments.newAssignment")}
           </Button>
         </div>
       </div>
@@ -145,9 +148,9 @@ export function AssignmentsPage() {
         className="mb-4"
       >
         <TabsList className="flex-wrap">
-          {STATUS_TABS.map((t) => (
-            <TabsTrigger key={t.value} value={t.value}>
-              {t.label}
+          {STATUS_TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {t(tab.labelKey)}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -156,7 +159,7 @@ export function AssignmentsPage() {
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Qidiruv (F.I.SH. yoki Talaba ID)"
+          placeholder={t("adminAssignments.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[240px] flex-1 max-w-xs"
@@ -166,10 +169,10 @@ export function AssignmentsPage() {
           onValueChange={(v) => setFilter({ practice_type_id: v === ALL ? undefined : v })}
         >
           <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="Amaliyot turi" />
+            <SelectValue placeholder={t("common.practiceType")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha turlar</SelectItem>
+            <SelectItem value={ALL}>{t("adminAssignments.allTypes")}</SelectItem>
             {(practiceTypes.data ?? []).map((pt) => (
               <SelectItem key={pt.id} value={pt.id}>
                 {pt.name}
@@ -184,10 +187,10 @@ export function AssignmentsPage() {
           }
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Tashkilot" />
+            <SelectValue placeholder={t("common.organization")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha tashkilotlar</SelectItem>
+            <SelectItem value={ALL}>{t("adminAssignments.allOrganizations")}</SelectItem>
             {(orgs.data?.items ?? []).map((o) => (
               <SelectItem key={o.id} value={o.id}>
                 {o.name}
@@ -202,10 +205,10 @@ export function AssignmentsPage() {
           }
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Supervizor" />
+            <SelectValue placeholder={t("common.supervisor")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha supervizorlar</SelectItem>
+            <SelectItem value={ALL}>{t("adminAssignments.allSupervisors")}</SelectItem>
             {(supervisorsQ.data?.items ?? []).map((s) => (
               <SelectItem key={s.id} value={s.id}>
                 {s.full_name}
@@ -220,10 +223,10 @@ export function AssignmentsPage() {
           }
         >
           <SelectTrigger className="w-[170px]">
-            <SelectValue placeholder="O'quv yili" />
+            <SelectValue placeholder={t("common.academicYear")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha o'quv yillari</SelectItem>
+            <SelectItem value={ALL}>{t("common.allYears")}</SelectItem>
             {(academicYearsQ.data ?? []).map((y) => (
               <SelectItem key={y.id} value={y.id}>
                 {y.name}
@@ -241,10 +244,10 @@ export function AssignmentsPage() {
           }
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Mutaxassislik" />
+            <SelectValue placeholder={t("adminAssignments.directionPlaceholder")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha mutaxassisliklar</SelectItem>
+            <SelectItem value={ALL}>{t("adminAssignments.allDirections")}</SelectItem>
             {(directionsQ.data?.items ?? []).map((d) => (
               <SelectItem key={d.id} value={d.id}>
                 {d.code} · {d.name}
@@ -262,13 +265,13 @@ export function AssignmentsPage() {
           }
         >
           <SelectTrigger className="w-[130px]">
-            <SelectValue placeholder="Kurs" />
+            <SelectValue placeholder={t("common.course")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha kurslar</SelectItem>
+            <SelectItem value={ALL}>{t("adminAssignments.allCourses")}</SelectItem>
             {COURSES.map((c) => (
               <SelectItem key={c} value={String(c)}>
-                {c}-kurs
+                {t("common.courseN", { n: c })}
               </SelectItem>
             ))}
           </SelectContent>
@@ -278,13 +281,13 @@ export function AssignmentsPage() {
           onValueChange={(v) => setFilter({ group_id: v === ALL ? undefined : (v as UUID) })}
         >
           <SelectTrigger className="w-[170px]">
-            <SelectValue placeholder="Guruh" />
+            <SelectValue placeholder={t("common.group")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha guruhlar</SelectItem>
+            <SelectItem value={ALL}>{t("adminAssignments.allGroups")}</SelectItem>
             {(groupsQ.data?.items ?? []).map((g) => (
               <SelectItem key={g.id} value={g.id}>
-                {g.name} (kurs {g.course})
+                {t("adminAssignments.groupWithCourse", { name: g.name, course: g.course })}
               </SelectItem>
             ))}
           </SelectContent>
@@ -303,7 +306,7 @@ export function AssignmentsPage() {
               setPage(1);
             }}
           >
-            Tozalash
+            {t("common.clear")}
           </Button>
         )}
       </div>
@@ -321,12 +324,12 @@ export function AssignmentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Talaba</TableHead>
-                  <TableHead>Amaliyot turi</TableHead>
-                  <TableHead>Obyekt</TableHead>
-                  <TableHead>Supervizor</TableHead>
-                  <TableHead className="w-[180px]">Muddati</TableHead>
-                  <TableHead className="w-[140px]">Status</TableHead>
+                  <TableHead>{t("common.student")}</TableHead>
+                  <TableHead>{t("common.practiceType")}</TableHead>
+                  <TableHead>{t("adminAssignments.columns.object")}</TableHead>
+                  <TableHead>{t("common.supervisor")}</TableHead>
+                  <TableHead className="w-[180px]">{t("adminAssignments.columns.period")}</TableHead>
+                  <TableHead className="w-[140px]">{t("common.status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -335,8 +338,8 @@ export function AssignmentsPage() {
                     <TableCell colSpan={6} className="p-0">
                       <EmptyState
                         icon={ClipboardList}
-                        title="Biriktirish yo'q"
-                        description='"Yangi biriktirish" tugmasini bosib boshlang'
+                        title={t("adminAssignments.emptyTitle")}
+                        description={t("adminAssignments.emptyDescription")}
                         accent="primary"
                         compact
                       />
@@ -360,7 +363,7 @@ export function AssignmentsPage() {
                       <div className="text-sm">{a.practice_type_name}</div>
                       {a.requires_contract && (
                         <Badge variant="outline" className="mt-1 text-xs">
-                          Shartnoma
+                          {t("adminAssignments.contractBadge")}
                         </Badge>
                       )}
                     </TableCell>
@@ -373,9 +376,9 @@ export function AssignmentsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-xs">
-                      <div>{new Date(a.start_date).toLocaleDateString("uz-UZ")}</div>
+                      <div>{new Date(a.start_date).toLocaleDateString(dateLocale())}</div>
                       <div className="text-muted-foreground">
-                        {new Date(a.end_date).toLocaleDateString("uz-UZ")}
+                        {new Date(a.end_date).toLocaleDateString(dateLocale())}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -390,7 +393,7 @@ export function AssignmentsPage() {
           {data.total > 0 && (
             <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
               <div>
-                Jami: <span className="font-medium text-foreground">{data.total}</span>
+                {t("common.total")}: <span className="font-medium text-foreground">{data.total}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -400,7 +403,7 @@ export function AssignmentsPage() {
                   disabled={page <= 1 || isFetching}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Oldingi
+                  {t("common.previous")}
                 </Button>
                 <span className="px-2">
                   {page} / {totalPages}
@@ -411,7 +414,7 @@ export function AssignmentsPage() {
                   onClick={() => setPage(page + 1)}
                   disabled={page >= totalPages || isFetching}
                 >
-                  Keyingi
+                  {t("common.next")}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

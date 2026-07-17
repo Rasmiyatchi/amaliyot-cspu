@@ -1,5 +1,6 @@
 import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AreaFormDialog } from "@/components/admin/objects/area-form-dialog";
@@ -21,6 +22,7 @@ import { useAreas, useDeleteArea } from "@/lib/api/areas";
 import type { Area } from "@/lib/api/types";
 
 export function AreasList() {
+  const { t } = useTranslation();
   const [searchInput, setSearchInput] = useState("");
   const [regionInput, setRegionInput] = useState("");
   const search = useDebounce(searchInput, 300);
@@ -34,12 +36,12 @@ export function AreasList() {
   const [creating, setCreating] = useState(false);
 
   const handleDelete = async (a: Area) => {
-    if (!confirm(`"${a.name}" ni o'chirishni tasdiqlang?`)) return;
+    if (!confirm(t("objectsAreasList.deleteConfirm", { name: a.name }))) return;
     try {
       await del.mutateAsync(a.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -47,7 +49,7 @@ export function AreasList() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Qidiruv (nomi)"
+          placeholder={t("objectsAreasList.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="min-w-[180px] max-w-[220px]"
@@ -55,7 +57,7 @@ export function AreasList() {
         <div className="relative">
           <MapPin className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Viloyat (joylashuv)"
+            placeholder={t("objectsAreasList.regionPlaceholder")}
             value={regionInput}
             onChange={(e) => setRegionInput(e.target.value)}
             className="min-w-[180px] max-w-[220px] pl-8"
@@ -63,7 +65,7 @@ export function AreasList() {
         </div>
         <Button className="ml-auto" onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Yangi hudud
+          {t("objectsAreasList.newArea")}
         </Button>
       </div>
 
@@ -79,11 +81,15 @@ export function AreasList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nomi</TableHead>
-                <TableHead>Viloyat</TableHead>
-                <TableHead className="w-[100px]">Sig'im</TableHead>
-                <TableHead className="w-[140px]">Geo</TableHead>
-                <TableHead className="w-[80px]">Status</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("objectsAreasList.regionHeader")}</TableHead>
+                <TableHead className="w-[100px]">
+                  {t("objectsAreasList.capacityHeader")}
+                </TableHead>
+                <TableHead className="w-[140px]">{t("objectsAreasList.geoHeader")}</TableHead>
+                <TableHead className="w-[80px]">
+                  {t("objectsAreasList.statusHeader")}
+                </TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -91,7 +97,7 @@ export function AreasList() {
               {data.items.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    Hududlar topilmadi. "Yangi hudud" tugmasini bosing.
+                    {t("objectsAreasList.emptyMessage")}
                   </TableCell>
                 </TableRow>
               )}
@@ -117,9 +123,9 @@ export function AreasList() {
                   </TableCell>
                   <TableCell>
                     {a.is_active ? (
-                      <Badge variant="success">Aktiv</Badge>
+                      <Badge variant="success">{t("objectsAreasList.active")}</Badge>
                     ) : (
-                      <Badge variant="outline">Deaktiv</Badge>
+                      <Badge variant="outline">{t("objectsAreasList.inactive")}</Badge>
                     )}
                   </TableCell>
                   <TableCell>
@@ -128,7 +134,7 @@ export function AreasList() {
                         size="icon"
                         variant="ghost"
                         onClick={() => setEditing(a)}
-                        aria-label="Tahrirlash"
+                        aria-label={t("common.edit")}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -136,7 +142,7 @@ export function AreasList() {
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDelete(a)}
-                        aria-label="O'chirish"
+                        aria-label={t("common.delete")}
                         disabled={del.isPending}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />

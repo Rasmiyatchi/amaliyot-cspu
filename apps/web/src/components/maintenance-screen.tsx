@@ -1,4 +1,5 @@
 import { Cog, Settings2, Sparkles, Wrench } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { useAuthStore } from "@/stores/auth";
 
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export function MaintenanceScreen({ message, siteName = "CHDPU Amaliyot" }: Props) {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
   return (
@@ -90,15 +92,14 @@ export function MaintenanceScreen({ message, siteName = "CHDPU Amaliyot" }: Prop
           className="fade-up mb-3 text-4xl font-bold tracking-tight sm:text-5xl"
           style={{ animationDelay: "0.2s" }}
         >
-          Profilaktika rejimi
+          {t("maintenanceScreen.title")}
         </h1>
 
         <p
           className="fade-up mx-auto max-w-md text-base leading-relaxed text-blue-100"
           style={{ animationDelay: "0.4s" }}
         >
-          {message ||
-            "Tizim hozircha vaqtinchalik mavjud emas. Biz uni yangilamoqdamiz va tezda qaytamiz."}
+          {message || t("maintenanceScreen.defaultMessage")}
         </p>
 
         {/* Progress hint */}
@@ -120,7 +121,7 @@ export function MaintenanceScreen({ message, siteName = "CHDPU Amaliyot" }: Prop
               style={{ animationDelay: "300ms" }}
             />
           </div>
-          <span className="text-white/80">Yangilash davom etmoqda</span>
+          <span className="text-white/80">{t("maintenanceScreen.progressHint")}</span>
         </div>
 
         {user && (
@@ -128,7 +129,7 @@ export function MaintenanceScreen({ message, siteName = "CHDPU Amaliyot" }: Prop
             className="fade-up mt-6 text-xs text-white/60"
             style={{ animationDelay: "0.8s" }}
           >
-            {user.full_name} sifatida kirilgan
+            {t("maintenanceScreen.loggedInAs", { name: user.full_name })}
           </div>
         )}
       </div>
@@ -136,7 +137,7 @@ export function MaintenanceScreen({ message, siteName = "CHDPU Amaliyot" }: Prop
       {/* Bottom info bar */}
       <div className="absolute inset-x-0 bottom-6 text-center">
         <div className="text-[10px] uppercase tracking-widest text-white/40">
-          Chirchiq Davlat Pedagogika Universiteti
+          {t("maintenanceScreen.universityName")}
         </div>
       </div>
     </div>

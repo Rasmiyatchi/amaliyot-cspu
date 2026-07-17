@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { Camera, Eye, EyeOff, Loader2, Save, UserCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,6 +31,7 @@ type Props = {
 };
 
 export function ProfileDialog({ open, onClose }: Props) {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const update = useUpdateProfile();
   const changePwd = useChangeMyPassword();
@@ -65,7 +67,7 @@ export function ProfileDialog({ open, onClose }: Props) {
 
   const handleSaveProfile = async () => {
     if (!firstName.trim() || !lastName.trim()) {
-      toast.error("Ism va familiya majburiy");
+      toast.error(t("profileDialog.nameRequired"));
       return;
     }
     try {
@@ -76,19 +78,19 @@ export function ProfileDialog({ open, onClose }: Props) {
         email: email.trim() || null,
         phone: phone.trim() || null,
       });
-      toast.success("Profil yangilandi");
+      toast.success(t("profileDialog.profileUpdated"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const handleChangePwd = async () => {
     if (newPwd.length < 4) {
-      toast.error("Yangi parol kamida 4 belgi");
+      toast.error(t("profileDialog.pwdTooShort"));
       return;
     }
     if (newPwd !== newPwd2) {
-      toast.error("Parollar mos kelmaydi");
+      toast.error(t("profileDialog.pwdMismatch"));
       return;
     }
     try {
@@ -96,12 +98,12 @@ export function ProfileDialog({ open, onClose }: Props) {
         current_password: currentPwd,
         new_password: newPwd,
       });
-      toast.success("Parol o'zgartirildi");
+      toast.success(t("profileDialog.pwdChanged"));
       setCurrentPwd("");
       setNewPwd("");
       setNewPwd2("");
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -109,9 +111,9 @@ export function ProfileDialog({ open, onClose }: Props) {
     if (!file) return;
     try {
       await uploadAvatar.mutateAsync(file);
-      toast.success("Avatar yangilandi");
+      toast.success(t("profileDialog.avatarUpdated"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -124,7 +126,7 @@ export function ProfileDialog({ open, onClose }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserCircle className="h-5 w-5 text-primary" />
-            Mening profilim
+            {t("profileDialog.title")}
           </DialogTitle>
           <DialogDescription>
             {user.username} · {user.role}
@@ -136,7 +138,7 @@ export function ProfileDialog({ open, onClose }: Props) {
           <button
             onClick={() => fileRef.current?.click()}
             className="group relative h-20 w-20 shrink-0"
-            title="Avatar o'zgartirish"
+            title={t("profileDialog.changeAvatar")}
           >
             {user.avatar_url ? (
               <img
@@ -167,7 +169,7 @@ export function ProfileDialog({ open, onClose }: Props) {
           <div className="flex-1 min-w-0">
             <div className="text-base font-semibold">{user.full_name}</div>
             <div className="truncate text-sm text-muted-foreground">
-              {user.email ?? "Email kiritilmagan"}
+              {user.email ?? t("profileDialog.noEmail")}
             </div>
           </div>
         </div>
@@ -176,14 +178,14 @@ export function ProfileDialog({ open, onClose }: Props) {
 
         <Tabs defaultValue="profile">
           <TabsList>
-            <TabsTrigger value="profile">Profil</TabsTrigger>
-            <TabsTrigger value="password">Parol</TabsTrigger>
+            <TabsTrigger value="profile">{t("profileDialog.tabs.profile")}</TabsTrigger>
+            <TabsTrigger value="password">{t("profileDialog.tabs.password")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <Label htmlFor="prof-last">Familiya *</Label>
+                <Label htmlFor="prof-last">{t("profileDialog.lastName")} *</Label>
                 <Input
                   id="prof-last"
                   value={lastName}
@@ -191,7 +193,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                 />
               </div>
               <div>
-                <Label htmlFor="prof-first">Ism *</Label>
+                <Label htmlFor="prof-first">{t("profileDialog.firstName")} *</Label>
                 <Input
                   id="prof-first"
                   value={firstName}
@@ -199,7 +201,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                 />
               </div>
               <div className="sm:col-span-2">
-                <Label htmlFor="prof-middle">Otasining ismi</Label>
+                <Label htmlFor="prof-middle">{t("profileDialog.middleName")}</Label>
                 <Input
                   id="prof-middle"
                   value={middleName}
@@ -216,7 +218,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                 />
               </div>
               <div>
-                <Label htmlFor="prof-phone">Telefon</Label>
+                <Label htmlFor="prof-phone">{t("profileDialog.phone")}</Label>
                 <Input
                   id="prof-phone"
                   value={phone}
@@ -229,7 +231,7 @@ export function ProfileDialog({ open, onClose }: Props) {
               <Button onClick={handleSaveProfile} disabled={update.isPending}>
                 {update.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <Save className="h-4 w-4" />
-                Saqlash
+                {t("common.save")}
               </Button>
             </div>
           </TabsContent>
@@ -237,13 +239,12 @@ export function ProfileDialog({ open, onClose }: Props) {
           <TabsContent value="password" className="space-y-3">
             <Alert>
               <AlertDescription>
-                Yangi parol kamida 4 belgi bo'lishi kerak. Parolni o'zgartirgandan keyin
-                tizimdan chiqib qaytadan kirish tavsiya etiladi.
+                {t("profileDialog.pwdHint")}
               </AlertDescription>
             </Alert>
             <div className="space-y-3">
               <div>
-                <Label htmlFor="cur-pwd">Joriy parol</Label>
+                <Label htmlFor="cur-pwd">{t("profileDialog.currentPwd")}</Label>
                 <div className="relative">
                   <Input
                     id="cur-pwd"
@@ -267,7 +268,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                 </div>
               </div>
               <div>
-                <Label htmlFor="new-pwd">Yangi parol</Label>
+                <Label htmlFor="new-pwd">{t("profileDialog.newPwd")}</Label>
                 <Input
                   id="new-pwd"
                   type={showPwd ? "text" : "password"}
@@ -277,7 +278,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                 />
               </div>
               <div>
-                <Label htmlFor="new-pwd2">Parolni takrorlang</Label>
+                <Label htmlFor="new-pwd2">{t("profileDialog.repeatPwd")}</Label>
                 <Input
                   id="new-pwd2"
                   type={showPwd ? "text" : "password"}
@@ -295,7 +296,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                 }
               >
                 {changePwd.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Parolni o'zgartirish
+                {t("profileDialog.changePwdBtn")}
               </Button>
             </div>
           </TabsContent>
@@ -303,7 +304,7 @@ export function ProfileDialog({ open, onClose }: Props) {
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            Yopish
+            {t("common.close")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { dateLocale } from "@/i18n";
 import { useApproveTask, useRejectTask } from "@/lib/api/tasks";
 import type { Task } from "@/lib/api/types";
 
@@ -24,6 +26,7 @@ type Props = {
 };
 
 export function TaskGradeDialog({ task, onClose }: Props) {
+  const { t } = useTranslation();
   const [points, setPoints] = useState<string>("");
   const [reason, setReason] = useState<string>("");
 
@@ -38,7 +41,7 @@ export function TaskGradeDialog({ task, onClose }: Props) {
     const parsed = points === "" ? null : Number(points);
     if (parsed !== null) {
       if (!Number.isFinite(parsed) || parsed < 0 || parsed > task.template_points) {
-        toast.error(`Ball 0–${task.template_points} oralig'ida bo'lishi kerak`);
+        toast.error(t("assignmentsTaskGradeDialog.pointsRange", { max: task.template_points }));
         return;
       }
     }
@@ -47,17 +50,17 @@ export function TaskGradeDialog({ task, onClose }: Props) {
         id: task.id,
         data: { points_earned: parsed },
       });
-      toast.success("Topshiriq tasdiqlandi");
+      toast.success(t("assignmentsTaskGradeDialog.approvedToast"));
       setPoints("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const handleReject = async () => {
     if (reason.trim().length < 3) {
-      toast.error("Sababni yozing");
+      toast.error(t("assignmentsTaskGradeDialog.reasonRequired"));
       return;
     }
     try {
@@ -65,11 +68,11 @@ export function TaskGradeDialog({ task, onClose }: Props) {
         id: task.id,
         data: { rejection_reason: reason.trim() },
       });
-      toast.success("Rad etildi");
+      toast.success(t("assignmentsTaskGradeDialog.rejectedToast"));
       setReason("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -79,10 +82,14 @@ export function TaskGradeDialog({ task, onClose }: Props) {
         <DialogHeader>
           <DialogTitle>{task.template_title}</DialogTitle>
           <DialogDescription>
-            {task.template_course}-kurs · {task.template_semester === "fall" ? "Kuzgi" : "Bahorgi"}
-            {" · max "}
-            {task.template_points} ball
-            {task.template_quantity > 1 && ` · ${task.template_quantity} ta`}
+            {t("common.courseN", { n: task.template_course })} ·{" "}
+            {task.template_semester === "fall"
+              ? t("common.semesterFall")
+              : t("common.semesterSpring")}
+            {" · "}
+            {t("assignmentsTaskGradeDialog.maxPoints", { points: task.template_points })}
+            {task.template_quantity > 1 &&
+              t("assignmentsTaskGradeDialog.quantityTimes", { count: task.template_quantity })}
           </DialogDescription>
         </DialogHeader>
 
@@ -96,7 +103,7 @@ export function TaskGradeDialog({ task, onClose }: Props) {
 
         <div>
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Talaba javobi
+            {t("assignmentsTaskGradeDialog.studentAnswer")}
           </div>
           {task.submission_md ? (
             <div className="whitespace-pre-wrap rounded-md border border-border p-3 text-sm">
@@ -104,20 +111,24 @@ export function TaskGradeDialog({ task, onClose }: Props) {
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-              Talaba hali yubormagan
+              {t("assignmentsTaskGradeDialog.notSubmitted")}
             </div>
           )}
 
           {task.submitted_at && (
             <div className="mt-2 text-xs text-muted-foreground">
-              Yuborilgan: {new Date(task.submitted_at).toLocaleString("uz-UZ")}
+              {t("assignmentsTaskGradeDialog.submittedAt", {
+                date: new Date(task.submitted_at).toLocaleString(dateLocale()),
+              })}
             </div>
           )}
         </div>
 
         {task.rejection_reason && (
           <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
-            <div className="font-medium text-destructive">Rad etilgan</div>
+            <div className="font-medium text-destructive">
+              {t("assignmentsTaskGradeDialog.rejectedTitle")}
+            </div>
             <div className="mt-1">{task.rejection_reason}</div>
           </div>
         )}
@@ -125,18 +136,21 @@ export function TaskGradeDialog({ task, onClose }: Props) {
         {task.status === "approved" && (
           <div className="rounded-md border border-success/30 bg-success/5 p-3 text-sm">
             <div className="font-medium">
-              Tasdiqlangan{" "}
+              {t("assignmentsTaskGradeDialog.approvedTitle")}{" "}
               {task.points_earned !== null && (
                 <span className="font-mono">
-                  ({task.points_earned}/{task.template_points} ball)
+                  {t("assignmentsTaskGradeDialog.pointsEarned", {
+                    earned: task.points_earned,
+                    max: task.template_points,
+                  })}
                 </span>
               )}
             </div>
             {task.graded_by_name && (
               <div className="mt-1 text-xs text-muted-foreground">
-                Baholagan: {task.graded_by_name}
+                {t("assignmentsTaskGradeDialog.gradedBy", { name: task.graded_by_name })}
                 {task.graded_at &&
-                  ` · ${new Date(task.graded_at).toLocaleString("uz-UZ")}`}
+                  ` · ${new Date(task.graded_at).toLocaleString(dateLocale())}`}
               </div>
             )}
           </div>
@@ -148,7 +162,9 @@ export function TaskGradeDialog({ task, onClose }: Props) {
             <Separator />
             <div className="space-y-3">
               <div>
-                <Label htmlFor="grade-points">Ball (0–{task.template_points})</Label>
+                <Label htmlFor="grade-points">
+                  {t("assignmentsTaskGradeDialog.pointsLabel", { max: task.template_points })}
+                </Label>
                 <Input
                   id="grade-points"
                   type="number"
@@ -161,14 +177,16 @@ export function TaskGradeDialog({ task, onClose }: Props) {
               </div>
 
               <div>
-                <Label htmlFor="reject-reason">Rad etish sababi (agar kerak bo'lsa)</Label>
+                <Label htmlFor="reject-reason">
+                  {t("assignmentsTaskGradeDialog.rejectReasonLabel")}
+                </Label>
                 <textarea
                   id="reject-reason"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   rows={3}
                   className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                  placeholder="Qaerga e'tibor berish kerak..."
+                  placeholder={t("assignmentsTaskGradeDialog.rejectReasonPlaceholder")}
                 />
               </div>
             </div>
@@ -177,7 +195,7 @@ export function TaskGradeDialog({ task, onClose }: Props) {
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            Yopish
+            {t("common.close")}
           </Button>
           {task.status !== "not_started" && (
             <>
@@ -188,12 +206,12 @@ export function TaskGradeDialog({ task, onClose }: Props) {
               >
                 {reject.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <XCircle className="h-4 w-4" />
-                Rad etish
+                {t("common.reject")}
               </Button>
               <Button onClick={handleApprove} disabled={busy}>
                 {approve.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <CheckCircle2 className="h-4 w-4" />
-                Tasdiqlash
+                {t("common.approve")}
               </Button>
             </>
           )}

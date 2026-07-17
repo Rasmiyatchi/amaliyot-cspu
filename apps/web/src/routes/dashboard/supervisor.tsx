@@ -16,6 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { downloadSupervisorReport } from "@/lib/api/supervisor-report";
@@ -28,6 +29,7 @@ import { SupervisorReviewPanel } from "@/components/supervisor/review-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { dateLocale } from "@/i18n";
 import {
   useApproveDay,
   useAttendanceDays,
@@ -40,7 +42,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const fmtTime = (s: string | null) =>
   s
-    ? new Date(s).toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" })
+    ? new Date(s).toLocaleTimeString(dateLocale(), { hour: "2-digit", minute: "2-digit" })
     : "—";
 
 type DayRowProps = {
@@ -48,6 +50,7 @@ type DayRowProps = {
 };
 
 function DayRow({ day }: DayRowProps) {
+  const { t } = useTranslation();
   const approve = useApproveDay();
   const reject = useRejectDay();
   const [expanded, setExpanded] = useState(false);
@@ -56,15 +59,15 @@ function DayRow({ day }: DayRowProps) {
   const handleApprove = async () => {
     try {
       await approve.mutateAsync({ id: day.id, data: {} });
-      toast.success("Yashilga tasdiqlandi");
+      toast.success(t("supervisor.approvedGreen"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const handleReject = async () => {
     if (rejectReason.trim().length < 3) {
-      toast.error("Sababni yozing");
+      toast.error(t("supervisor.writeReason"));
       return;
     }
     try {
@@ -72,11 +75,11 @@ function DayRow({ day }: DayRowProps) {
         id: day.id,
         data: { note: rejectReason.trim() },
       });
-      toast.success("Qizilga belgilandi");
+      toast.success(t("supervisor.markedRed"));
       setExpanded(false);
       setRejectReason("");
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -119,15 +122,15 @@ function DayRow({ day }: DayRowProps) {
             >
               {approve.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               <CheckCircle2 className="h-4 w-4" />
-              Yashilga tasdiqlash
+              {t("supervisor.approveGreen")}
             </Button>
           </div>
           <div>
-            <div className="mb-1 text-xs text-muted-foreground">Rad etish sababi:</div>
+            <div className="mb-1 text-xs text-muted-foreground">{t("supervisor.rejectReasonLabel")}</div>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Masalan: kech keldi, yoki kelmadi..."
+              placeholder={t("supervisor.rejectReasonPlaceholder")}
               rows={2}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
@@ -140,7 +143,7 @@ function DayRow({ day }: DayRowProps) {
             >
               {reject.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               <XCircle className="h-4 w-4" />
-              Qizilga
+              {t("supervisor.toRed")}
             </Button>
           </div>
         </div>
@@ -150,6 +153,7 @@ function DayRow({ day }: DayRowProps) {
 }
 
 export function SupervisorDashboard() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const { data: assignments, isPending: assignmentsPending } = useMyAssignments();
   const { data: supervisorStats } = useSupervisorStats();
@@ -163,9 +167,9 @@ export function SupervisorDashboard() {
     setDownloadingReport(true);
     try {
       await downloadSupervisorReport();
-      toast.success("Hisobot yuklab olindi");
+      toast.success(t("supervisor.reportDownloaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setDownloadingReport(false);
     }
@@ -203,10 +207,10 @@ export function SupervisorDashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-semibold">
-                Xush kelibsiz, {user?.first_name}!
+                {t("supervisor.welcome", { name: user?.first_name })}
               </h2>
               <p className="mt-0.5 text-sm text-blue-50">
-                Sizga biriktirilgan talabalar davomati va topshiriqlari
+                {t("supervisor.subtitle")}
               </p>
             </div>
             <div className="shrink-0 [&_button]:text-white [&_button]:hover:bg-white/10">
@@ -226,8 +230,8 @@ export function SupervisorDashboard() {
             <CardContent className="pt-6">
               <EmptyState
                 icon={Users}
-                title="Biriktirilgan talabalar yo'q"
-                description="Sizga hali hech qanday talaba biriktirilmagan"
+                title={t("supervisor.noStudentsTitle")}
+                description={t("supervisor.noStudentsDesc")}
               />
             </CardContent>
           </Card>
@@ -239,40 +243,36 @@ export function SupervisorDashboard() {
             {supervisorStats && (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
-                  label="Talabalar"
+                  label={t("common.students")}
                   value={supervisorStats.assignments_total}
                   icon={Users}
                   accent="primary"
                 />
                 <StatCard
-                  label="Bugungi check-in"
+                  label={t("supervisor.todayCheckin")}
                   value={
                     (supervisorStats.today.green ?? 0) +
                     (supervisorStats.today.pending ?? 0)
                   }
                   icon={CalendarCheck}
                   accent="info"
-                  hint={
-                    <>
-                      Yashil: {supervisorStats.today.green} · Kutilmoqda:{" "}
-                      {supervisorStats.today.pending}
-                    </>
-                  }
+                  hint={t("supervisor.todayHint", {
+                    green: supervisorStats.today.green,
+                    pending: supervisorStats.today.pending,
+                  })}
                 />
                 <StatCard
-                  label="Ko'rib chiqish kutilmoqda"
+                  label={t("supervisor.pendingReviews")}
                   value={supervisorStats.pending_reviews.total}
                   icon={Inbox}
                   accent={supervisorStats.pending_reviews.total > 0 ? "warning" : "success"}
-                  hint={
-                    <>
-                      Davomat: {supervisorStats.pending_attendance} · Topshiriq:{" "}
-                      {supervisorStats.pending_reviews.tasks}
-                    </>
-                  }
+                  hint={t("supervisor.pendingHint", {
+                    attendance: supervisorStats.pending_attendance,
+                    tasks: supervisorStats.pending_reviews.tasks,
+                  })}
                 />
                 <StatCard
-                  label="Ball (jami)"
+                  label={t("supervisor.pointsTotal")}
                   value={`${supervisorStats.points_earned} / ${supervisorStats.points_max}`}
                   icon={Trophy}
                   accent="success"
@@ -290,7 +290,7 @@ export function SupervisorDashboard() {
                 variant={selectedAssignmentId === "all" ? "default" : "outline"}
                 onClick={() => setSelectedAssignmentId("all")}
               >
-                Barchasi ({assignments.length})
+                {t("common.all")} ({assignments.length})
               </Button>
               {assignments.map((a) => (
                 <Button
@@ -308,14 +308,14 @@ export function SupervisorDashboard() {
                 className="ml-auto"
                 onClick={handleDownloadReport}
                 disabled={downloadingReport}
-                title="Talabalar bo'yicha yakuniy hisobotni PDF yuklab olish"
+                title={t("supervisor.reportTooltip")}
               >
                 {downloadingReport ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <FileText className="h-4 w-4" />
                 )}
-                Hisobot (PDF)
+                {t("supervisor.reportPdf")}
                 <Download className="h-4 w-4" />
               </Button>
             </div>
@@ -325,7 +325,7 @@ export function SupervisorDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CalendarCheck className="h-4 w-4 text-warning" />
-                  Kutilmoqda ({pendingDays.length})
+                  {t("supervisor.pendingCount", { n: pendingDays.length })}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -337,8 +337,8 @@ export function SupervisorDashboard() {
                 {!daysPending && pendingDays.length === 0 && (
                   <EmptyState
                     icon={CheckCircle2}
-                    title="Hammasi tasdiqlangan"
-                    description="Yangi davomat yozuvlari paydo bo'lganda bu yerda ko'rinadi"
+                    title={t("supervisor.allApprovedTitle")}
+                    description={t("supervisor.allApprovedDesc")}
                     accent="success"
                     compact
                   />
@@ -359,7 +359,7 @@ export function SupervisorDashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <MapPin className="h-4 w-4" />
-                    Yakunlangan kunlar ({otherDays.length})
+                    {t("supervisor.completedDaysCount", { n: otherDays.length })}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -386,11 +386,10 @@ export function SupervisorDashboard() {
                 <CardContent className="py-8 text-center">
                   <ClipboardCheck className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                   <p className="text-sm font-medium">
-                    Topshiriq, kundalik va tahlilni tasdiqlash
+                    {t("supervisor.reviewPromptTitle")}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Yuqoridan talabani tanlang — uning topshiriqlari, kundaligi va dars
-                    tahlillari shu yerda chiqadi va tasdiqlaysiz.
+                    {t("supervisor.reviewPromptDesc")}
                   </p>
                 </CardContent>
               </Card>

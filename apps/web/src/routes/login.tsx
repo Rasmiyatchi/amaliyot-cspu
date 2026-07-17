@@ -13,9 +13,11 @@ import {
   User,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { MaintenanceScreen } from "@/components/maintenance-screen";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,7 @@ import { usePublicSettings } from "@/lib/api/system-settings";
 import { useAuthStore } from "@/stores/auth";
 
 export function Login() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const { data: settings } = usePublicSettings();
@@ -56,14 +59,14 @@ export function Login() {
     setLoading(true);
     try {
       const u = await login(username, password);
-      toast.success(`Xush kelibsiz, ${u.full_name}!`);
+      toast.success(t("auth.login.welcome", { name: u.full_name }));
       if (u.must_change_password) {
         navigate("/change-password", { replace: true });
       } else {
         navigate(landingPathFor(u.role), { replace: true });
       }
     } catch (err) {
-      const msg = err instanceof HTTPError ? err.message : "Kutilmagan xatolik";
+      const msg = err instanceof HTTPError ? err.message : t("common.unexpectedError");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -113,7 +116,7 @@ export function Login() {
         <div className="relative z-10 flex w-full flex-col justify-between p-12 text-white">
           <Link to="/" className="inline-flex items-center gap-2 text-sm opacity-80 hover:opacity-100">
             <ArrowLeft className="h-4 w-4" />
-            Bosh sahifaga
+            {t("auth.login.backHome")}
           </Link>
 
           <div className="fade-in" style={{ animationDelay: "0.2s" }}>
@@ -125,13 +128,12 @@ export function Login() {
               {siteName}
             </h1>
             <p className="max-w-md text-lg leading-relaxed text-indigo-100">
-              Talabalar amaliyotini boshqarish uchun zamonaviy tizim. Geo-fence
-              davomat, QR shartnomalar va sillabus topshiriqlari bir joyda.
+              {t("auth.login.heroText")}
             </p>
           </div>
 
           <div className="text-xs text-white/50">
-            © {new Date().getFullYear()} Chirchiq Davlat Pedagogika Universiteti
+            {t("auth.login.copyright", { year: new Date().getFullYear() })}
           </div>
         </div>
       </div>
@@ -145,9 +147,12 @@ export function Login() {
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground lg:hidden"
           >
             <ArrowLeft className="h-4 w-4" />
-            Bosh
+            {t("auth.login.backShort")}
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* Form center */}
@@ -161,10 +166,10 @@ export function Login() {
                 <Lock className="h-6 w-6" />
               </div>
               <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                Tizimga kirish
+                {t("auth.login.title")}
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Login va parolingizni kiriting
+                {t("auth.login.subtitle")}
               </p>
             </div>
 
@@ -174,7 +179,7 @@ export function Login() {
               style={{ animationDelay: "0.15s" }}
             >
               <div className="space-y-2">
-                <Label htmlFor="username">Login</Label>
+                <Label htmlFor="username">{t("auth.login.username")}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -185,14 +190,14 @@ export function Login() {
                     required
                     minLength={3}
                     disabled={loading}
-                    placeholder="Talaba ID yoki username"
+                    placeholder={t("auth.login.usernamePlaceholder")}
                     className="h-11 pl-10"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Parol</Label>
+                <Label htmlFor="password">{t("auth.login.password")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -211,7 +216,7 @@ export function Login() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label={showPassword ? "Yashirish" : "Ko'rsatish"}
+                    aria-label={showPassword ? t("auth.login.hide") : t("auth.login.show")}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -230,16 +235,18 @@ export function Login() {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Kirilmoqda...
+                    {t("auth.login.submitting")}
                   </>
                 ) : (
-                  "Kirish"
+                  t("auth.login.submit")
                 )}
               </Button>
 
               <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
-                <strong className="text-foreground">Talaba</strong>: import qilinganida
-                berilgan login va parol bilan kiring. Birinchi kirishda parol o'zgartiriladi.
+                <Trans
+                  i18nKey="auth.login.studentHint"
+                  components={[<strong key="0" className="text-foreground" />]}
+                />
               </div>
             </form>
           </div>

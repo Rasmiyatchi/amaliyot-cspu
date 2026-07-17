@@ -1,5 +1,6 @@
 import { BookOpen, Loader2, Pencil, Plus, Sliders, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { GradingRulesDialog } from "@/components/admin/practice-types/grading-rules-dialog";
@@ -28,24 +29,25 @@ import { useAuthStore } from "@/stores/auth";
 import type { PracticeType } from "@/lib/api/types";
 
 const OBJECT_KIND_LABEL = {
-  organization: "Tashkilot",
-  area: "Hudud",
-  any: "Ikkalasi",
+  organization: "common.organization",
+  area: "common.area",
+  any: "adminPracticeTypes.objectBoth",
 };
 
 const ALL = "__all__";
 const COURSES = [1, 2, 3, 4, 5];
 const EDU_FORMS = [
-  { value: "daytime", label: "Kunduzgi" },
-  { value: "evening", label: "Kechki" },
-  { value: "correspondence", label: "Sirtqi" },
-  { value: "distance", label: "Masofaviy" },
+  { value: "daytime", labelKey: "adminPracticeTypes.eduForm.daytime" },
+  { value: "evening", labelKey: "adminPracticeTypes.eduForm.evening" },
+  { value: "correspondence", labelKey: "adminPracticeTypes.eduForm.correspondence" },
+  { value: "distance", labelKey: "adminPracticeTypes.eduForm.distance" },
 ];
 const EDU_FORM_LABEL: Record<string, string> = Object.fromEntries(
-  EDU_FORMS.map((f) => [f.value, f.label]),
+  EDU_FORMS.map((f) => [f.value, f.labelKey]),
 );
 
 export function PracticeTypesPage() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
   const { data, isPending, error } = usePracticeTypes();
@@ -72,12 +74,12 @@ export function PracticeTypesPage() {
   });
 
   const handleDelete = async (pt: PracticeType) => {
-    if (!confirm(`"${pt.name}" amaliyot turini o'chirishni tasdiqlang?`)) return;
+    if (!confirm(t("adminPracticeTypes.deleteConfirm", { name: pt.name }))) return;
     try {
       await del.mutateAsync(pt.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -89,16 +91,16 @@ export function PracticeTypesPage() {
             <BookOpen className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Amaliyot turlari</h1>
+            <h1 className="text-2xl font-semibold">{t("adminPracticeTypes.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Standart turlar: 4+2, dala, pedagogik, malakaviy va boshqalar
+              {t("adminPracticeTypes.subtitle")}
             </p>
           </div>
         </div>
         {isSuperAdmin && (
           <Button onClick={() => setCreating(true)}>
             <Plus className="h-4 w-4" />
-            Yangi amaliyot turi
+            {t("adminPracticeTypes.newType")}
           </Button>
         )}
       </div>
@@ -119,26 +121,26 @@ export function PracticeTypesPage() {
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Select value={formFilter} onValueChange={setFormFilter}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Ta'lim shakli" />
+              <SelectValue placeholder={t("adminPracticeTypes.eduFormPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Barcha ta'lim shakli</SelectItem>
+              <SelectItem value={ALL}>{t("adminPracticeTypes.allEduForms")}</SelectItem>
               {EDU_FORMS.map((f) => (
                 <SelectItem key={f.value} value={f.value}>
-                  {f.label}
+                  {t(f.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={courseFilter} onValueChange={setCourseFilter}>
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Kurs" />
+              <SelectValue placeholder={t("common.course")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Barcha kurslar</SelectItem>
+              <SelectItem value={ALL}>{t("adminPracticeTypes.allCourses")}</SelectItem>
               {COURSES.map((c) => (
                 <SelectItem key={c} value={String(c)}>
-                  {c}-kurs
+                  {t("common.courseN", { n: c })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -151,7 +153,7 @@ export function PracticeTypesPage() {
                 setCourseFilter(ALL);
               }}
             >
-              Tozalash
+              {t("common.clear")}
             </Button>
           )}
         </div>
@@ -163,11 +165,17 @@ export function PracticeTypesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[40px]">№</TableHead>
-                <TableHead>Nomi</TableHead>
-                <TableHead className="w-[120px]">Shartnoma</TableHead>
-                <TableHead className="w-[110px]">Obyekt</TableHead>
-                <TableHead className="w-[120px]">Haftalar</TableHead>
-                <TableHead>Kurslar</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead className="w-[120px]">
+                  {t("adminPracticeTypes.contractCol")}
+                </TableHead>
+                <TableHead className="w-[110px]">
+                  {t("adminPracticeTypes.objectCol")}
+                </TableHead>
+                <TableHead className="w-[120px]">
+                  {t("adminPracticeTypes.weeksCol")}
+                </TableHead>
+                <TableHead>{t("adminPracticeTypes.coursesCol")}</TableHead>
                 {isSuperAdmin && <TableHead className="w-[140px]"></TableHead>}
               </TableRow>
             </TableHeader>
@@ -187,21 +195,24 @@ export function PracticeTypesPage() {
                   </TableCell>
                   <TableCell>
                     {pt.requires_contract ? (
-                      <Badge variant="default">Majburiy</Badge>
+                      <Badge variant="default">{t("adminPracticeTypes.required")}</Badge>
                     ) : (
-                      <Badge variant="secondary">Yo'q</Badge>
+                      <Badge variant="secondary">{t("common.no")}</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {OBJECT_KIND_LABEL[pt.object_kind]}
+                    {t(OBJECT_KIND_LABEL[pt.object_kind])}
                   </TableCell>
                   <TableCell className="text-sm">
                     {pt.min_weeks === pt.max_weeks
-                      ? `${pt.min_weeks} hafta`
-                      : `${pt.min_weeks}–${pt.max_weeks} hafta`}
+                      ? t("adminPracticeTypes.weeksSingle", { n: pt.min_weeks })
+                      : t("adminPracticeTypes.weeksRange", {
+                          min: pt.min_weeks,
+                          max: pt.max_weeks,
+                        })}
                     {pt.days_per_week && (
                       <div className="text-xs text-muted-foreground">
-                        {pt.days_per_week} kun/hafta
+                        {t("adminPracticeTypes.daysPerWeek", { n: pt.days_per_week })}
                       </div>
                     )}
                   </TableCell>
@@ -217,7 +228,7 @@ export function PracticeTypesPage() {
                       <div className="mt-1 flex flex-wrap gap-1">
                         {pt.allowed_education_forms.map((f) => (
                           <Badge key={f} variant="secondary" className="text-xs">
-                            {EDU_FORM_LABEL[f] ?? f}
+                            {EDU_FORM_LABEL[f] ? t(EDU_FORM_LABEL[f]) : f}
                           </Badge>
                         ))}
                       </div>
@@ -229,7 +240,7 @@ export function PracticeTypesPage() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          title="Tahrirlash"
+                          title={t("common.edit")}
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditing(pt);
@@ -240,7 +251,7 @@ export function PracticeTypesPage() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          title="Baho shkalasi"
+                          title={t("adminPracticeTypes.gradingScale")}
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingGrading(pt);
@@ -251,7 +262,7 @@ export function PracticeTypesPage() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          title="O'chirish"
+                          title={t("common.delete")}
                           disabled={del.isPending}
                           onClick={(e) => {
                             e.stopPropagation();

@@ -5,6 +5,7 @@ import {
   Loader2,
   ScrollText,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,13 +20,14 @@ import {
 import { downloadAttachment } from "@/lib/api/uploads";
 
 function DocumentList({ kind }: { kind: DocumentKind }) {
+  const { t } = useTranslation();
   const { data, isPending, error } = useDocuments({ kind });
 
   const handleDownload = async (doc: DocumentEntity) => {
     try {
       await downloadAttachment(doc.file_attachment);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Yuklab olishda xato");
+      toast.error(e instanceof Error ? e.message : t("supervisorDocuments.downloadError"));
     }
   };
 
@@ -49,10 +51,10 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
         icon={kind === "regulation" ? ScrollText : BookOpen}
         title={
           kind === "regulation"
-            ? "Normativ hujjatlar yo'q"
-            : "Amaliyot dasturlari yo'q"
+            ? t("supervisorDocuments.emptyRegulations")
+            : t("supervisorDocuments.emptyPrograms")
         }
-        description="Adminlar yuklagandan so'ng bu yerda ko'rinadi"
+        description={t("supervisorDocuments.emptyDescription")}
         accent="muted"
       />
     );
@@ -94,7 +96,7 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
               className="w-full"
             >
               <Download className="h-4 w-4" />
-              Yuklab olish
+              {t("common.download")}
             </Button>
           </CardContent>
         </Card>
@@ -104,6 +106,7 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
 }
 
 export function SupervisorRegulationsPage() {
+  const { t } = useTranslation();
   return (
     <div className="container max-w-6xl py-8">
       <div className="mb-6 flex items-center gap-3">
@@ -111,9 +114,9 @@ export function SupervisorRegulationsPage() {
           <ScrollText className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold">Normativ hujjatlar</h1>
+          <h1 className="text-2xl font-semibold">{t("supervisorDocuments.regulationsTitle")}</h1>
           <p className="text-sm text-muted-foreground">
-            Amaliyot bo'yicha rasmiy hujjatlar
+            {t("supervisorDocuments.regulationsSubtitle")}
           </p>
         </div>
       </div>
@@ -123,6 +126,7 @@ export function SupervisorRegulationsPage() {
 }
 
 export function SupervisorProgramsPage() {
+  const { t } = useTranslation();
   return (
     <div className="container max-w-6xl py-8">
       <div className="mb-6 flex items-center gap-3">
@@ -130,9 +134,9 @@ export function SupervisorProgramsPage() {
           <BookOpen className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold">Amaliyot dasturlari</h1>
+          <h1 className="text-2xl font-semibold">{t("supervisorDocuments.programsTitle")}</h1>
           <p className="text-sm text-muted-foreground">
-            Har amaliyot turi uchun batafsil dastur
+            {t("supervisorDocuments.programsSubtitle")}
           </p>
         </div>
       </div>

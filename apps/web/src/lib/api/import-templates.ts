@@ -1,4 +1,5 @@
 import type { HemisCredentials } from "@/lib/api/types";
+import i18n from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 
 /** Blob javobini fayl sifatida saqlaydi (Content-Disposition'dan nom oladi). */
@@ -19,7 +20,7 @@ function saveBlob(res: Response, blob: Blob, fallbackName: string): void {
 /** Serverdan namuna import shablonini (.xlsx) yuklab oladi. */
 async function downloadTemplate(path: string, fallbackName: string): Promise<void> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
 
   const res = await fetch(path, {
     headers: { Authorization: `Bearer ${token}` },
@@ -35,7 +36,7 @@ export async function downloadStudentsCredentials(
   credentials: HemisCredentials[],
 ): Promise<void> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
 
   const res = await fetch("/api/v1/hemis/credentials.xlsx", {
     method: "POST",

@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { Download, FileIcon, Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import {
   type AttachmentKind,
 } from "@/lib/api/uploads";
 import { cn } from "@/lib/utils";
+import { dateLocale } from "@/i18n";
 import type { UUID } from "@/lib/api/types";
 
 type Props = {
@@ -37,6 +39,7 @@ export function AttachmentsSection({
   canEdit = true,
   className,
 }: Props) {
+  const { t } = useTranslation();
   const upload = useUploadAttachment(kind, entityId);
   const remove = useDeleteAttachment(kind, entityId);
   const [dragOver, setDragOver] = useState(false);
@@ -48,9 +51,10 @@ export function AttachmentsSection({
     for (const file of Array.from(files)) {
       try {
         await upload.mutateAsync(file);
-        toast.success(`${file.name} yuklandi`);
+        toast.success(t("attachmentsSection.fileUploaded", { name: file.name }));
       } catch (e) {
-        const msg = e instanceof HTTPError ? e.message : e instanceof Error ? e.message : "Xatolik";
+        const msg =
+          e instanceof HTTPError ? e.message : e instanceof Error ? e.message : t("common.error");
         toast.error(`${file.name}: ${msg}`);
       }
     }
@@ -60,10 +64,10 @@ export function AttachmentsSection({
     if (!confirmDelete) return;
     try {
       await remove.mutateAsync(confirmDelete.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
       setConfirmDelete(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -71,7 +75,7 @@ export function AttachmentsSection({
     try {
       await downloadAttachment(att);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -79,13 +83,13 @@ export function AttachmentsSection({
     <div className={cn("space-y-2", className)}>
       <div className="flex items-center justify-between">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Biriktirilgan fayllar ({attachments.length})
+          {t("attachmentsSection.title", { n: attachments.length })}
         </div>
       </div>
 
       {attachments.length === 0 && !canEdit && (
         <div className="rounded-md border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
-          Fayl biriktirilmagan
+          {t("attachmentsSection.empty")}
         </div>
       )}
 
@@ -100,7 +104,7 @@ export function AttachmentsSection({
               <div className="flex-1 min-w-0">
                 <div className="truncate font-medium">{a.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {fmtSize(a.size)} · {new Date(a.uploaded_at).toLocaleString("uz-UZ")}
+                  {fmtSize(a.size)} · {new Date(a.uploaded_at).toLocaleString(dateLocale())}
                 </div>
               </div>
               <Button
@@ -108,7 +112,7 @@ export function AttachmentsSection({
                 size="icon"
                 className="h-7 w-7"
                 onClick={() => handleDownload(a)}
-                title="Yuklab olish"
+                title={t("common.download")}
               >
                 <Download className="h-3.5 w-3.5" />
               </Button>
@@ -118,7 +122,7 @@ export function AttachmentsSection({
                   size="icon"
                   className="h-7 w-7 text-muted-foreground hover:text-destructive"
                   onClick={() => setConfirmDelete(a)}
-                  title="O'chirish"
+                  title={t("common.delete")}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -155,11 +159,11 @@ export function AttachmentsSection({
           )}
           <div className="text-muted-foreground">
             {upload.isPending
-              ? "Yuklanmoqda..."
-              : "Faylni shu yerga olib keling yoki bosing"}
+              ? t("common.loading")
+              : t("attachmentsSection.dropHint")}
           </div>
           <div className="text-xs text-muted-foreground">
-            PDF, JPG, PNG, DOC, DOCX (max 10 MB)
+            {t("attachmentsSection.fileTypes")}
           </div>
           <input
             ref={fileRef}
@@ -174,10 +178,12 @@ export function AttachmentsSection({
 
       <ConfirmDialog
         open={!!confirmDelete}
-        title="Faylni o'chirish"
-        description={confirmDelete ? `"${confirmDelete.name}" o'chirilsinmi?` : ""}
+        title={t("attachmentsSection.deleteTitle")}
+        description={
+          confirmDelete ? t("attachmentsSection.deleteConfirm", { name: confirmDelete.name }) : ""
+        }
         variant="destructive"
-        confirmText="O'chirish"
+        confirmText={t("common.delete")}
         isPending={remove.isPending}
         onConfirm={handleDelete}
         onClose={() => setConfirmDelete(null)}

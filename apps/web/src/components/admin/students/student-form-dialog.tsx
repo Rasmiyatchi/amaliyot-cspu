@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { Info, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -84,24 +85,25 @@ const EMPTY: FormState = {
 };
 
 const EDU_FORMS = [
-  { value: "daytime", label: "Kunduzgi" },
-  { value: "evening", label: "Kechki" },
-  { value: "correspondence", label: "Sirtqi" },
-  { value: "distance", label: "Masofaviy" },
+  { value: "daytime", labelKey: "studentsStudentFormDialog.eduForm.daytime" },
+  { value: "evening", labelKey: "studentsStudentFormDialog.eduForm.evening" },
+  { value: "correspondence", labelKey: "studentsStudentFormDialog.eduForm.correspondence" },
+  { value: "distance", labelKey: "studentsStudentFormDialog.eduForm.distance" },
 ];
 const DEGREE_TYPES = [
-  { value: "bachelor", label: "Bakalavr" },
-  { value: "master", label: "Magistr" },
-  { value: "phd", label: "PhD / Doktorantura" },
+  { value: "bachelor", labelKey: "studentsStudentFormDialog.degreeType.bachelor" },
+  { value: "master", labelKey: "studentsStudentFormDialog.degreeType.master" },
+  { value: "phd", labelKey: "studentsStudentFormDialog.degreeType.phd" },
 ];
 const STUDENT_STATUSES = [
-  { value: "studying", label: "O'qiyapti" },
-  { value: "graduated", label: "Bitirgan" },
-  { value: "expelled", label: "Chetlashtirilgan" },
-  { value: "academic_leave", label: "Akademik ta'til" },
+  { value: "studying", labelKey: "studentsStudentFormDialog.studentStatus.studying" },
+  { value: "graduated", labelKey: "studentsStudentFormDialog.studentStatus.graduated" },
+  { value: "expelled", labelKey: "studentsStudentFormDialog.studentStatus.expelled" },
+  { value: "academic_leave", labelKey: "studentsStudentFormDialog.studentStatus.academicLeave" },
 ];
 
 export function StudentFormDialog({ open, student, onClose }: Props) {
+  const { t } = useTranslation();
   const isEdit = !!student;
   const [form, setForm] = useState<FormState>(EMPTY);
   const create = useCreateStudent();
@@ -156,12 +158,12 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
     });
 
   const validate = (): string | null => {
-    if (!form.first_name.trim()) return "Ism majburiy";
-    if (!form.last_name.trim()) return "Familiya majburiy";
-    if (!form.group_id) return "Guruh tanlang";
+    if (!form.first_name.trim()) return t("studentsStudentFormDialog.firstNameRequired");
+    if (!form.last_name.trim()) return t("studentsStudentFormDialog.lastNameRequired");
+    if (!form.group_id) return t("studentsStudentFormDialog.groupRequired");
     // Amaliyot ID endi tahrirlashda ham o'zgartiriladi
-    if (!form.hemis_id.trim()) return "Amaliyot ID majburiy";
-    if (form.hemis_id.trim().length < 4) return "Amaliyot ID kamida 4 ta belgi";
+    if (!form.hemis_id.trim()) return t("studentsStudentFormDialog.hemisIdRequired");
+    if (form.hemis_id.trim().length < 4) return t("studentsStudentFormDialog.hemisIdMin");
     return null;
   };
 
@@ -195,7 +197,7 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
             status: (form.status || undefined) as StudentUpdatePayload["status"],
           },
         });
-        toast.success("Talaba ma'lumotlari yangilandi");
+        toast.success(t("studentsStudentFormDialog.updatedToast"));
       } else {
         const payload: StudentCreatePayload = {
           hemis_id: form.hemis_id.trim(),
@@ -211,13 +213,13 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
         };
         const created = await create.mutateAsync(payload);
         toast.success(
-          `Talaba qo'shildi. Login = parol: ${created.username} (birinchi kirishda almashtiriladi)`,
+          t("studentsStudentFormDialog.createdToast", { username: created.username }),
           { duration: 12000 },
         );
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -227,11 +229,15 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Talabani tahrirlash" : "Yangi talaba"}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? t("studentsStudentFormDialog.editTitle")
+              : t("studentsStudentFormDialog.createTitle")}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Ma'lumotlarni yangilang. Login/parolni alohida tugmadan o'zgartiring."
-              : "Yakka talaba qo'shish formi (Excel import alternativasi)."}
+              ? t("studentsStudentFormDialog.editDescription")
+              : t("studentsStudentFormDialog.createDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -242,8 +248,7 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription className="text-xs">
-                    Login va parol avtomatik generatsiya qilinadi (12 raqamli, "2500" bilan
-                    boshlanadi). Talaba birinchi kirishda parolni o'zgartiradi.
+                    {t("studentsStudentFormDialog.autoCredentialsInfo")}
                   </AlertDescription>
                 </Alert>
               </div>
@@ -253,7 +258,7 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
           {/* Amaliyot ID — yaratishda ham, tahrirlashda ham (import xato ID bilan
               kelsa admin tuzata olsin; unique — band bo'lsa 409 chiqadi) */}
           <div className="sm:col-span-2">
-            <Label>Amaliyot ID *</Label>
+            <Label>{t("studentsStudentFormDialog.hemisId")} *</Label>
             <Input
               value={form.hemis_id}
               onChange={(e) => set("hemis_id", e.target.value)}
@@ -263,21 +268,21 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
 
           {/* F.I.SH. */}
           <div>
-            <Label>Familiya *</Label>
+            <Label>{t("studentsStudentFormDialog.lastName")} *</Label>
             <Input
               value={form.last_name}
               onChange={(e) => set("last_name", e.target.value)}
             />
           </div>
           <div>
-            <Label>Ism *</Label>
+            <Label>{t("studentsStudentFormDialog.firstName")} *</Label>
             <Input
               value={form.first_name}
               onChange={(e) => set("first_name", e.target.value)}
             />
           </div>
           <div className="sm:col-span-2">
-            <Label>Otasining ismi</Label>
+            <Label>{t("studentsStudentFormDialog.middleName")}</Label>
             <Input
               value={form.middle_name}
               onChange={(e) => set("middle_name", e.target.value)}
@@ -286,10 +291,10 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
 
           {/* Akademik */}
           <div>
-            <Label>Fakultet *</Label>
+            <Label>{t("common.faculty")} *</Label>
             <Select value={form.faculty_id} onValueChange={(v) => set("faculty_id", v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Tanlang" />
+                <SelectValue placeholder={t("studentsStudentFormDialog.selectPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {(facultiesQ.data?.items ?? []).map((f) => (
@@ -301,14 +306,20 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
             </Select>
           </div>
           <div>
-            <Label>Yo'nalish *</Label>
+            <Label>{t("common.direction")} *</Label>
             <Select
               value={form.direction_id}
               onValueChange={(v) => set("direction_id", v)}
               disabled={!form.faculty_id}
             >
               <SelectTrigger>
-                <SelectValue placeholder={form.faculty_id ? "Tanlang" : "Avval fakultet"} />
+                <SelectValue
+                  placeholder={
+                    form.faculty_id
+                      ? t("studentsStudentFormDialog.selectPlaceholder")
+                      : t("studentsStudentFormDialog.facultyFirst")
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {(directionsQ.data?.items ?? []).map((d) => (
@@ -320,19 +331,25 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <Label>Guruh *</Label>
+            <Label>{t("common.group")} *</Label>
             <Select
               value={form.group_id}
               onValueChange={(v) => set("group_id", v)}
               disabled={!form.direction_id}
             >
               <SelectTrigger>
-                <SelectValue placeholder={form.direction_id ? "Tanlang" : "Avval yo'nalish"} />
+                <SelectValue
+                  placeholder={
+                    form.direction_id
+                      ? t("studentsStudentFormDialog.selectPlaceholder")
+                      : t("studentsStudentFormDialog.directionFirst")
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {(groupsQ.data?.items ?? []).map((g) => (
                   <SelectItem key={g.id} value={g.id}>
-                    {g.name} (kurs {g.course})
+                    {t("studentsStudentFormDialog.groupOption", { name: g.name, course: g.course })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -341,7 +358,7 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
 
           {/* Aloqa */}
           <div>
-            <Label>Email</Label>
+            <Label>{t("studentsStudentFormDialog.email")}</Label>
             <Input
               type="email"
               value={form.email}
@@ -349,7 +366,7 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
             />
           </div>
           <div>
-            <Label>Telefon</Label>
+            <Label>{t("studentsStudentFormDialog.phone")}</Label>
             <Input
               value={form.phone}
               onChange={(e) => set("phone", e.target.value)}
@@ -359,26 +376,26 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
 
           {/* Shaxsiy */}
           <div>
-            <Label>Jins</Label>
+            <Label>{t("studentsStudentFormDialog.gender")}</Label>
             <Select value={form.gender} onValueChange={(v) => set("gender", v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Tanlang" />
+                <SelectValue placeholder={t("studentsStudentFormDialog.selectPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="male">Erkak</SelectItem>
-                <SelectItem value="female">Ayol</SelectItem>
+                <SelectItem value="male">{t("studentsStudentFormDialog.male")}</SelectItem>
+                <SelectItem value="female">{t("studentsStudentFormDialog.female")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label>Viloyat</Label>
+            <Label>{t("studentsStudentFormDialog.region")}</Label>
             <Input
               value={form.region}
               onChange={(e) => set("region", e.target.value)}
             />
           </div>
           <div>
-            <Label>Tuman</Label>
+            <Label>{t("studentsStudentFormDialog.district")}</Label>
             <Input
               value={form.district}
               onChange={(e) => set("district", e.target.value)}
@@ -387,48 +404,48 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
 
           {/* Ta'lim ma'lumotlari — backend allaqachon qabul qiladi */}
           <div>
-            <Label>Ta'lim shakli</Label>
+            <Label>{t("studentsStudentFormDialog.educationFormLabel")}</Label>
             <Select
               value={form.education_form}
               onValueChange={(v) => set("education_form", v)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Tanlang" />
+                <SelectValue placeholder={t("studentsStudentFormDialog.selectPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {EDU_FORMS.map((f) => (
                   <SelectItem key={f.value} value={f.value}>
-                    {f.label}
+                    {t(f.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label>Ta'lim turi</Label>
+            <Label>{t("studentsStudentFormDialog.degreeTypeLabel")}</Label>
             <Select value={form.degree_type} onValueChange={(v) => set("degree_type", v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Tanlang" />
+                <SelectValue placeholder={t("studentsStudentFormDialog.selectPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {DEGREE_TYPES.map((d) => (
                   <SelectItem key={d.value} value={d.value}>
-                    {d.label}
+                    {t(d.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label>Ta'lim tili</Label>
+            <Label>{t("studentsStudentFormDialog.educationLanguageLabel")}</Label>
             <Input
               value={form.education_language}
               onChange={(e) => set("education_language", e.target.value)}
-              placeholder="O'zbek"
+              placeholder={t("studentsStudentFormDialog.educationLanguagePlaceholder")}
             />
           </div>
           <div>
-            <Label>Semestr</Label>
+            <Label>{t("common.semester")}</Label>
             <Input
               type="number"
               min={1}
@@ -438,7 +455,7 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
             />
           </div>
           <div>
-            <Label>Qabul yili</Label>
+            <Label>{t("studentsStudentFormDialog.enrollmentYear")}</Label>
             <Input
               type="number"
               min={2000}
@@ -450,15 +467,15 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
           </div>
           {isEdit && (
             <div>
-              <Label>Holat</Label>
+              <Label>{t("common.status")}</Label>
               <Select value={form.status} onValueChange={(v) => set("status", v)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Tanlang" />
+                  <SelectValue placeholder={t("studentsStudentFormDialog.selectPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {STUDENT_STATUSES.map((s) => (
                     <SelectItem key={s.value} value={s.value}>
-                      {s.label}
+                      {t(s.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -473,18 +490,18 @@ export function StudentFormDialog({ open, student, onClose }: Props) {
                 checked={form.is_graduating}
                 onChange={(e) => setForm((p) => ({ ...p, is_graduating: e.target.checked }))}
               />
-              <span className="text-sm">Bitiruvchi</span>
+              <span className="text-sm">{t("studentsStudentFormDialog.isGraduating")}</span>
             </label>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Bekor
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={busy}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isEdit ? "Saqlash" : "Qo'shish"}
+            {isEdit ? t("common.save") : t("common.add")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { BookOpen, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { TaskTemplateFormDialog } from "@/components/admin/task-templates/task-template-form-dialog";
@@ -31,12 +32,13 @@ import type { Semester, TaskCategory, TaskTemplate, UUID } from "@/lib/api/types
 
 const ALL = "__all__";
 
-const SEMESTER_LABEL: Record<Semester, string> = {
-  fall: "Kuzgi",
-  spring: "Bahorgi",
+const SEMESTER_LABEL_KEY: Record<Semester, string> = {
+  fall: "common.semesterFall",
+  spring: "common.semesterSpring",
 };
 
 export function TaskTemplatesPage() {
+  const { t } = useTranslation();
   const practiceTypes = usePracticeTypes();
   const [practiceTypeId, setPracticeTypeId] = useState<string>("");
   const [course, setCourse] = useState<string>(ALL);
@@ -64,10 +66,10 @@ export function TaskTemplatesPage() {
     if (!deletingId) return;
     try {
       await deleteTemplate.mutateAsync(deletingId);
-      toast.success("Shablon o'chirildi");
+      toast.success(t("adminTaskTemplates.templateDeleted"));
       setDeletingId(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -97,28 +99,28 @@ export function TaskTemplatesPage() {
             <BookOpen className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Topshiriqlar katalogi</h1>
+            <h1 className="text-2xl font-semibold">{t("adminTaskTemplates.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Sillabus asosida amaliyot turlari uchun topshiriqlar
+              {t("adminTaskTemplates.subtitle")}
             </p>
           </div>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4" />
-          Yangi shablon
+          {t("adminTaskTemplates.newTemplate")}
         </Button>
       </div>
 
       {/* Filtrlar */}
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
-          <Label className="text-xs">Amaliyot turi</Label>
+          <Label className="text-xs">{t("common.practiceType")}</Label>
           <Select
             value={effectivePracticeTypeId}
             onValueChange={setPracticeTypeId}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Amaliyot turi" />
+              <SelectValue placeholder={t("common.practiceType")} />
             </SelectTrigger>
             <SelectContent>
               {(practiceTypes.data ?? []).map((p) => (
@@ -130,28 +132,28 @@ export function TaskTemplatesPage() {
           </Select>
         </div>
         <div>
-          <Label className="text-xs">Kurs</Label>
+          <Label className="text-xs">{t("common.course")}</Label>
           <Select value={course} onValueChange={setCourse}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Barchasi</SelectItem>
-              <SelectItem value="3">3-kurs</SelectItem>
-              <SelectItem value="4">4-kurs</SelectItem>
+              <SelectItem value={ALL}>{t("common.all")}</SelectItem>
+              <SelectItem value="3">{t("common.courseN", { n: 3 })}</SelectItem>
+              <SelectItem value="4">{t("common.courseN", { n: 4 })}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label className="text-xs">Semestr</Label>
+          <Label className="text-xs">{t("common.semester")}</Label>
           <Select value={semester} onValueChange={setSemester}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Barchasi</SelectItem>
-              <SelectItem value="fall">Kuzgi</SelectItem>
-              <SelectItem value="spring">Bahorgi</SelectItem>
+              <SelectItem value={ALL}>{t("common.all")}</SelectItem>
+              <SelectItem value="fall">{t("common.semesterFall")}</SelectItem>
+              <SelectItem value="spring">{t("common.semesterSpring")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -172,8 +174,8 @@ export function TaskTemplatesPage() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={BookOpen}
-            title="Topshiriqlar yo'q"
-            description="Bu amaliyot turi uchun hali topshiriq belgilanmagan"
+            title={t("adminTaskTemplates.emptyTitle")}
+            description={t("adminTaskTemplates.emptyDescription")}
           />
         </div>
       )}
@@ -190,9 +192,9 @@ export function TaskTemplatesPage() {
       />
       <ConfirmDialog
         open={!!deletingId}
-        title="Shablonni o'chirish"
-        description="Bu amal qaytarilmaydi. Agar bu shablonga biriktirilgan topshiriqlar bo'lsa, xato beradi."
-        confirmText="Ha, o'chirish"
+        title={t("adminTaskTemplates.deleteTitle")}
+        description={t("adminTaskTemplates.deleteDescription")}
+        confirmText={t("adminTaskTemplates.deleteConfirm")}
         variant="destructive"
         onConfirm={handleDelete}
         onClose={() => setDeletingId(null)}
@@ -208,62 +210,64 @@ export function TaskTemplatesPage() {
               <Card key={key}>
                 <CardHeader>
                   <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-                    <span className="font-semibold">{course_}-kurs</span>
+                    <span className="font-semibold">
+                      {t("common.courseN", { n: course_ })}
+                    </span>
                     <span className="text-muted-foreground">
-                      · {SEMESTER_LABEL[sem_ as Semester]}
+                      · {t(SEMESTER_LABEL_KEY[sem_ as Semester])}
                     </span>
                     <TaskCategoryBadge category={cat_ as TaskCategory} />
                     <span className="ml-auto text-xs text-muted-foreground">
-                      Jami: {totalByGroup(key)} ball
+                      {t("adminTaskTemplates.totalPoints", { points: totalByGroup(key) })}
                     </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {items.map((t) => (
+                    {items.map((tpl) => (
                       <div
-                        key={t.id}
+                        key={tpl.id}
                         className="flex items-start gap-3 rounded-md border border-border p-3"
                       >
                         <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
-                          {t.display_order}
+                          {tpl.display_order}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium leading-snug">{t.title}</div>
+                          <div className="font-medium leading-snug">{tpl.title}</div>
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <TaskTypeLabel type={t.type} />
-                            {t.quantity > 1 && (
+                            <TaskTypeLabel type={tpl.type} />
+                            {tpl.quantity > 1 && (
                               <Badge variant="outline">
-                                {t.quantity} ta
+                                {t("adminTaskTemplates.quantityN", { n: tpl.quantity })}
                               </Badge>
                             )}
-                            {t.month_hint && (
-                              <span>{t.month_hint}</span>
+                            {tpl.month_hint && (
+                              <span>{tpl.month_hint}</span>
                             )}
                           </div>
-                          {t.description && (
+                          {tpl.description && (
                             <div className="mt-1.5 text-xs text-muted-foreground">
-                              {t.description}
+                              {tpl.description}
                             </div>
                           )}
                         </div>
                         <Badge variant="secondary" className="shrink-0 font-mono">
-                          {t.points} ball
+                          {t("adminTaskTemplates.pointsN", { n: tpl.points })}
                         </Badge>
                         <div className="flex shrink-0 gap-1">
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => setEditing(t)}
-                            title="Tahrirlash"
+                            onClick={() => setEditing(tpl)}
+                            title={t("common.edit")}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => setDeletingId(t.id)}
-                            title="O'chirish"
+                            onClick={() => setDeletingId(tpl.id)}
+                            title={t("common.delete")}
                             className="text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-4 w-4" />

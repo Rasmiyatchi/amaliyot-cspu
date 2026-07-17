@@ -1,5 +1,6 @@
 import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ type Props = {
 const ALL_VALUE = "__all__";
 
 export function StudentsFilters({ filters, onChange }: Props) {
+  const { t } = useTranslation();
   const faculties = useFaculties();
   const directions = useDirections(filters.faculty_id);
   const academicYears = useAcademicYears();
@@ -61,7 +63,7 @@ export function StudentsFilters({ filters, onChange }: Props) {
       <div className="relative min-w-[220px] flex-1">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Qidiruv (F.I.SH., Talaba ID)"
+          placeholder={t("studentsStudentsFilters.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="pl-8"
@@ -75,10 +77,12 @@ export function StudentsFilters({ filters, onChange }: Props) {
         }
       >
         <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Fakultet" />
+          <SelectValue placeholder={t("common.faculty")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL_VALUE}>Barcha fakultetlar</SelectItem>
+          <SelectItem value={ALL_VALUE}>
+            {t("studentsStudentsFilters.allFaculties")}
+          </SelectItem>
           {(faculties.data?.items ?? []).map((f) => (
             <SelectItem key={f.id} value={f.id}>
               {f.name}
@@ -97,10 +101,12 @@ export function StudentsFilters({ filters, onChange }: Props) {
         }
       >
         <SelectTrigger className="w-[220px]">
-          <SelectValue placeholder="Yo'nalish" />
+          <SelectValue placeholder={t("common.direction")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL_VALUE}>Barcha yo'nalishlar</SelectItem>
+          <SelectItem value={ALL_VALUE}>
+            {t("studentsStudentsFilters.allDirections")}
+          </SelectItem>
           {(directions.data?.items ?? []).map((d) => (
             <SelectItem key={d.id} value={d.id}>
               {d.code} — {d.name}
@@ -114,10 +120,12 @@ export function StudentsFilters({ filters, onChange }: Props) {
         onValueChange={(v) => set({ group_id: v === ALL_VALUE ? undefined : (v as UUID) })}
       >
         <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Guruh" />
+          <SelectValue placeholder={t("common.group")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL_VALUE}>Barcha guruhlar</SelectItem>
+          <SelectItem value={ALL_VALUE}>
+            {t("studentsStudentsFilters.allGroups")}
+          </SelectItem>
           {(groups.data?.items ?? []).map((g) => (
             <SelectItem key={g.id} value={g.id}>
               {g.name}
@@ -133,14 +141,14 @@ export function StudentsFilters({ filters, onChange }: Props) {
         }
       >
         <SelectTrigger className="w-[150px]">
-          <SelectValue placeholder="O'quv yili" />
+          <SelectValue placeholder={t("common.academicYear")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL_VALUE}>Barcha yillar</SelectItem>
+          <SelectItem value={ALL_VALUE}>{t("common.allYears")}</SelectItem>
           {(academicYears.data ?? []).map((y) => (
             <SelectItem key={y.id} value={y.id}>
               {y.name}
-              {y.is_active ? " (aktiv)" : ""}
+              {y.is_active ? t("common.activeSuffix") : ""}
             </SelectItem>
           ))}
         </SelectContent>
@@ -151,13 +159,15 @@ export function StudentsFilters({ filters, onChange }: Props) {
         onValueChange={(v) => set({ course: v === ALL_VALUE ? undefined : Number(v) })}
       >
         <SelectTrigger className="w-[120px]">
-          <SelectValue placeholder="Kurs" />
+          <SelectValue placeholder={t("common.course")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL_VALUE}>Barcha kurs</SelectItem>
+          <SelectItem value={ALL_VALUE}>
+            {t("studentsStudentsFilters.allCourses")}
+          </SelectItem>
           {[1, 2, 3, 4, 5].map((c) => (
             <SelectItem key={c} value={String(c)}>
-              {c}-kurs
+              {t("common.courseN", { n: c })}
             </SelectItem>
           ))}
         </SelectContent>
@@ -170,21 +180,31 @@ export function StudentsFilters({ filters, onChange }: Props) {
         }
       >
         <SelectTrigger className="w-[160px]">
-          <SelectValue placeholder="Status" />
+          <SelectValue placeholder={t("common.status")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL_VALUE}>Barcha status</SelectItem>
-          <SelectItem value="studying">O'qiyapti</SelectItem>
-          <SelectItem value="graduated">Bitirgan</SelectItem>
-          <SelectItem value="academic_leave">Akademik ta'til</SelectItem>
-          <SelectItem value="expelled">Haydalgan</SelectItem>
+          <SelectItem value={ALL_VALUE}>
+            {t("studentsStudentsFilters.allStatuses")}
+          </SelectItem>
+          <SelectItem value="studying">
+            {t("studentsStudentsFilters.statusStudying")}
+          </SelectItem>
+          <SelectItem value="graduated">
+            {t("studentsStudentsFilters.statusGraduated")}
+          </SelectItem>
+          <SelectItem value="academic_leave">
+            {t("studentsStudentsFilters.statusAcademicLeave")}
+          </SelectItem>
+          <SelectItem value="expelled">
+            {t("studentsStudentsFilters.statusExpelled")}
+          </SelectItem>
         </SelectContent>
       </Select>
 
       {hasFilters && (
         <Button variant="ghost" size="sm" onClick={clear}>
           <X className="h-4 w-4" />
-          Tozalash
+          {t("common.clear")}
         </Button>
       )}
     </div>

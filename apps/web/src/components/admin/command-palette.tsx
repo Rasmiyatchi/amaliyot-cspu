@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -29,34 +30,34 @@ import { useAuthStore } from "@/stores/auth";
 
 type Cmd = {
   id: string;
-  label: string;
+  labelKey: string;
   to: string;
   icon: LucideIcon;
   keywords?: string[];
   superAdminOnly?: boolean;
-  group: "Sahifalar" | "Tezkor amallar";
+  group: "adminCommandPalette.groups.pages" | "adminCommandPalette.groups.quickActions";
 };
 
 const COMMANDS: Cmd[] = [
-  { id: "home", label: "Bosh sahifa", to: "/admin", icon: LayoutDashboard, keywords: ["dashboard", "asosiy"], group: "Sahifalar" },
-  { id: "academic", label: "Akademik", to: "/admin/academic", icon: School, keywords: ["fakultet", "yo'nalish", "guruh"], group: "Sahifalar" },
-  { id: "ptype", label: "Amaliyot turlari", to: "/admin/practice-types", icon: BookOpen, keywords: ["practice", "tur"], group: "Sahifalar" },
-  { id: "objects", label: "Obyektlar", to: "/admin/objects", icon: Building2, keywords: ["tashkilot", "hudud", "maktab"], group: "Sahifalar" },
-  { id: "supervisors", label: "Rahbarlar", to: "/admin/supervisors", icon: UserCog, keywords: ["supervisor"], group: "Sahifalar" },
-  { id: "students", label: "Talabalar", to: "/admin/students", icon: Users, keywords: ["student", "hemis"], group: "Sahifalar" },
-  { id: "assignments", label: "Biriktirish", to: "/admin/assignments", icon: ClipboardList, keywords: ["assignment", "amaliyot"], group: "Sahifalar" },
-  { id: "contracts", label: "Shartnomalar", to: "/admin/contracts", icon: FileCheck2, keywords: ["qr", "contract"], group: "Sahifalar" },
-  { id: "attendance", label: "Davomat", to: "/admin/attendance", icon: CalendarCheck, keywords: ["kelish", "ketish"], group: "Sahifalar" },
-  { id: "tasks", label: "Topshiriqlar", to: "/admin/task-templates", icon: LibraryBig, keywords: ["task", "shablon"], group: "Sahifalar" },
-  { id: "documents", label: "Hujjatlar", to: "/admin/documents", icon: BookOpen, keywords: ["normativ", "dastur", "regulation", "program", "pdf"], group: "Sahifalar" },
-  { id: "reports", label: "Yakuniy hisobotlar", to: "/admin/reports", icon: FileCheck2, keywords: ["report", "yakuniy", "tasdiq"], group: "Sahifalar" },
-  { id: "admins", label: "Adminlar", to: "/admin/admins", icon: ShieldCheck, superAdminOnly: true, group: "Sahifalar" },
-  { id: "settings", label: "Sozlamalar", to: "/admin/system-settings", icon: Cog, superAdminOnly: true, keywords: ["maintenance", "profilaktika"], group: "Sahifalar" },
+  { id: "home", labelKey: "adminCommandPalette.pages.home", to: "/admin", icon: LayoutDashboard, keywords: ["dashboard", "asosiy"], group: "adminCommandPalette.groups.pages" },
+  { id: "academic", labelKey: "adminCommandPalette.pages.academic", to: "/admin/academic", icon: School, keywords: ["fakultet", "yo'nalish", "guruh"], group: "adminCommandPalette.groups.pages" },
+  { id: "ptype", labelKey: "adminCommandPalette.pages.practiceTypes", to: "/admin/practice-types", icon: BookOpen, keywords: ["practice", "tur"], group: "adminCommandPalette.groups.pages" },
+  { id: "objects", labelKey: "adminCommandPalette.pages.objects", to: "/admin/objects", icon: Building2, keywords: ["tashkilot", "hudud", "maktab"], group: "adminCommandPalette.groups.pages" },
+  { id: "supervisors", labelKey: "adminCommandPalette.pages.supervisors", to: "/admin/supervisors", icon: UserCog, keywords: ["supervisor"], group: "adminCommandPalette.groups.pages" },
+  { id: "students", labelKey: "common.students", to: "/admin/students", icon: Users, keywords: ["student", "hemis"], group: "adminCommandPalette.groups.pages" },
+  { id: "assignments", labelKey: "adminCommandPalette.pages.assignments", to: "/admin/assignments", icon: ClipboardList, keywords: ["assignment", "amaliyot"], group: "adminCommandPalette.groups.pages" },
+  { id: "contracts", labelKey: "adminCommandPalette.pages.contracts", to: "/admin/contracts", icon: FileCheck2, keywords: ["qr", "contract"], group: "adminCommandPalette.groups.pages" },
+  { id: "attendance", labelKey: "adminCommandPalette.pages.attendance", to: "/admin/attendance", icon: CalendarCheck, keywords: ["kelish", "ketish"], group: "adminCommandPalette.groups.pages" },
+  { id: "tasks", labelKey: "adminCommandPalette.pages.tasks", to: "/admin/task-templates", icon: LibraryBig, keywords: ["task", "shablon"], group: "adminCommandPalette.groups.pages" },
+  { id: "documents", labelKey: "adminCommandPalette.pages.documents", to: "/admin/documents", icon: BookOpen, keywords: ["normativ", "dastur", "regulation", "program", "pdf"], group: "adminCommandPalette.groups.pages" },
+  { id: "reports", labelKey: "adminCommandPalette.pages.reports", to: "/admin/reports", icon: FileCheck2, keywords: ["report", "yakuniy", "tasdiq"], group: "adminCommandPalette.groups.pages" },
+  { id: "admins", labelKey: "adminCommandPalette.pages.admins", to: "/admin/admins", icon: ShieldCheck, superAdminOnly: true, group: "adminCommandPalette.groups.pages" },
+  { id: "settings", labelKey: "adminCommandPalette.pages.settings", to: "/admin/system-settings", icon: Cog, superAdminOnly: true, keywords: ["maintenance", "profilaktika"], group: "adminCommandPalette.groups.pages" },
 
   // Quick actions
-  { id: "qa-new-student", label: "Yangi talaba qo'shish", to: "/admin/students?new=1", icon: Users, group: "Tezkor amallar" },
-  { id: "qa-new-supervisor", label: "Yangi supervizor qo'shish", to: "/admin/supervisors?new=1", icon: UserCog, group: "Tezkor amallar" },
-  { id: "qa-new-assign", label: "Yangi biriktirish", to: "/admin/assignments?new=1", icon: ClipboardList, group: "Tezkor amallar" },
+  { id: "qa-new-student", labelKey: "adminCommandPalette.quickActions.newStudent", to: "/admin/students?new=1", icon: Users, group: "adminCommandPalette.groups.quickActions" },
+  { id: "qa-new-supervisor", labelKey: "adminCommandPalette.quickActions.newSupervisor", to: "/admin/supervisors?new=1", icon: UserCog, group: "adminCommandPalette.groups.quickActions" },
+  { id: "qa-new-assign", labelKey: "adminCommandPalette.quickActions.newAssignment", to: "/admin/assignments?new=1", icon: ClipboardList, group: "adminCommandPalette.groups.quickActions" },
 ];
 
 function fuzzyMatch(text: string, query: string): boolean {
@@ -66,6 +67,7 @@ function fuzzyMatch(text: string, query: string): boolean {
 }
 
 export function CommandPalette() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -97,10 +99,10 @@ export function CommandPalette() {
     return COMMANDS.filter((c) => {
       if (c.superAdminOnly && user?.role !== "super_admin") return false;
       if (!query) return true;
-      const haystack = [c.label, ...(c.keywords ?? [])].join(" ");
+      const haystack = [t(c.labelKey), ...(c.keywords ?? [])].join(" ");
       return fuzzyMatch(haystack, query);
     });
-  }, [query, user?.role]);
+  }, [query, user?.role, t]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Cmd[]>();
@@ -139,9 +141,9 @@ export function CommandPalette() {
         className="top-[20%] max-w-xl translate-y-0 gap-0 p-0"
         showClose={false}
       >
-        <DialogTitle className="sr-only">Tezkor qidiruv</DialogTitle>
+        <DialogTitle className="sr-only">{t("adminCommandPalette.srTitle")}</DialogTitle>
         <DialogDescription className="sr-only">
-          Sahifa nomini yozing yoki tugmalardan foydalaning
+          {t("adminCommandPalette.srDescription")}
         </DialogDescription>
 
         <div className="flex items-center gap-2 border-b border-border px-4">
@@ -154,7 +156,7 @@ export function CommandPalette() {
               setActiveIdx(0);
             }}
             onKeyDown={onKeyDown}
-            placeholder="Sahifa, amal yoki kalit so'z..."
+            placeholder={t("adminCommandPalette.searchPlaceholder")}
             className="h-12 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <kbd className="hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground sm:inline">
@@ -165,14 +167,14 @@ export function CommandPalette() {
         <div className="max-h-[60vh] overflow-y-auto p-2">
           {groups.length === 0 && (
             <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-              Hech narsa topilmadi
+              {t("adminCommandPalette.noResults")}
             </div>
           )}
 
           {groups.map(([group, items]) => (
             <div key={group} className="mb-2 last:mb-0">
               <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {group}
+                {t(group)}
               </div>
               {items.map((c) => {
                 runningIdx++;
@@ -188,7 +190,7 @@ export function CommandPalette() {
                     )}
                   >
                     <c.icon className={cn("h-4 w-4 shrink-0", isActive && "text-primary")} />
-                    <span className="flex-1 truncate">{c.label}</span>
+                    <span className="flex-1 truncate">{t(c.labelKey)}</span>
                   </button>
                 );
               })}
@@ -200,11 +202,11 @@ export function CommandPalette() {
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
               <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono">↑↓</kbd>
-              o'tish
+              {t("adminCommandPalette.footerNavigate")}
             </span>
             <span className="flex items-center gap-1">
               <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono">⏎</kbd>
-              ochish
+              {t("adminCommandPalette.footerOpen")}
             </span>
           </div>
           <span className="hidden sm:inline">Cmd+K</span>

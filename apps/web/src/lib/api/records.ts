@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import i18n from "@/i18n";
 
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
@@ -62,7 +63,7 @@ export function useRecords(filters: RecordFilters = {}) {
 
 async function downloadFile(path: string, fallbackName: string): Promise<void> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
   const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error(`Yuklab bo'lmadi (${res.status})`);
   const blob = await res.blob();

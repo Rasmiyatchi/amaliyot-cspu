@@ -1,8 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { TFunction } from "i18next";
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -22,17 +24,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useCreateDepartment, useFaculties, useUpdateDepartment } from "@/lib/api/academic";
 import type { Department } from "@/lib/api/types";
 
-const schema = z.object({
-  faculty_id: z.string().uuid("Fakultet tanlang"),
-  name: z.string().min(2).max(200),
-  code: z.string().max(32).optional().or(z.literal("")),
-});
+const makeSchema = (t: TFunction) =>
+  z.object({
+    faculty_id: z.string().uuid(t("academicDepartmentFormDialog.facultyRequired")),
+    name: z.string().min(2).max(200),
+    code: z.string().max(32).optional().or(z.literal("")),
+  });
 
-type Values = z.infer<typeof schema>;
+type Values = z.infer<ReturnType<typeof makeSchema>>;
 
 type Props = { open: boolean; existing: Department | null; onClose: () => void };
 
 export function DepartmentFormDialog({ open, existing, onClose }: Props) {
+  const { t } = useTranslation();
   const create = useCreateDepartment();
   const update = useUpdateDepartment();
   const faculties = useFaculties();
@@ -40,7 +44,7 @@ export function DepartmentFormDialog({ open, existing, onClose }: Props) {
 
   const form = useForm<Values>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(makeSchema(t)) as any,
     defaultValues: { faculty_id: "", name: "", code: "" },
   });
 
@@ -61,14 +65,14 @@ export function DepartmentFormDialog({ open, existing, onClose }: Props) {
     try {
       if (isEdit && existing) {
         await update.mutateAsync({ id: existing.id, data: payload });
-        toast.success("Kafedra yangilandi");
+        toast.success(t("academicDepartmentFormDialog.updatedToast"));
       } else {
         await create.mutateAsync(payload);
-        toast.success("Kafedra yaratildi");
+        toast.success(t("academicDepartmentFormDialog.createdToast"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -78,8 +82,12 @@ export function DepartmentFormDialog({ open, existing, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Kafedrani tahrirlash" : "Yangi kafedra"}</DialogTitle>
-          <DialogDescription>Fakultet tarkibidagi kafedra</DialogDescription>
+          <DialogTitle>
+            {isEdit
+              ? t("academicDepartmentFormDialog.editTitle")
+              : t("academicDepartmentFormDialog.createTitle")}
+          </DialogTitle>
+          <DialogDescription>{t("academicDepartmentFormDialog.description")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
@@ -88,16 +96,16 @@ export function DepartmentFormDialog({ open, existing, onClose }: Props) {
               name="faculty_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Fakultet *</FormLabel>
+                  <FormLabel>{t("common.faculty")} *</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Fakultetni tanlang..." />
+                        <SelectValue placeholder={t("academicDepartmentFormDialog.facultyPlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {(faculties.data?.items ?? []).length === 0 ? (
-                        <SelectEmpty message="Fakultetlar yo'q — avval qo'shing" />
+                        <SelectEmpty message={t("academicDepartmentFormDialog.facultiesEmpty")} />
                       ) : (
                         (faculties.data?.items ?? []).map((f) => (
                           <SelectItem key={f.id} value={f.id}>
@@ -116,9 +124,12 @@ export function DepartmentFormDialog({ open, existing, onClose }: Props) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nomi *</FormLabel>
+                  <FormLabel>{t("common.name")} *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Pedagogika kafedrasi" {...field} />
+                    <Input
+                      placeholder={t("academicDepartmentFormDialog.namePlaceholder")}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -129,9 +140,13 @@ export function DepartmentFormDialog({ open, existing, onClose }: Props) {
               name="code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Kod</FormLabel>
+                  <FormLabel>{t("academicDepartmentFormDialog.codeLabel")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="(ixtiyoriy)" {...field} value={field.value ?? ""} />
+                    <Input
+                      placeholder={t("academicDepartmentFormDialog.optionalPlaceholder")}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -139,11 +154,11 @@ export function DepartmentFormDialog({ open, existing, onClose }: Props) {
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
-                Bekor qilish
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={busy}>
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isEdit ? "Saqlash" : "Yaratish"}
+                {isEdit ? t("common.save") : t("academicDepartmentFormDialog.create")}
               </Button>
             </DialogFooter>
           </form>

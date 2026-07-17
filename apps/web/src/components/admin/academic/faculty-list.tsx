@@ -1,5 +1,6 @@
 import { Building, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { FacultyFormDialog } from "@/components/admin/academic/faculty-form-dialog";
@@ -7,22 +8,24 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { dateLocale } from "@/i18n";
 import { useDeleteFaculty, useFaculties } from "@/lib/api/academic";
 import type { Faculty } from "@/lib/api/types";
 
 export function FacultyList() {
+  const { t } = useTranslation();
   const { data, isPending, error } = useFaculties();
   const del = useDeleteFaculty();
   const [editing, setEditing] = useState<Faculty | null>(null);
   const [creating, setCreating] = useState(false);
 
   const handleDelete = async (f: Faculty) => {
-    if (!confirm(`"${f.name}" ni o'chirishni tasdiqlang?`)) return;
+    if (!confirm(t("academicFacultyList.deleteConfirm", { name: f.name }))) return;
     try {
       await del.mutateAsync(f.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -31,7 +34,7 @@ export function FacultyList() {
       <div className="flex justify-end">
         <Button onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Yangi fakultet
+          {t("academicFacultyList.newFaculty")}
         </Button>
       </div>
 
@@ -50,8 +53,8 @@ export function FacultyList() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={Building}
-            title="Fakultetlar yo'q"
-            description="Birinchi fakultetni qo'shing — yo'nalishlar shunga bog'lanadi"
+            title={t("academicFacultyList.emptyTitle")}
+            description={t("academicFacultyList.emptyDescription")}
           />
         </div>
       )}
@@ -61,9 +64,11 @@ export function FacultyList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[120px]">Kod</TableHead>
-                <TableHead>Nomi</TableHead>
-                <TableHead className="w-[180px]">Yaratilgan</TableHead>
+                <TableHead className="w-[120px]">{t("academicFacultyList.codeHeader")}</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead className="w-[180px]">
+                  {t("academicFacultyList.createdHeader")}
+                </TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -73,18 +78,18 @@ export function FacultyList() {
                   <TableCell className="font-mono text-xs">{f.code ?? "—"}</TableCell>
                   <TableCell className="font-medium">{f.name}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {new Date(f.created_at).toLocaleDateString("uz-UZ")}
+                    {new Date(f.created_at).toLocaleDateString(dateLocale())}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => setEditing(f)} aria-label="Tahrirlash">
+                      <Button size="icon" variant="ghost" onClick={() => setEditing(f)} aria-label={t("common.edit")}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDelete(f)}
-                        aria-label="O'chirish"
+                        aria-label={t("common.delete")}
                         disabled={del.isPending}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />

@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { AlertCircle, CheckCircle2, Loader2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -40,9 +41,9 @@ import { WeekdayPicker } from "@/components/admin/assignments/weekday-picker";
 
 const NONE = "__none__";
 
-const SEMESTERS: { value: Semester; label: string }[] = [
-  { value: "fall", label: "Kuzgi" },
-  { value: "spring", label: "Bahorgi" },
+const SEMESTERS: { value: Semester; labelKey: string }[] = [
+  { value: "fall", labelKey: "common.semesterFall" },
+  { value: "spring", labelKey: "common.semesterSpring" },
 ];
 
 type Props = {
@@ -59,6 +60,7 @@ function addDays(dateStr: string, days: number): string {
 }
 
 export function AssignmentWizard({ open, onClose }: Props) {
+  const { t } = useTranslation();
   const practiceTypes = usePracticeTypes();
   const academicYears = useAcademicYears();
   const organizations = useOrganizations({ is_active: true }, 1, 100);
@@ -222,7 +224,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
     try {
       if (mode === "single") {
         await createOne.mutateAsync({ ...base, student_id: singleStudentId });
-        toast.success("Biriktirish yaratildi");
+        toast.success(t("assignmentsAssignmentWizard.createdSingle"));
         handleClose();
       } else {
         const res = await createBulk.mutateAsync({
@@ -230,16 +232,26 @@ export function AssignmentWizard({ open, onClose }: Props) {
           student_ids: Array.from(selectedStudentIds),
         });
         if (res.failed.length === 0) {
-          toast.success(`${res.created} ta biriktirish yaratildi`);
+          toast.success(
+            t("assignmentsAssignmentWizard.createdCount", { n: res.created }),
+          );
           handleClose();
         } else {
           toast.warning(
-            `Yaratildi: ${res.created}/${res.requested}, xato: ${res.failed.length}`,
+            t("assignmentsAssignmentWizard.bulkPartial", {
+              created: res.created,
+              requested: res.requested,
+              failed: res.failed.length,
+            }),
           );
         }
       }
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik yuz berdi");
+      toast.error(
+        e instanceof HTTPError
+          ? e.message
+          : t("assignmentsAssignmentWizard.errorOccurred"),
+      );
     }
   };
 
@@ -252,9 +264,9 @@ export function AssignmentWizard({ open, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Yangi biriktirish</DialogTitle>
+          <DialogTitle>{t("assignmentsAssignmentWizard.title")}</DialogTitle>
           <DialogDescription>
-            Talabani yoki butun guruhni amaliyotga biriktirish
+            {t("assignmentsAssignmentWizard.subtitle")}
           </DialogDescription>
         </DialogHeader>
 
@@ -262,10 +274,10 @@ export function AssignmentWizard({ open, onClose }: Props) {
           {/* Practice type + academic year */}
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <Label>Amaliyot turi *</Label>
+              <Label>{t("common.practiceType")} *</Label>
               <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Tanlang..." />
+                  <SelectValue placeholder={t("assignmentsAssignmentWizard.selectPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {availablePracticeTypes.map((pt) => (
@@ -277,15 +289,16 @@ export function AssignmentWizard({ open, onClose }: Props) {
               </Select>
             </div>
             <div>
-              <Label>O'quv yili *</Label>
+              <Label>{t("common.academicYear")} *</Label>
               <Select value={academicYearId} onValueChange={setAcademicYearId}>
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Tanlang..." />
+                  <SelectValue placeholder={t("assignmentsAssignmentWizard.selectPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {(academicYears.data ?? []).map((ay) => (
                     <SelectItem key={ay.id} value={ay.id}>
-                      {ay.name} {ay.is_active && "(aktiv)"}
+                      {ay.name}
+                      {ay.is_active && t("common.activeSuffix")}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -297,14 +310,20 @@ export function AssignmentWizard({ open, onClose }: Props) {
             <Alert variant="info">
               <AlertTitle className="text-sm">{practiceType.name}</AlertTitle>
               <AlertDescription className="mt-1 text-xs">
-                Davomiyligi: {practiceType.min_weeks}–{practiceType.max_weeks} hafta ·
-                Ruxsat: {practiceType.allowed_courses.join(", ")}-kurs · Obyekt:{" "}
-                {practiceType.object_kind === "organization"
-                  ? "tashkilot"
-                  : practiceType.object_kind === "area"
-                    ? "hudud"
-                    : "ikkalasi"}{" "}
-                · Shartnoma: {practiceType.requires_contract ? "majburiy" : "yo'q"}
+                {t("assignmentsAssignmentWizard.typeInfo", {
+                  min: practiceType.min_weeks,
+                  max: practiceType.max_weeks,
+                  courses: practiceType.allowed_courses.join(", "),
+                  object:
+                    practiceType.object_kind === "organization"
+                      ? t("assignmentsAssignmentWizard.objectKindOrganization")
+                      : practiceType.object_kind === "area"
+                        ? t("assignmentsAssignmentWizard.objectKindArea")
+                        : t("assignmentsAssignmentWizard.objectKindBoth"),
+                  contract: practiceType.requires_contract
+                    ? t("assignmentsAssignmentWizard.contractRequired")
+                    : t("assignmentsAssignmentWizard.contractNone"),
+                })}
               </AlertDescription>
             </Alert>
           )}
@@ -313,11 +332,15 @@ export function AssignmentWizard({ open, onClose }: Props) {
 
           {/* Mode: single or group */}
           <div>
-            <Label>Kim biriktiriladi?</Label>
+            <Label>{t("assignmentsAssignmentWizard.whoLabel")}</Label>
             <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} className="mt-1.5">
               <TabsList>
-                <TabsTrigger value="single">Yakka talaba</TabsTrigger>
-                <TabsTrigger value="group">Butun guruh</TabsTrigger>
+                <TabsTrigger value="single">
+                  {t("assignmentsAssignmentWizard.modeSingle")}
+                </TabsTrigger>
+                <TabsTrigger value="group">
+                  {t("assignmentsAssignmentWizard.modeGroup")}
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -326,27 +349,29 @@ export function AssignmentWizard({ open, onClose }: Props) {
           {mode === "group" && groupId && groupStudents.length === 0 && !groupStudentsQuery.isPending && (
             <Alert variant="warning">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Guruhda talaba yo'q</AlertTitle>
+              <AlertTitle>{t("assignmentsAssignmentWizard.emptyGroupTitle")}</AlertTitle>
               <AlertDescription>
-                Excel import orqali talabalarni qo'shing yoki boshqa guruh tanlang.
+                {t("assignmentsAssignmentWizard.emptyGroupDesc")}
               </AlertDescription>
             </Alert>
           )}
 
           {mode === "single" ? (
             <div>
-              <Label>Talaba *</Label>
+              <Label>{t("common.student")} *</Label>
               <Select value={singleStudentId} onValueChange={setSingleStudentId}>
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Talabani tanlang..." />
+                  <SelectValue placeholder={t("assignmentsAssignmentWizard.studentPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {studentsForSingle.length === 0 ? (
                     <SelectEmpty
                       message={
                         allowedCourses.length
-                          ? `${allowedCourses.join(", ")}-kurs talabalari yo'q`
-                          : "Talabalar yo'q"
+                          ? t("assignmentsAssignmentWizard.noCourseStudents", {
+                              courses: allowedCourses.join(", "),
+                            })
+                          : t("assignmentsAssignmentWizard.noStudents")
                       }
                     />
                   ) : (
@@ -361,31 +386,35 @@ export function AssignmentWizard({ open, onClose }: Props) {
               </Select>
               {allowedCourses.length > 0 && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {allowedCourses.join(", ")}-kurs talabalaridan tanlanyapti
+                  {t("assignmentsAssignmentWizard.courseFilterHint", {
+                    courses: allowedCourses.join(", "),
+                  })}
                 </p>
               )}
             </div>
           ) : (
             <div className="space-y-3">
               <div>
-                <Label>Guruh *</Label>
+                <Label>{t("common.group")} *</Label>
                 <Select value={groupId} onValueChange={setGroupId}>
                   <SelectTrigger className="mt-1.5">
-                    <SelectValue placeholder="Guruhni tanlang..." />
+                    <SelectValue placeholder={t("assignmentsAssignmentWizard.groupPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {filteredGroups.length === 0 ? (
                       <SelectEmpty
                         message={
                           allowedCourses.length
-                            ? `${allowedCourses.join(", ")}-kurs guruhlari yo'q`
-                            : "Guruhlar yo'q"
+                            ? t("assignmentsAssignmentWizard.noCourseGroups", {
+                                courses: allowedCourses.join(", "),
+                              })
+                            : t("assignmentsAssignmentWizard.noGroups")
                         }
                       />
                     ) : (
                       filteredGroups.map((g) => (
                         <SelectItem key={g.id} value={g.id}>
-                          {g.name} ({g.course}-kurs)
+                          {g.name} ({t("common.courseN", { n: g.course })})
                         </SelectItem>
                       ))
                     )}
@@ -397,7 +426,9 @@ export function AssignmentWizard({ open, onClose }: Props) {
                   <div className="mb-2 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      Guruhda {groupStudents.length} talaba · tanlangan:{" "}
+                      {t("assignmentsAssignmentWizard.groupSelected", {
+                        n: groupStudents.length,
+                      })}{" "}
                       <strong>{selectedStudentIds.size}</strong>
                     </div>
                     <Button
@@ -406,7 +437,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
                       variant="outline"
                       onClick={selectAllGroup}
                     >
-                      Hammasini tanlash
+                      {t("assignmentsAssignmentWizard.selectAll")}
                     </Button>
                   </div>
                   <div className="max-h-48 space-y-1 overflow-y-auto">
@@ -437,14 +468,14 @@ export function AssignmentWizard({ open, onClose }: Props) {
           {practiceType && (
             <div>
               <Label>
-                Obyekt *{" "}
+                {t("assignmentsAssignmentWizard.objectLabel")} *{" "}
                 <span className="text-xs font-normal text-muted-foreground">
                   (
                   {practiceType.object_kind === "organization"
-                    ? "tashkilot"
+                    ? t("assignmentsAssignmentWizard.objectKindOrganization")
                     : practiceType.object_kind === "area"
-                      ? "hudud"
-                      : "tashkilot yoki hudud"}
+                      ? t("assignmentsAssignmentWizard.objectKindArea")
+                      : t("assignmentsAssignmentWizard.objectKindEither")}
                   )
                 </span>
               </Label>
@@ -458,12 +489,12 @@ export function AssignmentWizard({ open, onClose }: Props) {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Tashkilot..." />
+                      <SelectValue placeholder={t("assignmentsAssignmentWizard.orgPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NONE}>—</SelectItem>
                       {(organizations.data?.items ?? []).length === 0 ? (
-                        <SelectEmpty message="Tashkilotlar yo'q — avval qo'shing" />
+                        <SelectEmpty message={t("assignmentsAssignmentWizard.noOrganizations")} />
                       ) : (
                         (organizations.data?.items ?? []).map((o) => (
                           <SelectItem key={o.id} value={o.id}>
@@ -483,12 +514,12 @@ export function AssignmentWizard({ open, onClose }: Props) {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Hudud..." />
+                      <SelectValue placeholder={t("assignmentsAssignmentWizard.areaPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={NONE}>—</SelectItem>
                       {(areas.data?.items ?? []).length === 0 ? (
-                        <SelectEmpty message="Hududlar yo'q — avval qo'shing" />
+                        <SelectEmpty message={t("assignmentsAssignmentWizard.noAreas")} />
                       ) : (
                         (areas.data?.items ?? []).map((a) => (
                           <SelectItem key={a.id} value={a.id}>
@@ -506,18 +537,18 @@ export function AssignmentWizard({ open, onClose }: Props) {
           {/* Supervisor — tashkilot yoki hudud tanlangan bo'lsa */}
           {(organizationId || areaId) && (
             <div>
-              <Label>Supervizor</Label>
+              <Label>{t("common.supervisor")}</Label>
               <Select
                 value={supervisorId || NONE}
                 onValueChange={(v) => setSupervisorId(v === NONE ? "" : v)}
               >
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Supervizorni tanlang..." />
+                  <SelectValue placeholder={t("assignmentsAssignmentWizard.supervisorPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE}>—</SelectItem>
                   {(supervisorsQuery.data?.items ?? []).length === 0 ? (
-                    <SelectEmpty message="Faol supervizor topilmadi" />
+                    <SelectEmpty message={t("assignmentsAssignmentWizard.noActiveSupervisors")} />
                   ) : (
                     (supervisorsQuery.data?.items ?? []).map((s) => (
                       <SelectItem key={s.id} value={s.id}>
@@ -535,7 +566,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
           {/* Dates */}
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <Label htmlFor="start_date">Boshlanish *</Label>
+              <Label htmlFor="start_date">{t("assignmentsAssignmentWizard.startDate")} *</Label>
               <Input
                 id="start_date"
                 type="date"
@@ -545,7 +576,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
               />
             </div>
             <div>
-              <Label htmlFor="end_date">Tugash *</Label>
+              <Label htmlFor="end_date">{t("assignmentsAssignmentWizard.endDate")} *</Label>
               <Input
                 id="end_date"
                 type="date"
@@ -558,57 +589,63 @@ export function AssignmentWizard({ open, onClose }: Props) {
 
           {/* Semestr — 4+2 da kuzgi va bahorgi baho alohida chiqadi */}
           <div>
-            <Label>Semestr</Label>
+            <Label>{t("common.semester")}</Label>
             <Select value={semester} onValueChange={setSemester}>
               <SelectTrigger className="mt-1.5">
-                <SelectValue placeholder="Tanlang" />
+                <SelectValue placeholder={t("assignmentsAssignmentWizard.choosePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>Belgilanmagan (qisqa amaliyot)</SelectItem>
+                <SelectItem value={NONE}>
+                  {t("assignmentsAssignmentWizard.semesterNone")}
+                </SelectItem>
                 {SEMESTERS.map((s) => (
                   <SelectItem key={s.value} value={s.value}>
-                    {s.label}
+                    {t(s.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="mt-1 text-xs text-muted-foreground">
-              Yillik amaliyotlarda (4+2) kuzgi va bahorgi baho alohida chiqadi — har semestr
-              uchun alohida biriktirish qiling.
+              {t("assignmentsAssignmentWizard.semesterHint")}
             </p>
           </div>
 
           {/* Majburiy kunlar — davomat foizi maxraji shu kunlardan hisoblanadi */}
           <div>
-            <Label>Amaliyot kunlari *</Label>
+            <Label>{t("assignmentsAssignmentWizard.weekdaysLabel")} *</Label>
             <div className="mt-1.5">
               <WeekdayPicker value={weekdays} onChange={setWeekdays} disabled={busy} />
             </div>
             <p className="mt-1.5 text-xs text-muted-foreground">
-              Talaba haftaning qaysi kunlari borishi shart. Davomat foizi shu kunlar asosida
-              hisoblanadi.
+              {t("assignmentsAssignmentWizard.weekdaysHint")}
               {practiceType?.days_per_week
-                ? ` "${practiceType.name}" uchun tavsiya: ${practiceType.days_per_week} kun/hafta.`
+                ? " " +
+                  t("assignmentsAssignmentWizard.weekdaysRecommend", {
+                    name: practiceType.name,
+                    days: practiceType.days_per_week,
+                  })
                 : ""}
             </p>
             {!!practiceType?.days_per_week &&
               weekdays.length > 0 &&
               weekdays.length !== practiceType.days_per_week && (
                 <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
-                  Diqqat: {weekdays.length} kun tanlandi, amaliyot turida esa{" "}
-                  {practiceType.days_per_week} kun/hafta ko'rsatilgan.
+                  {t("assignmentsAssignmentWizard.weekdaysMismatch", {
+                    selected: weekdays.length,
+                    expected: practiceType.days_per_week,
+                  })}
                 </p>
               )}
           </div>
 
           <div>
-            <Label htmlFor="notes">Izoh</Label>
+            <Label htmlFor="notes">{t("common.note")}</Label>
             <Input
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="mt-1.5"
-              placeholder="Ixtiyoriy izohlar"
+              placeholder={t("assignmentsAssignmentWizard.notesPlaceholder")}
             />
           </div>
 
@@ -616,7 +653,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
           {createBulk.data && createBulk.data.failed.length > 0 && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Ba'zi biriktirishlar yaratilmadi</AlertTitle>
+              <AlertTitle>{t("assignmentsAssignmentWizard.bulkFailedTitle")}</AlertTitle>
               <AlertDescription>
                 <div className="mt-2 max-h-40 overflow-y-auto text-xs">
                   {createBulk.data.failed.map((f, i) => (
@@ -633,19 +670,23 @@ export function AssignmentWizard({ open, onClose }: Props) {
           {createBulk.data && createBulk.data.created > 0 && (
             <Alert variant="success">
               <CheckCircle2 className="h-4 w-4" />
-              <AlertTitle>{createBulk.data.created} ta biriktirish yaratildi</AlertTitle>
+              <AlertTitle>
+                {t("assignmentsAssignmentWizard.createdCount", {
+                  n: createBulk.data.created,
+                })}
+              </AlertTitle>
             </Alert>
           )}
         </div>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleClose} disabled={busy}>
-            {createBulk.data ? "Yopish" : "Bekor qilish"}
+            {createBulk.data ? t("common.close") : t("common.cancel")}
           </Button>
           {!createBulk.data?.created && (
             <Button onClick={handleSubmit} disabled={!canSubmit || busy}>
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-              Yaratish
+              {t("assignmentsAssignmentWizard.createButton")}
               {mode === "group" && selectedStudentIds.size > 0 && (
                 <span className="ml-1 opacity-80">({selectedStudentIds.size})</span>
               )}

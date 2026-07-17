@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import i18n from "@/i18n";
 
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
@@ -77,7 +78,7 @@ export function useDeleteDocument() {
 
 export async function uploadStandaloneFile(file: File): Promise<Attachment> {
   const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error("Sessiya tugagan");
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
   const fd = new FormData();
   fd.append("file", file);
   const res = await fetch("/api/v1/uploads/standalone", {

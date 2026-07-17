@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { FileText, Loader2, Save, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -33,6 +34,7 @@ function defaultDate(): string {
 }
 
 export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props) {
+  const { t } = useTranslation();
   const [date, setDate] = useState<string>(defaultDate());
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -59,9 +61,9 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
     try {
       const att = await uploadStandaloneFile(file);
       setAttachments((prev) => [...prev, att]);
-      toast.success("PDF yuklandi");
+      toast.success(t("studentJournalFormDialog.pdfUploaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Yuklashda xato");
+      toast.error(e instanceof Error ? e.message : t("studentJournalFormDialog.uploadError"));
     } finally {
       setUploading(false);
     }
@@ -73,7 +75,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
 
   const handleSave = async () => {
     if (attachments.length === 0) {
-      toast.error("Kundalik PDF faylini yuklang");
+      toast.error(t("studentJournalFormDialog.pdfRequired"));
       return;
     }
     try {
@@ -82,7 +84,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
           id: entry.id,
           data: { attachments },
         });
-        toast.success("Yangilandi");
+        toast.success(t("common.updated"));
       } else {
         await create.mutateAsync({
           assignmentId,
@@ -91,11 +93,11 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
             attachments,
           },
         });
-        toast.success("Yuborildi");
+        toast.success(t("studentJournalFormDialog.submitted"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -105,16 +107,16 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
     <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-h-[92vh] max-w-xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Kundalikni tahrirlash" : "Yangi kundalik"}</DialogTitle>
+          <DialogTitle>{isEdit ? t("studentJournalFormDialog.editTitle") : t("studentJournalFormDialog.newTitle")}</DialogTitle>
           <DialogDescription>
-            Sana belgilang va kundalik faylini PDF ko'rinishida yuklang.
+            {t("studentJournalFormDialog.description")}
           </DialogDescription>
         </DialogHeader>
 
         {entry?.status === "rejected" && entry.rejection_reason && (
           <Alert variant="destructive">
             <AlertDescription>
-              <div className="font-medium">Rad etilgan</div>
+              <div className="font-medium">{t("studentJournalFormDialog.rejected")}</div>
               <div className="mt-1 text-sm">{entry.rejection_reason}</div>
             </AlertDescription>
           </Alert>
@@ -123,7 +125,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
         <div className="space-y-3">
           <div>
             <Label htmlFor="journal-date">
-              Sana <span className="text-destructive">*</span>
+              {t("common.date")} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="journal-date"
@@ -137,7 +139,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
 
           <div>
             <Label>
-              Kundalik fayli <span className="text-destructive">*</span>
+              {t("studentJournalFormDialog.fileLabel")} <span className="text-destructive">*</span>
             </Label>
             <input
               ref={fileInputRef}
@@ -171,7 +173,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
                         variant="ghost"
                         onClick={() => removeAttachment(att.id)}
                       >
-                        Olib tashlash
+                        {t("studentJournalFormDialog.removeFile")}
                       </Button>
                     )}
                   </div>
@@ -190,12 +192,12 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
                 {uploading ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Yuklanmoqda...
+                    {t("common.loading")}
                   </>
                 ) : (
                   <>
                     <Upload className="h-5 w-5" />
-                    PDF tanlash
+                    {t("studentJournalFormDialog.choosePdf")}
                   </>
                 )}
               </Button>
@@ -205,7 +207,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            Yopish
+            {t("common.close")}
           </Button>
           {!isApproved && (
             <Button
@@ -216,7 +218,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
               <Save className="h-4 w-4" />
-              {isEdit ? "Saqlash" : "Yuborish"}
+              {isEdit ? t("common.save") : t("studentJournalFormDialog.submit")}
             </Button>
           )}
         </DialogFooter>

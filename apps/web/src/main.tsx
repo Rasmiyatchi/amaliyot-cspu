@@ -6,6 +6,7 @@ import { RouterProvider } from "react-router-dom";
 
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Toaster } from "@/components/ui/sonner";
+import "@/i18n";
 import "@/index.css";
 import { queryClient } from "@/lib/query";
 import { router } from "@/router";

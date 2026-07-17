@@ -1,5 +1,6 @@
 import { CalendarDays, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AcademicYearFormDialog } from "@/components/admin/academic/academic-year-form-dialog";
@@ -8,22 +9,24 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { dateLocale } from "@/i18n";
 import { useAcademicYears, useDeleteAcademicYear } from "@/lib/api/academic";
 import type { AcademicYear } from "@/lib/api/types";
 
 export function AcademicYearList() {
+  const { t } = useTranslation();
   const { data, isPending, error } = useAcademicYears();
   const del = useDeleteAcademicYear();
   const [editing, setEditing] = useState<AcademicYear | null>(null);
   const [creating, setCreating] = useState(false);
 
   const handleDelete = async (ay: AcademicYear) => {
-    if (!confirm(`"${ay.name}" ni o'chirishni tasdiqlang?`)) return;
+    if (!confirm(t("academicAcademicYearList.deleteConfirm", { name: ay.name }))) return;
     try {
       await del.mutateAsync(ay.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -32,7 +35,7 @@ export function AcademicYearList() {
       <div className="flex justify-end">
         <Button onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" />
-          Yangi o'quv yili
+          {t("academicAcademicYearList.newYear")}
         </Button>
       </div>
 
@@ -51,8 +54,8 @@ export function AcademicYearList() {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={CalendarDays}
-            title="O'quv yillari yo'q"
-            description="Birinchi o'quv yilini yarating va aktiv qilib belgilang"
+            title={t("academicAcademicYearList.emptyTitle")}
+            description={t("academicAcademicYearList.emptyDescription")}
           />
         </div>
       )}
@@ -62,10 +65,10 @@ export function AcademicYearList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nomi</TableHead>
-                <TableHead>Boshlanishi</TableHead>
-                <TableHead>Tugashi</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("academicAcademicYearList.colStart")}</TableHead>
+                <TableHead>{t("academicAcademicYearList.colEnd")}</TableHead>
+                <TableHead>{t("common.status")}</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -74,28 +77,28 @@ export function AcademicYearList() {
                 <TableRow key={ay.id}>
                   <TableCell className="font-medium">{ay.name}</TableCell>
                   <TableCell className="text-sm">
-                    {new Date(ay.start_date).toLocaleDateString("uz-UZ")}
+                    {new Date(ay.start_date).toLocaleDateString(dateLocale())}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {new Date(ay.end_date).toLocaleDateString("uz-UZ")}
+                    {new Date(ay.end_date).toLocaleDateString(dateLocale())}
                   </TableCell>
                   <TableCell>
                     {ay.is_active ? (
-                      <Badge variant="success">Aktiv</Badge>
+                      <Badge variant="success">{t("academicAcademicYearList.active")}</Badge>
                     ) : (
-                      <Badge variant="outline">Arxiv</Badge>
+                      <Badge variant="outline">{t("academicAcademicYearList.archive")}</Badge>
                     )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => setEditing(ay)} aria-label="Tahrirlash">
+                      <Button size="icon" variant="ghost" onClick={() => setEditing(ay)} aria-label={t("common.edit")}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDelete(ay)}
-                        aria-label="O'chirish"
+                        aria-label={t("common.delete")}
                         disabled={del.isPending}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />

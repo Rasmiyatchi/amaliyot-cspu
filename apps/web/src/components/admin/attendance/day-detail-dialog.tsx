@@ -9,8 +9,10 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { dateLocale } from "@/i18n";
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { OverrideDialog } from "@/components/admin/attendance/override-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -38,7 +40,7 @@ type Props = {
 };
 
 const fmtDateTime = (s: string | null) =>
-  s ? new Date(s).toLocaleString("uz-UZ") : "—";
+  s ? new Date(s).toLocaleString(dateLocale()) : "—";
 
 const fmtNum = (v: string | number | null): string => {
   if (v === null || v === undefined) return "—";
@@ -47,6 +49,7 @@ const fmtNum = (v: string | number | null): string => {
 };
 
 export function DayDetailDialog({ day, onClose }: Props) {
+  const { t } = useTranslation();
   const role = useAuthStore((s) => s.user?.role);
   const isSuperAdmin = role === "super_admin";
 
@@ -65,26 +68,26 @@ export function DayDetailDialog({ day, onClose }: Props) {
   const handleApprove = async () => {
     try {
       await approve.mutateAsync({ id: day.id, data: {} });
-      toast.success("Yashilga tasdiqlandi");
+      toast.success(t("attendanceDayDetailDialog.approvedGreenToast"));
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const handleReject = async () => {
     if (rejectReason.trim().length < 3) {
-      toast.error("Sababni yozing");
+      toast.error(t("attendanceDayDetailDialog.reasonRequired"));
       return;
     }
     try {
       await reject.mutateAsync({ id: day.id, data: { note: rejectReason.trim() } });
-      toast.success("Kun qizilga belgilandi");
+      toast.success(t("attendanceDayDetailDialog.markedRedToast"));
       setRejectMode(false);
       setRejectReason("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -115,7 +118,7 @@ export function DayDetailDialog({ day, onClose }: Props) {
                 <Button onClick={handleApprove} disabled={approve.isPending}>
                   {approve.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                   <CheckCircle2 className="h-4 w-4" />
-                  Yashilga tasdiqlash
+                  {t("attendanceDayDetailDialog.approveGreen")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -123,7 +126,7 @@ export function DayDetailDialog({ day, onClose }: Props) {
                   onClick={() => setRejectMode(!rejectMode)}
                 >
                   <XCircle className="h-4 w-4" />
-                  Rad etish
+                  {t("common.reject")}
                 </Button>
               </>
             )}
@@ -138,11 +141,11 @@ export function DayDetailDialog({ day, onClose }: Props) {
           {rejectMode && (
             <Alert>
               <AlertDescription className="space-y-2">
-                <div className="text-sm font-medium">Rad etish sababi</div>
+                <div className="text-sm font-medium">{t("attendanceDayDetailDialog.rejectReason")}</div>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Nima uchun qizilga?"
+                  placeholder={t("attendanceDayDetailDialog.rejectPlaceholder")}
                   rows={3}
                   className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                 />
@@ -154,10 +157,10 @@ export function DayDetailDialog({ day, onClose }: Props) {
                     disabled={reject.isPending || rejectReason.trim().length < 3}
                   >
                     {reject.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Qizilga
+                    {t("attendanceDayDetailDialog.toRed")}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setRejectMode(false)}>
-                    Bekor
+                    {t("common.cancel")}
                   </Button>
                 </div>
               </AlertDescription>
@@ -169,24 +172,24 @@ export function DayDetailDialog({ day, onClose }: Props) {
           {/* Meta */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
-              <div className="text-xs text-muted-foreground">Kelgan vaqt</div>
+              <div className="text-xs text-muted-foreground">{t("attendanceDayDetailDialog.checkInTime")}</div>
               <div>{fmtDateTime(day.check_in_at)}</div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">Ketgan vaqt</div>
+              <div className="text-xs text-muted-foreground">{t("attendanceDayDetailDialog.checkOutTime")}</div>
               <div>{fmtDateTime(day.check_out_at)}</div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">Tasdiqlagan</div>
+              <div className="text-xs text-muted-foreground">{t("attendanceDayDetailDialog.approvedBy")}</div>
               <div>{day.approved_by_name ?? "—"}</div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">Tasdiq vaqti</div>
+              <div className="text-xs text-muted-foreground">{t("attendanceDayDetailDialog.approvedAt")}</div>
               <div>{fmtDateTime(day.approved_at)}</div>
             </div>
             {day.note && (
               <div className="col-span-2">
-                <div className="text-xs text-muted-foreground">Izoh</div>
+                <div className="text-xs text-muted-foreground">{t("common.note")}</div>
                 <div className="rounded-md border border-border bg-muted/30 p-2 text-sm">
                   {day.note}
                 </div>
@@ -200,11 +203,12 @@ export function DayDetailDialog({ day, onClose }: Props) {
           <div>
             <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
               <MapPin className="h-4 w-4" />
-              Event'lar {isPending ? "(yuklanmoqda...)" : `(${detail?.events.length ?? 0})`}
+              {t("attendanceDayDetailDialog.eventsTitle")}{" "}
+              {isPending ? `(${t("common.loading")})` : `(${detail?.events.length ?? 0})`}
             </h3>
             {detail && detail.events.length === 0 && (
               <div className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-                Event yo'q (check-in yoki check-out yozilmagan)
+                {t("attendanceDayDetailDialog.noEvents")}
               </div>
             )}
             {detail && detail.events.length > 0 && (
@@ -216,10 +220,12 @@ export function DayDetailDialog({ day, onClose }: Props) {
                   >
                     <div className="flex items-center justify-between">
                       <div className="font-medium">
-                        {ev.kind === "check_in" ? "Kelish" : "Ketish"}
+                        {ev.kind === "check_in"
+                          ? t("attendanceDayDetailDialog.checkIn")
+                          : t("attendanceDayDetailDialog.checkOut")}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {new Date(ev.event_at).toLocaleTimeString("uz-UZ")}
+                        {new Date(ev.event_at).toLocaleTimeString(dateLocale())}
                       </div>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -231,11 +237,15 @@ export function DayDetailDialog({ day, onClose }: Props) {
                       )}
                       {ev.distance_m !== null && (
                         <span>
-                          Masofa: {parseFloat(String(ev.distance_m)).toFixed(0)} m
+                          {t("attendanceDayDetailDialog.distanceM", {
+                            value: parseFloat(String(ev.distance_m)).toFixed(0),
+                          })}
                         </span>
                       )}
                       <span className={ev.is_within_fence ? "text-emerald-600" : "text-destructive"}>
-                        {ev.is_within_fence ? "✓ hududda" : "✗ hudud tashqarisida"}
+                        {ev.is_within_fence
+                          ? t("attendanceDayDetailDialog.withinFence")
+                          : t("attendanceDayDetailDialog.outsideFence")}
                       </span>
                       {ev.wifi_ssid && <span>WiFi: {ev.wifi_ssid}</span>}
                     </div>
@@ -252,7 +262,7 @@ export function DayDetailDialog({ day, onClose }: Props) {
               <div>
                 <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
                   <History className="h-4 w-4" />
-                  Override tarixi ({overrides.length})
+                  {t("attendanceDayDetailDialog.overrideHistory")} ({overrides.length})
                 </h3>
                 <div className="space-y-2">
                   {overrides.map((ov) => (
@@ -262,7 +272,7 @@ export function DayDetailDialog({ day, onClose }: Props) {
                           {ov.previous_status} → {ov.new_status}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(ov.created_at).toLocaleString("uz-UZ")}
+                          {new Date(ov.created_at).toLocaleString(dateLocale())}
                         </span>
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground">

@@ -1,5 +1,6 @@
 import { Pencil, Plus, Trash2, Upload, UserCog, Users } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { SupervisorFormDialog } from "@/components/admin/supervisors/supervisor-form-dialog";
@@ -33,6 +34,7 @@ import type { Supervisor, UUID } from "@/lib/api/types";
 const ALL = "__all__";
 
 export function SupervisorsPage() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [facultyId, setFacultyId] = useState<string>(ALL);
   const [orgId, setOrgId] = useState<string>(ALL);
@@ -57,12 +59,12 @@ export function SupervisorsPage() {
   const [importOpen, setImportOpen] = useState(false);
 
   const handleDelete = async (s: Supervisor) => {
-    if (!confirm(`"${s.full_name}" ni o'chirishni tasdiqlang?`)) return;
+    if (!confirm(t("adminSupervisors.deleteConfirm", { name: s.full_name }))) return;
     try {
       await del.mutateAsync(s.id);
-      toast.success("O'chirildi");
+      toast.success(t("common.deleted"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -74,37 +76,37 @@ export function SupervisorsPage() {
             <Users className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold">Rahbarlar (supervizorlar)</h1>
+            <h1 className="text-2xl font-semibold">{t("adminSupervisors.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Tashkilotlardagi amaliyot rahbarlari
+              {t("adminSupervisors.subtitle")}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" />
-            Excel import
+            {t("adminSupervisors.excelImport")}
           </Button>
           <Button onClick={() => setCreating(true)}>
             <Plus className="h-4 w-4" />
-            Yangi supervizor
+            {t("adminSupervisors.newSupervisor")}
           </Button>
         </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
-          placeholder="Qidiruv (F.I.SH. yoki username)"
+          placeholder={t("adminSupervisors.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="min-w-[220px] max-w-xs flex-1"
         />
         <Select value={facultyId} onValueChange={setFacultyId}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Fakultet" />
+            <SelectValue placeholder={t("common.faculty")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha fakultetlar</SelectItem>
+            <SelectItem value={ALL}>{t("adminSupervisors.allFaculties")}</SelectItem>
             {(faculties.data?.items ?? []).map((f) => (
               <SelectItem key={f.id} value={f.id}>
                 {f.name}
@@ -114,10 +116,10 @@ export function SupervisorsPage() {
         </Select>
         <Select value={orgId} onValueChange={setOrgId}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Tashkilot" />
+            <SelectValue placeholder={t("common.organization")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>Barcha tashkilotlar</SelectItem>
+            <SelectItem value={ALL}>{t("adminSupervisors.allOrganizations")}</SelectItem>
             {(orgs.data?.items ?? []).map((o) => (
               <SelectItem key={o.id} value={o.id}>
                 {o.name}
@@ -127,12 +129,12 @@ export function SupervisorsPage() {
         </Select>
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Holat" />
+            <SelectValue placeholder={t("common.status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Barcha holat</SelectItem>
-            <SelectItem value="active">Faol</SelectItem>
-            <SelectItem value="inactive">Nofaol</SelectItem>
+            <SelectItem value={ALL}>{t("adminSupervisors.allStatuses")}</SelectItem>
+            <SelectItem value="active">{t("adminSupervisors.active")}</SelectItem>
+            <SelectItem value="inactive">{t("adminSupervisors.inactive")}</SelectItem>
           </SelectContent>
         </Select>
         {(facultyId !== ALL || orgId !== ALL || status !== ALL) && (
@@ -144,7 +146,7 @@ export function SupervisorsPage() {
               setStatus(ALL);
             }}
           >
-            Tozalash
+            {t("common.clear")}
           </Button>
         )}
       </div>
@@ -161,12 +163,12 @@ export function SupervisorsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>F.I.SH.</TableHead>
-                <TableHead>Lavozim</TableHead>
-                <TableHead>Tashkilot</TableHead>
-                <TableHead>Aloqa</TableHead>
-                <TableHead className="w-[90px]">Sig'im</TableHead>
-                <TableHead className="w-[90px]">Status</TableHead>
+                <TableHead>{t("common.fullName")}</TableHead>
+                <TableHead>{t("adminSupervisors.position")}</TableHead>
+                <TableHead>{t("common.organization")}</TableHead>
+                <TableHead>{t("adminSupervisors.contact")}</TableHead>
+                <TableHead className="w-[90px]">{t("adminSupervisors.capacity")}</TableHead>
+                <TableHead className="w-[90px]">{t("common.status")}</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -176,8 +178,8 @@ export function SupervisorsPage() {
                   <TableCell colSpan={7} className="p-0">
                     <EmptyState
                       icon={UserCog}
-                      title="Supervizorlar topilmadi"
-                      description="Yangi supervizor qo'shing yoki filtrlarni o'zgartiring"
+                      title={t("adminSupervisors.emptyTitle")}
+                      description={t("adminSupervisors.emptyDesc")}
                       accent="info"
                       compact
                     />
@@ -206,7 +208,9 @@ export function SupervisorsPage() {
                         ))}
                       </div>
                     ) : (
-                      <span className="text-muted-foreground">Biriktirilmagan</span>
+                      <span className="text-muted-foreground">
+                        {t("adminSupervisors.notAssigned")}
+                      </span>
                     )}
                     {(s.faculty_name || s.department_name) && (
                       <div className="mt-1 text-xs text-muted-foreground">
@@ -221,9 +225,9 @@ export function SupervisorsPage() {
                   <TableCell>{s.capacity}</TableCell>
                   <TableCell>
                     {s.is_active ? (
-                      <Badge variant="success">Aktiv</Badge>
+                      <Badge variant="success">{t("adminSupervisors.badgeActive")}</Badge>
                     ) : (
-                      <Badge variant="outline">Deaktiv</Badge>
+                      <Badge variant="outline">{t("adminSupervisors.badgeInactive")}</Badge>
                     )}
                   </TableCell>
                   <TableCell>
@@ -232,7 +236,7 @@ export function SupervisorsPage() {
                         size="icon"
                         variant="ghost"
                         onClick={() => setEditing(s)}
-                        aria-label="Tahrirlash"
+                        aria-label={t("common.edit")}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -240,7 +244,7 @@ export function SupervisorsPage() {
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDelete(s)}
-                        aria-label="O'chirish"
+                        aria-label={t("common.delete")}
                         disabled={del.isPending}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />

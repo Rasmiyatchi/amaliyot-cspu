@@ -1,6 +1,7 @@
 import { HTTPError } from "ky";
 import { Loader2, Save, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { CredentialsSection } from "@/components/admin/credentials-section";
@@ -38,6 +39,7 @@ type Props = {
 };
 
 export function AdminFormDialog({ open, existing, onClose }: Props) {
+  const { t } = useTranslation();
   const create = useCreateAdmin();
   const update = useUpdateAdmin();
   const updateCreds = useUpdateAdminCredentials();
@@ -79,7 +81,7 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
 
   const handleSave = async () => {
     if (!firstName.trim() || !lastName.trim()) {
-      toast.error("Ism va familiya majburiy");
+      toast.error(t("adminsAdminFormDialog.nameRequired"));
       return;
     }
 
@@ -98,10 +100,10 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
           id: existing.id,
           data: { ...basePayload, is_active: isActive },
         });
-        toast.success("Yangilandi");
+        toast.success(t("common.updated"));
       } else {
         if (username.trim().length < 3 || password.length < 4) {
-          toast.error("Username (≥3) va parol (≥4) majburiy");
+          toast.error(t("adminsAdminFormDialog.credentialsRequired"));
           return;
         }
         await create.mutateAsync({
@@ -109,11 +111,11 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
           username: username.trim(),
           password,
         });
-        toast.success("Admin yaratildi");
+        toast.success(t("adminsAdminFormDialog.adminCreated"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -125,12 +127,14 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" />
-            {isEdit ? "Adminni tahrirlash" : "Yangi admin"}
+            {isEdit
+              ? t("adminsAdminFormDialog.editTitle")
+              : t("adminsAdminFormDialog.createTitle")}
           </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Profil ma'lumotlari va rolini o'zgartirish"
-              : "Admin yoki super admin foydalanuvchi yaratish"}
+              ? t("adminsAdminFormDialog.editDescription")
+              : t("adminsAdminFormDialog.createDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +142,7 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
           <>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <Label htmlFor="adm-username">Username *</Label>
+                <Label htmlFor="adm-username">{t("adminsAdminFormDialog.username")} *</Label>
                 <Input
                   id="adm-username"
                   value={username}
@@ -148,7 +152,7 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
                 />
               </div>
               <div>
-                <Label htmlFor="adm-password">Parol *</Label>
+                <Label htmlFor="adm-password">{t("adminsAdminFormDialog.password")} *</Label>
                 <Input
                   id="adm-password"
                   type="password"
@@ -164,7 +168,7 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label htmlFor="adm-last">Familiya *</Label>
+            <Label htmlFor="adm-last">{t("adminsAdminFormDialog.lastName")} *</Label>
             <Input
               id="adm-last"
               value={lastName}
@@ -172,7 +176,7 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
             />
           </div>
           <div>
-            <Label htmlFor="adm-first">Ism *</Label>
+            <Label htmlFor="adm-first">{t("adminsAdminFormDialog.firstName")} *</Label>
             <Input
               id="adm-first"
               value={firstName}
@@ -180,7 +184,7 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
             />
           </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="adm-middle">Otasining ismi</Label>
+            <Label htmlFor="adm-middle">{t("adminsAdminFormDialog.middleName")}</Label>
             <Input
               id="adm-middle"
               value={middleName}
@@ -188,7 +192,7 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
             />
           </div>
           <div>
-            <Label htmlFor="adm-email">Email</Label>
+            <Label htmlFor="adm-email">{t("adminsAdminFormDialog.email")}</Label>
             <Input
               id="adm-email"
               type="email"
@@ -197,7 +201,7 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
             />
           </div>
           <div>
-            <Label htmlFor="adm-phone">Telefon</Label>
+            <Label htmlFor="adm-phone">{t("adminsAdminFormDialog.phone")}</Label>
             <Input
               id="adm-phone"
               value={phone}
@@ -205,20 +209,22 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
             />
           </div>
           <div>
-            <Label htmlFor="adm-role">Rol *</Label>
+            <Label htmlFor="adm-role">{t("adminsAdminFormDialog.role")} *</Label>
             <Select value={role} onValueChange={(v) => setRole(v as "admin" | "super_admin")}>
               <SelectTrigger id="adm-role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="super_admin">Super Admin</SelectItem>
+                <SelectItem value="admin">{t("adminsAdminFormDialog.roleAdmin")}</SelectItem>
+                <SelectItem value="super_admin">
+                  {t("adminsAdminFormDialog.roleSuperAdmin")}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
           {isEdit && (
             <div>
-              <Label htmlFor="adm-active">Holat</Label>
+              <Label htmlFor="adm-active">{t("common.status")}</Label>
               <Select
                 value={isActive ? "true" : "false"}
                 onValueChange={(v) => setIsActive(v === "true")}
@@ -227,8 +233,8 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="true">Aktiv</SelectItem>
-                  <SelectItem value="false">Bloklangan</SelectItem>
+                  <SelectItem value="true">{t("adminsAdminFormDialog.active")}</SelectItem>
+                  <SelectItem value="false">{t("adminsAdminFormDialog.blocked")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -238,8 +244,10 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
         {role === "super_admin" && !isEdit && (
           <Alert>
             <AlertDescription>
-              <strong>Diqqat:</strong> Super admin to'liq tizim ustidan nazoratga ega bo'ladi
-              (override, sozlamalar, boshqa adminlarni boshqarish).
+              <Trans
+                i18nKey="adminsAdminFormDialog.superAdminWarning"
+                components={[<strong key="0" />]}
+              />
             </AlertDescription>
           </Alert>
         )}
@@ -259,12 +267,12 @@ export function AdminFormDialog({ open, existing, onClose }: Props) {
 
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Bekor
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={busy}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             <Save className="h-4 w-4" />
-            {isEdit ? "Saqlash" : "Yaratish"}
+            {isEdit ? t("common.save") : t("adminsAdminFormDialog.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

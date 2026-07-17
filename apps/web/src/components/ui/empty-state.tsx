@@ -1,4 +1,5 @@
 import { Inbox, type LucideIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 
@@ -47,13 +48,14 @@ const ACCENT_CLASSES: Record<
 /** Umumiy empty state — animatsiya bilan, gradient ring fonli icon. */
 export function EmptyState({
   icon: Icon = Inbox,
-  title = "Ma'lumot yo'q",
+  title,
   description,
   action,
   className,
   compact = false,
   accent = "muted",
 }: Props) {
+  const { t } = useTranslation();
   const a = ACCENT_CLASSES[accent];
   return (
     <div
@@ -96,7 +98,7 @@ export function EmptyState({
       <div
         className={cn("font-semibold tracking-tight", compact ? "text-sm" : "text-base")}
       >
-        {title}
+        {title ?? t("uiEmptyState.noData")}
       </div>
 
       {description && (
@@ -116,8 +118,11 @@ export function EmptyState({
 }
 
 /** Select dropdown ichidagi empty state — SelectContent ichida ishlatiladi. */
-export function SelectEmpty({ message = "Ma'lumot yo'q" }: { message?: string }) {
+export function SelectEmpty({ message }: { message?: string }) {
+  const { t } = useTranslation();
   return (
-    <div className="py-4 text-center text-xs text-muted-foreground">{message}</div>
+    <div className="py-4 text-center text-xs text-muted-foreground">
+      {message ?? t("uiEmptyState.noData")}
+    </div>
   );
 }

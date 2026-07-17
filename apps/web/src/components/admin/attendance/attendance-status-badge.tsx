@@ -1,10 +1,12 @@
+import { useTranslation } from "react-i18next";
+
 import { Badge } from "@/components/ui/badge";
 import type { AttendanceDayStatus } from "@/lib/api/types";
 
-const LABEL: Record<AttendanceDayStatus, string> = {
-  pending: "Kutilmoqda",
-  green: "Yashil",
-  red: "Qizil",
+const LABEL_KEY: Record<AttendanceDayStatus, string> = {
+  pending: "attendanceAttendanceStatusBadge.status.pending",
+  green: "attendanceAttendanceStatusBadge.status.green",
+  red: "attendanceAttendanceStatusBadge.status.red",
 };
 
 const VARIANT: Record<
@@ -17,5 +19,6 @@ const VARIANT: Record<
 };
 
 export function AttendanceStatusBadge({ status }: { status: AttendanceDayStatus }) {
-  return <Badge variant={VARIANT[status]}>{LABEL[status]}</Badge>;
+  const { t } = useTranslation();
+  return <Badge variant={VARIANT[status]}>{t(LABEL_KEY[status])}</Badge>;
 }

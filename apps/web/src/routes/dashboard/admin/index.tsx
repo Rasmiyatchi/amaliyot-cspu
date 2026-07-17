@@ -10,6 +10,7 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { StatCard } from "@/components/admin/stat-card";
@@ -21,10 +22,12 @@ import {
   StatCardsSkeleton,
 } from "@/components/ui/loading-skeletons";
 import { Progress } from "@/components/ui/progress";
+import { dateLocale } from "@/i18n";
 import { useAdminStats, useSuperAdminStats } from "@/lib/api/stats";
 import { useAuthStore } from "@/stores/auth";
 
 export function AdminHome() {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -50,11 +53,13 @@ export function AdminHome() {
           </div>
           <div className="flex-1">
             <h1 className="text-2xl font-semibold">
-              {isSuperAdmin ? "Super admin paneli" : "Admin paneli"}
+              {isSuperAdmin
+                ? t("adminIndex.superAdminTitle")
+                : t("adminIndex.adminTitle")}
             </h1>
             <p className="mt-0.5 text-sm text-indigo-50">
-              Xush kelibsiz, {user?.full_name}
-              {isSuperAdmin && " — siz tizimni to'liq boshqarasiz"}
+              {t("adminIndex.welcome", { name: user?.full_name })}
+              {isSuperAdmin && t("adminIndex.superAdminSuffix")}
             </p>
           </div>
         </div>
@@ -80,16 +85,30 @@ export function AdminHome() {
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="flex flex-wrap items-center gap-3">
                 <span className="font-medium">
-                  {stats.pending_reviews.total} ta tasdiqlash kutilmoqda:
+                  {t("adminIndex.pendingReviews", {
+                    count: stats.pending_reviews.total,
+                  })}
                 </span>
                 {stats.pending_reviews.tasks > 0 && (
-                  <span>topshiriqlar: {stats.pending_reviews.tasks}</span>
+                  <span>
+                    {t("adminIndex.pendingTasks", {
+                      count: stats.pending_reviews.tasks,
+                    })}
+                  </span>
                 )}
                 {stats.pending_reviews.journals > 0 && (
-                  <span>kundalik: {stats.pending_reviews.journals}</span>
+                  <span>
+                    {t("adminIndex.pendingJournals", {
+                      count: stats.pending_reviews.journals,
+                    })}
+                  </span>
                 )}
                 {stats.pending_reviews.analyses > 0 && (
-                  <span>tahlillar: {stats.pending_reviews.analyses}</span>
+                  <span>
+                    {t("adminIndex.pendingAnalyses", {
+                      count: stats.pending_reviews.analyses,
+                    })}
+                  </span>
                 )}
               </AlertDescription>
             </Alert>
@@ -100,7 +119,9 @@ export function AdminHome() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  Sig'im to'lib qoldi ({stats.capacity_alerts.length})
+                  {t("adminIndex.capacityAlerts", {
+                    count: stats.capacity_alerts.length,
+                  })}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -120,9 +141,14 @@ export function AdminHome() {
                       <div className="flex-1 min-w-0">
                         <div className="font-medium">{a.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {a.kind === "organization" ? "Tashkilot" : "Supervizor"}
+                          {a.kind === "organization"
+                            ? t("common.organization")
+                            : t("common.supervisor")}
                           {" · "}
-                          {a.used} / {a.capacity} talaba
+                          {t("adminIndex.capacityUsage", {
+                            used: a.used,
+                            capacity: a.capacity,
+                          })}
                         </div>
                       </div>
                       <div
@@ -133,7 +159,7 @@ export function AdminHome() {
                         }
                       >
                         {a.percent}%
-                        {a.severity === "full" ? " · to'la" : ""}
+                        {a.severity === "full" ? t("adminIndex.fullSuffix") : ""}
                       </div>
                     </div>
                   ))}
@@ -144,38 +170,36 @@ export function AdminHome() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              label="Talabalar"
+              label={t("common.students")}
               value={stats.students.total}
               icon={Users}
               accent="primary"
-              hint={<>O'qiyapti: {stats.students.by_status.studying}</>}
+              hint={t("adminIndex.studying", {
+                count: stats.students.by_status.studying,
+              })}
             />
             <StatCard
-              label="Amaliyot biriktirishlari"
+              label={t("adminIndex.assignments")}
               value={stats.assignments.total}
               icon={ClipboardList}
               accent="success"
-              hint={
-                <>
-                  Draft: {stats.assignments.by_status.draft} · Aktiv:{" "}
-                  {stats.assignments.by_status.active}
-                </>
-              }
+              hint={t("adminIndex.assignmentsHint", {
+                draft: stats.assignments.by_status.draft,
+                active: stats.assignments.by_status.active,
+              })}
             />
             <StatCard
-              label="Shartnomalar"
+              label={t("adminIndex.contracts")}
               value={stats.contracts.total}
               icon={FileCheck2}
               accent="info"
-              hint={
-                <>
-                  PDF tayyor: {stats.contracts.by_status.generated} · Aktiv:{" "}
-                  {stats.contracts.by_status.active}
-                </>
-              }
+              hint={t("adminIndex.contractsHint", {
+                generated: stats.contracts.by_status.generated,
+                active: stats.contracts.by_status.active,
+              })}
             />
             <StatCard
-              label="Davomat (30 kun)"
+              label={t("adminIndex.attendance30d")}
               value={
                 stats.attendance_30d.green_percent !== null
                   ? `${stats.attendance_30d.green_percent}%`
@@ -188,43 +212,39 @@ export function AdminHome() {
                   ? "success"
                   : "warning"
               }
-              hint={
-                <>
-                  Yashil: {stats.attendance_30d.green} · Qizil:{" "}
-                  {stats.attendance_30d.red}
-                </>
-              }
+              hint={t("adminIndex.attendanceHint", {
+                green: stats.attendance_30d.green,
+                red: stats.attendance_30d.red,
+              })}
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              label="Tashkilotlar"
+              label={t("adminIndex.organizations")}
               value={stats.organizations}
               icon={Building2}
               accent="info"
             />
             <StatCard
-              label="Supervizorlar"
+              label={t("adminIndex.supervisors")}
               value={stats.supervisors}
               icon={UserCog}
               accent="info"
             />
             <StatCard
-              label="Topshiriqlar"
+              label={t("adminIndex.tasks")}
               value={stats.tasks.total}
               icon={ClipboardList}
               accent="primary"
-              hint={
-                <>
-                  Tasdiqlangan: {stats.tasks.by_status.approved} · Yuborilgan:{" "}
-                  {stats.tasks.by_status.submitted}
-                </>
-              }
+              hint={t("adminIndex.tasksHint", {
+                approved: stats.tasks.by_status.approved,
+                submitted: stats.tasks.by_status.submitted,
+              })}
             />
             {isSuperAdmin && superAdmin.data && (
               <StatCard
-                label="Foydalanuvchilar"
+                label={t("adminIndex.users")}
                 value={superAdmin.data.users_total}
                 icon={Users}
                 accent="primary"
@@ -234,30 +254,32 @@ export function AdminHome() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Topshiriqlar holati</CardTitle>
+              <CardTitle className="text-base">
+                {t("adminIndex.tasksStatusTitle")}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <TaskStatusBar
-                  label="Tasdiqlangan"
+                  label={t("adminIndex.statusApproved")}
                   count={stats.tasks.by_status.approved}
                   total={stats.tasks.total}
                   color="bg-success"
                 />
                 <TaskStatusBar
-                  label="Yuborilgan"
+                  label={t("adminIndex.statusSubmitted")}
                   count={stats.tasks.by_status.submitted}
                   total={stats.tasks.total}
                   color="bg-info"
                 />
                 <TaskStatusBar
-                  label="Rad etilgan"
+                  label={t("adminIndex.statusRejected")}
                   count={stats.tasks.by_status.rejected}
                   total={stats.tasks.total}
                   color="bg-destructive"
                 />
                 <TaskStatusBar
-                  label="Boshlanmagan"
+                  label={t("adminIndex.statusNotStarted")}
                   count={stats.tasks.by_status.not_started}
                   total={stats.tasks.total}
                   color="bg-muted-foreground/40"
@@ -268,24 +290,32 @@ export function AdminHome() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Davomat (oxirgi 30 kun)</CardTitle>
+              <CardTitle className="text-base">
+                {t("adminIndex.attendanceLast30Title")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
                 <div className="rounded-md bg-success/10 p-3">
-                  <div className="text-xs text-muted-foreground">Yashil</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("adminIndex.green")}
+                  </div>
                   <div className="text-2xl font-semibold text-success">
                     {stats.attendance_30d.green}
                   </div>
                 </div>
                 <div className="rounded-md bg-amber-500/10 p-3">
-                  <div className="text-xs text-muted-foreground">Kutilmoqda</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("adminIndex.pending")}
+                  </div>
                   <div className="text-2xl font-semibold text-amber-600 dark:text-amber-400">
                     {stats.attendance_30d.pending}
                   </div>
                 </div>
                 <div className="rounded-md bg-destructive/10 p-3">
-                  <div className="text-xs text-muted-foreground">Qizil</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("adminIndex.red")}
+                  </div>
                   <div className="text-2xl font-semibold text-destructive">
                     {stats.attendance_30d.red}
                   </div>
@@ -305,15 +335,15 @@ export function AdminHome() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <History className="h-4 w-4" />
-                  Oxirgi override'lar
+                  {t("adminIndex.recentOverrides")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {superAdmin.data.recent_overrides.length === 0 ? (
                   <EmptyState
                     icon={History}
-                    title="Override yozuvlari yo'q"
-                    description="Hech qanday avto-belgilangan davomat o'zgartirilmagan"
+                    title={t("adminIndex.noOverridesTitle")}
+                    description={t("adminIndex.noOverridesDescription")}
                     accent="muted"
                     compact
                   />
@@ -331,7 +361,7 @@ export function AdminHome() {
                           <div className="truncate">{ov.reason}</div>
                           <div className="text-xs text-muted-foreground">
                             {ov.admin_name} ·{" "}
-                            {new Date(ov.created_at).toLocaleString("uz-UZ")}
+                            {new Date(ov.created_at).toLocaleString(dateLocale())}
                           </div>
                         </div>
                       </div>

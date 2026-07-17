@@ -1,8 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { TFunction } from "i18next";
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -20,21 +22,25 @@ import { Input } from "@/components/ui/input";
 import { useCreateAcademicYear, useUpdateAcademicYear } from "@/lib/api/academic";
 import type { AcademicYear } from "@/lib/api/types";
 
-const schema = z.object({
-  name: z.string().regex(/^\d{4}-\d{4}$/, "Masalan 2025-2026"),
-  start_date: z.string().min(1, "Sana kiriting"),
-  end_date: z.string().min(1, "Sana kiriting"),
-  is_active: z.boolean(),
-});
+const makeSchema = (t: TFunction) =>
+  z.object({
+    name: z.string().regex(/^\d{4}-\d{4}$/, t("academicAcademicYearFormDialog.nameFormat")),
+    start_date: z.string().min(1, t("academicAcademicYearFormDialog.dateRequired")),
+    end_date: z.string().min(1, t("academicAcademicYearFormDialog.dateRequired")),
+    is_active: z.boolean(),
+  });
 
-type Values = z.infer<typeof schema>;
+type Values = z.infer<ReturnType<typeof makeSchema>>;
 
 type Props = { open: boolean; existing: AcademicYear | null; onClose: () => void };
 
 export function AcademicYearFormDialog({ open, existing, onClose }: Props) {
+  const { t } = useTranslation();
   const create = useCreateAcademicYear();
   const update = useUpdateAcademicYear();
   const isEdit = !!existing;
+
+  const schema = useMemo(() => makeSchema(t), [t]);
 
   const form = useForm<Values>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,14 +70,14 @@ export function AcademicYearFormDialog({ open, existing, onClose }: Props) {
     try {
       if (isEdit && existing) {
         await update.mutateAsync({ id: existing.id, data: v });
-        toast.success("O'quv yili yangilandi");
+        toast.success(t("academicAcademicYearFormDialog.updatedToast"));
       } else {
         await create.mutateAsync(v);
-        toast.success("O'quv yili yaratildi");
+        toast.success(t("academicAcademicYearFormDialog.createdToast"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -82,10 +88,12 @@ export function AcademicYearFormDialog({ open, existing, onClose }: Props) {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "O'quv yilini tahrirlash" : "Yangi o'quv yili"}
+            {isEdit
+              ? t("academicAcademicYearFormDialog.editTitle")
+              : t("academicAcademicYearFormDialog.createTitle")}
           </DialogTitle>
           <DialogDescription>
-            Faqat bitta o'quv yili aktiv bo'lishi mumkin
+            {t("academicAcademicYearFormDialog.description")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -95,7 +103,7 @@ export function AcademicYearFormDialog({ open, existing, onClose }: Props) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nomi *</FormLabel>
+                  <FormLabel>{t("common.name")} *</FormLabel>
                   <FormControl>
                     <Input placeholder="2025-2026" {...field} />
                   </FormControl>
@@ -109,7 +117,7 @@ export function AcademicYearFormDialog({ open, existing, onClose }: Props) {
                 name="start_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Boshlanishi *</FormLabel>
+                    <FormLabel>{t("academicAcademicYearFormDialog.startDate")} *</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -122,7 +130,7 @@ export function AcademicYearFormDialog({ open, existing, onClose }: Props) {
                 name="end_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tugashi *</FormLabel>
+                    <FormLabel>{t("academicAcademicYearFormDialog.endDate")} *</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -143,7 +151,7 @@ export function AcademicYearFormDialog({ open, existing, onClose }: Props) {
                       onChange={(e) => field.onChange(e.target.checked)}
                       className="h-4 w-4"
                     />
-                    <span className="text-sm">Aktiv (boshqalarini deaktiv qiladi)</span>
+                    <span className="text-sm">{t("academicAcademicYearFormDialog.isActive")}</span>
                   </label>
                   <FormMessage />
                 </FormItem>
@@ -151,11 +159,11 @@ export function AcademicYearFormDialog({ open, existing, onClose }: Props) {
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
-                Bekor qilish
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={busy}>
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isEdit ? "Saqlash" : "Yaratish"}
+                {isEdit ? t("common.save") : t("academicAcademicYearFormDialog.create")}
               </Button>
             </DialogFooter>
           </form>

@@ -1,8 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { TFunction } from "i18next";
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -36,37 +38,45 @@ import { Separator } from "@/components/ui/separator";
 import { useCreateOrganization, useUpdateOrganization } from "@/lib/api/organizations";
 import type { Organization, OrganizationKind } from "@/lib/api/types";
 
-const KIND_OPTIONS: { value: OrganizationKind; label: string }[] = [
-  { value: "school", label: "Maktab" },
-  { value: "mtt", label: "MTT (bog'cha)" },
-  { value: "lyceum", label: "Akademik litsey" },
-  { value: "college", label: "Kasb-hunar kolleji" },
-  { value: "company", label: "Korxona" },
-  { value: "university", label: "Universitet" },
-  { value: "other", label: "Boshqa" },
+const KIND_OPTIONS: { value: OrganizationKind; labelKey: string }[] = [
+  { value: "school", labelKey: "objectsOrganizationFormDialog.kinds.school" },
+  { value: "mtt", labelKey: "objectsOrganizationFormDialog.kinds.mtt" },
+  { value: "lyceum", labelKey: "objectsOrganizationFormDialog.kinds.lyceum" },
+  { value: "college", labelKey: "objectsOrganizationFormDialog.kinds.college" },
+  { value: "company", labelKey: "objectsOrganizationFormDialog.kinds.company" },
+  { value: "university", labelKey: "objectsOrganizationFormDialog.kinds.university" },
+  { value: "other", labelKey: "objectsOrganizationFormDialog.kinds.other" },
 ];
 
-const orgSchema = z.object({
-  name: z.string().min(2, "Kamida 2 ta belgi").max(200),
-  legal_name: z.string().max(300).optional().or(z.literal("")),
-  kind: z.enum(["school", "mtt", "lyceum", "college", "company", "university", "other"]),
-  director_full_name: z.string().min(3, "F.I.SH. to'liq kiriting").max(200),
-  director_position: z.string().max(100).optional().or(z.literal("")),
-  region: z.string().min(2).max(64),
-  district: z.string().max(64).optional().or(z.literal("")),
-  address_line: z.string().min(3).max(300),
-  phone: z.string().min(5).max(32),
-  email: z.string().email("Email noto'g'ri").optional().or(z.literal("")),
-  website: z.string().max(255).optional().or(z.literal("")),
-  inn: z.string().max(16).optional().or(z.literal("")),
-  bank_name: z.string().max(200).optional().or(z.literal("")),
-  bank_account: z.string().max(32).optional().or(z.literal("")),
-  bank_correspondent: z.string().max(32).optional().or(z.literal("")),
-  bank_mfo: z.string().max(16).optional().or(z.literal("")),
-  capacity: z.coerce.number().int().min(1).max(1000),
-});
+const makeOrgSchema = (t: TFunction) =>
+  z.object({
+    name: z.string().min(2, t("objectsOrganizationFormDialog.validation.nameMin")).max(200),
+    legal_name: z.string().max(300).optional().or(z.literal("")),
+    kind: z.enum(["school", "mtt", "lyceum", "college", "company", "university", "other"]),
+    director_full_name: z
+      .string()
+      .min(3, t("objectsOrganizationFormDialog.validation.directorFullName"))
+      .max(200),
+    director_position: z.string().max(100).optional().or(z.literal("")),
+    region: z.string().min(2).max(64),
+    district: z.string().max(64).optional().or(z.literal("")),
+    address_line: z.string().min(3).max(300),
+    phone: z.string().min(5).max(32),
+    email: z
+      .string()
+      .email(t("objectsOrganizationFormDialog.validation.emailInvalid"))
+      .optional()
+      .or(z.literal("")),
+    website: z.string().max(255).optional().or(z.literal("")),
+    inn: z.string().max(16).optional().or(z.literal("")),
+    bank_name: z.string().max(200).optional().or(z.literal("")),
+    bank_account: z.string().max(32).optional().or(z.literal("")),
+    bank_correspondent: z.string().max(32).optional().or(z.literal("")),
+    bank_mfo: z.string().max(16).optional().or(z.literal("")),
+    capacity: z.coerce.number().int().min(1).max(1000),
+  });
 
-type OrgForm = z.infer<typeof orgSchema>;
+type OrgForm = z.infer<ReturnType<typeof makeOrgSchema>>;
 
 type Props = {
   open: boolean;
@@ -75,6 +85,7 @@ type Props = {
 };
 
 export function OrganizationFormDialog({ open, existing, onClose }: Props) {
+  const { t } = useTranslation();
   const create = useCreateOrganization();
   const update = useUpdateOrganization();
   const isEdit = !!existing;
@@ -83,13 +94,13 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
 
   const form = useForm<OrgForm>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(orgSchema) as any,
+    resolver: zodResolver(makeOrgSchema(t)) as any,
     defaultValues: {
       name: "",
       legal_name: "",
       kind: "school",
       director_full_name: "",
-      director_position: "Direktor",
+      director_position: t("objectsOrganizationFormDialog.directorDefault"),
       region: "",
       district: "",
       address_line: "",
@@ -147,14 +158,14 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
     try {
       if (isEdit && existing) {
         await update.mutateAsync({ id: existing.id, data: payload });
-        toast.success("Tashkilot yangilandi");
+        toast.success(t("objectsOrganizationFormDialog.updated"));
       } else {
         await create.mutateAsync(payload);
-        toast.success("Tashkilot yaratildi");
+        toast.success(t("objectsOrganizationFormDialog.created"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik yuz berdi");
+      toast.error(e instanceof HTTPError ? e.message : t("objectsOrganizationFormDialog.errorOccurred"));
     }
   };
 
@@ -164,9 +175,13 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Tashkilotni tahrirlash" : "Yangi tashkilot"}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? t("objectsOrganizationFormDialog.editTitle")
+              : t("objectsOrganizationFormDialog.createTitle")}
+          </DialogTitle>
           <DialogDescription>
-            Shartnoma tuzish uchun barcha kerakli maydonlarni to'ldiring
+            {t("objectsOrganizationFormDialog.subtitle")}
           </DialogDescription>
         </DialogHeader>
 
@@ -175,7 +190,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
             {/* Section: Identity */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Asosiy ma'lumot
+                {t("objectsOrganizationFormDialog.sectionMain")}
               </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 <FormField
@@ -183,9 +198,12 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nomi *</FormLabel>
+                      <FormLabel>{t("common.name")} *</FormLabel>
                       <FormControl>
-                        <Input placeholder="48-maktab" {...field} />
+                        <Input
+                          placeholder={t("objectsOrganizationFormDialog.namePlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,7 +214,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="kind"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Turi *</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.kind")} *</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
@@ -206,7 +224,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                         <SelectContent>
                           {KIND_OPTIONS.map((o) => (
                             <SelectItem key={o.value} value={o.value}>
-                              {o.label}
+                              {t(o.labelKey)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -220,10 +238,10 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="legal_name"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>To'liq yuridik nomi</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.legalName")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Shartnoma uchun (ixtiyoriy)"
+                          placeholder={t("objectsOrganizationFormDialog.legalNamePlaceholder")}
                           {...field}
                           value={field.value ?? ""}
                         />
@@ -237,7 +255,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="director_full_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Rahbar F.I.SH. *</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.directorName")} *</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -250,7 +268,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="director_position"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Rahbar lavozimi</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.directorPosition")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -263,7 +281,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="capacity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sig'imi (talabalar) *</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.capacity")} *</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} />
                       </FormControl>
@@ -279,7 +297,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
             {/* Section: Address + contact */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Manzil va aloqa
+                {t("objectsOrganizationFormDialog.sectionAddress")}
               </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 <FormField
@@ -287,9 +305,12 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="region"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Viloyat *</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.region")} *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Toshkent viloyati" {...field} />
+                        <Input
+                          placeholder={t("objectsOrganizationFormDialog.regionPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -300,7 +321,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="district"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tuman</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.district")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -313,9 +334,12 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="address_line"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>Manzil *</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.address")} *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ko'cha, uy, kvartira" {...field} />
+                        <Input
+                          placeholder={t("objectsOrganizationFormDialog.addressPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -326,7 +350,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Telefon *</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.phone")} *</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -352,7 +376,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="website"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>Veb-sayt</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.website")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -364,9 +388,9 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
 
               <div className="mt-3 space-y-2">
                 <label className="text-sm font-medium">
-                  Xaritadagi joylashuv
+                  {t("objectsOrganizationFormDialog.mapLocation")}
                   <span className="ml-1 text-xs font-normal text-muted-foreground">
-                    (Phase 7 — davomat geo-fence uchun)
+                    {t("objectsOrganizationFormDialog.mapHint")}
                   </span>
                 </label>
                 <MapPicker value={geo} onChange={setGeo} height={280} />
@@ -378,7 +402,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
             {/* Section: Bank */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Bank rekvizitlari (shartnoma uchun)
+                {t("objectsOrganizationFormDialog.sectionBank")}
               </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 <FormField
@@ -386,7 +410,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="inn"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>INN</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.inn")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -399,7 +423,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="bank_mfo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>MFO</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.mfo")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -412,7 +436,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="bank_name"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>Bank nomi</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.bankName")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -425,7 +449,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="bank_account"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>H/R</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.bankAccount")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -438,7 +462,7 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
                   name="bank_correspondent"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sh/hr</FormLabel>
+                      <FormLabel>{t("objectsOrganizationFormDialog.bankCorrespondent")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -451,11 +475,11 @@ export function OrganizationFormDialog({ open, existing, onClose }: Props) {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
-                Bekor qilish
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={busy}>
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isEdit ? "Saqlash" : "Yaratish"}
+                {isEdit ? t("common.save") : t("objectsOrganizationFormDialog.create")}
               </Button>
             </DialogFooter>
           </form>

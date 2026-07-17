@@ -1,5 +1,6 @@
 import { Award, Check, Loader2, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -23,6 +24,7 @@ type Props = {
 };
 
 export function GradePanel({ assignmentId, readOnly = false }: Props) {
+  const { t } = useTranslation();
   const { data, isPending, error } = useGradeBreakdown(assignmentId);
   const finalize = useFinalizeGrade(assignmentId);
 
@@ -46,16 +48,20 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
   const locked = readOnly || finalized;
 
   const handleFinalize = async () => {
-    if (!confirm("Amaliyotni yakunlaysizmi? Umumiy ball chiqariladi.")) return;
+    if (!confirm(t("assignmentsGradePanel.finalizeConfirm"))) return;
     try {
       const res = await finalize.mutateAsync();
       toast.success(
-        `Yakunlandi — ${res.final_grade}/${res.max_total} ball, kredit ${
-          res.credit_earned ? "olindi" : "olinmadi"
-        }`,
+        t("assignmentsGradePanel.finalizedToast", {
+          grade: res.final_grade,
+          max: res.max_total,
+          credit: res.credit_earned
+            ? t("assignmentsGradePanel.creditEarned")
+            : t("assignmentsGradePanel.creditNotEarned"),
+        }),
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Yakunlab bo'lmadi");
+      toast.error(e instanceof Error ? e.message : t("assignmentsGradePanel.finalizeError"));
     }
   };
 
@@ -77,7 +83,7 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 font-medium">
             <Award className="h-4 w-4 text-primary" />
-            Jami
+            {t("common.total")}
           </span>
           <span className="text-lg font-semibold tabular-nums">
             {data.total}
@@ -92,11 +98,11 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
         />
         {data.min_total > 0 && (
           <p className="mt-2 text-xs text-muted-foreground">
-            Kredit uchun kamida {data.min_total} ball kerak —{" "}
+            {t("assignmentsGradePanel.minPointsInfo", { min: data.min_total })}{" "}
             {data.passed ? (
-              <span className="font-medium text-success">yetarli</span>
+              <span className="font-medium text-success">{t("assignmentsGradePanel.enough")}</span>
             ) : (
-              <span className="font-medium text-destructive">yetmaydi</span>
+              <span className="font-medium text-destructive">{t("assignmentsGradePanel.notEnough")}</span>
             )}
           </p>
         )}
@@ -106,8 +112,13 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
         <Alert>
           <Check className="h-4 w-4" />
           <AlertDescription>
-            Amaliyot yakunlangan — yakuniy ball {data.final_grade}/{data.max_total}, kredit{" "}
-            {data.credit_earned ? "olindi" : "olinmadi"}.
+            {t("assignmentsGradePanel.finalizedInfo", {
+              grade: data.final_grade,
+              max: data.max_total,
+              credit: data.credit_earned
+                ? t("assignmentsGradePanel.creditEarned")
+                : t("assignmentsGradePanel.creditNotEarned"),
+            })}
           </AlertDescription>
         </Alert>
       ) : (
@@ -115,7 +126,7 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             {!data.complete && (
               <p className="text-xs text-muted-foreground">
-                Yakunlash uchun barcha mezonlarni baholang.
+                {t("assignmentsGradePanel.gradeAllHint")}
               </p>
             )}
             <Button
@@ -124,7 +135,7 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
               onClick={handleFinalize}
             >
               {finalize.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Amaliyotni yakunlash
+              {t("assignmentsGradePanel.finalizeButton")}
             </Button>
           </div>
         )
@@ -142,6 +153,7 @@ function CriterionRow({
   criterion: CriterionScore;
   locked: boolean;
 }) {
+  const { t } = useTranslation();
   const setScore = useSetCriterionScore(assignmentId);
   const [draft, setDraft] = useState(
     criterion.score !== null ? String(criterion.score) : "",
@@ -157,7 +169,7 @@ function CriterionRow({
     if (trimmed === "") return;
     const value = Number(trimmed);
     if (!Number.isInteger(value) || value < 0 || value > criterion.max) {
-      toast.error(`Ball 0 va ${criterion.max} oralig'ida butun son bo'lishi kerak`);
+      toast.error(t("assignmentsGradePanel.scoreRangeError", { max: criterion.max }));
       setDraft(criterion.score !== null ? String(criterion.score) : "");
       return;
     }
@@ -165,7 +177,7 @@ function CriterionRow({
     try {
       await setScore.mutateAsync({ key: criterion.key, score: value });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Saqlab bo'lmadi");
+      toast.error(e instanceof Error ? e.message : t("assignmentsGradePanel.saveError"));
       setDraft(criterion.score !== null ? String(criterion.score) : "");
     }
   };
@@ -178,10 +190,10 @@ function CriterionRow({
           {criterion.auto ? (
             <Badge variant="secondary" className="gap-1">
               <Lock className="h-3 w-3" />
-              Avtomatik
+              {t("assignmentsGradePanel.autoBadge")}
             </Badge>
           ) : (
-            <Badge variant="outline">Qo'lda</Badge>
+            <Badge variant="outline">{t("assignmentsGradePanel.manualBadge")}</Badge>
           )}
         </div>
         {criterion.detail && (

@@ -1,8 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { TFunction } from "i18next";
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -44,26 +46,34 @@ import type { Supervisor } from "@/lib/api/types";
 
 const NONE_VALUE = "__none__";
 
-const supCreateSchema = z.object({
-  username: z.string().min(3, "Kamida 3 ta belgi").max(64),
-  password: z.string().min(8, "Kamida 8 ta belgi").max(128),
-  email: z.string().email("Email noto'g'ri").optional().or(z.literal("")),
-  phone: z.string().max(32).optional().or(z.literal("")),
-  first_name: z.string().min(1).max(100),
-  last_name: z.string().min(1).max(100),
-  middle_name: z.string().max(100).optional().or(z.literal("")),
-  position: z.string().min(2).max(100),
-  specialty: z.string().max(150).optional().or(z.literal("")),
-  experience_years: z.coerce.number().int().min(0).max(80).optional().or(z.literal(NaN as number)),
-  faculty_id: z.string().optional().or(z.literal(NONE_VALUE)),
-  department_id: z.string().optional().or(z.literal(NONE_VALUE)),
-  organization_ids: z.array(z.string()).max(5, "Maksimum 5 ta tashkilot").default([]),
-  capacity: z.coerce.number().int().min(1).max(100),
-});
+const makeCreateSchema = (t: TFunction) =>
+  z.object({
+    username: z.string().min(3, t("supervisorsSupervisorFormDialog.minChars3")).max(64),
+    password: z.string().min(8, t("supervisorsSupervisorFormDialog.minChars8")).max(128),
+    email: z
+      .string()
+      .email(t("supervisorsSupervisorFormDialog.emailInvalid"))
+      .optional()
+      .or(z.literal("")),
+    phone: z.string().max(32).optional().or(z.literal("")),
+    first_name: z.string().min(1).max(100),
+    last_name: z.string().min(1).max(100),
+    middle_name: z.string().max(100).optional().or(z.literal("")),
+    position: z.string().min(2).max(100),
+    specialty: z.string().max(150).optional().or(z.literal("")),
+    experience_years: z.coerce.number().int().min(0).max(80).optional().or(z.literal(NaN as number)),
+    faculty_id: z.string().optional().or(z.literal(NONE_VALUE)),
+    department_id: z.string().optional().or(z.literal(NONE_VALUE)),
+    organization_ids: z
+      .array(z.string())
+      .max(5, t("supervisorsSupervisorFormDialog.maxOrganizations"))
+      .default([]),
+    capacity: z.coerce.number().int().min(1).max(100),
+  });
 
-type SupForm = z.infer<typeof supCreateSchema>;
+type SupForm = z.infer<ReturnType<typeof makeCreateSchema>>;
 
-const supUpdateSchema = supCreateSchema.partial();
+const makeUpdateSchema = (t: TFunction) => makeCreateSchema(t).partial();
 
 type Props = {
   open: boolean;
@@ -72,6 +82,7 @@ type Props = {
 };
 
 export function SupervisorFormDialog({ open, existing, onClose }: Props) {
+  const { t } = useTranslation();
   const create = useCreateSupervisor();
   const update = useUpdateSupervisor();
   const updateCreds = useUpdateSupervisorCredentials();
@@ -81,7 +92,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
 
   const form = useForm<SupForm>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver((isEdit ? supUpdateSchema : supCreateSchema) as any) as any,
+    resolver: zodResolver((isEdit ? makeUpdateSchema(t) : makeCreateSchema(t)) as any) as any,
     defaultValues: {
       username: "",
       password: "",
@@ -149,18 +160,18 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
     try {
       if (isEdit && existing) {
         await update.mutateAsync({ id: existing.id, data: basePayload });
-        toast.success("Supervizor yangilandi");
+        toast.success(t("supervisorsSupervisorFormDialog.updatedToast"));
       } else {
         await create.mutateAsync({
           ...basePayload,
           username: values.username,
           password: values.password,
         } as never);
-        toast.success("Supervizor yaratildi");
+        toast.success(t("supervisorsSupervisorFormDialog.createdToast"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik yuz berdi");
+      toast.error(e instanceof HTTPError ? e.message : t("supervisorsSupervisorFormDialog.errorToast"));
     }
   };
 
@@ -170,11 +181,15 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Supervizorni tahrirlash" : "Yangi supervizor"}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? t("supervisorsSupervisorFormDialog.editTitle")
+              : t("supervisorsSupervisorFormDialog.createTitle")}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "User va profile ma'lumotlari birga yangilanadi"
-              : "User (login + parol) va supervizor profili bir vaqtda yaratiladi"}
+              ? t("supervisorsSupervisorFormDialog.editDescription")
+              : t("supervisorsSupervisorFormDialog.createDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -198,7 +213,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
               <>
                 <div>
                   <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Login ma'lumotlari
+                    {t("supervisorsSupervisorFormDialog.loginSection")}
                   </h3>
                   <div className="grid gap-3 md:grid-cols-2">
                     <FormField
@@ -206,7 +221,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                       name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Username *</FormLabel>
+                          <FormLabel>{t("supervisorsSupervisorFormDialog.usernameLabel")} *</FormLabel>
                           <FormControl>
                             <Input autoComplete="off" {...field} />
                           </FormControl>
@@ -219,7 +234,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Parol *</FormLabel>
+                          <FormLabel>{t("supervisorsSupervisorFormDialog.passwordLabel")} *</FormLabel>
                           <FormControl>
                             <Input type="password" autoComplete="new-password" {...field} />
                           </FormControl>
@@ -236,7 +251,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
             {/* Name + contact */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Shaxsiy ma'lumot
+                {t("supervisorsSupervisorFormDialog.personalSection")}
               </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 <FormField
@@ -244,7 +259,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="last_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Familiya *</FormLabel>
+                      <FormLabel>{t("supervisorsSupervisorFormDialog.lastNameLabel")} *</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -257,7 +272,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="first_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ism *</FormLabel>
+                      <FormLabel>{t("supervisorsSupervisorFormDialog.firstNameLabel")} *</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -270,7 +285,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="middle_name"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>Otasining ismi (sharif)</FormLabel>
+                      <FormLabel>{t("supervisorsSupervisorFormDialog.middleNameLabel")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -283,7 +298,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t("supervisorsSupervisorFormDialog.emailLabel")}</FormLabel>
                       <FormControl>
                         <Input type="email" {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -296,7 +311,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Telefon</FormLabel>
+                      <FormLabel>{t("supervisorsSupervisorFormDialog.phoneLabel")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -312,7 +327,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
             {/* Profile */}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Kasbiy ma'lumot
+                {t("supervisorsSupervisorFormDialog.professionalSection")}
               </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 <FormField
@@ -320,9 +335,12 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="position"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Lavozim *</FormLabel>
+                      <FormLabel>{t("supervisorsSupervisorFormDialog.positionLabel")} *</FormLabel>
                       <FormControl>
-                        <Input placeholder="O'qituvchi, Direktor..." {...field} />
+                        <Input
+                          placeholder={t("supervisorsSupervisorFormDialog.positionPlaceholder")}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -333,7 +351,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="specialty"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mutaxassislik</FormLabel>
+                      <FormLabel>{t("supervisorsSupervisorFormDialog.specialtyLabel")}</FormLabel>
                       <FormControl>
                         <Input {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -346,7 +364,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="experience_years"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tajriba (yil)</FormLabel>
+                      <FormLabel>{t("supervisorsSupervisorFormDialog.experienceLabel")}</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} value={field.value ?? ""} />
                       </FormControl>
@@ -359,7 +377,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="capacity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sig'im (talabalar soni) *</FormLabel>
+                      <FormLabel>{t("supervisorsSupervisorFormDialog.capacityLabel")} *</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} />
                       </FormControl>
@@ -372,7 +390,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="faculty_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fakultet</FormLabel>
+                      <FormLabel>{t("common.faculty")}</FormLabel>
                       <Select
                         value={field.value ?? NONE_VALUE}
                         onValueChange={(v) => {
@@ -382,11 +400,13 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Fakultet tanlang" />
+                            <SelectValue placeholder={t("supervisorsSupervisorFormDialog.facultyPlaceholder")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={NONE_VALUE}>Tanlanmagan</SelectItem>
+                          <SelectItem value={NONE_VALUE}>
+                            {t("supervisorsSupervisorFormDialog.noneSelected")}
+                          </SelectItem>
                           {(faculties.data?.items ?? []).map((f) => (
                             <SelectItem key={f.id} value={f.id}>
                               {f.name}
@@ -403,7 +423,7 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   name="department_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Kafedra</FormLabel>
+                      <FormLabel>{t("supervisorsSupervisorFormDialog.departmentLabel")}</FormLabel>
                       <Select
                         value={field.value ?? NONE_VALUE}
                         onValueChange={field.onChange}
@@ -411,11 +431,13 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Kafedra tanlang" />
+                            <SelectValue placeholder={t("supervisorsSupervisorFormDialog.departmentPlaceholder")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={NONE_VALUE}>Tanlanmagan</SelectItem>
+                          <SelectItem value={NONE_VALUE}>
+                            {t("supervisorsSupervisorFormDialog.noneSelected")}
+                          </SelectItem>
                           {(departments.data?.items ?? []).map((d) => (
                             <SelectItem key={d.id} value={d.id}>
                               {d.name}
@@ -433,12 +455,14 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
                       <FormLabel>
-                        Tashkilotlar (maksimum 5) — {field.value.length}/5
+                        {t("supervisorsSupervisorFormDialog.organizationsLabel", {
+                          n: field.value.length,
+                        })}
                       </FormLabel>
                       <div className="max-h-44 space-y-1.5 overflow-y-auto rounded-md border border-border p-2">
                         {(orgs.data?.items ?? []).length === 0 && (
                           <div className="px-1 py-2 text-sm text-muted-foreground">
-                            Tashkilotlar yo'q
+                            {t("supervisorsSupervisorFormDialog.noOrganizations")}
                           </div>
                         )}
                         {(orgs.data?.items ?? []).map((o) => {
@@ -476,11 +500,11 @@ export function SupervisorFormDialog({ open, existing, onClose }: Props) {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
-                Bekor qilish
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={busy}>
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isEdit ? "Saqlash" : "Yaratish"}
+                {isEdit ? t("common.save") : t("supervisorsSupervisorFormDialog.create")}
               </Button>
             </DialogFooter>
           </form>

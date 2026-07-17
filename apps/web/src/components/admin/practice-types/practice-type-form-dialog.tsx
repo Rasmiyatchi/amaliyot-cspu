@@ -1,8 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { TFunction } from "i18next";
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -22,51 +24,55 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCreatePracticeType, useUpdatePracticeType } from "@/lib/api/practice-types";
 import type { PracticeType } from "@/lib/api/types";
 
-const schema = z
-  .object({
-    code: z
-      .string()
-      .regex(/^[a-z0-9_]+$/, "Faqat kichik harf, raqam va _")
-      .min(2)
-      .max(64),
-    name: z.string().min(2).max(200),
-    description: z.string().max(2000).optional(),
-    object_kind: z.enum(["organization", "area", "any"]),
-    requires_contract: z.boolean(),
-    min_weeks: z.coerce.number().int().min(1).max(52),
-    max_weeks: z.coerce.number().int().min(1).max(52),
-    days_per_week: z.coerce.number().int().min(1).max(7).optional(),
-    hours_per_day: z.coerce.number().int().min(1).max(12).optional(),
-    allowed_courses: z.array(z.number()).min(1, "Kamida bitta kurs tanlang"),
-    allowed_education_forms: z.array(z.string()),
-    display_order: z.coerce.number().int().min(0).max(999),
-    is_active: z.boolean(),
-  })
-  .refine((v) => v.max_weeks >= v.min_weeks, {
-    message: "Maksimal hafta minimaldan kichik bo'lmasligi kerak",
-    path: ["max_weeks"],
-  });
+const makeSchema = (t: TFunction) =>
+  z
+    .object({
+      code: z
+        .string()
+        .regex(/^[a-z0-9_]+$/, t("practiceTypesPracticeTypeFormDialog.codeRegex"))
+        .min(2)
+        .max(64),
+      name: z.string().min(2).max(200),
+      description: z.string().max(2000).optional(),
+      object_kind: z.enum(["organization", "area", "any"]),
+      requires_contract: z.boolean(),
+      min_weeks: z.coerce.number().int().min(1).max(52),
+      max_weeks: z.coerce.number().int().min(1).max(52),
+      days_per_week: z.coerce.number().int().min(1).max(7).optional(),
+      hours_per_day: z.coerce.number().int().min(1).max(12).optional(),
+      allowed_courses: z
+        .array(z.number())
+        .min(1, t("practiceTypesPracticeTypeFormDialog.coursesMin")),
+      allowed_education_forms: z.array(z.string()),
+      display_order: z.coerce.number().int().min(0).max(999),
+      is_active: z.boolean(),
+    })
+    .refine((v) => v.max_weeks >= v.min_weeks, {
+      message: t("practiceTypesPracticeTypeFormDialog.maxWeeksInvalid"),
+      path: ["max_weeks"],
+    });
 
-type Values = z.infer<typeof schema>;
+type Values = z.infer<ReturnType<typeof makeSchema>>;
 
 type Props = { open: boolean; existing: PracticeType | null; onClose: () => void };
 
 const COURSES = [1, 2, 3, 4, 5];
 const EDU_FORMS = [
-  { value: "daytime", label: "Kunduzgi" },
-  { value: "evening", label: "Kechki" },
-  { value: "correspondence", label: "Sirtqi" },
-  { value: "distance", label: "Masofaviy" },
+  { value: "daytime", labelKey: "practiceTypesPracticeTypeFormDialog.eduForms.daytime" },
+  { value: "evening", labelKey: "practiceTypesPracticeTypeFormDialog.eduForms.evening" },
+  { value: "correspondence", labelKey: "practiceTypesPracticeTypeFormDialog.eduForms.correspondence" },
+  { value: "distance", labelKey: "practiceTypesPracticeTypeFormDialog.eduForms.distance" },
 ];
 
 export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
+  const { t } = useTranslation();
   const create = useCreatePracticeType();
   const update = useUpdatePracticeType();
   const isEdit = !!existing;
 
   const form = useForm<Values>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(makeSchema(t)) as any,
     defaultValues: {
       code: "",
       name: "",
@@ -119,14 +125,14 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
         const { code: _code, ...rest } = payload;
         void _code;
         await update.mutateAsync({ id: existing.id, data: rest });
-        toast.success("Amaliyot turi yangilandi");
+        toast.success(t("practiceTypesPracticeTypeFormDialog.updatedToast"));
       } else {
         await create.mutateAsync(payload);
-        toast.success("Amaliyot turi yaratildi");
+        toast.success(t("practiceTypesPracticeTypeFormDialog.createdToast"));
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : "Xatolik");
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -137,10 +143,12 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Amaliyot turini tahrirlash" : "Yangi amaliyot turi"}
+            {isEdit
+              ? t("practiceTypesPracticeTypeFormDialog.editTitle")
+              : t("practiceTypesPracticeTypeFormDialog.createTitle")}
           </DialogTitle>
           <DialogDescription>
-            Amaliyot turi konfiguratsiyasi (muddat, obyekt, kurslar)
+            {t("practiceTypesPracticeTypeFormDialog.description")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -151,10 +159,10 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kod *</FormLabel>
+                    <FormLabel>{t("practiceTypesPracticeTypeFormDialog.codeLabel")}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="malakaviy_umumiy"
+                        placeholder={t("practiceTypesPracticeTypeFormDialog.codePlaceholder")}
                         className="font-mono"
                         disabled={isEdit}
                         {...field}
@@ -169,7 +177,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                 name="display_order"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tartib raqami</FormLabel>
+                    <FormLabel>{t("practiceTypesPracticeTypeFormDialog.displayOrderLabel")}</FormLabel>
                     <FormControl>
                       <Input type="number" min={0} {...field} />
                     </FormControl>
@@ -183,9 +191,9 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nomi *</FormLabel>
+                  <FormLabel>{t("practiceTypesPracticeTypeFormDialog.nameLabel")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Malakaviy amaliyot (umumiy)" {...field} />
+                    <Input placeholder={t("practiceTypesPracticeTypeFormDialog.namePlaceholder")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,9 +204,9 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tavsif</FormLabel>
+                  <FormLabel>{t("practiceTypesPracticeTypeFormDialog.descriptionLabel")}</FormLabel>
                   <FormControl>
-                    <Textarea rows={2} placeholder="Qisqacha izoh..." {...field} />
+                    <Textarea rows={2} placeholder={t("practiceTypesPracticeTypeFormDialog.descriptionPlaceholder")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -209,7 +217,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
               name="object_kind"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Obyekt turi *</FormLabel>
+                  <FormLabel>{t("practiceTypesPracticeTypeFormDialog.objectKindLabel")}</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger>
@@ -217,9 +225,9 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="organization">Tashkilot</SelectItem>
-                      <SelectItem value="area">Hudud</SelectItem>
-                      <SelectItem value="any">Ikkalasi</SelectItem>
+                      <SelectItem value="organization">{t("common.organization")}</SelectItem>
+                      <SelectItem value="area">{t("common.area")}</SelectItem>
+                      <SelectItem value="any">{t("practiceTypesPracticeTypeFormDialog.objectKindAny")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -232,7 +240,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                 name="min_weeks"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Min hafta *</FormLabel>
+                    <FormLabel>{t("practiceTypesPracticeTypeFormDialog.minWeeksLabel")}</FormLabel>
                     <FormControl>
                       <Input type="number" min={1} max={52} {...field} />
                     </FormControl>
@@ -245,7 +253,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                 name="max_weeks"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Max hafta *</FormLabel>
+                    <FormLabel>{t("practiceTypesPracticeTypeFormDialog.maxWeeksLabel")}</FormLabel>
                     <FormControl>
                       <Input type="number" min={1} max={52} {...field} />
                     </FormControl>
@@ -258,7 +266,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                 name="days_per_week"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kun/hafta</FormLabel>
+                    <FormLabel>{t("practiceTypesPracticeTypeFormDialog.daysPerWeekLabel")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -279,7 +287,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                 name="hours_per_day"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Soat/kun</FormLabel>
+                    <FormLabel>{t("practiceTypesPracticeTypeFormDialog.hoursPerDayLabel")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -301,7 +309,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
               name="allowed_courses"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ruxsat etilgan kurslar *</FormLabel>
+                  <FormLabel>{t("practiceTypesPracticeTypeFormDialog.allowedCoursesLabel")}</FormLabel>
                   <div className="flex flex-wrap gap-3 pt-1">
                     {COURSES.map((c) => (
                       <label key={c} className="flex cursor-pointer items-center gap-1.5 text-sm">
@@ -317,7 +325,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                             )
                           }
                         />
-                        {c}-kurs
+                        {t("common.courseN", { n: c })}
                       </label>
                     ))}
                   </div>
@@ -330,7 +338,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
               name="allowed_education_forms"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ta'lim shakllari (bo'sh = barchasi)</FormLabel>
+                  <FormLabel>{t("practiceTypesPracticeTypeFormDialog.eduFormsLabel")}</FormLabel>
                   <div className="flex flex-wrap gap-3 pt-1">
                     {EDU_FORMS.map((f) => (
                       <label
@@ -349,7 +357,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                             )
                           }
                         />
-                        {f.label}
+                        {t(f.labelKey)}
                       </label>
                     ))}
                   </div>
@@ -369,7 +377,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                       onChange={(e) => field.onChange(e.target.checked)}
                       className="h-4 w-4"
                     />
-                    <span className="text-sm">Shartnoma majburiy</span>
+                    <span className="text-sm">{t("practiceTypesPracticeTypeFormDialog.requiresContract")}</span>
                   </label>
                   <FormMessage />
                 </FormItem>
@@ -387,7 +395,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                       onChange={(e) => field.onChange(e.target.checked)}
                       className="h-4 w-4"
                     />
-                    <span className="text-sm">Aktiv</span>
+                    <span className="text-sm">{t("practiceTypesPracticeTypeFormDialog.isActive")}</span>
                   </label>
                   <FormMessage />
                 </FormItem>
@@ -395,11 +403,11 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
-                Bekor qilish
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={busy}>
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isEdit ? "Saqlash" : "Yaratish"}
+                {isEdit ? t("common.save") : t("practiceTypesPracticeTypeFormDialog.createButton")}
               </Button>
             </DialogFooter>
           </form>
