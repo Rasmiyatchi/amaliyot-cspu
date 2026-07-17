@@ -11,8 +11,8 @@ import re
 import secrets
 import string
 from typing import Any
+from uuid import UUID
 
-from loguru import logger
 from openpyxl import load_workbook
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -239,8 +239,8 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
     from app.core.config import settings as app_settings
 
     # Kesh — ORM obyekt EMAS, ID saqlaymiz (per-row commit'da eskirmaydi).
-    direction_cache: dict[str, "UUID | None"] = {}
-    group_cache: dict[tuple[str, str], "UUID"] = {}
+    direction_cache: dict[str, UUID | None] = {}
+    group_cache: dict[tuple[str, str], UUID] = {}
 
     errors: list[HemisImportError] = []
     credentials: list[HemisCredentials] = []

@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from docxtpl import DocxTemplate, InlineImage
 from docx.shared import Mm
+from docxtpl import DocxTemplate, InlineImage
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -148,7 +148,9 @@ def template_file_path(tpl: ContractTemplateDoc) -> Path:
     return _abs_path(rel)
 
 
-def render_docx(tpl: ContractTemplateDoc, context: dict[str, Any], qr_png: bytes | None = None) -> bytes:
+def render_docx(
+    tpl: ContractTemplateDoc, context: dict[str, Any], qr_png: bytes | None = None
+) -> bytes:
     """Shablonni context bilan to'ldirib, to'ldirilgan .docx baytlarini qaytaradi.
 
     `qr_png` berilsa va shablonda `{{ qr }}` placeholder bo'lsa — QR rasm joylashtiriladi.
