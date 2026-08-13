@@ -56,8 +56,9 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
     kind,
     course: course && course !== "all" ? Number(course) : undefined,
     educationForm: educationForm && educationForm !== "all" ? educationForm : undefined,
-    directionId: (directionId && directionId !== "all" ? directionId : undefined) as any,
-    practiceTypeId: (practiceTypeId && practiceTypeId !== "all" ? practiceTypeId : undefined) as any,
+    directionId: directionId && directionId !== "all" ? directionId : undefined,
+    practiceTypeId:
+      practiceTypeId && practiceTypeId !== "all" ? practiceTypeId : undefined,
   });
   const [editing, setEditing] = useState<DocumentEntity | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);

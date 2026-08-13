@@ -1,4 +1,4 @@
-import { Download, Edit, FileText, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
+import { Download, Edit, FileText, Loader2, Plus, Power, Trash2, Upload, X } from "lucide-react";
 import { useState, type ChangeEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +30,7 @@ import {
   useContractTemplates,
   useCreateContractTemplate,
   useDeleteContractTemplate,
+  useUpdateContractTemplate,
   type ContractTemplateDoc,
 } from "@/lib/api/contract-templates";
 import { usePracticeTypes } from "@/lib/api/practice-types";
@@ -42,10 +43,25 @@ export function ContractTemplatesPage() {
   const { data, isPending, error } = useContractTemplates();
   const practiceTypes = usePracticeTypes();
   const del = useDeleteContractTemplate();
+  const update = useUpdateContractTemplate();
   const [creating, setCreating] = useState(false);
 
   const ptName = (id: string | null) =>
     id ? (practiceTypes.data ?? []).find((p) => p.id === id)?.name : null;
+
+  const handleToggleStatus = async (tpl: ContractTemplateDoc) => {
+    const next = tpl.status === "active" ? "inactive" : "active";
+    try {
+      await update.mutateAsync({ id: tpl.id, data: { status: next } });
+      toast.success(
+        next === "active"
+          ? t("adminContractTemplates.activated")
+          : t("adminContractTemplates.deactivated"),
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
 
   const handleDelete = async (tpl: ContractTemplateDoc) => {
     if (!confirm(t("adminContractTemplates.deleteConfirm", { name: tpl.name }))) return;
@@ -115,7 +131,13 @@ export function ContractTemplatesPage() {
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-primary shrink-0" />
                   <span className="font-medium">{tpl.name}</span>
-                  {!tpl.is_active && (
+                  {tpl.status === "active" ? (
+                    <Badge variant="success">{t("adminContractTemplates.statusActive")}</Badge>
+                  ) : tpl.status === "draft" ? (
+                    <Badge variant="secondary">{t("adminContractTemplates.statusDraft")}</Badge>
+                  ) : tpl.status === "archived" ? (
+                    <Badge variant="secondary">{t("adminContractTemplates.statusArchived")}</Badge>
+                  ) : (
                     <Badge variant="secondary">{t("adminContractTemplates.inactive")}</Badge>
                   )}
                   {tpl.html_content && (
@@ -153,6 +175,26 @@ export function ContractTemplatesPage() {
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
+                <Button
+                  size="sm"
+                  variant={tpl.status === "active" ? "outline" : "success"}
+                  title={
+                    tpl.status === "active"
+                      ? t("adminContractTemplates.deactivate")
+                      : t("adminContractTemplates.activate")
+                  }
+                  disabled={update.isPending}
+                  onClick={() => handleToggleStatus(tpl)}
+                >
+                  {update.isPending && update.variables?.id === tpl.id ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Power className="mr-1 h-4 w-4" />
+                  )}
+                  {tpl.status === "active"
+                    ? t("adminContractTemplates.deactivate")
+                    : t("adminContractTemplates.activate")}
+                </Button>
                 <Button
                   size="sm"
                   variant="secondary"

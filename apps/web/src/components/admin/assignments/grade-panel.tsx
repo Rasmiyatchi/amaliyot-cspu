@@ -29,6 +29,7 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
   const { t } = useTranslation();
   const { data, isPending, error } = useGradeBreakdown(assignmentId);
   const finalize = useFinalizeGrade(assignmentId);
+  const { data: finalReport } = useFinalReportForAssignment(assignmentId);
 
   if (isPending) {
     return (
@@ -45,8 +46,6 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
     );
   }
   if (!data) return null;
-
-  const { data: finalReport } = useFinalReportForAssignment(assignmentId);
 
   const finalized = data.status === "completed" && data.final_grade !== null;
   const locked = readOnly || finalized;

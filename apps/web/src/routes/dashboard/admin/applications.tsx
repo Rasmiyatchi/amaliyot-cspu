@@ -1,5 +1,15 @@
-import { Check, ClipboardEdit, Download, Layers, Loader2, X, AlertCircle } from "lucide-react";
-import { useState } from "react";
+import {
+  AlertCircle,
+  Check,
+  ClipboardEdit,
+  Download,
+  Eye,
+  FileCheck,
+  Layers,
+  Loader2,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -28,11 +38,14 @@ import { Input } from "@/components/ui/input";
 import {
   downloadContract,
   downloadApplicationScan,
+  previewContractPdf,
   useAppendix,
   useApplications,
   useApproveApplication,
+  useConfirmScan,
   useRejectApplication,
   useReturnApplication,
+  useTemplateFormFields,
   type ApplicationStatus,
   type PracticeApplication,
 } from "@/lib/api/applications";
@@ -42,16 +55,28 @@ const ALL = "__all__";
 const STATUS_TABS: { value: string; labelKey: string }[] = [
   { value: ALL, labelKey: "common.all" },
   { value: "submitted", labelKey: "adminApplications.status.new" },
+  { value: "resubmitted", labelKey: "adminApplications.status.resubmitted" },
   { value: "approved", labelKey: "adminApplications.status.approved" },
+  { value: "active", labelKey: "adminApplications.status.active" },
   { value: "revision_required", labelKey: "adminApplications.status.revisionRequired" },
   { value: "rejected", labelKey: "adminApplications.status.rejected" },
 ];
-const STATUS_BADGE: Record<ApplicationStatus, { labelKey: string; variant: "secondary" | "success" | "destructive" | "warning" }> = {
+type BadgeVariant = "secondary" | "success" | "destructive" | "warning" | "default";
+const STATUS_BADGE: Record<ApplicationStatus, { labelKey: string; variant: BadgeVariant }> = {
+  draft: { labelKey: "adminApplications.status.draft", variant: "default" },
   submitted: { labelKey: "adminApplications.status.new", variant: "secondary" },
-  approved: { labelKey: "adminApplications.status.approved", variant: "success" },
+  under_review: { labelKey: "adminApplications.status.underReview", variant: "warning" },
   revision_required: { labelKey: "adminApplications.status.revisionRequired", variant: "warning" },
+  resubmitted: { labelKey: "adminApplications.status.resubmitted", variant: "secondary" },
+  approved: { labelKey: "adminApplications.status.approved", variant: "success" },
+  active: { labelKey: "adminApplications.status.active", variant: "success" },
   rejected: { labelKey: "adminApplications.status.rejected", variant: "destructive" },
+  expired: { labelKey: "adminApplications.status.expired", variant: "destructive" },
+  archived: { labelKey: "adminApplications.status.archived", variant: "default" },
 };
+
+/** Superadmin ko'rib chiqishi mumkin bo'lgan statuslar (approve/return/reject). */
+const REVIEWABLE: ApplicationStatus[] = ["submitted", "revision_required", "resubmitted"];
 
 export function ApplicationsPage() {
   const { t } = useTranslation();
@@ -64,7 +89,9 @@ export function ApplicationsPage() {
   const approve = useApproveApplication();
   const reject = useRejectApplication();
   const returnApp = useReturnApplication();
-  
+  const confirmScan = useConfirmScan();
+
+  const [detailApp, setDetailApp] = useState<PracticeApplication | null>(null);
   const [returnDialog, setReturnDialog] = useState<{ open: boolean, app: PracticeApplication | null }>({ open: false, app: null });
   const [returnReason, setReturnReason] = useState("");
 
@@ -72,6 +99,7 @@ export function ApplicationsPage() {
     try {
       await approve.mutateAsync(a.id);
       toast.success(t("adminApplications.toastApproved"));
+      setDetailApp(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
@@ -82,11 +110,17 @@ export function ApplicationsPage() {
     try {
       await reject.mutateAsync({ id: a.id, review_note: note || undefined });
       toast.success(t("adminApplications.toastRejected"));
+      setDetailApp(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
-  
+
+  const openReturnDialog = (a: PracticeApplication) => {
+    setDetailApp(null);
+    setReturnDialog({ open: true, app: a });
+  };
+
   const handleReturn = async () => {
     if (!returnReason.trim() || !returnDialog.app) {
         toast.error(t("adminApplications.returnReasonRequired"));
@@ -99,6 +133,17 @@ export function ApplicationsPage() {
         setReturnReason("");
     } catch (e) {
         toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
+
+  const handleConfirmScan = async (a: PracticeApplication) => {
+    if (!confirm(t("adminApplications.confirmScanPrompt"))) return;
+    try {
+      await confirmScan.mutateAsync(a.id);
+      toast.success(t("adminApplications.toastScanConfirmed"));
+      setDetailApp(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -166,13 +211,13 @@ export function ApplicationsPage() {
                     <TableHead>{t("common.organization")}</TableHead>
                     <TableHead>{t("common.area")}</TableHead>
                     <TableHead>{t("common.status")}</TableHead>
-                    {isSuperAdmin && <TableHead className="w-[150px]">{t("adminApplications.colAction")}</TableHead>}
+                    <TableHead className="w-[150px]">{t("adminApplications.colAction")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={isSuperAdmin ? 6 : 5} className="p-0">
+                      <TableCell colSpan={6} className="p-0">
                         <EmptyState
                           icon={ClipboardEdit}
                           title={t("adminApplications.emptyTitle")}
@@ -183,7 +228,11 @@ export function ApplicationsPage() {
                     </TableRow>
                   )}
                   {data.map((a) => (
-                    <TableRow key={a.id}>
+                    <TableRow
+                      key={a.id}
+                      className="cursor-pointer"
+                      onClick={() => setDetailApp(a)}
+                    >
                       <TableCell className="font-medium">{a.student_name ?? "—"}</TableCell>
                       <TableCell className="text-sm">
                         {a.direction_name ?? "—"}
@@ -198,8 +247,8 @@ export function ApplicationsPage() {
                         {a.district ? `, ${a.district}` : ""}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={STATUS_BADGE[a.status].variant}>
-                          {t(STATUS_BADGE[a.status].labelKey)}
+                        <Badge variant={STATUS_BADGE[a.status]?.variant ?? "default"}>
+                          {STATUS_BADGE[a.status] ? t(STATUS_BADGE[a.status].labelKey) : a.status}
                         </Badge>
                         {a.status === "revision_required" && a.return_reason && (
                           <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
@@ -215,11 +264,12 @@ export function ApplicationsPage() {
                               <button
                                 title={t("adminApplications.contractDocx")}
                                 className="text-primary hover:underline"
-                                onClick={() =>
-                                  downloadContract(a.id, a.contract_number).catch((e) =>
-                                    toast.error(e instanceof Error ? e.message : t("common.error")),
-                                  )
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  downloadContract(a.id, a.contract_number).catch((err) =>
+                                    toast.error(err instanceof Error ? err.message : t("common.error")),
+                                  );
+                                }}
                               >
                                 <Download className="h-3.5 w-3.5" />
                               </button>
@@ -228,11 +278,12 @@ export function ApplicationsPage() {
                               <button
                                 title={t("adminApplications.scanCopy")}
                                 className="text-primary hover:underline ml-1"
-                                onClick={() =>
-                                  downloadApplicationScan(a.id).catch((e) =>
-                                    toast.error(e instanceof Error ? e.message : t("common.error")),
-                                  )
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  downloadApplicationScan(a.id).catch((err) =>
+                                    toast.error(err instanceof Error ? err.message : t("common.error")),
+                                  );
+                                }}
                               >
                                 <span className="text-[10px] font-medium border rounded px-1 ml-1 bg-primary/10">{t("adminApplications.scanBadge")}</span>
                               </button>
@@ -240,17 +291,31 @@ export function ApplicationsPage() {
                           </div>
                         )}
                       </TableCell>
-                      {isSuperAdmin && (
-                        <TableCell>
-                          {(a.status === "submitted" || a.status === "revision_required") && (
-                            <div className="flex gap-1">
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title={t("adminApplications.openDetail")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDetailApp(a);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {isSuperAdmin && REVIEWABLE.includes(a.status) && (
+                            <>
                               <Button
                                 size="icon"
                                 variant="ghost"
                                 className="text-success"
                                 title={t("adminApplications.approveWithQr")}
                                 disabled={approve.isPending}
-                                onClick={() => handleApprove(a)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApprove(a);
+                                }}
                               >
                                 <Check className="h-4 w-4" />
                               </Button>
@@ -259,7 +324,10 @@ export function ApplicationsPage() {
                                 variant="ghost"
                                 className="text-warning"
                                 title={t("adminApplications.returnForRevision")}
-                                onClick={() => setReturnDialog({ open: true, app: a })}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openReturnDialog(a);
+                                }}
                               >
                                 <AlertCircle className="h-4 w-4" />
                               </Button>
@@ -269,14 +337,32 @@ export function ApplicationsPage() {
                                 className="text-destructive"
                                 title={t("common.reject")}
                                 disabled={reject.isPending}
-                                onClick={() => handleReject(a)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReject(a);
+                                }}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
-                            </div>
+                            </>
                           )}
-                        </TableCell>
-                      )}
+                          {a.status === "approved" && a.has_scan_file && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-success"
+                              title={t("adminApplications.confirmScan")}
+                              disabled={confirmScan.isPending}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConfirmScan(a);
+                              }}
+                            >
+                              <FileCheck className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -334,7 +420,21 @@ export function ApplicationsPage() {
           ))}
         </div>
       )}
-      
+
+      {/* Ariza tafsilotlari — hujjatni ko'rib chiqib tasdiqlash */}
+      <ApplicationDetailDialog
+        app={detailApp}
+        onClose={() => setDetailApp(null)}
+        isSuperAdmin={isSuperAdmin}
+        onApprove={handleApprove}
+        onReturn={openReturnDialog}
+        onReject={handleReject}
+        onConfirmScan={handleConfirmScan}
+        approvePending={approve.isPending}
+        rejectPending={reject.isPending}
+        confirmScanPending={confirmScan.isPending}
+      />
+
       {/* Return Dialog */}
       <Dialog open={returnDialog.open} onOpenChange={(o) => !o && setReturnDialog({ open: false, app: null })}>
         <DialogContent>
@@ -360,6 +460,250 @@ export function ApplicationsPage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ─── Ariza tafsilotlari dialogi ─────────────────────────────
+type DetailProps = {
+  app: PracticeApplication | null;
+  onClose: () => void;
+  isSuperAdmin: boolean;
+  onApprove: (a: PracticeApplication) => void;
+  onReturn: (a: PracticeApplication) => void;
+  onReject: (a: PracticeApplication) => void;
+  onConfirmScan: (a: PracticeApplication) => void;
+  approvePending: boolean;
+  rejectPending: boolean;
+  confirmScanPending: boolean;
+};
+
+function ApplicationDetailDialog({
+  app,
+  onClose,
+  isSuperAdmin,
+  onApprove,
+  onReturn,
+  onReject,
+  onConfirmScan,
+  approvePending,
+  rejectPending,
+  confirmScanPending,
+}: DetailProps) {
+  const { t } = useTranslation();
+  const { data: formFields } = useTemplateFormFields(app?.contract_template_id);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  // PDF preview — hujjat mazmunini tasdiqlashdan OLDIN ko'rish
+  useEffect(() => {
+    setPdfUrl(null);
+    setPdfError(null);
+    if (!app || !app.contract_template_id) return;
+
+    let active = true;
+    let urlToRevoke: string | null = null;
+    setPdfLoading(true);
+    previewContractPdf(app.id)
+      .then((url) => {
+        if (!active) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        urlToRevoke = url;
+        setPdfUrl(url);
+      })
+      .catch((e) => {
+        if (active) setPdfError(e instanceof Error ? e.message : t("common.error"));
+      })
+      .finally(() => {
+        if (active) setPdfLoading(false);
+      });
+
+    return () => {
+      active = false;
+      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app?.id]);
+
+  if (!app) return null;
+
+  const labelFor = (key: string) =>
+    formFields?.fields.find((f) => f.key === key)?.label ?? key;
+  const variableEntries = Object.entries(app.variable_values ?? {});
+  const badge = STATUS_BADGE[app.status];
+
+  return (
+    <Dialog open={!!app} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="flex max-h-[92vh] max-w-4xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b border-border bg-muted/20 p-4">
+          <div className="flex items-center justify-between gap-3 pr-8">
+            <DialogTitle className="text-base">
+              {t("adminApplications.detailTitle")}
+            </DialogTitle>
+            <Badge variant={badge?.variant ?? "default"}>
+              {badge ? t(badge.labelKey) : app.status}
+            </Badge>
+          </div>
+          <DialogDescription className="text-xs">
+            {t("adminApplications.detailDescription")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          {/* Talaba ma'lumotlari */}
+          <div className="grid gap-x-6 gap-y-2 rounded-lg border border-border p-3 text-sm sm:grid-cols-2">
+            <InfoRow label={t("common.student")} value={app.student_name} />
+            <InfoRow label={t("common.group")} value={app.group_name} />
+            <InfoRow label={t("common.direction")} value={app.direction_name} />
+            <InfoRow
+              label={t("common.course")}
+              value={app.course ? t("common.courseN", { n: app.course }) : null}
+            />
+            <InfoRow label={t("adminApplications.templateName")} value={app.contract_template_name} />
+            <InfoRow label={t("common.organization")} value={app.organization_name} />
+            <InfoRow
+              label={t("common.area")}
+              value={[app.region, app.district].filter(Boolean).join(", ") || null}
+            />
+            <InfoRow label={t("common.note")} value={app.note} />
+            {app.contract_number && (
+              <InfoRow label="№" value={app.contract_number} />
+            )}
+          </div>
+
+          {/* Qaytarish sababi / rad izohi */}
+          {app.status === "revision_required" && app.return_reason && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {t("adminApplications.reason", { reason: app.return_reason })}
+              </AlertDescription>
+            </Alert>
+          )}
+          {app.status === "rejected" && app.review_note && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {t("adminApplications.reason", { reason: app.review_note })}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Talaba kiritgan ma'lumotlar */}
+          <div>
+            <h4 className="mb-2 text-sm font-medium">{t("adminApplications.enteredData")}</h4>
+            {variableEntries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("adminApplications.noEnteredData")}</p>
+            ) : (
+              <div className="grid gap-x-6 gap-y-1.5 rounded-lg border border-border bg-muted/20 p-3 text-sm sm:grid-cols-2">
+                {variableEntries.map(([key, value]) => (
+                  <InfoRow key={key} label={labelFor(key)} value={value == null ? null : String(value)} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Skan */}
+          {app.has_scan_file && (
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <span className="text-sm font-medium">{t("adminApplications.scanCopy")}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  downloadApplicationScan(app.id).catch((e) =>
+                    toast.error(e instanceof Error ? e.message : t("common.error")),
+                  )
+                }
+              >
+                <Eye className="mr-1 h-4 w-4" />
+                {t("adminApplications.viewScan")}
+              </Button>
+            </div>
+          )}
+
+          {/* PDF preview */}
+          <div>
+            <h4 className="mb-2 text-sm font-medium">{t("adminApplications.pdfPreview")}</h4>
+            {pdfLoading && (
+              <div className="flex h-40 items-center justify-center rounded-lg border border-border">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{t("adminApplications.pdfLoading")}</span>
+              </div>
+            )}
+            {pdfError && !pdfLoading && (
+              <Alert variant="destructive">
+                <AlertDescription>{pdfError}</AlertDescription>
+              </Alert>
+            )}
+            {!app.contract_template_id && !pdfLoading && (
+              <p className="text-sm text-muted-foreground">{t("adminApplications.noPreview")}</p>
+            )}
+            {pdfUrl && !pdfLoading && (
+              <iframe
+                src={`${pdfUrl}#toolbar=1&navpanes=0`}
+                title={t("adminApplications.pdfPreview")}
+                className="h-[55vh] w-full rounded-md border border-border bg-white shadow-sm"
+              />
+            )}
+          </div>
+        </div>
+
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-muted/20 p-4">
+          <Button variant="ghost" onClick={onClose}>
+            {t("common.close")}
+          </Button>
+          {app.status === "approved" && app.has_scan_file && (
+            <Button
+              variant="success"
+              disabled={confirmScanPending}
+              onClick={() => onConfirmScan(app)}
+            >
+              {confirmScanPending ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <FileCheck className="mr-1 h-4 w-4" />
+              )}
+              {t("adminApplications.confirmScan")}
+            </Button>
+          )}
+          {isSuperAdmin && REVIEWABLE.includes(app.status) && (
+            <>
+              <Button
+                variant="destructive"
+                disabled={rejectPending}
+                onClick={() => onReject(app)}
+              >
+                <X className="mr-1 h-4 w-4" />
+                {t("common.reject")}
+              </Button>
+              <Button variant="outline" onClick={() => onReturn(app)}>
+                <AlertCircle className="mr-1 h-4 w-4" />
+                {t("adminApplications.returnForRevision")}
+              </Button>
+              <Button disabled={approvePending} onClick={() => onApprove(app)}>
+                {approvePending ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-1 h-4 w-4" />
+                )}
+                {t("adminApplications.approveWithQr")}
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className="shrink-0 text-xs text-muted-foreground">{label}:</span>
+      <span className="min-w-0 break-words font-medium">{value}</span>
     </div>
   );
 }

@@ -39,8 +39,11 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
   const [content, setContent] = useState("");
   const submit = useSubmitTask();
 
+  // Faqat task almashganda reset — submission_md ni deps'ga qo'shsak, har saqlashda
+  // foydalanuvchi yozayotgan matn qayta yozilib ketadi
   useEffect(() => {
     setContent(task?.submission_md ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task?.id]);
 
   if (!task) return null;
@@ -55,7 +58,7 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
         id: task.id,
         data: { 
           submission_md: content.trim(),
-          attachments: (task.attachments as any) || [],
+          attachments: task.attachments ?? [],
         },
       });
       toast.success(t("studentTaskSubmitDialog.submitted"));

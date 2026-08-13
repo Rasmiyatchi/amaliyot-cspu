@@ -31,14 +31,21 @@ export const api = ky.create({
     beforeError: [
       async (error) => {
         try {
-          const body = (await error.response.clone().json()) as { detail?: any };
+          const body = (await error.response.clone().json()) as { detail?: unknown };
           if (body.detail) {
+            const detail = body.detail;
             error.message =
-              typeof body.detail === "string"
-                ? body.detail
-                : Array.isArray(body.detail)
-                  ? body.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ")
-                  : JSON.stringify(body.detail);
+              typeof detail === "string"
+                ? detail
+                : Array.isArray(detail)
+                  ? detail
+                      .map((e: unknown) =>
+                        e && typeof e === "object" && "msg" in e
+                          ? String((e as { msg: unknown }).msg)
+                          : JSON.stringify(e),
+                      )
+                      .join(", ")
+                  : JSON.stringify(detail);
           }
         } catch {
           /* JSON emas */

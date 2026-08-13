@@ -5,6 +5,8 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
 import type { UUID } from "@/lib/api/types";
 
+export type ContractTemplateStatus = "draft" | "active" | "inactive" | "archived";
+
 export type ContractTemplateDoc = {
   id: UUID;
   name: string;
@@ -13,7 +15,7 @@ export type ContractTemplateDoc = {
   file_attachment: { name: string; path: string; mime: string; size: number } | null;
   html_content: string | null;
   placeholders: string[];
-  is_active: boolean;
+  status: ContractTemplateStatus;
   created_at: string;
   updated_at: string;
 };

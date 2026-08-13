@@ -5,7 +5,17 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
 import type { UUID } from "@/lib/api/types";
 
-export type ApplicationStatus = "submitted" | "approved" | "revision_required" | "rejected";
+export type ApplicationStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "revision_required"
+  | "resubmitted"
+  | "approved"
+  | "active"
+  | "rejected"
+  | "expired"
+  | "archived";
 
 export type ContractType = {
   id: UUID;
@@ -52,6 +62,7 @@ export type PracticeApplication = {
   note: string | null;
   status: ApplicationStatus;
   qr_token: string | null;
+  variable_values: Record<string, unknown> | null;
   reviewed_by_id: UUID | null;
   reviewed_at: string | null;
   review_note: string | null;
@@ -68,7 +79,7 @@ export type ApplicationCreate = {
   district?: string;
   note?: string;
   placeholders_data?: Record<string, string>;
-  variable_values?: Record<string, any>;
+  variable_values?: Record<string, string>;
 };
 
 export type AppendixGroup = {
@@ -127,7 +138,7 @@ export async function previewContractPdf(id: UUID): Promise<string> {
   const res = await fetch(`/api/v1/practice-applications/${id}/preview-pdf`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`Preview yuklab bo'lmadi (${res.status})`);
+  if (!res.ok) throw new Error(i18n.t("adminApplications.previewLoadFailed", { status: res.status }));
   const blob = await res.blob();
   return URL.createObjectURL(blob);
 }
@@ -180,6 +191,18 @@ export async function downloadApplicationScan(id: UUID): Promise<void> {
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank"); // O'zgartirildi: skan yangi tabda ochiladi
   setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+/** Talaba: tuzatishga qaytarilgan arizani to'g'irlab qayta yuborish. */
+export function useResubmitApplication() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, variable_values }: { id: UUID; variable_values?: Record<string, unknown> | null }) =>
+      api
+        .post(`v1/practice-applications/${id}/resubmit`, { json: { variable_values: variable_values ?? null } })
+        .json<PracticeApplication>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
 }
 
 export function useUploadApplicationScan() {
@@ -241,6 +264,16 @@ export function useReturnApplication() {
       api
         .post(`v1/practice-applications/${id}/return`, { json: { return_reason } })
         .json<PracticeApplication>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+/** Admin: imzolangan skanni tasdiqlash — shartnoma yopiladi (ACTIVE). */
+export function useConfirmScan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) =>
+      api.post(`v1/practice-applications/${id}/confirm-scan`).json<PracticeApplication>(),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 }

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- WEEKDAYS/formatWeekdays picker bilan birga yashaydi */
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/i18n";
