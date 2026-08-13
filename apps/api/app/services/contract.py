@@ -9,14 +9,16 @@ from fastapi import HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
-from app.models.academic import AcademicYear, Direction, Group
+from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.contract import Contract
 from app.models.enums import ContractStatus, ContractTemplate
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
 from app.models.student import Student
+from app.models.supervisor import Supervisor
 from app.models.user import User
 
 TEMPLATE_SHORT_CODES: dict[ContractTemplate, str] = {
@@ -158,6 +160,7 @@ async def _snapshot_students(
     db: AsyncSession, assignment_ids: list[UUID], organization_id: UUID
 ) -> list[dict[str, Any]]:
     """Assignment'lardan talaba snapshot'ini olish + tashkilot mos kelishini tekshirish."""
+    sup_user = aliased(User)
     stmt = (
         select(
             PracticeAssignment.id,
@@ -167,16 +170,21 @@ async def _snapshot_students(
             ).label("full_name"),
             Direction.code.label("direction_code"),
             Direction.name.label("direction_name"),
+            Faculty.name.label("faculty_name"),
             Group.name.label("group_name"),
             PracticeAssignment.course,
             PracticeAssignment.start_date,
             PracticeAssignment.end_date,
             PracticeAssignment.organization_id,
+            (sup_user.last_name + " " + sup_user.first_name).label("supervisor_name"),
         )
         .join(Student, Student.id == PracticeAssignment.student_id)
         .join(User, User.id == Student.user_id)
         .outerjoin(Group, Group.id == PracticeAssignment.group_id)
         .outerjoin(Direction, Direction.id == Group.direction_id)
+        .outerjoin(Faculty, Faculty.id == Direction.faculty_id)
+        .outerjoin(Supervisor, Supervisor.id == PracticeAssignment.supervisor_id)
+        .outerjoin(sup_user, sup_user.id == Supervisor.user_id)
         .where(PracticeAssignment.id.in_(assignment_ids))
     )
     rows = (await db.execute(stmt)).mappings().all()
@@ -210,6 +218,8 @@ async def _snapshot_students(
             "direction_name": r["direction_name"],
             "course": r["course"],
             "group_name": r["group_name"],
+            "faculty_name": r["faculty_name"],
+            "supervisor_name": (r["supervisor_name"] or "").strip() or None,
             "start_date": r["start_date"].isoformat(),
             "end_date": r["end_date"].isoformat(),
         }

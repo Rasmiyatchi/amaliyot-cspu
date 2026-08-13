@@ -129,6 +129,28 @@ async def create_for_student(
     if not tpl:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Shablon topilmadi")
 
+    # Bir talabada bir vaqtda faqat bitta faol ariza bo'lsin
+    active_statuses = [
+        ApplicationStatus.SUBMITTED,
+        ApplicationStatus.UNDER_REVIEW,
+        ApplicationStatus.RESUBMITTED,
+        ApplicationStatus.APPROVED,
+        ApplicationStatus.ACTIVE,
+    ]
+    existing = (
+        await db.execute(
+            select(PracticeApplication.id).where(
+                PracticeApplication.student_id == student.id,
+                PracticeApplication.status.in_(active_statuses),
+            )
+        )
+    ).first()
+    if existing:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Sizda faol ariza allaqachon bor — avval uni yakunlang yoki bekor qiling",
+        )
+
     variable_values = {}
     if data.variable_values:
         variable_values = ct_svc.validate_student_input(tpl, data.variable_values)
@@ -193,6 +215,45 @@ async def return_application(
     obj.reviewed_by_id = user.id
     obj.reviewed_at = datetime.now(UTC)
     obj.return_reason = reason
+    await db.commit()
+    return await get_one(db, id_)
+
+
+async def resubmit(
+    db: AsyncSession, id_: UUID, user: User, variable_values: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Talaba "Tuzatish kerak" arizasini to'g'irlab qayta yuboradi."""
+    obj = await _get_obj(db, id_)
+    student = await _student_for_user(db, user)
+    if obj.student_id != student.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Ruxsat yo'q")
+    if obj.status != ApplicationStatus.REVISION_REQUIRED:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Faqat tuzatishga qaytarilgan arizani qayta yuborish mumkin"
+        )
+    if variable_values:
+        tpl = await db.get(ContractTemplateDoc, obj.contract_template_id)
+        if tpl:
+            obj.variable_values = ct_svc.validate_student_input(tpl, variable_values)
+    obj.status = ApplicationStatus.RESUBMITTED
+    obj.return_reason = None
+    await db.commit()
+    return await get_one(db, id_)
+
+
+async def confirm_scan(db: AsyncSession, id_: UUID, user: User) -> dict[str, Any]:
+    """Admin imzolangan skanni tasdiqlaydi — shartnoma yopiladi (ACTIVE).
+
+    Shundan keyin talaba skanni qayta yuklay olmaydi.
+    """
+    obj = await _get_obj(db, id_)
+    if not obj.scan_file:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Skan hali yuklanmagan")
+    if obj.status == ApplicationStatus.ACTIVE:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Shartnoma allaqachon yopilgan")
+    if obj.status != ApplicationStatus.APPROVED:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ariza tasdiqlanmagan")
+    obj.status = ApplicationStatus.ACTIVE
     await db.commit()
     return await get_one(db, id_)
 
@@ -340,7 +401,26 @@ async def _generate_contract(db: AsyncSession, obj: PracticeApplication) -> None
 
         # WeasyPrint PDF generatsiyasi HTML'dan
         str_ctx = {k: str(v) for k, v in ctx.items()}
-        pdf_bytes = render_student_contract_pdf(tpl.html_content, str_ctx, obj.qr_token or "")
+        appendix_students = [
+            {
+                "full_name": ctx.get("student_full_name") or "",
+                "faculty_name": ctx.get("faculty_name") or "",
+                "course": ctx.get("course") or "",
+                "direction_name": ctx.get("specialty_name") or "",
+                # Ariza bosqichida amaliyot rahbari hali biriktirilmagan
+                "supervisor_name": None,
+                "start_date": ctx.get("practice_start_date") or "",
+                "end_date": ctx.get("practice_end_date") or "",
+            }
+        ]
+        pdf_bytes = render_student_contract_pdf(
+            tpl.html_content,
+            str_ctx,
+            obj.qr_token or "",
+            appendix_students=appendix_students,
+            contract_number=number,
+            contract_date=ctx.get("contract_date", ""),
+        )
 
         import hashlib
 
@@ -469,6 +549,10 @@ async def upload_scan(
         if obj.student_id != student.id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Ruxsat yo'q")
 
+    if obj.status == ApplicationStatus.ACTIVE:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Shartnoma yopilgan — skanni o'zgartirib bo'lmaydi"
+        )
     if obj.status != ApplicationStatus.APPROVED:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ariza tasdiqlanmagan")
 

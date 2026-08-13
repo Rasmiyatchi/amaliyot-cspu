@@ -11,6 +11,7 @@ from app.models.enums import ApplicationStatus
 from app.schemas.practice_application import (
     ApplicationCreate,
     ApplicationRead,
+    ApplicationResubmit,
     ApplicationReview,
 )
 from app.services import practice_application as svc
@@ -175,6 +176,22 @@ async def reject_application(
     id_: UUID, data: ApplicationReview, db: SessionDep, user: RequireSuperAdmin
 ) -> ApplicationRead:
     return ApplicationRead.model_validate(await svc.reject(db, id_, user, data.review_note))
+
+
+@router.post("/{id_}/resubmit", response_model=ApplicationRead)
+async def resubmit_application(
+    id_: UUID, data: ApplicationResubmit, db: SessionDep, user: RequireStudent
+) -> ApplicationRead:
+    """Talaba: tuzatishga qaytarilgan arizani to'g'irlab qayta yuborish."""
+    return ApplicationRead.model_validate(
+        await svc.resubmit(db, id_, user, data.variable_values)
+    )
+
+
+@router.post("/{id_}/confirm-scan", response_model=ApplicationRead)
+async def confirm_scan(id_: UUID, db: SessionDep, user: RequireAdmin) -> ApplicationRead:
+    """Admin: imzolangan skanni tasdiqlash — shartnoma yopiladi (ACTIVE)."""
+    return ApplicationRead.model_validate(await svc.confirm_scan(db, id_, user))
 
 
 @router.post("/{id_}/return", response_model=ApplicationRead)

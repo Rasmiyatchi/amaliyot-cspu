@@ -29,6 +29,12 @@ class ApplicationCreate(BaseModel):
     note: str | None = None
 
 
+class ApplicationResubmit(BaseModel):
+    """Tuzatilgan arizani qayta yuborish — yangilangan maydon qiymatlari bilan."""
+
+    variable_values: dict[str, Any] | None = None
+
+
 class ApplicationReview(BaseModel):
     review_note: str | None = Field(None, max_length=500)
     return_reason: str | None = Field(None, max_length=500)
