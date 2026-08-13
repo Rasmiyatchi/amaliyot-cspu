@@ -136,8 +136,25 @@ def read_pdf(relative_path: str) -> bytes:
     return abs_path.read_bytes()
 
 
+def _safe_url_fetcher(url: str, timeout: int = 10, ssl_context: object = None) -> dict:
+    """WeasyPrint uchun cheklangan URL fetcher — faqat data: URI.
+
+    Shablon HTML'iga (yoki unga almashtirilgan qiymatlarga) file:// yoki
+    http://ichki-xost kabi manzillar kirsa, WeasyPrint ularni O'QIB PDF'ga
+    joylab yuborardi (SSRF/mahalliy fayl o'qish). QR kod data: URI bilan
+    kiritiladi — boshqa hech narsa kerak emas.
+    """
+    if url.startswith("data:"):
+        from weasyprint import default_url_fetcher
+
+        return default_url_fetcher(url)
+    raise ValueError(f"Tashqi URL'lar taqiqlangan: {url[:80]}")
+
+
 def render_student_contract_pdf(html_template: str, data: dict[str, str], qr_token: str) -> bytes:
     """Yangi WYSIWYG tahrirlangan shablondan talaba shartnomasini PDF ga aylantirish."""
+    import html as html_mod
+
     verify_url = build_verify_url(qr_token)
     qr_data_uri = _generate_qr_data_uri(verify_url)
 
@@ -162,11 +179,12 @@ def render_student_contract_pdf(html_template: str, data: dict[str, str], qr_tok
         # Agar yo'q bo'lsa, oxiriga qo'shib qo'yamiz
         html_content += f'<div style="text-align: right; margin-top: 30px;">{qr_img_tag}</div>'
 
-    # Boshqa barcha o'zgaruvchilarni almashtirish
+    # Boshqa barcha o'zgaruvchilarni almashtirish — qiymatlar ESCAPE qilinadi:
+    # talaba kiritgan matn hujjatga HTML sifatida emas, matn sifatida kiradi
     for key, value in data.items():
         placeholder = f"{{{key}}}"
         if placeholder in html_content:
-            html_content = html_content.replace(placeholder, str(value))
+            html_content = html_content.replace(placeholder, html_mod.escape(str(value)))
 
     # Asosiy HTML tuzilishi
     full_html = (
@@ -174,7 +192,9 @@ def render_student_contract_pdf(html_template: str, data: dict[str, str], qr_tok
         f"<body>{html_content}</body></html>"
     )
 
-    pdf_bytes: bytes | None = HTML(string=full_html).write_pdf()
+    pdf_bytes: bytes | None = HTML(
+        string=full_html, url_fetcher=_safe_url_fetcher
+    ).write_pdf()
     if pdf_bytes is None:
         raise RuntimeError("WeasyPrint PDF generation returned None")
 

@@ -142,7 +142,6 @@ async def create_for_student(
         district=data.district or student.district,
         note=data.note,
         status=ApplicationStatus.SUBMITTED,
-        placeholders_data=data.placeholders_data,
         variable_values=variable_values,
     )
     db.add(app_obj)
@@ -291,8 +290,10 @@ async def _build_contract_context(
                 "academic_year": row.academic_year_name or "",
             }
         )
-    if obj.placeholders_data:
-        ctx.update(obj.placeholders_data)
+    # XAVFSIZLIK: placeholders_data ATAYLAB o'qilmaydi — talaba yuborgan xom dict
+    # tizim maydonlarini (F.I.Sh, rektor...) bosib, imzolanadigan hujjatga istalgan
+    # HTML kiritishga yo'l ochardi. Yagona qonuniy yo'l — validate_student_input
+    # dan o'tgan variable_values.
 
     if obj.variable_values:
         ctx.update(obj.variable_values)
@@ -477,7 +478,20 @@ async def upload_scan(
 
     ext = Path(filename).suffix.lower()
     if ext not in [".pdf", ".jpg", ".jpeg", ".png"]:
-        raise ValueError("Faqat PDF va rasm (JPG, PNG) qabul qilinadi")
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Faqat PDF va rasm (JPG, PNG) qabul qilinadi"
+        )
+    # Magic-byte tekshiruvi — kengaytmani almashtirib exe/html yuklashning oldini oladi
+    magic_by_ext = {
+        ".pdf": (b"%PDF",),
+        ".jpg": (b"\xff\xd8\xff",),
+        ".jpeg": (b"\xff\xd8\xff",),
+        ".png": (b"\x89PNG",),
+    }
+    if not any(content.startswith(m) for m in magic_by_ext[ext]):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Fayl mazmuni kengaytmaga mos emas"
+        )
 
     file_name = f"{obj.contract_number or 'shartnoma'}_scan_{secrets.token_hex(4)}{ext}"
     path = PDF_STORAGE_DIR / file_name

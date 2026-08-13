@@ -27,7 +27,6 @@ class ApplicationCreate(BaseModel):
     region: str | None = Field(None, max_length=64)
     district: str | None = Field(None, max_length=64)
     note: str | None = None
-    placeholders_data: dict[str, Any] | None = None
 
 
 class ApplicationReview(BaseModel):
@@ -57,7 +56,6 @@ class ApplicationRead(BaseModel):
     note: str | None = None
     status: ApplicationStatus
     qr_token: str | None = None
-    placeholders_data: dict[str, Any] | None = None
     variable_values: dict[str, Any] | None = None
     reviewed_by_id: UUID | None = None
     reviewed_at: datetime | None = None
