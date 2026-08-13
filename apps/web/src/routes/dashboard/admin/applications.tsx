@@ -40,17 +40,17 @@ import { useAuthStore } from "@/stores/auth";
 
 const ALL = "__all__";
 const STATUS_TABS: { value: string; labelKey: string }[] = [
-  { value: ALL, labelKey: "Barchasi" },
-  { value: "submitted", labelKey: "Yangi" },
-  { value: "approved", labelKey: "Tasdiqlangan" },
-  { value: "revision_required", labelKey: "Tuzatish kerak" },
-  { value: "rejected", labelKey: "Rad etilgan" },
+  { value: ALL, labelKey: "common.all" },
+  { value: "submitted", labelKey: "adminApplications.status.new" },
+  { value: "approved", labelKey: "adminApplications.status.approved" },
+  { value: "revision_required", labelKey: "adminApplications.status.revisionRequired" },
+  { value: "rejected", labelKey: "adminApplications.status.rejected" },
 ];
 const STATUS_BADGE: Record<ApplicationStatus, { labelKey: string; variant: "secondary" | "success" | "destructive" | "warning" }> = {
-  submitted: { labelKey: "Yangi", variant: "secondary" },
-  approved: { labelKey: "Tasdiqlangan", variant: "success" },
-  revision_required: { labelKey: "Tuzatish kerak", variant: "warning" },
-  rejected: { labelKey: "Rad etilgan", variant: "destructive" },
+  submitted: { labelKey: "adminApplications.status.new", variant: "secondary" },
+  approved: { labelKey: "adminApplications.status.approved", variant: "success" },
+  revision_required: { labelKey: "adminApplications.status.revisionRequired", variant: "warning" },
+  rejected: { labelKey: "adminApplications.status.rejected", variant: "destructive" },
 };
 
 export function ApplicationsPage() {
@@ -89,12 +89,12 @@ export function ApplicationsPage() {
   
   const handleReturn = async () => {
     if (!returnReason.trim() || !returnDialog.app) {
-        toast.error("Iltimos, qaytarish sababini kiriting");
+        toast.error(t("adminApplications.returnReasonRequired"));
         return;
     }
     try {
         await returnApp.mutateAsync({ id: returnDialog.app.id, return_reason: returnReason.trim() });
-        toast.success("Ariza talabaga qaytarildi");
+        toast.success(t("adminApplications.toastReturned"));
         setReturnDialog({ open: false, app: null });
         setReturnReason("");
     } catch (e) {
@@ -163,7 +163,7 @@ export function ApplicationsPage() {
                   <TableRow>
                     <TableHead>{t("common.student")}</TableHead>
                     <TableHead>{t("adminApplications.colDirectionCourse")}</TableHead>
-                    <TableHead>Tashkilot</TableHead>
+                    <TableHead>{t("common.organization")}</TableHead>
                     <TableHead>{t("common.area")}</TableHead>
                     <TableHead>{t("common.status")}</TableHead>
                     {isSuperAdmin && <TableHead className="w-[150px]">{t("adminApplications.colAction")}</TableHead>}
@@ -203,7 +203,7 @@ export function ApplicationsPage() {
                         </Badge>
                         {a.status === "revision_required" && a.return_reason && (
                           <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                            Sabab: {a.return_reason}
+                            {t("adminApplications.reason", { reason: a.return_reason })}
                           </div>
                         )}
                         {a.contract_number && (
@@ -226,7 +226,7 @@ export function ApplicationsPage() {
                             )}
                             {a.has_scan_file && (
                               <button
-                                title="Skan qilingan nusxa"
+                                title={t("adminApplications.scanCopy")}
                                 className="text-primary hover:underline ml-1"
                                 onClick={() =>
                                   downloadApplicationScan(a.id).catch((e) =>
@@ -234,7 +234,7 @@ export function ApplicationsPage() {
                                   )
                                 }
                               >
-                                <span className="text-[10px] font-medium border rounded px-1 ml-1 bg-primary/10">SKAN</span>
+                                <span className="text-[10px] font-medium border rounded px-1 ml-1 bg-primary/10">{t("adminApplications.scanBadge")}</span>
                               </button>
                             )}
                           </div>
@@ -258,7 +258,7 @@ export function ApplicationsPage() {
                                 size="icon"
                                 variant="ghost"
                                 className="text-warning"
-                                title="Kamchilik sababli qaytarish"
+                                title={t("adminApplications.returnForRevision")}
                                 onClick={() => setReturnDialog({ open: true, app: a })}
                               >
                                 <AlertCircle className="h-4 w-4" />
@@ -315,7 +315,7 @@ export function ApplicationsPage() {
                     <TableHead>{t("common.student")}</TableHead>
                     <TableHead>{t("common.direction")}</TableHead>
                     <TableHead className="w-[80px]">{t("common.course")}</TableHead>
-                    <TableHead>Tashkilot</TableHead>
+                    <TableHead>{t("common.organization")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -339,23 +339,23 @@ export function ApplicationsPage() {
       <Dialog open={returnDialog.open} onOpenChange={(o) => !o && setReturnDialog({ open: false, app: null })}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Arizani tuzatishga qaytarish</DialogTitle>
+                <DialogTitle>{t("adminApplications.returnDialogTitle")}</DialogTitle>
                 <DialogDescription>
-                    Talabaga nima uchun arizasi qaytarilayotgani va nimani to'g'irlashi kerakligini yozing.
+                    {t("adminApplications.returnDialogDescription")}
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-                <Input 
-                    value={returnReason} 
-                    onChange={e => setReturnReason(e.target.value)} 
-                    placeholder="Masalan: Tashkilot nomi noto'g'ri kiritilgan..." 
+                <Input
+                    value={returnReason}
+                    onChange={e => setReturnReason(e.target.value)}
+                    placeholder={t("adminApplications.returnReasonPlaceholder")}
                 />
             </div>
             <DialogFooter>
-                <Button variant="ghost" onClick={() => setReturnDialog({ open: false, app: null })}>Bekor qilish</Button>
+                <Button variant="ghost" onClick={() => setReturnDialog({ open: false, app: null })}>{t("common.cancel")}</Button>
                 <Button onClick={handleReturn} disabled={returnApp.isPending}>
                     {returnApp.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Qaytarish
+                    {t("adminApplications.returnSubmit")}
                 </Button>
             </DialogFooter>
         </DialogContent>

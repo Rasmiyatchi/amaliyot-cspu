@@ -123,11 +123,11 @@ export function ContractsPage() {
         <TabsList>
           <TabsTrigger value="official" className="gap-2">
             <FileCheck2 className="h-4 w-4" />
-            Rasmiy shartnomalar
+            {t("adminContracts.sourceOfficial")}
           </TabsTrigger>
           <TabsTrigger value="application" className="gap-2">
             <ClipboardCheck className="h-4 w-4" />
-            Ariza shartnomalar
+            {t("adminContracts.sourceApplications")}
             {appContracts && appContracts.length > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
                 {appContracts.length}
@@ -300,8 +300,8 @@ export function ContractsPage() {
             <div className="rounded-lg border border-border">
               <EmptyState
                 icon={ClipboardCheck}
-                title="Tasdiqlangan ariza shartnomalar yo'q"
-                description="Talabalar ariza yuborib, admin tasdiqlagan shartnomalar shu yerda ko'rinadi."
+                title={t("adminContracts.appEmptyTitle")}
+                description={t("adminContracts.appEmptyDescription")}
               />
             </div>
           )}
@@ -312,13 +312,13 @@ export function ContractsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[50px]">№</TableHead>
-                    <TableHead>Shartnoma raqami</TableHead>
-                    <TableHead>Talaba</TableHead>
-                    <TableHead>Tashkilot</TableHead>
-                    <TableHead>Hudud</TableHead>
-                    <TableHead>Tasdiqlangan sana</TableHead>
-                    <TableHead className="w-[140px]">Shartnoma</TableHead>
-                    <TableHead className="w-[100px]">Holat</TableHead>
+                    <TableHead>{t("adminContracts.colNumber")}</TableHead>
+                    <TableHead>{t("common.student")}</TableHead>
+                    <TableHead>{t("common.organization")}</TableHead>
+                    <TableHead>{t("common.area")}</TableHead>
+                    <TableHead>{t("adminContracts.colApprovedDate")}</TableHead>
+                    <TableHead className="w-[140px]">{t("adminContracts.colContract")}</TableHead>
+                    <TableHead className="w-[100px]">{t("common.status")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -333,7 +333,7 @@ export function ContractsPage() {
                         {a.direction_name && (
                           <div className="text-xs text-muted-foreground">
                             {a.direction_name}
-                            {a.course ? ` · ${a.course}-kurs` : ""}
+                            {a.course ? ` · ${t("common.courseN", { n: a.course })}` : ""}
                           </div>
                         )}
                       </TableCell>
@@ -359,14 +359,14 @@ export function ContractsPage() {
                             onClick={() => setPreviewFile(a.contract_file ?? null)}
                           >
                             <FileText className="h-4 w-4" />
-                            Shartnoma PDF
+                            {t("adminContracts.pdfButton")}
                           </Button>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="success">PDF tayyor</Badge>
+                        <Badge variant="success">{t("adminContracts.pdfReady")}</Badge>
                       </TableCell>
                     </TableRow>
                   ))}

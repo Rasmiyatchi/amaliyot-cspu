@@ -67,18 +67,18 @@ export function ContractTemplatesPage() {
           <div>
             <h1 className="text-2xl font-semibold">{t("adminContractTemplates.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Shartnoma shablonlarini yarating va tahrirlang
+              {t("adminContractTemplates.subtitleEditor")}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setCreating(true)}>
             <Upload className="mr-1 h-4 w-4" />
-            DOCX yuklash
+            {t("adminContractTemplates.uploadDocx")}
           </Button>
           <Button onClick={() => navigate("/admin/contract-templates/new/edit")}>
             <Plus className="mr-1 h-4 w-4" />
-            Yangi shablon
+            {t("adminContractTemplates.newTemplate")}
           </Button>
         </div>
       </div>
@@ -133,11 +133,11 @@ export function ContractTemplatesPage() {
                 )}
                 <div className="mt-2 flex flex-wrap items-center gap-1">
                   <span className="text-xs text-muted-foreground">
-                    O'zgaruvchilar:
+                    {t("adminContractTemplates.variables")}
                   </span>
                   {(tpl.placeholders || []).length === 0 && (
                     <span className="text-xs text-muted-foreground">
-                      topilmadi
+                      {t("adminContractTemplates.noneFound")}
                     </span>
                   )}
                   {(tpl.placeholders || []).map((p) => (
@@ -159,7 +159,7 @@ export function ContractTemplatesPage() {
                   onClick={() => navigate(`/admin/contract-templates/${tpl.id}/edit`)}
                 >
                   <Edit className="mr-1 h-4 w-4" />
-                  Tahrirlash
+                  {t("common.edit")}
                 </Button>
                 {tpl.file_attachment && (
                   <Button

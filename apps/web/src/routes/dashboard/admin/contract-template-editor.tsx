@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -106,6 +107,7 @@ const createHtmlTemplate = async (data: {
 // ─── Main Page Component ─────────────────────────────────
 
 export function ContractTemplateEditorPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -139,7 +141,7 @@ export function ContractTemplateEditorPage() {
       TiptapImage,
       TextStyle,
       FontFamily,
-      Placeholder.configure({ placeholder: "Shartnoma matnini yozing…" }),
+      Placeholder.configure({ placeholder: t("adminContractEditor.editorPlaceholder") }),
       Color,
       Highlight.configure({ multicolor: true }),
     ],
@@ -171,11 +173,11 @@ export function ContractTemplateEditorPage() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!templateName.trim()) {
-        throw new Error("Shartnoma nomini kiriting!");
+        throw new Error(t("adminContractEditor.nameRequired"));
       }
       const html = editor?.getHTML() || "";
       if (!html || html === "<p></p>") {
-        throw new Error("Shartnoma matni bo'sh!");
+        throw new Error(t("adminContractEditor.emptyContent"));
       }
 
       if (isNew) {
@@ -185,7 +187,7 @@ export function ContractTemplateEditorPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contract-templates"] });
-      toast.success("Shablon muvaffaqiyatli saqlandi!");
+      toast.success(t("adminContractEditor.saved"));
       if (isNew) navigate("/admin/contract-templates");
     },
     onError: (err: Error) => {
@@ -199,7 +201,7 @@ export function ContractTemplateEditorPage() {
       const file = e.target.files?.[0];
       if (!file) return;
       if (!/\.(docx?)$/i.test(file.name)) {
-        toast.error("Faqat .doc yoki .docx fayl yuklang!");
+        toast.error(t("adminContractEditor.docOnly"));
         return;
       }
       try {
@@ -211,19 +213,19 @@ export function ContractTemplateEditorPage() {
           if (!templateName) {
             setTemplateName(file.name.replace(/\.(docx?)$/i, ""));
           }
-          toast.success("Word fayl yuklandi va tahrirlash uchun tayyor!");
+          toast.success(t("adminContractEditor.wordLoaded"));
           if (result.messages.length > 0) {
             console.warn("Mammoth warnings:", result.messages);
           }
         }
       } catch (err) {
-        toast.error("Word faylni o'qishda xatolik yuz berdi!");
+        toast.error(t("adminContractEditor.wordReadError"));
         console.error(err);
       }
       // reset input
       e.target.value = "";
     },
-    [editor, templateName]
+    [editor, templateName, t]
   );
 
   // Insert variable
@@ -256,7 +258,7 @@ export function ContractTemplateEditorPage() {
             <Input
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
-              placeholder="Shartnoma nomi..."
+              placeholder={t("adminContractEditor.namePlaceholder")}
               className="w-[300px] text-lg font-semibold border-dashed"
             />
           </div>
@@ -266,7 +268,7 @@ export function ContractTemplateEditorPage() {
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="mr-2 h-4 w-4" />
-              Word yuklash
+              {t("adminContractEditor.uploadWord")}
             </Button>
             <input
               ref={fileInputRef}
@@ -284,7 +286,7 @@ export function ContractTemplateEditorPage() {
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              Saqlash
+              {t("common.save")}
             </Button>
           </div>
         </div>
@@ -295,13 +297,13 @@ export function ContractTemplateEditorPage() {
             {/* Undo / Redo */}
             <ToolbarButton
               icon={<Undo className="h-4 w-4" />}
-              tooltip="Qaytarish (Undo)"
+              tooltip={t("adminContractEditor.undo")}
               onClick={() => editor.chain().focus().undo().run()}
               disabled={!editor.can().undo()}
             />
             <ToolbarButton
               icon={<Redo className="h-4 w-4" />}
-              tooltip="Takrorlash (Redo)"
+              tooltip={t("adminContractEditor.redo")}
               onClick={() => editor.chain().focus().redo().run()}
               disabled={!editor.can().redo()}
             />
@@ -311,25 +313,25 @@ export function ContractTemplateEditorPage() {
             {/* Headings */}
             <ToolbarButton
               icon={<Heading1 className="h-4 w-4" />}
-              tooltip="Sarlavha 1"
+              tooltip={t("adminContractEditor.heading1")}
               active={editor.isActive("heading", { level: 1 })}
               onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             />
             <ToolbarButton
               icon={<Heading2 className="h-4 w-4" />}
-              tooltip="Sarlavha 2"
+              tooltip={t("adminContractEditor.heading2")}
               active={editor.isActive("heading", { level: 2 })}
               onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             />
             <ToolbarButton
               icon={<Heading3 className="h-4 w-4" />}
-              tooltip="Sarlavha 3"
+              tooltip={t("adminContractEditor.heading3")}
               active={editor.isActive("heading", { level: 3 })}
               onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
             />
             <ToolbarButton
               icon={<Type className="h-4 w-4" />}
-              tooltip="Oddiy matn"
+              tooltip={t("adminContractEditor.paragraph")}
               active={editor.isActive("paragraph")}
               onClick={() => editor.chain().focus().setParagraph().run()}
             />
@@ -346,10 +348,10 @@ export function ContractTemplateEditorPage() {
               }
             >
               <SelectTrigger className="h-8 w-[130px] text-xs">
-                <SelectValue placeholder="Shrift" />
+                <SelectValue placeholder={t("adminContractEditor.font")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">Standart</SelectItem>
+                <SelectItem value="default">{t("adminContractEditor.fontDefault")}</SelectItem>
                 <SelectItem value="Times New Roman">Times New Roman</SelectItem>
                 <SelectItem value="Arial">Arial</SelectItem>
                 <SelectItem value="Georgia">Georgia</SelectItem>
@@ -362,25 +364,25 @@ export function ContractTemplateEditorPage() {
             {/* Bold, Italic, Underline, Strikethrough */}
             <ToolbarButton
               icon={<Bold className="h-4 w-4" />}
-              tooltip="Qalin (Bold)"
+              tooltip={t("adminContractEditor.bold")}
               active={editor.isActive("bold")}
               onClick={() => editor.chain().focus().toggleBold().run()}
             />
             <ToolbarButton
               icon={<Italic className="h-4 w-4" />}
-              tooltip="Kursiv (Italic)"
+              tooltip={t("adminContractEditor.italic")}
               active={editor.isActive("italic")}
               onClick={() => editor.chain().focus().toggleItalic().run()}
             />
             <ToolbarButton
               icon={<UnderlineIcon className="h-4 w-4" />}
-              tooltip="Tagiga chizish"
+              tooltip={t("adminContractEditor.underline")}
               active={editor.isActive("underline")}
               onClick={() => editor.chain().focus().toggleUnderline().run()}
             />
             <ToolbarButton
               icon={<Strikethrough className="h-4 w-4" />}
-              tooltip="Chizilgan"
+              tooltip={t("adminContractEditor.strikethrough")}
               active={editor.isActive("strike")}
               onClick={() => editor.chain().focus().toggleStrike().run()}
             />
@@ -390,25 +392,25 @@ export function ContractTemplateEditorPage() {
             {/* Text Align */}
             <ToolbarButton
               icon={<AlignLeft className="h-4 w-4" />}
-              tooltip="Chapga tekislash"
+              tooltip={t("adminContractEditor.alignLeft")}
               active={editor.isActive({ textAlign: "left" })}
               onClick={() => editor.chain().focus().setTextAlign("left").run()}
             />
             <ToolbarButton
               icon={<AlignCenter className="h-4 w-4" />}
-              tooltip="Markazga tekislash"
+              tooltip={t("adminContractEditor.alignCenter")}
               active={editor.isActive({ textAlign: "center" })}
               onClick={() => editor.chain().focus().setTextAlign("center").run()}
             />
             <ToolbarButton
               icon={<AlignRight className="h-4 w-4" />}
-              tooltip="O'ngga tekislash"
+              tooltip={t("adminContractEditor.alignRight")}
               active={editor.isActive({ textAlign: "right" })}
               onClick={() => editor.chain().focus().setTextAlign("right").run()}
             />
             <ToolbarButton
               icon={<AlignJustify className="h-4 w-4" />}
-              tooltip="Ikki tomonga tekislash"
+              tooltip={t("adminContractEditor.alignJustify")}
               active={editor.isActive({ textAlign: "justify" })}
               onClick={() => editor.chain().focus().setTextAlign("justify").run()}
             />
@@ -418,13 +420,13 @@ export function ContractTemplateEditorPage() {
             {/* Lists */}
             <ToolbarButton
               icon={<List className="h-4 w-4" />}
-              tooltip="Belgili ro'yxat"
+              tooltip={t("adminContractEditor.bulletList")}
               active={editor.isActive("bulletList")}
               onClick={() => editor.chain().focus().toggleBulletList().run()}
             />
             <ToolbarButton
               icon={<ListOrdered className="h-4 w-4" />}
-              tooltip="Raqamli ro'yxat"
+              tooltip={t("adminContractEditor.orderedList")}
               active={editor.isActive("orderedList")}
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
             />
@@ -448,33 +450,33 @@ export function ContractTemplateEditorPage() {
                       .run()
                   }
                 >
-                  <Plus className="mr-2 h-4 w-4" /> Jadval qo'shish (3×3)
+                  <Plus className="mr-2 h-4 w-4" /> {t("adminContractEditor.tableInsert")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => editor.chain().focus().addRowAfter().run()}
                   disabled={!editor.can().addRowAfter()}
                 >
-                  <Rows3 className="mr-2 h-4 w-4" /> Qator qo'shish
+                  <Rows3 className="mr-2 h-4 w-4" /> {t("adminContractEditor.rowAdd")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => editor.chain().focus().addColumnAfter().run()}
                   disabled={!editor.can().addColumnAfter()}
                 >
-                  <Columns3 className="mr-2 h-4 w-4" /> Ustun qo'shish
+                  <Columns3 className="mr-2 h-4 w-4" /> {t("adminContractEditor.colAdd")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => editor.chain().focus().deleteRow().run()}
                   disabled={!editor.can().deleteRow()}
                 >
-                  <Minus className="mr-2 h-4 w-4" /> Qatorni o'chirish
+                  <Minus className="mr-2 h-4 w-4" /> {t("adminContractEditor.rowDelete")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => editor.chain().focus().deleteColumn().run()}
                   disabled={!editor.can().deleteColumn()}
                 >
-                  <Minus className="mr-2 h-4 w-4" /> Ustunni o'chirish
+                  <Minus className="mr-2 h-4 w-4" /> {t("adminContractEditor.colDelete")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -482,7 +484,7 @@ export function ContractTemplateEditorPage() {
                   disabled={!editor.can().deleteTable()}
                   className="text-destructive"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" /> Jadvalni o'chirish
+                  <Trash2 className="mr-2 h-4 w-4" /> {t("adminContractEditor.tableDelete")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -490,10 +492,10 @@ export function ContractTemplateEditorPage() {
             {/* Link */}
             <ToolbarButton
               icon={<LinkIcon className="h-4 w-4" />}
-              tooltip="Havola"
+              tooltip={t("adminContractEditor.link")}
               active={editor.isActive("link")}
               onClick={() => {
-                const url = window.prompt("URL:");
+                const url = window.prompt(t("adminContractEditor.linkUrlPrompt"));
                 if (url) editor.chain().focus().setLink({ href: url }).run();
               }}
             />
@@ -501,9 +503,9 @@ export function ContractTemplateEditorPage() {
             {/* Image */}
             <ToolbarButton
               icon={<ImageIcon className="h-4 w-4" />}
-              tooltip="Rasm"
+              tooltip={t("adminContractEditor.image")}
               onClick={() => {
-                const url = window.prompt("Rasm URL:");
+                const url = window.prompt(t("adminContractEditor.imageUrlPrompt"));
                 if (url) editor.chain().focus().setImage({ src: url }).run();
               }}
             />
@@ -515,7 +517,7 @@ export function ContractTemplateEditorPage() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 gap-1 text-xs font-medium">
                   <Variable className="h-4 w-4" />
-                  O'zgaruvchilar
+                  {t("adminContractEditor.variables")}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-[300px] overflow-y-auto">

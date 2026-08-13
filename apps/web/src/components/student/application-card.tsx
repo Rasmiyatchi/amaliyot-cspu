@@ -34,16 +34,16 @@ import {
 } from "@/lib/api/applications";
 
 const STATUS: Record<string, { labelKey: string; variant: "secondary" | "success" | "destructive" | "warning" | "default" }> = {
-  draft: { labelKey: "Qoralama", variant: "default" },
+  draft: { labelKey: "studentApplicationCard.status.draft", variant: "default" },
   submitted: { labelKey: "studentApplicationCard.status.pending", variant: "secondary" },
-  under_review: { labelKey: "Ko'rib chiqilmoqda", variant: "warning" },
-  revision_required: { labelKey: "Tuzatish kerak", variant: "warning" },
-  resubmitted: { labelKey: "Qayta yuborilgan", variant: "secondary" },
+  under_review: { labelKey: "studentApplicationCard.status.underReview", variant: "warning" },
+  revision_required: { labelKey: "studentApplicationCard.status.revisionRequired", variant: "warning" },
+  resubmitted: { labelKey: "studentApplicationCard.status.resubmitted", variant: "secondary" },
   approved: { labelKey: "studentApplicationCard.status.approved", variant: "success" },
-  active: { labelKey: "Faol", variant: "success" },
+  active: { labelKey: "studentApplicationCard.status.active", variant: "success" },
   rejected: { labelKey: "studentApplicationCard.status.rejected", variant: "destructive" },
-  expired: { labelKey: "Muddati o'tgan", variant: "destructive" },
-  archived: { labelKey: "Arxivlangan", variant: "default" },
+  expired: { labelKey: "studentApplicationCard.status.expired", variant: "destructive" },
+  archived: { labelKey: "studentApplicationCard.status.archived", variant: "default" },
 };
 
 
@@ -92,7 +92,7 @@ export function StudentApplicationCard() {
             )}
             {a.status === "revision_required" && a.return_reason && (
               <div className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                Sabab: {a.return_reason}
+                {t("studentApplicationCard.reason", { note: a.return_reason })}
               </div>
             )}
             {a.status === "approved" && a.contract_number && (
@@ -110,7 +110,7 @@ export function StudentApplicationCard() {
                       }
                     >
                       <Download className="h-4 w-4" />
-                      Yuklab olish
+                      {t("common.download")}
                     </Button>
                     
                     <Label
@@ -122,7 +122,9 @@ export function StudentApplicationCard() {
                       ) : (
                         <Upload className="h-4 w-4" />
                       )}
-                      {a.has_scan_file ? "Skan yangilash" : "Skan yuklash"}
+                      {a.has_scan_file
+                        ? t("studentApplicationCard.scanUpdate")
+                        : t("studentApplicationCard.scanUpload")}
                     </Label>
                     <input
                       id={`scan-upload-${a.id}`}
@@ -136,8 +138,8 @@ export function StudentApplicationCard() {
                           uploadScan.mutate(
                             { id: a.id, file },
                             {
-                              onSuccess: () => toast.success("Skan yuklandi"),
-                              onError: (err) => toast.error(err.message || "Xatolik yuz berdi"),
+                              onSuccess: () => toast.success(t("studentApplicationCard.scanUploaded")),
+                              onError: (err) => toast.error(err.message || t("common.error")),
                             }
                           );
                         }
@@ -186,15 +188,15 @@ function ApplicationDialog({ open, onClose }: { open: boolean; onClose: () => vo
 
   const handleSubmit = async () => {
     if (!contractTypeId) {
-      toast.error(t("studentApplicationCard.selectOptional")); // actually make it required
+      toast.error(t("studentApplicationCard.templateRequired"));
       return;
     }
-    
+
     // Client-side validation for required dynamic fields
     if (formFieldsData?.fields) {
       for (const field of formFieldsData.fields) {
         if (field.required && (!form.variable_values[field.key] || form.variable_values[field.key].trim() === "")) {
-          toast.error(`«${field.label}» maydoni to'ldirilishi shart`);
+          toast.error(t("studentApplicationCard.fieldRequired", { label: field.label }));
           return;
         }
       }
@@ -245,7 +247,7 @@ function ApplicationDialog({ open, onClose }: { open: boolean; onClose: () => vo
             <Label>{t("studentApplicationCard.contractType")}</Label>
             <Select value={contractTypeId} onValueChange={setContractTypeId}>
               <SelectTrigger>
-                <SelectValue placeholder="Shablonni tanlang..." />
+                <SelectValue placeholder={t("studentApplicationCard.selectTemplatePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {(types.data ?? []).length === 0 && (
@@ -270,7 +272,7 @@ function ApplicationDialog({ open, onClose }: { open: boolean; onClose: () => vo
           
           {!isLoadingFields && formFieldsData?.fields && formFieldsData.fields.length > 0 && (
             <div className="space-y-4 rounded-md border border-border p-4 bg-muted/20">
-              <h4 className="text-sm font-medium">Shartnoma ma'lumotlari</h4>
+              <h4 className="text-sm font-medium">{t("studentApplicationCard.contractDetails")}</h4>
               <div className="grid gap-4 sm:grid-cols-1">
                 {formFieldsData.fields.map((field) => (
                   <div key={field.key}>
@@ -286,7 +288,7 @@ function ApplicationDialog({ open, onClose }: { open: boolean; onClose: () => vo
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={field.placeholder || "Tanlang..."} />
+                          <SelectValue placeholder={field.placeholder || t("studentApplicationCard.selectPlaceholder")} />
                         </SelectTrigger>
                         <SelectContent>
                           {field.options.map((opt) => (
@@ -320,7 +322,7 @@ function ApplicationDialog({ open, onClose }: { open: boolean; onClose: () => vo
           )}
 
           <div>
-            <Label>{t("common.note")} (Ixtiyoriy)</Label>
+            <Label>{t("studentApplicationCard.noteOptional")}</Label>
             <Textarea value={form.note} onChange={(e) => set("note", e.target.value)} rows={2} />
           </div>
         </div>

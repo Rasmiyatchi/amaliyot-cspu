@@ -28,6 +28,7 @@ EXACT: dict[str, str] = {
     ),
     "Amaliyot turi topilmadi": "Тип практики не найден",
     "Ariza allaqachon tasdiqlangan": "Заявка уже подтверждена",
+    "Ariza tasdiqlanmagan": "Заявка не подтверждена",
     "Ariza topilmadi": "Заявка не найдена",
     "Aynan shu kod VA nomli yo'nalish allaqachon mavjud "
     "(bir kod bilan boshqa nomli yo'nalish qo'shsa bo'ladi)": (
@@ -84,6 +85,9 @@ EXACT: dict[str, str] = {
     "Faqat DRAFT shartnomasini o'chirish mumkin. Aktiv bo'lsa — REVOKE qiling.": (
         "Удалить можно только договор в статусе DRAFT. Если он активен — выполните REVOKE."
     ),
+    "Faqat PDF va rasm (JPG, PNG) qabul qilinadi": (
+        "Принимаются только PDF и изображения (JPG, PNG)"
+    ),
     "Faqat Super Admin tasdiqlay oladi": "Подтверждать может только супер-админ",
     "Faqat o'tgan kunlar uchun qizilga belgilash mumkin": (
         "Отмечать красным можно только прошедшие дни"
@@ -91,7 +95,12 @@ EXACT: dict[str, str] = {
     "Faqat rasm fayllari (jpg, png, webp)": "Только файлы изображений (jpg, png, webp)",
     "Faqat talaba amal qiladi": "Действие доступно только студенту",
     "Faqat talaba hisobot topshira oladi": "Сдавать отчёт может только студент",
+    "Faqat tuzatishga qaytarilgan arizani qayta yuborish mumkin": (
+        "Повторно отправить можно только заявку, возвращённую на доработку"
+    ),
     "Fayl bo'sh": "Файл пуст",
+    "Fayl hajmi katta": "Файл слишком большой",
+    "Fayl mazmuni kengaytmaga mos emas": "Содержимое файла не соответствует расширению",
     "Fayl topilmadi": "Файл не найден",
     "Foydalanuvchi topilmadi": "Пользователь не найден",
     "Geo-fence tashqarisida — tashkilot hududida emassiz": (
@@ -137,6 +146,7 @@ EXACT: dict[str, str] = {
     "O'zingizni o'chirib bo'lmaydi": "Нельзя удалить самого себя",
     "PDF fayli topilmadi": "PDF-файл не найден",
     "PDF hali generatsiya qilinmagan": "PDF ещё не сгенерирован",
+    "Qaytarish sababi kiritilishi shart": "Необходимо указать причину возврата",
     "Refresh cookie topilmadi": "Refresh cookie не найден",
     "Refresh token yaroqsiz": "Refresh token недействителен",
     "Rolni faqat admin/super_admin oralig'ida o'zgartirish mumkin": (
@@ -146,8 +156,15 @@ EXACT: dict[str, str] = {
     "Sana amaliyot diapazonidan tashqarida": "Дата вне диапазона практики",
     "Shablon fayli yo'q": "Файл шаблона отсутствует",
     "Shablon topilmadi": "Шаблон не найден",
+    "Shartnoma allaqachon yopilgan": "Договор уже закрыт",
     "Shartnoma fayli hali yo'q": "Файл договора ещё отсутствует",
+    "Shartnoma fayli topilmadi": "Файл договора не найден",
+    "Shartnoma shabloni tanlanmagan": "Шаблон договора не выбран",
+    "Shartnoma shabloni topilmadi": "Шаблон договора не найден",
     "Shartnoma topilmadi": "Договор не найден",
+    "Shartnoma yopilgan — skanni o'zgartirib bo'lmaydi": (
+        "Договор закрыт — изменить скан нельзя"
+    ),
     "Shu akademik yilda, shu yo'nalishda xuddi shunday nomli guruh mavjud": (
         "В этом учебном году по этому направлению уже есть группа с таким названием"
     ),
@@ -165,10 +182,14 @@ EXACT: dict[str, str] = {
     "Siz bu biriktirishga supervizor emassiz": (
         "Вы не являетесь руководителем этого прикрепления"
     ),
+    "Sizda faol ariza allaqachon bor — avval uni yakunlang yoki bekor qiling": (
+        "У вас уже есть активная заявка — сначала завершите или отмените её"
+    ),
     "Sizdan parol almashtirish talab qilinmaydi — oddiy /me/change-password ishlatilsin": (
         "Смена пароля от вас не требуется — используйте обычный /me/change-password"
     ),
     "Skan fayli topilmadi": "Файл скана не найден",
+    "Skan hali yuklanmagan": "Скан ещё не загружен",
     "Skan yuklanmagan": "Скан не загружен",
     "Skan yuklash uchun avval PDF generatsiya qiling": (
         "Перед загрузкой скана сначала сгенерируйте PDF"
@@ -331,4 +352,11 @@ PATTERNS: list[tuple[str, str]] = [
      "К этому шаблону привязано {count} заданий — сначала удалите их "
      "или просто установите шаблону 'is_active=false'"),
     (r"Mos kelmaydigan template: (?P<ids>.+)", "Неподходящие шаблоны: {ids}"),
+    # ── practice_application.py / contract_template.py / pdf.py (ariza tizimi) ─
+    (r"Preview xatosi: (?P<error>.+)", "Ошибка предпросмотра: {error}"),
+    (r"«(?P<label>.+)» maydoni to'ldirilishi shart",
+     "Поле «{label}» обязательно для заполнения"),
+    (r"«(?P<label>.+)» uchun noto'g'ri qiymat: (?P<value>.+)",
+     "Недопустимое значение для «{label}»: {value}"),
+    (r"Tashqi URL'lar taqiqlangan: (?P<url>.+)", "Внешние URL запрещены: {url}"),
 ]

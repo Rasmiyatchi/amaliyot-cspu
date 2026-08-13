@@ -1,5 +1,6 @@
 import { Download, Eye, FileIcon, Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export function FilePreviewModal({ attachment, onClose }: Props) {
+  const { t } = useTranslation();
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,7 +49,7 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
         });
 
         if (!res.ok) {
-          throw new Error("Faylni yuklab bo'lmadi");
+          throw new Error(t("filePreviewModal.loadFailed"));
         }
 
         const blob = await res.blob();
@@ -76,7 +78,7 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
         }
       } catch (err) {
         if (active) {
-          setError(err instanceof Error ? err.message : "Faylni ko'rishda xatolik yuz berdi");
+          setError(err instanceof Error ? err.message : t("filePreviewModal.previewError"));
         }
       } finally {
         if (active) setLoading(false);
@@ -91,7 +93,7 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
         URL.revokeObjectURL(urlToRevoke);
       }
     };
-  }, [attachment]);
+  }, [attachment, t]);
 
   if (!attachment) return null;
 
@@ -104,8 +106,8 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
   const handleDownload = async () => {
     try {
       await downloadAttachment(attachment);
-    } catch (e) {
-      toast.error("Yuklab olishda xatolik");
+    } catch {
+      toast.error(t("common.downloadError"));
     }
   };
 
@@ -133,7 +135,7 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
           <div className="flex items-center gap-2 shrink-0">
             <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5">
               <Download className="h-3.5 w-3.5" />
-              <span>Yuklab olish</span>
+              <span>{t("common.download")}</span>
             </Button>
 
             <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
@@ -147,7 +149,7 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
           {loading && (
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span className="text-sm font-medium">Fayl yuklanmoqda...</span>
+              <span className="text-sm font-medium">{t("filePreviewModal.loading")}</span>
             </div>
           )}
 
@@ -156,7 +158,7 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
               <p className="text-destructive font-medium text-sm">{error}</p>
               <Button variant="outline" size="sm" onClick={handleDownload} className="mt-3">
                 <Download className="h-4 w-4 mr-2" />
-                Faylni yuklab olish
+                {t("filePreviewModal.downloadFile")}
               </Button>
             </div>
           )}
@@ -197,14 +199,14 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
                     <Eye className="h-6 w-6" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm">Ushbu fayl turini to'g'ridan-to'g'ri ko'rib bo'lmaydi</h4>
+                    <h4 className="font-semibold text-sm">{t("filePreviewModal.unsupportedTitle")}</h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Microsoft Word, Excel va arxiv fayllarini kompyuteringizga yuklab olib ko'rishingiz mumkin.
+                      {t("filePreviewModal.unsupportedDescription")}
                     </p>
                   </div>
                   <Button onClick={handleDownload} className="w-full gap-2">
                     <Download className="h-4 w-4" />
-                    Faylni yuklab olish
+                    {t("filePreviewModal.downloadFile")}
                   </Button>
                 </div>
               )}
