@@ -24,6 +24,9 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
         "kind": doc.kind,
         "practice_type_id": doc.practice_type_id,
         "practice_type_name": pt_name,
+        "course": doc.course,
+        "education_form": doc.education_form,
+        "direction_id": doc.direction_id,
         "title": doc.title,
         "description": doc.description,
         "file_attachment": doc.file_attachment,
@@ -39,6 +42,9 @@ async def list_documents(
     *,
     kind: DocumentKind | None = None,
     practice_type_id: UUID | None = None,
+    course: int | None = None,
+    education_form: str | None = None,
+    direction_id: UUID | None = None,
 ) -> list[dict[str, Any]]:
     stmt = (
         select(
@@ -55,6 +61,12 @@ async def list_documents(
         stmt = stmt.where(Document.kind == kind)
     if practice_type_id:
         stmt = stmt.where(Document.practice_type_id == practice_type_id)
+    if course is not None:
+        stmt = stmt.where(Document.course == course)
+    if education_form:
+        stmt = stmt.where(Document.education_form == education_form)
+    if direction_id:
+        stmt = stmt.where(Document.direction_id == direction_id)
 
     rows = (await db.execute(stmt)).all()
     out: list[dict[str, Any]] = []
@@ -72,6 +84,9 @@ async def list_documents(
                 "kind": doc.kind,
                 "practice_type_id": doc.practice_type_id,
                 "practice_type_name": pt_name,
+                "course": doc.course,
+                "education_form": doc.education_form,
+                "direction_id": doc.direction_id,
                 "title": doc.title,
                 "description": doc.description,
                 "file_attachment": doc.file_attachment,
@@ -109,6 +124,9 @@ async def create_document(
     doc = Document(
         kind=payload["kind"],
         practice_type_id=payload.get("practice_type_id"),
+        course=payload.get("course"),
+        education_form=payload.get("education_form"),
+        direction_id=payload.get("direction_id"),
         title=payload["title"],
         description=payload.get("description"),
         file_attachment=payload["file_attachment"],

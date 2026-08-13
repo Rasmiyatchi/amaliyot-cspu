@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { AttachmentsSection } from "@/components/attachments-section";
 import {
   Dialog,
   DialogContent,
@@ -122,6 +123,15 @@ export function TaskGradeDialog({ task, onClose }: Props) {
               })}
             </div>
           )}
+
+          <div className="mt-4">
+            <AttachmentsSection
+              kind="task"
+              entityId={task.id}
+              attachments={(task.attachments ?? []) as never}
+              canEdit={false}
+            />
+          </div>
         </div>
 
         {task.rejection_reason && (

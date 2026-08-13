@@ -38,7 +38,8 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
   const { data: journal } = useJournal(assignmentId);
   const { data: analyses } = useLessonAnalyses(assignmentId);
 
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const selectedTask = tasks?.find((t) => t.id === selectedTaskId) ?? null;
   const [journalOpen, setJournalOpen] = useState(false);
   const [journalEdit, setJournalEdit] = useState<JournalEntry | null>(null);
   const [analysisOpen, setAnalysisOpen] = useState(false);
@@ -160,7 +161,7 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                             {items.map((task) => (
                               <button
                                 key={task.id}
-                                onClick={() => setSelectedTask(task)}
+                                onClick={() => setSelectedTaskId(task.id)}
                                 className="flex w-full items-start gap-3 border-b border-border p-3 text-left last:border-0 hover:bg-muted/30"
                               >
                                 <div className="flex-1 min-w-0">
@@ -318,7 +319,7 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
 
       <StudentTaskSubmitDialog
         task={selectedTask}
-        onClose={() => setSelectedTask(null)}
+        onClose={() => setSelectedTaskId(null)}
       />
       <JournalFormDialog
         open={journalOpen}

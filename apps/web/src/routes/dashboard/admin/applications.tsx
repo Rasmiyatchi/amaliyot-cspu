@@ -1,4 +1,4 @@
-import { Check, ClipboardEdit, Download, Layers, Loader2, X } from "lucide-react";
+import { Check, ClipboardEdit, Download, Layers, Loader2, X, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -17,11 +17,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
   downloadContract,
+  downloadApplicationScan,
   useAppendix,
   useApplications,
   useApproveApplication,
   useRejectApplication,
+  useReturnApplication,
   type ApplicationStatus,
   type PracticeApplication,
 } from "@/lib/api/applications";
@@ -29,15 +40,17 @@ import { useAuthStore } from "@/stores/auth";
 
 const ALL = "__all__";
 const STATUS_TABS: { value: string; labelKey: string }[] = [
-  { value: ALL, labelKey: "common.all" },
-  { value: "pending", labelKey: "adminApplications.status.pending" },
-  { value: "approved", labelKey: "adminApplications.status.approved" },
-  { value: "rejected", labelKey: "adminApplications.status.rejected" },
+  { value: ALL, labelKey: "Barchasi" },
+  { value: "submitted", labelKey: "Yangi" },
+  { value: "approved", labelKey: "Tasdiqlangan" },
+  { value: "revision_required", labelKey: "Tuzatish kerak" },
+  { value: "rejected", labelKey: "Rad etilgan" },
 ];
-const STATUS_BADGE: Record<ApplicationStatus, { labelKey: string; variant: "secondary" | "success" | "destructive" }> = {
-  pending: { labelKey: "adminApplications.status.pending", variant: "secondary" },
-  approved: { labelKey: "adminApplications.status.approved", variant: "success" },
-  rejected: { labelKey: "adminApplications.status.rejected", variant: "destructive" },
+const STATUS_BADGE: Record<ApplicationStatus, { labelKey: string; variant: "secondary" | "success" | "destructive" | "warning" }> = {
+  submitted: { labelKey: "Yangi", variant: "secondary" },
+  approved: { labelKey: "Tasdiqlangan", variant: "success" },
+  revision_required: { labelKey: "Tuzatish kerak", variant: "warning" },
+  rejected: { labelKey: "Rad etilgan", variant: "destructive" },
 };
 
 export function ApplicationsPage() {
@@ -50,6 +63,10 @@ export function ApplicationsPage() {
   const appendix = useAppendix();
   const approve = useApproveApplication();
   const reject = useRejectApplication();
+  const returnApp = useReturnApplication();
+  
+  const [returnDialog, setReturnDialog] = useState<{ open: boolean, app: PracticeApplication | null }>({ open: false, app: null });
+  const [returnReason, setReturnReason] = useState("");
 
   const handleApprove = async (a: PracticeApplication) => {
     try {
@@ -67,6 +84,21 @@ export function ApplicationsPage() {
       toast.success(t("adminApplications.toastRejected"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
+  
+  const handleReturn = async () => {
+    if (!returnReason.trim() || !returnDialog.app) {
+        toast.error("Iltimos, qaytarish sababini kiriting");
+        return;
+    }
+    try {
+        await returnApp.mutateAsync({ id: returnDialog.app.id, return_reason: returnReason.trim() });
+        toast.success("Ariza talabaga qaytarildi");
+        setReturnDialog({ open: false, app: null });
+        setReturnReason("");
+    } catch (e) {
+        toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -131,17 +163,16 @@ export function ApplicationsPage() {
                   <TableRow>
                     <TableHead>{t("common.student")}</TableHead>
                     <TableHead>{t("adminApplications.colDirectionCourse")}</TableHead>
-                    <TableHead>{t("adminApplications.colObject")}</TableHead>
+                    <TableHead>Tashkilot</TableHead>
                     <TableHead>{t("common.area")}</TableHead>
-                    <TableHead>{t("adminApplications.colManagerPhone")}</TableHead>
                     <TableHead>{t("common.status")}</TableHead>
-                    {isSuperAdmin && <TableHead className="w-[120px]">{t("adminApplications.colAction")}</TableHead>}
+                    {isSuperAdmin && <TableHead className="w-[150px]">{t("adminApplications.colAction")}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={isSuperAdmin ? 7 : 6} className="p-0">
+                      <TableCell colSpan={isSuperAdmin ? 6 : 5} className="p-0">
                         <EmptyState
                           icon={ClipboardEdit}
                           title={t("adminApplications.emptyTitle")}
@@ -159,18 +190,22 @@ export function ApplicationsPage() {
                         {a.course ? ` · ${t("common.courseN", { n: a.course })}` : ""}
                       </TableCell>
                       <TableCell className="text-sm">
-                        <div>{a.object_name}</div>
-                        <div className="text-xs text-muted-foreground">{a.object_location}</div>
+                        <div>{a.organization_name}</div>
+                        <div className="text-xs text-muted-foreground">{a.organization_type}</div>
                       </TableCell>
                       <TableCell className="text-sm">
                         {a.region ?? "—"}
                         {a.district ? `, ${a.district}` : ""}
                       </TableCell>
-                      <TableCell className="text-sm">{a.manager_phone}</TableCell>
                       <TableCell>
                         <Badge variant={STATUS_BADGE[a.status].variant}>
                           {t(STATUS_BADGE[a.status].labelKey)}
                         </Badge>
+                        {a.status === "revision_required" && a.return_reason && (
+                          <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            Sabab: {a.return_reason}
+                          </div>
+                        )}
                         {a.contract_number && (
                           <div className="mt-1 flex items-center gap-1">
                             <span className="text-xs text-muted-foreground">
@@ -189,12 +224,25 @@ export function ApplicationsPage() {
                                 <Download className="h-3.5 w-3.5" />
                               </button>
                             )}
+                            {a.has_scan_file && (
+                              <button
+                                title="Skan qilingan nusxa"
+                                className="text-primary hover:underline ml-1"
+                                onClick={() =>
+                                  downloadApplicationScan(a.id).catch((e) =>
+                                    toast.error(e instanceof Error ? e.message : t("common.error")),
+                                  )
+                                }
+                              >
+                                <span className="text-[10px] font-medium border rounded px-1 ml-1 bg-primary/10">SKAN</span>
+                              </button>
+                            )}
                           </div>
                         )}
                       </TableCell>
                       {isSuperAdmin && (
                         <TableCell>
-                          {a.status === "pending" && (
+                          {(a.status === "submitted" || a.status === "revision_required") && (
                             <div className="flex gap-1">
                               <Button
                                 size="icon"
@@ -205,6 +253,15 @@ export function ApplicationsPage() {
                                 onClick={() => handleApprove(a)}
                               >
                                 <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="text-warning"
+                                title="Kamchilik sababli qaytarish"
+                                onClick={() => setReturnDialog({ open: true, app: a })}
+                              >
+                                <AlertCircle className="h-4 w-4" />
                               </Button>
                               <Button
                                 size="icon"
@@ -258,7 +315,7 @@ export function ApplicationsPage() {
                     <TableHead>{t("common.student")}</TableHead>
                     <TableHead>{t("common.direction")}</TableHead>
                     <TableHead className="w-[80px]">{t("common.course")}</TableHead>
-                    <TableHead>{t("adminApplications.colObject")}</TableHead>
+                    <TableHead>Tashkilot</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -268,7 +325,7 @@ export function ApplicationsPage() {
                       <TableCell className="font-medium">{s.student_name ?? "—"}</TableCell>
                       <TableCell className="text-sm">{s.direction_name ?? "—"}</TableCell>
                       <TableCell className="text-sm">{s.course ?? "—"}</TableCell>
-                      <TableCell className="text-sm">{s.object_name}</TableCell>
+                      <TableCell className="text-sm">{s.organization_name}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -277,6 +334,32 @@ export function ApplicationsPage() {
           ))}
         </div>
       )}
+      
+      {/* Return Dialog */}
+      <Dialog open={returnDialog.open} onOpenChange={(o) => !o && setReturnDialog({ open: false, app: null })}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Arizani tuzatishga qaytarish</DialogTitle>
+                <DialogDescription>
+                    Talabaga nima uchun arizasi qaytarilayotgani va nimani to'g'irlashi kerakligini yozing.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <Input 
+                    value={returnReason} 
+                    onChange={e => setReturnReason(e.target.value)} 
+                    placeholder="Masalan: Tashkilot nomi noto'g'ri kiritilgan..." 
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="ghost" onClick={() => setReturnDialog({ open: false, app: null })}>Bekor qilish</Button>
+                <Button onClick={handleReturn} disabled={returnApp.isPending}>
+                    {returnApp.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Qaytarish
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

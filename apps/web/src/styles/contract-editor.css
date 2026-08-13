@@ -1,0 +1,163 @@
+/* ─── Contract Template WYSIWYG Editor Styles ─── */
+
+/* A4 page content area */
+.contract-editor-content {
+  outline: none;
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  min-height: 200mm;
+}
+
+.contract-editor-content:focus {
+  outline: none;
+}
+
+/* Headings */
+.contract-editor-content h1 {
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 16px;
+  margin-top: 24px;
+  text-transform: uppercase;
+}
+
+.contract-editor-content h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  margin-top: 20px;
+}
+
+.contract-editor-content h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  margin-top: 16px;
+}
+
+.contract-editor-content h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+/* Paragraphs */
+.contract-editor-content p {
+  margin-bottom: 8px;
+  text-indent: 0;
+}
+
+/* Lists */
+.contract-editor-content ul,
+.contract-editor-content ol {
+  padding-left: 24px;
+  margin-bottom: 8px;
+}
+
+.contract-editor-content li {
+  margin-bottom: 4px;
+}
+
+/* Tables */
+.contract-editor-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+.contract-editor-content th,
+.contract-editor-content td {
+  border: 1px solid #333;
+  padding: 6px 10px;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.contract-editor-content th {
+  background-color: #f0f0f0;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Selected table cell */
+.contract-editor-content .selectedCell {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Column resize handle */
+.contract-editor-content .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: #3b82f6;
+  cursor: col-resize;
+}
+
+/* Links */
+.contract-editor-content a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Images */
+.contract-editor-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 12px auto;
+}
+
+/* Placeholder styling */
+.contract-editor-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #999;
+  pointer-events: none;
+  height: 0;
+  font-style: italic;
+}
+
+/* Variables highlighting — {variable_name} */
+.contract-editor-content code {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+/* Horizontal rule */
+.contract-editor-content hr {
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 16px 0;
+}
+
+/* Blockquote */
+.contract-editor-content blockquote {
+  border-left: 3px solid #ccc;
+  padding-left: 12px;
+  margin: 12px 0;
+  color: #555;
+}
+
+/* Print-like appearance helpers */
+.contract-a4-page {
+  position: relative;
+}
+
+/* Tiptap table resize cursor */
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.resize-cursor {
+  cursor: col-resize;
+}

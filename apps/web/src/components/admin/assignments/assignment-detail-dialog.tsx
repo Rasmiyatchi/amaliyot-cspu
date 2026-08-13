@@ -84,7 +84,8 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
   const approveAnalysis = useApproveLessonAnalysis();
   const rejectAnalysis = useRejectLessonAnalysis();
 
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const selectedTask = tasks?.find((t) => t.id === selectedTaskId) ?? null;
   const [addTasksOpen, setAddTasksOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [journalRejectId, setJournalRejectId] = useState<string | null>(null);
@@ -416,7 +417,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                                 className="flex items-start gap-3 border-b border-border last:border-0 hover:bg-muted/30"
                               >
                                 <button
-                                  onClick={() => setSelectedTask(task)}
+                                  onClick={() => setSelectedTaskId(task.id)}
                                   className="flex flex-1 items-start gap-3 p-3 text-left"
                                 >
                                   <div className="flex-1 min-w-0">
@@ -600,7 +601,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
         </DialogContent>
       </Dialog>
 
-      <TaskGradeDialog task={selectedTask} onClose={() => setSelectedTask(null)} />
+      <TaskGradeDialog task={selectedTask} onClose={() => setSelectedTaskId(null)} />
       <TasksAddDialog
         open={addTasksOpen}
         assignmentId={assignmentId}

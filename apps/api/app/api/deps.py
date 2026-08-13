@@ -80,4 +80,7 @@ def require_role(
 RequireSuperAdmin = Annotated[User, Depends(require_role([UserRole.SUPER_ADMIN]))]
 RequireAdmin = Annotated[User, Depends(require_role([UserRole.SUPER_ADMIN, UserRole.ADMIN]))]
 RequireSupervisor = Annotated[User, Depends(require_role([UserRole.SUPERVISOR]))]
+RequireSupervisorOrAdmin = Annotated[
+    User, Depends(require_role([UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+]
 RequireStudent = Annotated[User, Depends(require_role([UserRole.STUDENT]))]

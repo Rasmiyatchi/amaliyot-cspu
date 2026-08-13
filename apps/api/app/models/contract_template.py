@@ -3,16 +3,25 @@
 Shablon ichida `{{ maydon }}` placeholder'lar bo'ladi (sana, ism, joy va h.k.).
 Yuklanganda placeholder'lar avtomatik aniqlanadi. Shartnoma generatsiyasida
 docxtpl bilan to'ldiriladi (QR rasm sifatida joylashtiriladi).
+
+Har bir o'zgaruvchi uchun `variables` JSONB ustunida metadata saqlanadi:
+  key, label, type, required, source, options, placeholder, defaultValue
+source = "system" → tizimdan avtomatik olinadi (talaba profili, sana va h.k.)
+source = "student_input" → talaba kiritishi kerak
 """
 
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Boolean, ForeignKey, String, Text
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+# NOTE: html_content ustuni qo'shildi — shartnoma shablonini WYSIWYG editor orqali
+# to'g'ridan-to'g'ri bazada saqlash uchun.
 from app.db.base import Base, TimestampMixin, UUIDMixin
+from app.models.enums import ContractTemplateStatus
 
 
 class ContractTemplateDoc(UUIDMixin, TimestampMixin, Base):
@@ -28,16 +37,34 @@ class ContractTemplateDoc(UUIDMixin, TimestampMixin, Base):
     )
 
     # Yuklangan .docx fayl — uploads service dict (name, path, mime, size, ...)
-    file_attachment: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    file_attachment: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
-    # Aniqlangan placeholder'lar ro'yxati — masalan ["ism", "sana", "tashkilot"]
+    # WYSIWYG editor orqali saqlangan HTML kontent
+    html_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Eski placeholder'lar ro'yxati — backward compatibility uchun qoldirildi
     placeholders: Mapped[list[str]] = mapped_column(JSONB, default=list)
 
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # Yangi: har bir o'zgaruvchi uchun to'liq metadata
+    # [{key, label, type, required, source, options, placeholder, defaultValue}, ...]
+    variables: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
+
+    status: Mapped[ContractTemplateStatus] = mapped_column(
+        SAEnum(
+            ContractTemplateStatus,
+            name="contract_template_status",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        default=ContractTemplateStatus.DRAFT,
+        index=True,
+    )
 
     created_by_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     def __repr__(self) -> str:
-        return f"<ContractTemplate '{self.name}' ({len(self.placeholders or [])} maydon)>"
+        n = len(self.variables or self.placeholders or [])
+        return f"<ContractTemplate '{self.name}' ({n} maydon)>"

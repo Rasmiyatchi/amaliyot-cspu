@@ -75,6 +75,23 @@ export function useDeleteSupervisor() {
   });
 }
 
+export type SupervisorBulkDeleteResult = {
+  requested: number;
+  deleted: number;
+  failed: { id: UUID; full_name: string | null; error: string }[];
+};
+
+export function useBulkDeleteSupervisors() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: UUID[]) =>
+      api
+        .post("v1/supervisors/bulk-delete", { json: { ids }, timeout: 120_000 })
+        .json<SupervisorBulkDeleteResult>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
+  });
+}
+
 export type SupervisorImportResponse = {
   total_rows: number;
   created: number;

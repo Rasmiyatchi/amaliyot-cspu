@@ -31,8 +31,15 @@ export const api = ky.create({
     beforeError: [
       async (error) => {
         try {
-          const body = (await error.response.clone().json()) as { detail?: string };
-          if (body.detail) error.message = body.detail;
+          const body = (await error.response.clone().json()) as { detail?: any };
+          if (body.detail) {
+            error.message =
+              typeof body.detail === "string"
+                ? body.detail
+                : Array.isArray(body.detail)
+                  ? body.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ")
+                  : JSON.stringify(body.detail);
+          }
         } catch {
           /* JSON emas */
         }

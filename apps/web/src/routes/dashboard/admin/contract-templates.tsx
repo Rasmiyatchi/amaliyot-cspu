@@ -1,6 +1,7 @@
-import { Download, FileText, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
+import { Download, Edit, FileText, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
 import { useState, type ChangeEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -37,6 +38,7 @@ const NONE = "__none__";
 
 export function ContractTemplatesPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data, isPending, error } = useContractTemplates();
   const practiceTypes = usePracticeTypes();
   const del = useDeleteContractTemplate();
@@ -65,18 +67,20 @@ export function ContractTemplatesPage() {
           <div>
             <h1 className="text-2xl font-semibold">{t("adminContractTemplates.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              <Trans
-                i18nKey="adminContractTemplates.subtitle"
-                values={{ placeholder: "{{ maydon }}" }}
-                components={[<code key="0" />]}
-              />
+              Shartnoma shablonlarini yarating va tahrirlang
             </p>
           </div>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" />
-          {t("adminContractTemplates.uploadButton")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setCreating(true)}>
+            <Upload className="mr-1 h-4 w-4" />
+            DOCX yuklash
+          </Button>
+          <Button onClick={() => navigate("/admin/contract-templates/new/edit")}>
+            <Plus className="mr-1 h-4 w-4" />
+            Yangi shablon
+          </Button>
+        </div>
       </div>
 
       {isPending && (
@@ -105,13 +109,20 @@ export function ContractTemplatesPage() {
           {data.map((tpl) => (
             <div
               key={tpl.id}
-              className="flex items-start justify-between gap-4 rounded-lg border border-border p-4"
+              className="flex items-start justify-between gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-muted/30"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary shrink-0" />
                   <span className="font-medium">{tpl.name}</span>
                   {!tpl.is_active && (
                     <Badge variant="secondary">{t("adminContractTemplates.inactive")}</Badge>
+                  )}
+                  {tpl.html_content && (
+                    <Badge variant="default" className="text-[10px]">HTML</Badge>
+                  )}
+                  {tpl.file_attachment && !tpl.html_content && (
+                    <Badge variant="outline" className="text-[10px]">DOCX</Badge>
                   )}
                   {ptName(tpl.practice_type_id) && (
                     <Badge variant="outline">{ptName(tpl.practice_type_id)}</Badge>
@@ -122,36 +133,48 @@ export function ContractTemplatesPage() {
                 )}
                 <div className="mt-2 flex flex-wrap items-center gap-1">
                   <span className="text-xs text-muted-foreground">
-                    {t("adminContractTemplates.fields")}
+                    O'zgaruvchilar:
                   </span>
-                  {tpl.placeholders.length === 0 && (
+                  {(tpl.placeholders || []).length === 0 && (
                     <span className="text-xs text-muted-foreground">
-                      {t("adminContractTemplates.noneFound")}
+                      topilmadi
                     </span>
                   )}
-                  {tpl.placeholders.map((p) => (
+                  {(tpl.placeholders || []).map((p) => (
                     <Badge key={p} variant="outline" className="font-mono text-xs">
-                      {`{{ ${p} }}`}
+                      {`{${p}}`}
                     </Badge>
                   ))}
                 </div>
-                <div className="mt-1 truncate text-xs text-muted-foreground">
-                  {tpl.file_attachment.name} · {(tpl.file_attachment.size / 1024).toFixed(0)} KB
-                </div>
+                {tpl.file_attachment && (
+                  <div className="mt-1 truncate text-xs text-muted-foreground">
+                    {tpl.file_attachment.name} · {(tpl.file_attachment.size / 1024).toFixed(0)} KB
+                  </div>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <Button
-                  size="icon"
-                  variant="ghost"
-                  title={t("common.download")}
-                  onClick={() =>
-                    downloadContractTemplate(tpl.id, tpl.file_attachment.name).catch((e) =>
-                      toast.error(e instanceof Error ? e.message : t("common.error")),
-                    )
-                  }
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => navigate(`/admin/contract-templates/${tpl.id}/edit`)}
                 >
-                  <Download className="h-4 w-4" />
+                  <Edit className="mr-1 h-4 w-4" />
+                  Tahrirlash
                 </Button>
+                {tpl.file_attachment && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    title={t("common.download")}
+                    onClick={() =>
+                      downloadContractTemplate(tpl.id, tpl.file_attachment!.name).catch((e) =>
+                        toast.error(e instanceof Error ? e.message : t("common.error")),
+                      )
+                    }
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   size="icon"
                   variant="ghost"

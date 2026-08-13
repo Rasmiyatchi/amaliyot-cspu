@@ -68,12 +68,12 @@ const makeCreateSchema = (t: TFunction) =>
       .array(z.string())
       .max(5, t("supervisorsSupervisorFormDialog.maxOrganizations"))
       .default([]),
-    capacity: z.coerce.number().int().min(1).max(100),
+    capacity: z.coerce.number().int().min(1).max(500),
   });
 
 type SupForm = z.infer<ReturnType<typeof makeCreateSchema>>;
 
-const makeUpdateSchema = (t: TFunction) => makeCreateSchema(t).partial();
+const makeUpdateSchema = (t: TFunction) => makeCreateSchema(t).omit({ username: true, password: true }).partial();
 
 type Props = {
   open: boolean;

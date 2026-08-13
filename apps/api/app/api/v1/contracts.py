@@ -169,31 +169,98 @@ public_router = APIRouter(tags=["public"])
 @public_router.get("/verify/{qr_token}", response_model=ContractVerifyResponse)
 async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyResponse:
     """QR kod bosilganda ochiluvchi public endpoint — parol talab qilmaydi."""
-    data = await svc.verify_by_token(db, qr_token)
+    try:
+        data = await svc.verify_by_token(db, qr_token)
 
-    today = date.today()
-    status_ = data["status"]
-    is_valid = (
-        status_ == ContractStatus.ACTIVE
-        and data["end_date"] >= today
-        and data["revoked_at"] is None
-    )
+        today = date.today()
+        status_ = data["status"]
+        is_valid = (
+            status_ == ContractStatus.ACTIVE
+            and data["end_date"] >= today
+            and data["revoked_at"] is None
+        )
 
-    if status_ == ContractStatus.ACTIVE and data["end_date"] < today:
-        status_ = ContractStatus.EXPIRED
+        if status_ == ContractStatus.ACTIVE and data["end_date"] < today:
+            status_ = ContractStatus.EXPIRED
 
-    return ContractVerifyResponse(
-        number=data["number"],
-        template_ref=data["template_ref"],
-        status=status_,
-        organization_name=data["organization_name"],
-        practice_type_name=data["practice_type_name"],
-        start_date=data["start_date"],
-        end_date=data["end_date"],
-        students_count=len(data["students"] or []),
-        generated_at=data["generated_at"],
-        signed_at_org=data["signed_at_org"],
-        revoked_reason=data["revoked_reason"],
-        revoked_at=data["revoked_at"],
-        is_valid=is_valid,
+        return ContractVerifyResponse(
+            number=data["number"],
+            template_ref=data["template_ref"],
+            status=status_,
+            organization_name=data["organization_name"],
+            practice_type_name=data["practice_type_name"],
+            start_date=data["start_date"],
+            end_date=data["end_date"],
+            students_count=len(data["students"] or []),
+            generated_at=data["generated_at"],
+            signed_at_org=data["signed_at_org"],
+            revoked_reason=data["revoked_reason"],
+            revoked_at=data["revoked_at"],
+            is_valid=is_valid,
+        )
+    except HTTPException:
+        # Fallback to PracticeApplication verification
+        from app.services import practice_application as pa_svc
+
+        try:
+            pa_data = await pa_svc.verify_by_token(db, qr_token)
+            return ContractVerifyResponse(
+                number=pa_data["number"],
+                template_ref=pa_data["template_ref"],
+                status=pa_data["status"],
+                organization_name=pa_data["organization_name"],
+                practice_type_name=pa_data["practice_type_name"],
+                start_date=pa_data["start_date"],
+                end_date=pa_data["end_date"],
+                students_count=pa_data["students_count"],
+                generated_at=pa_data["generated_at"],
+                signed_at_org=pa_data["signed_at_org"],
+                revoked_reason=pa_data["revoked_reason"],
+                revoked_at=pa_data["revoked_at"],
+                is_valid=pa_data["is_valid"],
+            )
+        except HTTPException as e:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Shartnoma topilmadi") from e
+
+
+@public_router.get("/verify/{qr_token}/pdf")
+async def verify_contract_pdf(qr_token: str, db: SessionDep) -> FileResponse:
+
+    from sqlalchemy import select
+
+    from app.models.contract import Contract
+    from app.services.pdf import STORAGE_DIR as PDF_STORAGE_DIR
+
+    # Try Contract first
+    contract = (
+        await db.execute(select(Contract).where(Contract.qr_token == qr_token))
+    ).scalar_one_or_none()
+    if contract and contract.pdf_path:
+        abs_path = PDF_STORAGE_DIR.parent.parent / contract.pdf_path
+        if abs_path.exists():
+            return FileResponse(
+                abs_path, media_type="application/pdf", filename=f"{contract.number}.pdf"
+            )
+
+    # Try PracticeApplication next
+    from app.models.practice_application import PracticeApplication
+
+    pa = (
+        await db.execute(
+            select(PracticeApplication).where(PracticeApplication.qr_token == qr_token)
+        )
+    ).scalar_one_or_none()
+    if pa and pa.contract_file:
+        abs_path = PDF_STORAGE_DIR.parent.parent / pa.contract_file["path"]
+        if abs_path.exists():
+            ext = abs_path.suffix.lower()
+            media = (
+                "application/pdf"
+                if ext == ".pdf"
+                else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+            return FileResponse(abs_path, media_type=media, filename=pa.contract_file["name"])
+
+    raise HTTPException(
+        status.HTTP_404_NOT_FOUND, "Hujjat topilmadi yoki hali generatsiya qilinmagan"
     )

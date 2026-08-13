@@ -89,8 +89,8 @@ class ContractVerifyResponse(BaseModel):
     """Public verification response — QR kod orqali parolsiz ko'rish."""
 
     number: str
-    template_ref: ContractTemplate
-    status: ContractStatus
+    template_ref: str
+    status: str
     organization_name: str
     practice_type_name: str
     start_date: date

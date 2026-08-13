@@ -13,6 +13,9 @@ export type DocumentEntity = {
   kind: DocumentKind;
   practice_type_id: UUID | null;
   practice_type_name: string | null;
+  course: number | null;
+  education_form: string | null;
+  direction_id: UUID | null;
   title: string;
   description: string | null;
   file_attachment: Attachment;
@@ -25,6 +28,9 @@ export type DocumentEntity = {
 export type DocumentCreatePayload = {
   kind: DocumentKind;
   practice_type_id?: UUID | null;
+  course?: number | null;
+  education_form?: string | null;
+  direction_id?: UUID | null;
   title: string;
   description?: string | null;
   file_attachment: Attachment;
@@ -38,13 +44,16 @@ export const documentKeys = {
     [...documentKeys.all, "list", kind, practiceTypeId] as const,
 };
 
-export function useDocuments(filters: { kind?: DocumentKind; practiceTypeId?: UUID } = {}) {
+export function useDocuments(filters: { kind?: DocumentKind; practiceTypeId?: UUID; course?: number; educationForm?: string; directionId?: UUID } = {}) {
   return useQuery({
-    queryKey: documentKeys.list(filters.kind, filters.practiceTypeId),
+    queryKey: [...documentKeys.list(filters.kind, filters.practiceTypeId), filters.course, filters.educationForm, filters.directionId],
     queryFn: () => {
       const p = new URLSearchParams();
       if (filters.kind) p.set("kind", filters.kind);
       if (filters.practiceTypeId) p.set("practice_type_id", filters.practiceTypeId);
+      if (filters.course !== undefined) p.set("course", String(filters.course));
+      if (filters.educationForm) p.set("education_form", filters.educationForm);
+      if (filters.directionId) p.set("direction_id", filters.directionId);
       return api.get(`v1/documents?${p.toString()}`).json<DocumentEntity[]>();
     },
   });

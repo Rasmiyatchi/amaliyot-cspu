@@ -10,7 +10,8 @@ export type ContractTemplateDoc = {
   name: string;
   description: string | null;
   practice_type_id: UUID | null;
-  file_attachment: { name: string; path: string; mime: string; size: number };
+  file_attachment: { name: string; path: string; mime: string; size: number } | null;
+  html_content: string | null;
   placeholders: string[];
   is_active: boolean;
   created_at: string;

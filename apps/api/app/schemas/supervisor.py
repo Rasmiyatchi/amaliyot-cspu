@@ -34,7 +34,7 @@ class SupervisorCreate(BaseModel):
     organization_ids: list[UUID] = Field(
         default_factory=list, max_length=5, description="Maksimum 5 ta tashkilot"
     )
-    capacity: int = Field(5, ge=1, le=100)
+    capacity: int = Field(5, ge=1, le=500)
 
 
 class SupervisorUpdate(BaseModel):
@@ -52,7 +52,7 @@ class SupervisorUpdate(BaseModel):
     faculty_id: UUID | None = None
     department_id: UUID | None = None
     organization_ids: list[UUID] | None = Field(None, max_length=5)
-    capacity: int | None = Field(None, ge=1, le=100)
+    capacity: int | None = Field(None, ge=1, le=500)
     is_active: bool | None = None
 
 
@@ -88,3 +88,19 @@ class SupervisorRead(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SupervisorBulkDeleteRequest(BaseModel):
+    ids: list[UUID] = Field(..., min_length=1, max_length=100)
+
+
+class SupervisorBulkDeleteError(BaseModel):
+    id: UUID
+    full_name: str | None
+    error: str
+
+
+class SupervisorBulkDeleteResult(BaseModel):
+    requested: int
+    deleted: int
+    failed: list[SupervisorBulkDeleteError]

@@ -20,6 +20,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { usePracticeTypes } from "@/lib/api/practice-types";
+import { useDirections } from "@/lib/api/academic";
 import {
   useDeleteDocument,
   useDocuments,
@@ -28,12 +38,32 @@ import {
 } from "@/lib/api/documents";
 import { downloadAttachment } from "@/lib/api/uploads";
 
+const EDU_FORMS = [
+  { value: "daytime", labelKey: "studentsStudentFormDialog.eduForm.daytime" },
+  { value: "evening", labelKey: "studentsStudentFormDialog.eduForm.evening" },
+  { value: "correspondence", labelKey: "studentsStudentFormDialog.eduForm.correspondence" },
+  { value: "distance", labelKey: "studentsStudentFormDialog.eduForm.distance" },
+];
+
 function DocumentList({ kind }: { kind: DocumentKind }) {
   const { t } = useTranslation();
-  const { data, isPending, error } = useDocuments({ kind });
+  const [course, setCourse] = useState<string>("");
+  const [educationForm, setEducationForm] = useState<string>("");
+  const [directionId, setDirectionId] = useState<string>("");
+  const [practiceTypeId, setPracticeTypeId] = useState<string>("");
+
+  const { data, isPending, error } = useDocuments({ 
+    kind,
+    course: course && course !== "all" ? Number(course) : undefined,
+    educationForm: educationForm && educationForm !== "all" ? educationForm : undefined,
+    directionId: (directionId && directionId !== "all" ? directionId : undefined) as any,
+    practiceTypeId: (practiceTypeId && practiceTypeId !== "all" ? practiceTypeId : undefined) as any,
+  });
   const [editing, setEditing] = useState<DocumentEntity | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const del = useDeleteDocument();
+  const practiceTypes = usePracticeTypes();
+  const directionsQ = useDirections(undefined, 1, 200);
 
   const handleDelete = async () => {
     if (!deletingId) return;
@@ -85,7 +115,76 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
   }
 
   return (
-    <>
+    <div className="space-y-4">
+      {kind === "program" && (
+        <div className="grid gap-4 md:grid-cols-4 bg-muted/30 p-4 rounded-lg border">
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("common.practiceType")}</Label>
+            <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder={t("common.all")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                {(practiceTypes.data ?? []).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("common.course")}</Label>
+            <Select value={course} onValueChange={setCourse}>
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder={t("common.all")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="2">2</SelectItem>
+                <SelectItem value="3">3</SelectItem>
+                <SelectItem value="4">4</SelectItem>
+                <SelectItem value="5">5</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("studentsStudentFormDialog.educationFormLabel")}</Label>
+            <Select value={educationForm} onValueChange={setEducationForm}>
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder={t("common.all")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                {EDU_FORMS.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>
+                    {t(f.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">{t("common.direction")}</Label>
+            <Select value={directionId} onValueChange={setDirectionId}>
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder={t("common.all")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("common.all")}</SelectItem>
+                {(directionsQ.data?.items ?? []).map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-3 md:grid-cols-2">
         {data.map((doc) => (
           <Card key={doc.id} className="card-hover">
@@ -162,7 +261,7 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
         onClose={() => setDeletingId(null)}
         isPending={del.isPending}
       />
-    </>
+    </div>
   );
 }
 

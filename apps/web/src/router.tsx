@@ -14,6 +14,7 @@ import { ObjectsPage } from "@/routes/dashboard/admin/objects";
 import { PracticeTypesPage } from "@/routes/dashboard/admin/practice-types";
 import { ApplicationsPage } from "@/routes/dashboard/admin/applications";
 import { ContractTemplatesPage } from "@/routes/dashboard/admin/contract-templates";
+import { ContractTemplateEditorPage } from "@/routes/dashboard/admin/contract-template-editor";
 import { InquiriesPage } from "@/routes/dashboard/admin/inquiries";
 import { RecordsPage } from "@/routes/dashboard/admin/records";
 import { ReportsPage } from "@/routes/dashboard/admin/reports";
@@ -69,6 +70,7 @@ export const router = createBrowserRouter([
             element: <Protected allowed={["super_admin"]} />,
             children: [
               { path: "contract-templates", Component: ContractTemplatesPage },
+              { path: "contract-templates/:id/edit", Component: ContractTemplateEditorPage },
               { path: "admins", Component: AdminsPage },
               { path: "audit-log", Component: AuditLogPage },
               { path: "system-settings", Component: SystemSettingsPage },

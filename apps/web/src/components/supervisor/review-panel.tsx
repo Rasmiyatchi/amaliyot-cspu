@@ -19,6 +19,7 @@ import {
   TaskCategoryBadge,
   TaskTypeLabel,
 } from "@/components/admin/tasks/task-type-badge";
+import { AttachmentsSection } from "@/components/attachments-section";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -274,6 +275,15 @@ function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () =>
               {t("supervisorReviewPanel.notSubmitted")}
             </div>
           )}
+
+          <div className="mt-4">
+            <AttachmentsSection
+              kind="task"
+              entityId={task.id}
+              attachments={(task.attachments ?? []) as never}
+              canEdit={false}
+            />
+          </div>
         </div>
 
         {task.status !== "not_started" && (
@@ -397,6 +407,17 @@ function JournalReviewDialog({
           {entry.content_md}
         </div>
 
+        {entry.attachments && entry.attachments.length > 0 && (
+          <div className="mt-4">
+            <AttachmentsSection
+              kind="journal"
+              entityId={entry.id}
+              attachments={entry.attachments as never}
+              canEdit={false}
+            />
+          </div>
+        )}
+
         {entry.status === "submitted" && (
           <>
             <Separator />
@@ -510,6 +531,17 @@ function AnalysisReviewDialog({
         <div className="whitespace-pre-wrap rounded-md border border-border p-3 text-sm">
           {analysis.analysis_md}
         </div>
+
+        {analysis.attachments && analysis.attachments.length > 0 && (
+          <div className="mt-4">
+            <AttachmentsSection
+              kind="analysis"
+              entityId={analysis.id}
+              attachments={analysis.attachments as never}
+              canEdit={false}
+            />
+          </div>
+        )}
 
         {analysis.status === "submitted" && (
           <>

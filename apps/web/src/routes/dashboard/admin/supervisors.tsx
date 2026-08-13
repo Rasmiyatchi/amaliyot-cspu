@@ -1,6 +1,6 @@
 import { Pencil, Plus, Trash2, Upload, UserCog, Users } from "lucide-react";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { SupervisorFormDialog } from "@/components/admin/supervisors/supervisor-form-dialog";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/loading-skeletons";
+import { Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/table";
 import { useFaculties } from "@/lib/api/academic";
 import { useOrganizations } from "@/lib/api/organizations";
-import { useDeleteSupervisor, useSupervisors } from "@/lib/api/supervisors";
+import { useDeleteSupervisor, useBulkDeleteSupervisors, useSupervisors } from "@/lib/api/supervisors";
 import type { Supervisor, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
@@ -54,9 +55,49 @@ export function SupervisorsPage() {
     200,
   );
   const del = useDeleteSupervisor();
+  const bulkDel = useBulkDeleteSupervisors();
   const [editing, setEditing] = useState<Supervisor | null>(null);
   const [creating, setCreating] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<UUID>>(new Set());
+
+  // Checkbox functions
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked && data) {
+      setSelectedIds(new Set(data.items.map((s) => s.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const toggleSelect = (id: UUID, checked: boolean) => {
+    const next = new Set(selectedIds);
+    if (checked) next.add(id);
+    else next.delete(id);
+    setSelectedIds(next);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(t("common.deleteConfirm", { count: selectedIds.size }))) return;
+    try {
+      const res = await bulkDel.mutateAsync(Array.from(selectedIds));
+      if (res.failed.length > 0) {
+        toast.warning(
+          t("common.bulkDeleteWarning", {
+            deleted: res.deleted,
+            failed: res.failed.length,
+            reason: res.failed[0]?.error,
+          }),
+        );
+      } else {
+        toast.success(t("common.deletedCount", { count: res.deleted }));
+      }
+      setSelectedIds(new Set());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
 
   const handleDelete = async (s: Supervisor) => {
     if (!confirm(t("adminSupervisors.deleteConfirm", { name: s.full_name }))) return;
@@ -158,11 +199,51 @@ export function SupervisorsPage() {
         </Alert>
       )}
 
+      {selectedIds.size > 0 && (
+        <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
+          <span className="text-sm">
+            <Trans
+              i18nKey="adminSupervisors.selectedCount"
+              values={{ n: selectedIds.size }}
+              components={[<span key="0" className="font-medium" />]}
+            />
+          </span>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={bulkDel.isPending}
+            >
+              {bulkDel.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              {t("adminSupervisors.deleteSelected", { n: selectedIds.size })}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {data && (
         <div className="rounded-lg border border-border">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12 text-center">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary"
+                    checked={
+                      (data?.items?.length ?? 0) > 0 && selectedIds.size === (data?.items?.length ?? 0)
+                    }
+                    onChange={(e) => toggleSelectAll(e.target.checked)}
+                  />
+                </TableHead>
                 <TableHead>{t("common.fullName")}</TableHead>
                 <TableHead>{t("adminSupervisors.position")}</TableHead>
                 <TableHead>{t("common.organization")}</TableHead>
@@ -173,9 +254,9 @@ export function SupervisorsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.items.length === 0 && (
+              {(data?.items?.length ?? 0) === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="p-0">
+                  <TableCell colSpan={8} className="p-0">
                     <EmptyState
                       icon={UserCog}
                       title={t("adminSupervisors.emptyTitle")}
@@ -186,8 +267,16 @@ export function SupervisorsPage() {
                   </TableCell>
                 </TableRow>
               )}
-              {data.items.map((s) => (
+              {(data?.items ?? []).map((s) => (
                 <TableRow key={s.id}>
+                  <TableCell className="text-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary"
+                      checked={selectedIds.has(s.id)}
+                      onChange={(e) => toggleSelect(s.id, e.target.checked)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="font-medium">{s.full_name}</div>
                     <div className="text-xs text-muted-foreground">{s.username}</div>

@@ -424,6 +424,8 @@ async def list_available_templates_for_assignment(
 
 def _task_row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
     d = dict(row)
+    if d.get("attachments") is None:
+        d["attachments"] = []
     # Overdue: deadline o'tib ketgan, lekin hali topshirilmagan (yoki rad etilgan)
     due = d.get("due_date")
     st = d.get("status")
@@ -676,7 +678,7 @@ def _journal_to_dict(j: JournalEntry) -> dict[str, Any]:
         "assignment_id": j.assignment_id,
         "date": j.date,
         "content_md": j.content_md,
-        "attachments": j.attachments,
+        "attachments": j.attachments or [],
         "status": j.status,
         "approved_by_id": j.approved_by_id,
         "approved_at": j.approved_at,
@@ -857,7 +859,7 @@ def _analysis_to_dict(a: LessonAnalysis) -> dict[str, Any]:
         "grade_level": a.grade_level,
         "quarter": a.quarter,
         "analysis_md": a.analysis_md,
-        "attachments": a.attachments,
+        "attachments": a.attachments or [],
         "status": a.status,
         "approved_by_id": a.approved_by_id,
         "approved_at": a.approved_at,

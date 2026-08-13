@@ -81,7 +81,7 @@ def render_contract_pdf(contract: Contract, organization: Organization) -> bytes
     if pdf_bytes is None:
         raise RuntimeError("WeasyPrint PDF generation returned None")
 
-    logger.info(f"📄 PDF generated: {contract.number} ({len(pdf_bytes)} bytes)")
+    logger.info(f"PDF generated: {contract.number} ({len(pdf_bytes)} bytes)")
     return bytes(pdf_bytes)
 
 
@@ -92,7 +92,7 @@ def render_supervisor_report_pdf(context: dict[str, object]) -> bytes:
     pdf_bytes: bytes | None = HTML(string=html_content).write_pdf()
     if pdf_bytes is None:
         raise RuntimeError("WeasyPrint PDF generation returned None")
-    logger.info(f"📄 Supervisor report PDF generated ({len(pdf_bytes)} bytes)")
+    logger.info(f"Supervisor report PDF generated ({len(pdf_bytes)} bytes)")
     return bytes(pdf_bytes)
 
 
@@ -103,7 +103,7 @@ def render_records_pdf(context: dict[str, object]) -> bytes:
     pdf_bytes: bytes | None = HTML(string=html_content).write_pdf()
     if pdf_bytes is None:
         raise RuntimeError("WeasyPrint PDF generation returned None")
-    logger.info(f"📄 Records PDF generated ({len(pdf_bytes)} bytes)")
+    logger.info(f"Records PDF generated ({len(pdf_bytes)} bytes)")
     return bytes(pdf_bytes)
 
 
@@ -134,3 +134,49 @@ def read_pdf(relative_path: str) -> bytes:
     if not abs_path.exists():
         raise FileNotFoundError(f"PDF not found: {relative_path}")
     return abs_path.read_bytes()
+
+
+def render_student_contract_pdf(html_template: str, data: dict[str, str], qr_token: str) -> bytes:
+    """Yangi WYSIWYG tahrirlangan shablondan talaba shartnomasini PDF ga aylantirish."""
+    verify_url = build_verify_url(qr_token)
+    qr_data_uri = _generate_qr_data_uri(verify_url)
+
+    # Basic CSS for printing A4 and embedding font safely
+    style = """
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body { font-family: sans-serif; font-size: 14px; line-height: 1.5; color: #000; }
+        .qr-code { width: 100px; height: 100px; }
+    </style>
+    """
+
+    # QR kod tasvir tagi
+    qr_img_tag = f'<img src="data:image/png;base64,{qr_data_uri}" class="qr-code" alt="QR Code" />'
+
+    html_content = html_template
+
+    # {qr_code} o'zgaruvchisini almashtirish
+    if "{qr_code}" in html_content:
+        html_content = html_content.replace("{qr_code}", qr_img_tag)
+    else:
+        # Agar yo'q bo'lsa, oxiriga qo'shib qo'yamiz
+        html_content += f'<div style="text-align: right; margin-top: 30px;">{qr_img_tag}</div>'
+
+    # Boshqa barcha o'zgaruvchilarni almashtirish
+    for key, value in data.items():
+        placeholder = f"{{{key}}}"
+        if placeholder in html_content:
+            html_content = html_content.replace(placeholder, str(value))
+
+    # Asosiy HTML tuzilishi
+    full_html = (
+        f"<!DOCTYPE html><html><head><meta charset='utf-8'>{style}</head>"
+        f"<body>{html_content}</body></html>"
+    )
+
+    pdf_bytes: bytes | None = HTML(string=full_html).write_pdf()
+    if pdf_bytes is None:
+        raise RuntimeError("WeasyPrint PDF generation returned None")
+
+    logger.info(f"Dynamic Student Contract PDF generated ({len(pdf_bytes)} bytes)")
+    return bytes(pdf_bytes)

@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 
 from app.api.deps import CurrentUser, RequireAdmin, RequireStudent, RequireSuperAdmin
@@ -39,13 +39,106 @@ async def contract_types(db: SessionDep, _: CurrentUser) -> list[dict]:
     return await svc.list_contract_types(db)
 
 
+@router.get("/{id_}/preview-pdf")
+async def preview_contract_pdf(id_: UUID, db: SessionDep, _: RequireAdmin):
+    """Shartnomani tasdiqlashdan oldin PDF ko'rinishda ko'rish (saqlashsiz)."""
+    from fastapi.responses import Response
+
+    try:
+        pdf_bytes = await svc.preview_contract_pdf(db, id_)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "inline; filename=preview.pdf"},
+        )
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Preview xatosi: {e}") from e
+
+
 @router.get("/{id_}/contract.docx")
 async def download_contract(id_: UUID, db: SessionDep, user: CurrentUser) -> FileResponse:
     path, number = await svc.contract_file_path(db, user, id_)
+    # If the file is actually a PDF (it ends with .pdf), return it as PDF
+    ext = path.suffix.lower()
+    if ext == ".pdf":
+        return FileResponse(
+            path, media_type="application/pdf", filename=f"{number or 'shartnoma'}.pdf"
+        )
     return FileResponse(path, media_type=_DOCX_MIME, filename=f"{number or 'shartnoma'}.docx")
 
 
+@router.get("/{id_}/contract.pdf")
+async def download_contract_pdf(id_: UUID, db: SessionDep, user: CurrentUser) -> FileResponse:
+    """PDF sifatida yuklab olish (frontend /contract.pdf ga murojaat qiladi)."""
+    path, number = await svc.contract_file_path(db, user, id_)
+    ext = path.suffix.lower()
+    if ext == ".pdf":
+        return FileResponse(
+            path, media_type="application/pdf", filename=f"{number or 'shartnoma'}.pdf"
+        )
+    return FileResponse(path, media_type=_DOCX_MIME, filename=f"{number or 'shartnoma'}.docx")
+
+
+
+@router.post("/{id_}/upload-scan", response_model=ApplicationRead)
+async def upload_scan(
+    id_: UUID, db: SessionDep, user: CurrentUser, file: UploadFile = File(...)
+) -> ApplicationRead:
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        from fastapi import HTTPException
+
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Fayl hajmi katta")
+    return ApplicationRead.model_validate(
+        await svc.upload_scan(db, id_, user, content, file.filename or "scan.pdf")
+    )
+
+
+@router.get("/{id_}/scan")
+async def download_scan(id_: UUID, db: SessionDep, user: CurrentUser) -> FileResponse:
+    # Service doesn't have download_scan yet, let's just do it here
+    from fastapi import HTTPException
+
+    app_obj = await svc._get_obj(db, id_)
+    if user.role not in ("admin", "super_admin"):
+        student = await svc._student_for_user(db, user)
+        if app_obj.student_id != student.id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Ruxsat yo'q")
+
+    if not app_obj.scan_file:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Skan yuklanmagan")
+
+    from app.services.pdf import STORAGE_DIR as PDF_STORAGE_DIR
+
+    abs_path = PDF_STORAGE_DIR.parent.parent / app_obj.scan_file["path"]
+    if not abs_path.exists():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Fayl topilmadi")
+
+    return FileResponse(
+        abs_path, media_type=app_obj.scan_file["mime"], filename=app_obj.scan_file["name"]
+    )
+
+
 # ─── Admin ────────────────────────────────────────────────
+
+
+@router.get("/approved-contracts", response_model=list[ApplicationRead])
+async def list_approved_contracts(
+    db: SessionDep,
+    _: RequireAdmin,
+    search: str | None = Query(None, min_length=1, max_length=100),
+) -> list[ApplicationRead]:
+    """Tasdiqlangan va shartnoma fayli mavjud arizalar — admin 'Shartnomalar' bo'limi uchun."""
+    rows = await svc.list_all(
+        db,
+        status_filter=ApplicationStatus.APPROVED,
+        search=search,
+    )
+    # Faqat shartnoma fayli bor arizalar
+    rows = [r for r in rows if r.get("contract_file")]
+    return [ApplicationRead.model_validate(r) for r in rows]
+
+
 @router.get("", response_model=list[ApplicationRead])
 async def list_applications(
     db: SessionDep,
@@ -82,3 +175,17 @@ async def reject_application(
     id_: UUID, data: ApplicationReview, db: SessionDep, user: RequireSuperAdmin
 ) -> ApplicationRead:
     return ApplicationRead.model_validate(await svc.reject(db, id_, user, data.review_note))
+
+
+@router.post("/{id_}/return", response_model=ApplicationRead)
+async def return_application(
+    id_: UUID, data: ApplicationReview, db: SessionDep, user: RequireSuperAdmin
+) -> ApplicationRead:
+    """Arizani kamchiliklar sababli tuzatishga qaytarish."""
+    if not data.return_reason:
+        from fastapi import HTTPException
+
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Qaytarish sababi kiritilishi shart")
+    return ApplicationRead.model_validate(
+        await svc.return_application(db, id_, user, data.return_reason)
+    )

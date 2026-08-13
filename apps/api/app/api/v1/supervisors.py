@@ -17,7 +17,14 @@ from fastapi import (
 from app.api.deps import RequireAdmin, RequireSupervisor
 from app.db.session import SessionDep
 from app.schemas.common import CredentialsUpdate, Paginated
-from app.schemas.supervisor import SupervisorCreate, SupervisorRead, SupervisorUpdate
+from app.schemas.supervisor import (
+    SupervisorBulkDeleteError,
+    SupervisorBulkDeleteRequest,
+    SupervisorBulkDeleteResult,
+    SupervisorCreate,
+    SupervisorRead,
+    SupervisorUpdate,
+)
 from app.schemas.supervisor_import import SupervisorImportResponse
 from app.services import audit_log as audit
 from app.services import supervisor as svc
@@ -225,6 +232,53 @@ async def update_supervisor_credentials(
     )
     await db.commit()
     return SupervisorRead.model_validate(result)
+
+
+@router.post(
+    "/bulk-delete",
+    response_model=SupervisorBulkDeleteResult,
+    summary="Admin: ko'p tanlangan supervizorlarni o'chirish",
+)
+async def bulk_delete_supervisors(
+    payload: SupervisorBulkDeleteRequest,
+    request: Request,
+    db: SessionDep,
+    user: RequireAdmin,
+) -> SupervisorBulkDeleteResult:
+    deleted = 0
+    failed: list[SupervisorBulkDeleteError] = []
+
+    for sid in payload.ids:
+        full_name: str | None = None
+        try:
+            supervisor = await svc.get_supervisor(db, sid)
+            full_name = supervisor.get("full_name")
+            await svc.delete_supervisor(db, sid)
+            await audit.log(
+                db,
+                actor=user,
+                action="delete",
+                entity_type="supervisor",
+                entity_id=sid,
+                summary=f"Supervizor o'chirildi (ommaviy): {full_name or sid}",
+                request=request,
+            )
+            await db.commit()
+            deleted += 1
+        except HTTPException as e:
+            await db.rollback()
+            failed.append(
+                SupervisorBulkDeleteError(id=sid, full_name=full_name, error=str(e.detail))
+            )
+        except Exception as e:  # noqa: BLE001
+            await db.rollback()
+            failed.append(
+                SupervisorBulkDeleteError(id=sid, full_name=full_name, error=str(e))
+            )
+
+    return SupervisorBulkDeleteResult(
+        requested=len(payload.ids), deleted=deleted, failed=failed
+    )
 
 
 @router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)

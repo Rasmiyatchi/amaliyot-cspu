@@ -11,7 +11,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,6 +34,11 @@ class Document(UUIDMixin, TimestampMixin, Base):
         ForeignKey("practice_types.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
+    )
+    course: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    education_form: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    direction_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("directions.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     title: Mapped[str] = mapped_column(String(500))

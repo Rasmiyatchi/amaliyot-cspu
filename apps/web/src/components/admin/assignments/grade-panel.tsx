@@ -1,4 +1,4 @@
-import { Award, Check, Loader2, Lock } from "lucide-react";
+import { Award, Check, Loader2, Lock, FileText, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -14,7 +14,9 @@ import {
   useSetCriterionScore,
   type CriterionScore,
 } from "@/lib/api/grading";
+import { useFinalReportForAssignment } from "@/lib/api/final-reports";
 import type { UUID } from "@/lib/api/types";
+import { downloadAttachment } from "@/lib/api/uploads";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -43,6 +45,8 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
     );
   }
   if (!data) return null;
+
+  const { data: finalReport } = useFinalReportForAssignment(assignmentId);
 
   const finalized = data.status === "completed" && data.final_grade !== null;
   const locked = readOnly || finalized;
@@ -77,6 +81,25 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
           />
         ))}
       </div>
+
+      {finalReport && (
+        <div className="rounded-lg border border-border p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            <span className="font-medium">{t("reports.title", { defaultValue: "Yakuniy hisobot" })}</span>
+            <Badge variant="outline">{finalReport.status}</Badge>
+          </div>
+          <div className="text-sm">{finalReport.title}</div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => downloadAttachment(finalReport.file_attachment)}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {t("common.download")}
+          </Button>
+        </div>
+      )}
 
       {/* Jami */}
       <div className="rounded-lg border border-border bg-muted/40 p-3">

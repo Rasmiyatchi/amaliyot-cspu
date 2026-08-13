@@ -93,6 +93,18 @@ export function VerifyPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
+              {data.is_valid && (
+                <div className="mb-4 flex gap-2">
+                  <a
+                    href={`/api/v1/verify/${token}/pdf`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90"
+                  >
+                    Hujjatni ochish
+                  </a>
+                </div>
+              )}
               <div className="grid grid-cols-[140px_1fr] gap-y-1.5">
                 <dt className="text-muted-foreground">{t("common.status")}</dt>
                 <dd className="font-medium">

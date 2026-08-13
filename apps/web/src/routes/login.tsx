@@ -58,7 +58,7 @@ export function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      const u = await login(username, password);
+      const u = await login(username.trim(), password);
       toast.success(t("auth.login.welcome", { name: u.full_name }));
       if (u.must_change_password) {
         navigate("/change-password", { replace: true });

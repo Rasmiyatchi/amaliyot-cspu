@@ -19,9 +19,17 @@ async def list_documents(
     _: CurrentUser,
     kind: DocumentKind | None = None,
     practice_type_id: UUID | None = None,
+    course: int | None = None,
+    education_form: str | None = None,
+    direction_id: UUID | None = None,
 ) -> list[DocumentRead]:
     items = await svc.list_documents(
-        db, kind=kind, practice_type_id=practice_type_id
+        db,
+        kind=kind,
+        practice_type_id=practice_type_id,
+        course=course,
+        education_form=education_form,
+        direction_id=direction_id,
     )
     return [DocumentRead.model_validate(i) for i in items]
 

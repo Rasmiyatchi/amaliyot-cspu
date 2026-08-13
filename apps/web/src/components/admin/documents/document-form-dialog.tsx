@@ -31,6 +31,7 @@ import {
   type DocumentEntity,
   type DocumentKind,
 } from "@/lib/api/documents";
+import { useDirections } from "@/lib/api/academic";
 import type { Attachment } from "@/lib/api/uploads";
 import type { UUID } from "@/lib/api/types";
 
@@ -46,6 +47,13 @@ const KIND_LABEL: Record<DocumentKind, string> = {
   program: "documentsDocumentFormDialog.kind.program",
 };
 
+const EDU_FORMS = [
+  { value: "daytime", labelKey: "studentsStudentFormDialog.eduForm.daytime" },
+  { value: "evening", labelKey: "studentsStudentFormDialog.eduForm.evening" },
+  { value: "correspondence", labelKey: "studentsStudentFormDialog.eduForm.correspondence" },
+  { value: "distance", labelKey: "studentsStudentFormDialog.eduForm.distance" },
+];
+
 export function DocumentFormDialog({ open, document, defaultKind, onClose }: Props) {
   const { t } = useTranslation();
   const isEdit = !!document;
@@ -53,6 +61,9 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
   const [practiceTypeId, setPracticeTypeId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [course, setCourse] = useState("");
+  const [educationForm, setEducationForm] = useState("");
+  const [directionId, setDirectionId] = useState("");
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,6 +71,7 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
   const create = useCreateDocument();
   const update = useUpdateDocument();
   const practiceTypes = usePracticeTypes();
+  const directionsQ = useDirections(undefined, 1, 200);
 
   useEffect(() => {
     if (!open) return;
@@ -68,12 +80,18 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
       setPracticeTypeId(document.practice_type_id ?? "");
       setTitle(document.title);
       setDescription(document.description ?? "");
+      setCourse(document.course ? String(document.course) : "");
+      setEducationForm(document.education_form ?? "");
+      setDirectionId(document.direction_id ?? "");
       setAttachment(document.file_attachment);
     } else {
       setKind(defaultKind ?? "regulation");
       setPracticeTypeId("");
       setTitle("");
       setDescription("");
+      setCourse("");
+      setEducationForm("");
+      setDirectionId("");
       setAttachment(null);
     }
   }, [open, document, defaultKind]);
@@ -113,6 +131,9 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
           id: document.id,
           data: {
             practice_type_id: practiceTypeId ? (practiceTypeId as UUID) : null,
+            course: course ? Number(course) : null,
+            education_form: educationForm || null,
+            direction_id: directionId ? (directionId as UUID) : null,
             title: title.trim(),
             description: description.trim() || null,
             file_attachment: attachment,
@@ -123,6 +144,9 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
         await create.mutateAsync({
           kind,
           practice_type_id: practiceTypeId ? (practiceTypeId as UUID) : null,
+          course: course ? Number(course) : null,
+          education_form: educationForm || null,
+          direction_id: directionId ? (directionId as UUID) : null,
           title: title.trim(),
           description: description.trim() || null,
           file_attachment: attachment,
@@ -170,23 +194,74 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
           </div>
 
           {kind === "program" && (
-            <div>
-              <Label>{t("common.practiceType")} *</Label>
-              <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={t("documentsDocumentFormDialog.selectPlaceholder")}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {(practiceTypes.data ?? []).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <>
+              <div>
+                <Label>{t("common.practiceType")} *</Label>
+                <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={t("documentsDocumentFormDialog.selectPlaceholder")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(practiceTypes.data ?? []).map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>{t("common.course")}</Label>
+                  <Select value={course} onValueChange={setCourse}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("documentsDocumentFormDialog.selectPlaceholder")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="2">2</SelectItem>
+                      <SelectItem value="3">3</SelectItem>
+                      <SelectItem value="4">4</SelectItem>
+                      <SelectItem value="5">5</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>{t("studentsStudentFormDialog.educationFormLabel")}</Label>
+                  <Select value={educationForm} onValueChange={setEducationForm}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("documentsDocumentFormDialog.selectPlaceholder")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EDU_FORMS.map((f) => (
+                        <SelectItem key={f.value} value={f.value}>
+                          {t(f.labelKey)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label>{t("common.direction")}</Label>
+                <Select value={directionId} onValueChange={setDirectionId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("documentsDocumentFormDialog.selectPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(directionsQ.data?.items ?? []).map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.code} · {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
           )}
 
           <div>

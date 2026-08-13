@@ -247,6 +247,13 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
     created = 0
     skipped = 0
 
+    # 1) Oldindan bazadagi mavjud hemis_id'larni keshlab olamiz
+    existing_hemis_ids = set(
+        (await db.execute(select(Student.hemis_id).where(Student.hemis_id.is_not(None))))
+        .scalars()
+        .all()
+    )
+
     for rec in rows:
         row_idx = rec["_row_idx"]
         raw_id = rec.get("amaliyot_id")
@@ -254,143 +261,145 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
 
         try:
             # ── Amaliyot id bo'yicha dublikat (read-only) ──
-            if incoming_id and (
-                await db.execute(select(Student.id).where(Student.hemis_id == incoming_id))
-            ).first():
+            if incoming_id and incoming_id in existing_hemis_ids:
                 skipped += 1
                 continue
 
-            # ── Yo'nalish — Mutaxassislik shifri (kodi) bo'yicha ──
-            direction_code = str(rec.get("direction_code", "")).strip()
-            if direction_code not in direction_cache:
-                # Kod unikal EMAS (bir kodda bir nechta yo'nalish bo'lishi mumkin) —
-                # birinchisini olamiz (shablonda faqat kod bo'lgani uchun).
-                direction_cache[direction_code] = (
-                    await db.execute(
-                        select(Direction.id).where(Direction.code == direction_code)
-                    )
-                ).scalars().first()
-            dir_id = direction_cache[direction_code]
-            if not dir_id:
-                shown = direction_code or "(bo'sh)"
-                raise ValueError(
-                    f"Yo'nalish topilmadi — bu shifr (kod) akademik tuzilmada yo'q: {shown}"
-                )
-
-            course = _parse_course(rec.get("course"))
-
-            group_name = str(rec.get("group_name", "")).strip()
-            if not group_name:
-                raise ValueError("Guruh nomi bo'sh")
-
-            # ── Guruh — yo'q bo'lsa avto-yaratamiz (ID-cache) ──
-            gkey = (str(dir_id), group_name)
-            group_id = group_cache.get(gkey)
-            if group_id is None:
-                g_id = (
-                    await db.execute(
-                        select(Group.id).where(
-                            Group.direction_id == dir_id,
-                            Group.academic_year_id == ay_id,
-                            Group.name == group_name,
+            async with db.begin_nested():
+                # ── Yo'nalish — Mutaxassislik shifri (kodi) bo'yicha ──
+                direction_code = str(rec.get("direction_code", "")).strip()
+                if direction_code not in direction_cache:
+                    # Kod unikal EMAS (bir kodda bir nechta yo'nalish bo'lishi mumkin) —
+                    # birinchisini olamiz (shablonda faqat kod bo'lgani uchun).
+                    direction_cache[direction_code] = (
+                        (
+                            await db.execute(
+                                select(Direction.id).where(Direction.code == direction_code)
+                            )
                         )
+                        .scalars()
+                        .first()
                     )
-                ).scalar_one_or_none()
-                if g_id is None:
-                    g = Group(
-                        direction_id=dir_id,
-                        academic_year_id=ay_id,
-                        name=group_name,
-                        course=course,
+                dir_id = direction_cache[direction_code]
+                if not dir_id:
+                    shown = direction_code or "(bo'sh)"
+                    raise ValueError(
+                        f"Yo'nalish topilmadi — bu shifr (kod) akademik tuzilmada yo'q: {shown}"
                     )
-                    db.add(g)
-                    await db.flush()
-                    g_id = g.id
-                group_id = g_id
 
-            # ── Ism ──
-            full_name_raw = str(rec.get("full_name", "")).strip()
-            if not full_name_raw:
-                raise ValueError("To'liq ismi bo'sh")
-            last_name, first_name, middle_name = _parse_full_name(full_name_raw)
+                course = _parse_course(rec.get("course"))
 
-            # ── Ism+guruh bo'yicha dublikat (amaliyot id yo'q bo'lsa) ──
-            if not incoming_id:
-                dup = (
-                    await db.execute(
-                        select(Student.id)
-                        .join(User, Student.user_id == User.id)
-                        .where(
-                            Student.group_id == group_id,
-                            func.lower(User.last_name) == last_name.lower(),
-                            func.lower(User.first_name) == first_name.lower(),
+                group_name = str(rec.get("group_name", "")).strip()
+                if not group_name:
+                    raise ValueError("Guruh nomi bo'sh")
+
+                # ── Guruh — yo'q bo'lsa avto-yaratamiz (ID-cache) ──
+                gkey = (str(dir_id), group_name)
+                group_id = group_cache.get(gkey)
+                if group_id is None:
+                    g_id = (
+                        await db.execute(
+                            select(Group.id).where(
+                                Group.direction_id == dir_id,
+                                Group.academic_year_id == ay_id,
+                                Group.name == group_name,
+                            )
                         )
-                    )
-                ).first()
-                if dup:
-                    skipped += 1
-                    continue
+                    ).scalar_one_or_none()
+                    if g_id is None:
+                        g = Group(
+                            direction_id=dir_id,
+                            academic_year_id=ay_id,
+                            name=group_name,
+                            course=course,
+                        )
+                        db.add(g)
+                        await db.flush()
+                        g_id = g.id
+                    group_id = g_id
 
-            # ── Login + user + student ──
-            generated_login = await _generate_unique_login(
-                db, app_settings.LOGIN_YEAR_PREFIX
-            )
-            password = generated_login  # login va parol bir xil
-            amaliyot_id = incoming_id or generated_login
+                # ── Ism ──
+                full_name_raw = str(rec.get("full_name", "")).strip()
+                if not full_name_raw:
+                    raise ValueError("To'liq ismi bo'sh")
+                last_name, first_name, middle_name = _parse_full_name(full_name_raw)
 
-            user = User(
-                username=generated_login,
-                password_hash=hash_password(password),
-                role=UserRole.STUDENT,
-                is_active=True,
-                first_name=first_name,
-                last_name=last_name,
-                middle_name=middle_name,
-                must_change_password=True,
-            )
-            db.add(user)
-            await db.flush()
+                # ── Ism+guruh bo'yicha dublikat (amaliyot id yo'q bo'lsa) ──
+                if not incoming_id:
+                    dup = (
+                        await db.execute(
+                            select(Student.id)
+                            .join(User, Student.user_id == User.id)
+                            .where(
+                                Student.group_id == group_id,
+                                func.lower(User.last_name) == last_name.lower(),
+                                func.lower(User.first_name) == first_name.lower(),
+                            )
+                        )
+                    ).first()
+                    if dup:
+                        skipped += 1
+                        continue
 
-            student = Student(
-                user_id=user.id,
-                hemis_id=amaliyot_id,
-                gender=_parse_gender(rec.get("gender")),
-                region=rec.get("region") or None,
-                district=rec.get("district") or None,
-                group_id=group_id,
-                current_semester=_parse_semester(rec.get("semester")),
-                is_graduating=_parse_bool(rec.get("is_graduating")),
-                education_language=rec.get("education_language") or None,
-                education_form=_parse_education_form(rec.get("education_form")),
-                degree_type=_parse_degree_type(rec.get("degree_type")),
-                status=StudentStatus.STUDYING,
-            )
-            db.add(student)
+                # ── Login + user + student ──
+                generated_login = await _generate_unique_login(db, app_settings.LOGIN_YEAR_PREFIX)
+                password = generated_login  # login va parol bir xil
+                amaliyot_id = incoming_id or generated_login
 
-            # ── Shu qatorni ATOMAR commit — xato bo'lsa faqat shu qator yo'qoladi ──
-            await db.commit()
-
-            group_cache[gkey] = group_id  # muvaffaqiyatdan keyin keshlaymiz
-            credentials.append(
-                HemisCredentials(
-                    amaliyot_id=amaliyot_id,
-                    full_name=full_name_raw,
-                    group_name=group_name,
-                    course=course,
-                    direction_code=direction_code,
+                user = User(
                     username=generated_login,
-                    password=password,
+                    password_hash=hash_password(password),
+                    role=UserRole.STUDENT,
+                    is_active=True,
+                    first_name=first_name,
+                    last_name=last_name,
+                    middle_name=middle_name,
+                    must_change_password=True,
                 )
-            )
-            created += 1
+                db.add(user)
+                await db.flush()
+
+                student = Student(
+                    user_id=user.id,
+                    hemis_id=amaliyot_id,
+                    gender=_parse_gender(rec.get("gender")),
+                    region=rec.get("region") or None,
+                    district=rec.get("district") or None,
+                    group_id=group_id,
+                    current_semester=_parse_semester(rec.get("semester")),
+                    is_graduating=_parse_bool(rec.get("is_graduating")),
+                    education_language=rec.get("education_language") or None,
+                    education_form=_parse_education_form(rec.get("education_form")),
+                    degree_type=_parse_degree_type(rec.get("degree_type")),
+                    status=StudentStatus.STUDYING,
+                )
+                db.add(student)
+                await db.flush()
+
+                # Keshni yangilaymiz
+                if amaliyot_id:
+                    existing_hemis_ids.add(amaliyot_id)
+
+                group_cache[gkey] = group_id  # muvaffaqiyatdan keyin keshlaymiz
+                credentials.append(
+                    HemisCredentials(
+                        amaliyot_id=amaliyot_id,
+                        full_name=full_name_raw,
+                        group_name=group_name,
+                        course=course,
+                        direction_code=direction_code,
+                        username=generated_login,
+                        password=password,
+                    )
+                )
+                created += 1
 
         except Exception as e:  # noqa: BLE001
-            # Faqat shu qatorni bekor qilamiz (oldingi qatorlar allaqachon commit qilingan).
-            await db.rollback()
-            errors.append(
-                HemisImportError(row=row_idx, amaliyot_id=incoming_id, message=str(e))
-            )
+            # Faqat shu qatorni bekor qilamiz (oldingi qatorlar allaqachon savepoint qilingan).
+            errors.append(HemisImportError(row=row_idx, amaliyot_id=incoming_id, message=str(e)))
             continue
+
+    await db.commit()
 
     return HemisImportResponse(
         total_rows=len(rows),

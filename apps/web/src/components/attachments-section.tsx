@@ -1,9 +1,10 @@
 import { HTTPError } from "ky";
-import { Download, FileIcon, Loader2, Trash2, Upload } from "lucide-react";
+import { Download, Eye, FileIcon, Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { FilePreviewModal } from "@/components/file-preview-modal";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
@@ -44,6 +45,7 @@ export function AttachmentsSection({
   const remove = useDeleteAttachment(kind, entityId);
   const [dragOver, setDragOver] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Attachment | null>(null);
+  const [previewFile, setPreviewFile] = useState<Attachment | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = async (files: FileList | null) => {
@@ -101,12 +103,25 @@ export function AttachmentsSection({
               className="flex items-center gap-2 rounded-md border border-border p-2 text-sm"
             >
               <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="flex-1 min-w-0">
+              <button
+                type="button"
+                className="flex-1 min-w-0 text-left hover:underline focus:outline-none cursor-pointer"
+                onClick={() => setPreviewFile(a)}
+              >
                 <div className="truncate font-medium">{a.name}</div>
                 <div className="text-xs text-muted-foreground">
                   {fmtSize(a.size)} · {new Date(a.uploaded_at).toLocaleString(dateLocale())}
                 </div>
-              </div>
+              </button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                onClick={() => setPreviewFile(a)}
+                title="Saytda ko'rish"
+              >
+                <Eye className="h-3.5 w-3.5" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -187,6 +202,11 @@ export function AttachmentsSection({
         isPending={remove.isPending}
         onConfirm={handleDelete}
         onClose={() => setConfirmDelete(null)}
+      />
+
+      <FilePreviewModal
+        attachment={previewFile}
+        onClose={() => setPreviewFile(null)}
       />
     </div>
   );

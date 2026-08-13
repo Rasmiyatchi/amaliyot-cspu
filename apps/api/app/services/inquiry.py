@@ -90,6 +90,7 @@ async def create_for_student(
         )
     )
     await db.commit()
+    await db.refresh(inquiry)
     return (await _enrich(db, [inquiry]))[0]
 
 
@@ -181,4 +182,5 @@ async def set_resolved(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Murojaat topilmadi")
     inquiry.is_resolved = resolved
     await db.commit()
+    await db.refresh(inquiry)
     return (await _enrich(db, [inquiry]))[0]

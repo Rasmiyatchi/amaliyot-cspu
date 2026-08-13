@@ -32,7 +32,6 @@ from app.schemas.supervisor_import import (
     SupervisorImportResponse,
 )
 from app.services.hemis import (
-    _generate_unique_login,
     _normalize_header,
     _parse_full_name,
 )
@@ -106,9 +105,7 @@ def _parse_excel(
             break
 
     if header_idx is None:
-        errors.append(
-            SupervisorImportError(row=1, message="Ustun nomlari (header) topilmadi")
-        )
+        errors.append(SupervisorImportError(row=1, message="Ustun nomlari (header) topilmadi"))
         return rows, errors
 
     keys = set(col_to_key.values())
@@ -152,58 +149,127 @@ def _clean_email(value: Any) -> str | None:
     return s if _EMAIL_RE.match(s) else None
 
 
-async def _find_faculty(db: AsyncSession, name: str) -> Faculty | None:
-    return (
-        await db.execute(
-            select(Faculty).where(func.lower(Faculty.name) == name.strip().lower())
-        )
+async def _find_faculty(
+    db: AsyncSession, name: str, cache: dict[str, Faculty | None] | None = None
+) -> Faculty | None:
+    search_name = name.strip().lower()
+    if cache is not None and search_name in cache:
+        return cache[search_name]
+
+    fac = (
+        await db.execute(select(Faculty).where(func.lower(Faculty.name) == search_name))
     ).scalar_one_or_none()
+    if fac:
+        if cache is not None:
+            cache[search_name] = fac
+        return fac
+
+    clean_name = search_name.replace("fakulteti", "").replace("fakultet", "").strip()
+    if clean_name:
+        fac = (
+            (await db.execute(select(Faculty).where(func.lower(Faculty.name).contains(clean_name))))
+            .scalars()
+            .first()
+        )
+        if fac:
+            if cache is not None:
+                cache[search_name] = fac
+            return fac
+
+    if cache is not None:
+        cache[search_name] = None
+    return None
 
 
-async def _find_or_create_department(
-    db: AsyncSession, faculty_id: Any, name: str
-) -> Department:
+async def _find_department(
+    db: AsyncSession,
+    faculty_id: Any,
+    name: str,
+    cache: dict[tuple[Any, str], Department | None] | None = None,
+) -> Department | None:
+    search_name = name.strip().lower()
+    cache_key = (faculty_id, search_name)
+    if cache is not None and cache_key in cache:
+        return cache[cache_key]
+
     dept = (
         await db.execute(
             select(Department).where(
                 Department.faculty_id == faculty_id,
-                func.lower(Department.name) == name.strip().lower(),
+                func.lower(Department.name) == search_name,
             )
         )
     ).scalar_one_or_none()
     if dept:
+        if cache is not None:
+            cache[cache_key] = dept
         return dept
-    dept = Department(faculty_id=faculty_id, name=name.strip())
-    db.add(dept)
-    await db.flush()
-    return dept
+
+    clean_name = search_name.replace("kafedrasi", "").replace("kafedra", "").strip()
+    if clean_name:
+        dept = (
+            (
+                await db.execute(
+                    select(Department).where(
+                        Department.faculty_id == faculty_id,
+                        func.lower(Department.name).contains(clean_name),
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if dept:
+            if cache is not None:
+                cache[cache_key] = dept
+            return dept
+
+    if cache is not None:
+        cache[cache_key] = None
+    return None
 
 
-async def _resolve_organizations(db: AsyncSession, raw: str) -> list[Any]:
+async def _resolve_organizations(
+    db: AsyncSession, raw: str, cache: dict[str, Any] | None = None
+) -> list[Any]:
     """Vergul/nuqta-vergul bilan ajratilgan nomlardan organization id'lar (max 5)."""
     names = [n.strip() for n in raw.replace(";", ",").split(",") if n.strip()]
     org_ids: list[Any] = []
     for nm in names[:5]:
+        nm_lower = nm.lower()
+        if cache is not None and nm_lower in cache:
+            org_id = cache[nm_lower]
+            if org_id:
+                org_ids.append(org_id)
+            continue
+
         org = (
             await db.execute(
-                select(Organization.id).where(
-                    func.lower(Organization.name) == nm.lower()
-                )
+                select(Organization.id).where(func.lower(Organization.name) == nm_lower)
             )
         ).scalar_one_or_none()
+        if cache is not None:
+            cache[nm_lower] = org
         if org:
             org_ids.append(org)
     return org_ids
 
 
-async def import_supervisors(
-    db: AsyncSession, file_bytes: bytes
-) -> SupervisorImportResponse:
+async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorImportResponse:
     rows, parse_errors = _parse_excel(file_bytes)
     errors = list(parse_errors)
     credentials: list[SupervisorImportCredentials] = []
     created = 0
     skipped = 0
+
+    faculty_cache = {}
+    department_cache = {}
+    org_cache = {}
+
+    # Oldindan mavjud username'larni keshlab olamiz
+    existing_usernames = set(
+        (await db.execute(select(User.username).where(User.username.is_not(None)))).scalars().all()
+    )
 
     for rec in rows:
         row_idx = rec.get("_row_idx", 0)
@@ -242,10 +308,7 @@ async def import_supervisors(
         username = rec.get("username")
         if username:
             username = str(username).strip()
-            exists = (
-                await db.execute(select(User.id).where(User.username == username))
-            ).scalar_one_or_none()
-            if exists:
+            if username in existing_usernames:
                 skipped += 1
                 continue
 
@@ -256,20 +319,38 @@ async def import_supervisors(
                 department_id = None
                 faculty_name = rec.get("faculty_name")
                 if faculty_name:
-                    faculty = await _find_faculty(db, str(faculty_name))
+                    faculty = await _find_faculty(db, str(faculty_name), faculty_cache)
                     if not faculty:
                         raise ValueError(f"Fakultet topilmadi: {faculty_name}")
                     faculty_id = faculty.id
                     dept_name = rec.get("department_name")
                     if dept_name:
-                        dept = await _find_or_create_department(
-                            db, faculty_id, str(dept_name)
+                        dept = await _find_department(
+                            db, faculty_id, str(dept_name), department_cache
                         )
+                        if not dept:
+                            raise ValueError(f"Kafedra topilmadi: {dept_name}")
                         department_id = dept.id
 
-                login = username or await _generate_unique_login(
-                    db, app_settings.LOGIN_YEAR_PREFIX
-                )
+                login = username
+                if not login:
+                    # Keshni hisobga olgan holda unikal login yaratish
+                    prefix = app_settings.LOGIN_YEAR_PREFIX
+                    import secrets
+                    import string
+
+                    for _ in range(10):
+                        suffix = "".join(secrets.choice(string.digits) for _ in range(8))
+                        cand = f"{prefix}{suffix}"
+                        if cand not in existing_usernames:
+                            login = cand
+                            break
+                    if not login:
+                        raise RuntimeError(
+                            "Unique login generatsiya qila olmadim — qayta urinib ko'ring"
+                        )
+
+                existing_usernames.add(login)
                 password = login  # login = parol (birinchi kirishda almashtiriladi)
 
                 user = User(
@@ -307,7 +388,7 @@ async def import_supervisors(
 
                 org_raw = rec.get("organization_names")
                 if org_raw:
-                    for org_id in await _resolve_organizations(db, str(org_raw)):
+                    for org_id in await _resolve_organizations(db, str(org_raw), org_cache):
                         db.add(
                             SupervisorOrganization(
                                 supervisor_id=supervisor.id, organization_id=org_id
@@ -315,17 +396,13 @@ async def import_supervisors(
                         )
 
             credentials.append(
-                SupervisorImportCredentials(
-                    full_name=full_name, username=login, password=password
-                )
+                SupervisorImportCredentials(full_name=full_name, username=login, password=password)
             )
             created += 1
         except Exception as e:  # noqa: BLE001
             logger.warning(f"Supervisor import xato (qator {row_idx}): {e}")
             errors.append(
-                SupervisorImportError(
-                    row=row_idx, name=full_name, message=f"Xatolik: {e}"
-                )
+                SupervisorImportError(row=row_idx, name=full_name, message=f"Xatolik: {e}")
             )
 
     await db.commit()

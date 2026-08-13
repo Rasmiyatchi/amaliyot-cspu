@@ -57,10 +57,12 @@ class OrganizationKind(StrEnum):
     SCHOOL = "school"  # Umumiy o'rta ta'lim maktabi
     MTT = "mtt"  # Maktabgacha ta'lim tashkiloti
     LYCEUM = "lyceum"  # Akademik litsey
-    COLLEGE = "college"  # Kasb-hunar kolleji
-    COMPANY = "company"  # Ishlab chiqarish korxonasi
-    UNIVERSITY = "university"  # Universitet/OTM
-    OTHER = "other"
+    COLLEGE = "college"  # Professional ta'lim muassasasi
+    UNIVERSITY = "university"  # Oliy ta'lim muassasasi
+    STATE_ORGANIZATION = "state_organization"  # Davlat tashkiloti
+    PRIVATE_ORGANIZATION = "private_organization"  # Xususiy tashkilot
+    COMPANY = "company"  # Korxona
+    OTHER = "other"  # Boshqa
 
 
 class AssignmentStatus(StrEnum):
@@ -95,17 +97,28 @@ class ContractTemplate(StrEnum):
     PARTNERSHIP = "partnership"  # Dastlabki hamkorlik (№8490 kabi)
 
 
+class ContractTemplateStatus(StrEnum):
+    """Shartnoma shabloni holati."""
+
+    DRAFT = "draft"
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    ARCHIVED = "archived"
+
+
 class ApplicationStatus(StrEnum):
-    """Talaba amaliyot arizasi statusi.
+    """Talaba amaliyot arizasi statusi."""
 
-    PENDING → talaba ariza yubordi, super admin ko'rib chiqishi kutilyapti
-    APPROVED → super admin QR bilan tasdiqladi
-    REJECTED → super admin rad etdi
-    """
-
-    PENDING = "pending"
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    UNDER_REVIEW = "under_review"
+    REVISION_REQUIRED = "revision_required"
+    RESUBMITTED = "resubmitted"
     APPROVED = "approved"
+    ACTIVE = "active"
     REJECTED = "rejected"
+    EXPIRED = "expired"
+    ARCHIVED = "archived"
 
 
 class AttendanceDayStatus(StrEnum):

@@ -48,7 +48,11 @@ export function useUploadAttachment(kind: AttachmentKind, entityId: UUID) {
   return useMutation({
     mutationFn: (file: File) =>
       postFile(`/api/v1/uploads/entity/${kind}/${entityId}`, file),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: () => {
+      if (kind === "task") qc.invalidateQueries({ queryKey: ["tasks"] });
+      else if (kind === "journal") qc.invalidateQueries({ queryKey: ["journal"] });
+      else if (kind === "analysis") qc.invalidateQueries({ queryKey: ["analyses"] });
+    },
   });
 }
 
@@ -66,7 +70,11 @@ export function useDeleteAttachment(kind: AttachmentKind, entityId: UUID) {
       );
       if (!res.ok) throw new Error(i18n.t("common.deleteError"));
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: () => {
+      if (kind === "task") qc.invalidateQueries({ queryKey: ["tasks"] });
+      else if (kind === "journal") qc.invalidateQueries({ queryKey: ["journal"] });
+      else if (kind === "analysis") qc.invalidateQueries({ queryKey: ["analyses"] });
+    },
   });
 }
 
@@ -94,7 +102,9 @@ export function useAssignmentAttachments(assignmentId: UUID | null) {
 }
 
 /** Auth bilan faylni yuklab olish va browser'da saqlash. */
-export async function downloadAttachment(att: Attachment): Promise<void> {
+export async function downloadAttachment(
+  att: Pick<Attachment, "name" | "path">,
+): Promise<void> {
   const token = useAuthStore.getState().accessToken;
   const res = await fetch(`/api/v1/uploads/file/${att.path}`, {
     headers: { Authorization: `Bearer ${token}` },

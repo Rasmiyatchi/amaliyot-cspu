@@ -41,7 +41,7 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
 
   useEffect(() => {
     setContent(task?.submission_md ?? "");
-  }, [task]);
+  }, [task?.id]);
 
   if (!task) return null;
 
@@ -53,7 +53,10 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
     try {
       await submit.mutateAsync({
         id: task.id,
-        data: { submission_md: content.trim() },
+        data: { 
+          submission_md: content.trim(),
+          attachments: (task.attachments as any) || [],
+        },
       });
       toast.success(t("studentTaskSubmitDialog.submitted"));
       onClose();

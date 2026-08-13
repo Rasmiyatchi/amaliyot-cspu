@@ -14,6 +14,9 @@ class DocumentRead(BaseModel):
     kind: DocumentKind
     practice_type_id: UUID | None = None
     practice_type_name: str | None = None
+    course: int | None = None
+    education_form: str | None = None
+    direction_id: UUID | None = None
     title: str
     description: str | None = None
     file_attachment: dict[str, Any]
@@ -28,6 +31,9 @@ class DocumentRead(BaseModel):
 class DocumentCreate(BaseModel):
     kind: DocumentKind
     practice_type_id: UUID | None = None
+    course: int | None = None
+    education_form: str | None = None
+    direction_id: UUID | None = None
     title: str = Field(..., min_length=1, max_length=500)
     description: str | None = Field(None, max_length=10_000)
     # file_attachment dict shape: {"id","name","path","mime","size","uploaded_at","uploaded_by_id"}
@@ -36,6 +42,9 @@ class DocumentCreate(BaseModel):
 
 class DocumentUpdate(BaseModel):
     practice_type_id: UUID | None = None
+    course: int | None = None
+    education_form: str | None = None
+    direction_id: UUID | None = None
     title: str | None = Field(None, min_length=1, max_length=500)
     description: str | None = Field(None, max_length=10_000)
     file_attachment: dict[str, Any] | None = None
