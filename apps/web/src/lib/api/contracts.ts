@@ -130,7 +130,10 @@ export function useVerifyContract(token: string | null) {
     queryKey: ["verify", token],
     enabled: !!token,
     queryFn: async () => {
-      const res = await fetch(`/verify/${token}`, { credentials: "omit" });
+      let res = await fetch(`/api/v1/verify/${token}`, { credentials: "omit" });
+      if (!res.ok) {
+        res = await fetch(`/verify/${token}`, { credentials: "omit" });
+      }
       if (!res.ok) throw new Error(i18n.t("common.contractNotFound"));
       return (await res.json()) as ContractVerifyResponse;
     },

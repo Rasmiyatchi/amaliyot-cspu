@@ -37,7 +37,11 @@ def _qr_png(url: str) -> bytes:
     qr.add_data(url)
     qr.make(fit=True)
     buf = io.BytesIO()
-    qr.make_image(fill_color="black", back_color="white").save(buf, format="PNG")
+    img = qr.make_image(fill_color="black", back_color="white")
+    try:
+        img.save(buf, format="PNG")
+    except (TypeError, ValueError, KeyError):
+        img.save(buf)
     return buf.getvalue()
 
 
@@ -627,12 +631,26 @@ async def appendix_by_region(db: AsyncSession) -> list[dict[str, Any]]:
 
 
 async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
+    from sqlalchemy import or_
+
+    # UUID yoki token yoki shartnoma raqami orqali qidirish
+    conds = [
+        PracticeApplication.qr_token == qr_token,
+        PracticeApplication.contract_number == qr_token,
+    ]
+    try:
+        parsed_uuid = UUID(qr_token)
+        conds.append(PracticeApplication.id == parsed_uuid)
+    except (ValueError, TypeError, AttributeError):
+        pass
+
     row = (
         await db.execute(
             select(
                 PracticeApplication.contract_number,
                 PracticeApplication.status,
                 PracticeApplication.organization_name,
+                PracticeApplication.variable_values,
                 PracticeApplication.created_at,
                 PracticeApplication.reviewed_at,
                 ContractTemplateDoc.name.label("contract_template_name"),
@@ -641,7 +659,7 @@ async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
                 ContractTemplateDoc,
                 ContractTemplateDoc.id == PracticeApplication.contract_template_id,
             )
-            .where(PracticeApplication.qr_token == qr_token)
+            .where(or_(*conds))
         )
     ).first()
 
@@ -650,18 +668,29 @@ async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
 
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ariza topilmadi")
 
+    var_vals = row.variable_values or {}
+    org_name = (
+        row.organization_name
+        or var_vals.get("organization_name")
+        or var_vals.get("company_name")
+        or var_vals.get("school_name")
+        or "Amaliyot tashkiloti"
+    )
+
+    is_active = row.status in (ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE)
+
     return {
         "number": row.contract_number or "Kutilmoqda",
         "template_ref": row.contract_template_name or "Amaliyot shartnomasi",
-        "status": "active" if row.status == ApplicationStatus.APPROVED else "draft",
-        "organization_name": row.organization_name,
+        "status": "active" if is_active else "draft",
+        "organization_name": org_name,
         "practice_type_name": "Talaba arizasi asosida",
         "start_date": row.created_at.date(),
-        "end_date": row.created_at.date(),  # just filler
+        "end_date": row.created_at.date(),
         "students_count": 1,
-        "generated_at": row.reviewed_at,
+        "generated_at": row.reviewed_at or row.created_at,
         "signed_at_org": None,
         "revoked_reason": None,
         "revoked_at": None,
-        "is_valid": row.status == ApplicationStatus.APPROVED,
+        "is_valid": is_active,
     }

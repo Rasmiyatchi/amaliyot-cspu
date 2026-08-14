@@ -367,6 +367,18 @@ async def upload_scan(db: AsyncSession, id_: UUID, content: bytes, filename: str
 
 async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
     """Public QR verification — auth talab qilmaydi, minimal ma'lumot."""
+    from uuid import UUID as PyUUID
+
+    conds = [
+        Contract.qr_token == qr_token,
+        Contract.number == qr_token,
+    ]
+    try:
+        parsed_uuid = PyUUID(qr_token)
+        conds.append(Contract.id == parsed_uuid)
+    except (ValueError, TypeError, AttributeError):
+        pass
+
     row = (
         (
             await db.execute(
@@ -386,7 +398,7 @@ async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
                 )
                 .join(Organization, Organization.id == Contract.organization_id)
                 .join(PracticeType, PracticeType.id == Contract.practice_type_id)
-                .where(Contract.qr_token == qr_token)
+                .where(or_(*conds))
             )
         )
         .mappings()
