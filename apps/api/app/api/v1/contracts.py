@@ -169,6 +169,7 @@ public_router = APIRouter(tags=["public"])
 @public_router.get("/verify/{qr_token}", response_model=ContractVerifyResponse)
 async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyResponse:
     """QR kod bosilganda ochiluvchi public endpoint — parol talab qilmaydi."""
+    pdf_url = f"/api/v1/verify/{qr_token}/pdf"
     try:
         data = await svc.verify_by_token(db, qr_token)
 
@@ -187,8 +188,8 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
             number=data["number"],
             template_ref=data["template_ref"],
             status=status_,
-            organization_name=data["organization_name"],
-            practice_type_name=data["practice_type_name"],
+            organization_name=data["organization_name"] or "Tashkilot",
+            practice_type_name=data["practice_type_name"] or "Amaliyot",
             start_date=data["start_date"],
             end_date=data["end_date"],
             students_count=len(data["students"] or []),
@@ -197,6 +198,7 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
             revoked_reason=data["revoked_reason"],
             revoked_at=data["revoked_at"],
             is_valid=is_valid,
+            pdf_url=pdf_url,
         )
     except HTTPException:
         # Fallback to PracticeApplication verification
@@ -208,8 +210,8 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
                 number=pa_data["number"],
                 template_ref=pa_data["template_ref"],
                 status=pa_data["status"],
-                organization_name=pa_data["organization_name"],
-                practice_type_name=pa_data["practice_type_name"],
+                organization_name=pa_data["organization_name"] or "Amaliyot tashkiloti",
+                practice_type_name=pa_data["practice_type_name"] or "Talaba arizasi asosida",
                 start_date=pa_data["start_date"],
                 end_date=pa_data["end_date"],
                 students_count=pa_data["students_count"],
@@ -218,7 +220,28 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
                 revoked_reason=pa_data["revoked_reason"],
                 revoked_at=pa_data["revoked_at"],
                 is_valid=pa_data["is_valid"],
+                pdf_url=pa_data.get("pdf_url") or pdf_url,
             )
         except HTTPException as e:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Shartnoma topilmadi") from e
+
+
+@public_router.get("/verify/{qr_token}/pdf")
+async def get_verified_contract_pdf(qr_token: str, db: SessionDep) -> FileResponse:
+    """QR kod orqali generatsiya qilingan rasmiy PDF hujjatni to'g'ridan-to'g'ri ko'rish yoki yuklab olish."""
+    from app.services import practice_application as pa_svc
+
+    try:
+        file_path, filename = await pa_svc.get_public_contract_pdf_path(db, qr_token)
+        return FileResponse(
+            path=str(file_path),
+            media_type="application/pdf",
+            filename=f"{filename}.pdf" if not filename.endswith(".pdf") else filename,
+            content_disposition_type="inline",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi") from e
+
 

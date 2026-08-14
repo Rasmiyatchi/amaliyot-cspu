@@ -11,6 +11,7 @@ from uuid import UUID
 
 import qrcode
 from fastapi import HTTPException, status
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -693,4 +694,67 @@ async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
         "revoked_reason": None,
         "revoked_at": None,
         "is_valid": is_active,
+        "pdf_url": f"/api/v1/verify/{qr_token}/pdf",
     }
+
+
+async def get_public_contract_pdf_path(db: AsyncSession, qr_token: str) -> tuple[Path, str]:
+    """QR token, shartnoma raqami yoki ID orqali ochiq (public) PDF faylini topish."""
+    from sqlalchemy import or_
+
+    conds = [
+        PracticeApplication.qr_token == qr_token,
+        PracticeApplication.contract_number == qr_token,
+    ]
+    try:
+        parsed_uuid = UUID(qr_token)
+        conds.append(PracticeApplication.id == parsed_uuid)
+    except (ValueError, TypeError, AttributeError):
+        pass
+
+    obj = (await db.execute(select(PracticeApplication).where(or_(*conds)))).scalar_one_or_none()
+
+    if obj:
+        if not obj.contract_file and obj.contract_template_id and obj.status in (ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE):
+            await _generate_contract(db, obj)
+            await db.commit()
+
+        if obj.contract_file:
+            base = Path(__file__).parent.parent.parent
+            rel = str(obj.contract_file.get("path", ""))
+            if rel.startswith("storage/"):
+                file_path = base / rel
+            else:
+                file_path = base / "storage" / "contract_templates" / rel
+
+            if not file_path.exists() and obj.contract_template_id:
+                await _generate_contract(db, obj)
+                await db.commit()
+                rel = str(obj.contract_file.get("path", ""))
+                file_path = (base / rel) if rel.startswith("storage/") else (base / "storage" / "contract_templates" / rel)
+
+            if file_path.exists():
+                return file_path, obj.contract_number or str(obj.id)
+
+    # Contract modelidan qidiramiz
+    from app.models.contract import Contract
+
+    c_conds = [
+        Contract.qr_token == qr_token,
+        Contract.number == qr_token,
+    ]
+    try:
+        parsed_uuid = UUID(qr_token)
+        c_conds.append(Contract.id == parsed_uuid)
+    except (ValueError, TypeError, AttributeError):
+        pass
+
+    contract = (await db.execute(select(Contract).where(or_(*c_conds)))).scalar_one_or_none()
+    if contract and contract.pdf_path:
+        base = Path(__file__).parent.parent.parent
+        file_path = base / contract.pdf_path
+        if file_path.exists():
+            return file_path, contract.number or str(contract.id)
+
+    raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi")
+

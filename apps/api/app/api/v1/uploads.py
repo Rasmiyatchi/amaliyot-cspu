@@ -151,8 +151,21 @@ async def serve_file(
     abs_path = svc.absolute_path(path)
     if not abs_path.exists() or not abs_path.is_file():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Fayl topilmadi")
+
+    ext = abs_path.suffix.lower()
+    media_type = "application/octet-stream"
+    if ext == ".pdf":
+        media_type = "application/pdf"
+    elif ext in [".jpg", ".jpeg"]:
+        media_type = "image/jpeg"
+    elif ext == ".png":
+        media_type = "image/png"
+    elif ext == ".webp":
+        media_type = "image/webp"
+
     return FileResponse(
         path=abs_path,
-        filename=Path(path).name,
-        media_type="application/octet-stream",
+        filename=abs_path.name,
+        media_type=media_type,
+        content_disposition_type="inline",
     )

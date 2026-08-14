@@ -108,7 +108,11 @@ def absolute_path(rel_path: str) -> Path:
     Path traversal'dan himoya qilamiz — natija STORAGE_ROOT.parent ichida bo'lishi shart.
     """
     base = STORAGE_ROOT.parent.resolve()
-    candidate = (base / rel_path).resolve()
+    clean_rel = rel_path.lstrip("/\\")
+    if clean_rel.startswith("storage/") or clean_rel.startswith("storage\\"):
+        clean_rel = clean_rel[8:]
+
+    candidate = (base / clean_rel).resolve()
     try:
         candidate.relative_to(base)
     except ValueError as e:
