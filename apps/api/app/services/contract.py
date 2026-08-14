@@ -34,11 +34,10 @@ TEMPLATE_SHORT_CODES: dict[ContractTemplate, str] = {
 
 
 async def _next_contract_number(db: AsyncSession, template: ContractTemplate, year: int) -> str:
-    """CHDPU-4+2-2025-0001 formatida raqam yaratadi."""
-    short = TEMPLATE_SHORT_CODES[template]
-    prefix = f"CHDPU-{short}-{year}-"
+    """26000001 formatida raqam yaratadi."""
+    prefix = "26"
 
-    # O'sha yildagi shu template'ning eng katta sequence'ini topamiz
+    # Eng katta sequence'ni topamiz
     stmt = (
         select(Contract.number)
         .where(Contract.number.like(f"{prefix}%"))
@@ -51,11 +50,11 @@ async def _next_contract_number(db: AsyncSession, template: ContractTemplate, ye
         seq = 1
     else:
         try:
-            seq = int(last.split("-")[-1]) + 1
+            seq = int(last[len(prefix):]) + 1
         except (ValueError, IndexError):
             seq = 1
 
-    return f"{prefix}{seq:04d}"
+    return f"{prefix}{seq:06d}"
 
 
 # ─── Read helpers ─────────────────────────────────────────

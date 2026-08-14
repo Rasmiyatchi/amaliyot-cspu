@@ -321,7 +321,11 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                 if faculty_name:
                     faculty = await _find_faculty(db, str(faculty_name), faculty_cache)
                     if not faculty:
-                        raise ValueError(f"Fakultet topilmadi: {faculty_name}")
+                        faculty = Faculty(name=str(faculty_name).strip())
+                        db.add(faculty)
+                        await db.flush()
+                        search_name = str(faculty_name).strip().lower()
+                        faculty_cache[search_name] = faculty
                     faculty_id = faculty.id
                     dept_name = rec.get("department_name")
                     if dept_name:
@@ -329,7 +333,11 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                             db, faculty_id, str(dept_name), department_cache
                         )
                         if not dept:
-                            raise ValueError(f"Kafedra topilmadi: {dept_name}")
+                            dept = Department(faculty_id=faculty_id, name=str(dept_name).strip())
+                            db.add(dept)
+                            await db.flush()
+                            search_name_dept = str(dept_name).strip().lower()
+                            department_cache[(faculty_id, search_name_dept)] = dept
                         department_id = dept.id
 
                 login = username

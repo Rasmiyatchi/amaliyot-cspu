@@ -54,6 +54,7 @@ async def get_allowed_variables(_: RequireSuperAdmin) -> list[dict[str, str]]:
         {"key": "qr_code", "label": "QR-Kod joyi", "source": "system"},
         # ─── Student input variables (talaba kiritadi) ────
         {"key": "organization_name", "label": "Tashkilot nomi", "source": "student_input"},
+        {"key": "organization_address", "label": "Tashkilot manzili", "source": "student_input"},
         {"key": "organization_type", "label": "Tashkilot turi", "source": "student_input"},
         {
             "key": "organization_email",

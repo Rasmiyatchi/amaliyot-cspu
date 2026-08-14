@@ -294,3 +294,24 @@ select:focus-visible,
     radial-gradient(at 80% 100%, hsl(280 65% 60% / 0.1) 0px, transparent 50%),
     hsl(var(--background));
 }
+
+/* ─── Contract Template Editor Fixes ──────────────────────────── */
+.contract-a4-page p {
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: inherit;
+}
+
+.contract-a4-page h1,
+.contract-a4-page h2,
+.contract-a4-page h3,
+.contract-a4-page h4 {
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+}
+
+.contract-a4-page ul,
+.contract-a4-page ol {
+  margin-top: 0;
+  margin-bottom: 0;
+}

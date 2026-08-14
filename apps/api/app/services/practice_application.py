@@ -42,8 +42,8 @@ def _qr_png(url: str) -> bytes:
 
 
 async def _next_contract_number(db: AsyncSession, year: int) -> str:
-    """CHDPU-SH-{yil}-{0001} formatida takrorlanmas raqam."""
-    prefix = f"CHDPU-SH-{year}-"
+    """26000001 formatida takrorlanmas raqam."""
+    prefix = "26"
     last = (
         await db.execute(
             select(PracticeApplication.contract_number)
@@ -55,10 +55,10 @@ async def _next_contract_number(db: AsyncSession, year: int) -> str:
     seq = 1
     if last:
         try:
-            seq = int(last.split("-")[-1]) + 1
+            seq = int(last[len(prefix):]) + 1
         except (ValueError, IndexError):
             seq = 1
-    return f"{prefix}{seq:04d}"
+    return f"{prefix}{seq:06d}"
 
 
 async def _student_for_user(db: AsyncSession, user: User) -> Student:

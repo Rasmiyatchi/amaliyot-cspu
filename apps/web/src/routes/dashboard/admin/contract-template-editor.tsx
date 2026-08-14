@@ -9,6 +9,7 @@ import {
   Italic,
   Underline as UnderlineIcon,
   Strikethrough,
+  Indent,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -46,10 +47,86 @@ import TableHeader from "@tiptap/extension-table-header";
 import TiptapLink from "@tiptap/extension-link";
 import TiptapImage from "@tiptap/extension-image";
 import { TextStyle } from "@tiptap/extension-text-style";
-import FontFamily from "@tiptap/extension-font-family";
+import { Extension } from "@tiptap/react";
 import Placeholder from "@tiptap/extension-placeholder";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
+
+// ─── Custom Line Height Extension ──────────────────────
+const LineHeight = Extension.create({
+  name: "lineHeight",
+  addOptions() {
+    return {
+      types: ["paragraph", "heading", "listItem"],
+      defaultLineHeight: "normal",
+    };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          lineHeight: {
+            default: this.options.defaultLineHeight,
+            parseHTML: (element: HTMLElement) => element.style.lineHeight || this.options.defaultLineHeight,
+            renderHTML: (attributes: Record<string, any>) => {
+              if (attributes.lineHeight === this.options.defaultLineHeight) return {};
+              return { style: `line-height: ${attributes.lineHeight}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setLineHeight: (lineHeight: string) => ({ commands }: any) => {
+        return this.options.types.every((type: string) => commands.updateAttributes(type, { lineHeight }));
+      },
+      unsetLineHeight: () => ({ commands }: any) => {
+        return this.options.types.every((type: string) => commands.resetAttributes(type, "lineHeight"));
+      },
+    } as any;
+  },
+});
+
+// ─── Custom Text Indent Extension ──────────────────────
+const TextIndent = Extension.create({
+  name: "textIndent",
+  addOptions() {
+    return {
+      types: ["paragraph", "heading"],
+      defaultIndent: "0",
+    };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          textIndent: {
+            default: this.options.defaultIndent,
+            parseHTML: (element: HTMLElement) => element.style.textIndent || this.options.defaultIndent,
+            renderHTML: (attributes: Record<string, any>) => {
+              if (attributes.textIndent === this.options.defaultIndent) return {};
+              return { style: `text-indent: ${attributes.textIndent}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setTextIndent: (textIndent: string) => ({ commands }: any) => {
+        return this.options.types.every((type: string) => commands.updateAttributes(type, { textIndent }));
+      },
+      unsetTextIndent: () => ({ commands }: any) => {
+        return this.options.types.every((type: string) => commands.resetAttributes(type, "textIndent"));
+      },
+    } as any;
+  },
+});
 
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -140,7 +217,8 @@ export function ContractTemplateEditorPage() {
       TiptapLink.configure({ openOnClick: false }),
       TiptapImage,
       TextStyle,
-      FontFamily,
+      LineHeight,
+      TextIndent,
       Placeholder.configure({ placeholder: t("adminContractEditor.editorPlaceholder") }),
       Color,
       Highlight.configure({ multicolor: true }),
@@ -338,24 +416,24 @@ export function ContractTemplateEditorPage() {
 
             <ToolbarDivider />
 
-            {/* Font Family */}
+            {/* Line Height (Interval) */}
             <Select
-              value={editor.getAttributes("textStyle").fontFamily || "default"}
+              value={editor.getAttributes("paragraph").lineHeight || "normal"}
               onValueChange={(v) =>
-                v === "default"
-                  ? editor.chain().focus().unsetFontFamily().run()
-                  : editor.chain().focus().setFontFamily(v).run()
+                v === "normal"
+                  ? (editor.chain().focus() as any).unsetLineHeight().run()
+                  : (editor.chain().focus() as any).setLineHeight(v).run()
               }
             >
               <SelectTrigger className="h-8 w-[130px] text-xs">
-                <SelectValue placeholder={t("adminContractEditor.font")} />
+                <SelectValue placeholder="Interval" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">{t("adminContractEditor.fontDefault")}</SelectItem>
-                <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-                <SelectItem value="Arial">Arial</SelectItem>
-                <SelectItem value="Georgia">Georgia</SelectItem>
-                <SelectItem value="Courier New">Courier New</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="1">1.0</SelectItem>
+                <SelectItem value="1.15">1.15</SelectItem>
+                <SelectItem value="1.5">1.5</SelectItem>
+                <SelectItem value="2">2.0</SelectItem>
               </SelectContent>
             </Select>
 
@@ -413,6 +491,19 @@ export function ContractTemplateEditorPage() {
               tooltip={t("adminContractEditor.alignJustify")}
               active={editor.isActive({ textAlign: "justify" })}
               onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+            />
+            <ToolbarButton
+              icon={<Indent className="h-4 w-4" />}
+              tooltip="Abzas (Xat boshi)"
+              active={editor.getAttributes("paragraph").textIndent === "1.25cm"}
+              onClick={() => {
+                const currentIndent = editor.getAttributes("paragraph").textIndent;
+                if (currentIndent === "1.25cm") {
+                  (editor.chain().focus() as any).unsetTextIndent().run();
+                } else {
+                  (editor.chain().focus() as any).setTextIndent("1.25cm").run();
+                }
+              }}
             />
 
             <ToolbarDivider />
@@ -544,6 +635,7 @@ export function ContractTemplateEditorPage() {
               className="contract-a4-page"
               style={{
                 backgroundColor: "white",
+                fontFamily: '"Times New Roman", Times, serif',
                 minHeight: "297mm",
                 padding: "25mm 20mm",
                 boxShadow: "0 4px 24px rgba(0,0,0,0.12)",
