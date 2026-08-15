@@ -50,8 +50,12 @@ def _generate_qr_data_uri(url: str) -> str:
     buf = BytesIO()
     try:
         img.save(buf, format="PNG")
-    except (TypeError, ValueError, KeyError):
-        img.save(buf)
+    except (TypeError, ValueError, KeyError, AttributeError):
+        try:
+            img.save(buf)
+        except Exception:
+            if hasattr(img, "_img"):
+                img._img.save(buf, format="PNG")
     buf.seek(0)
     return base64.b64encode(buf.read()).decode("ascii")
 

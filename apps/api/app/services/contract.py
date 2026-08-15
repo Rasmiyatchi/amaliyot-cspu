@@ -34,27 +34,10 @@ TEMPLATE_SHORT_CODES: dict[ContractTemplate, str] = {
 
 
 async def _next_contract_number(db: AsyncSession, template: ContractTemplate, year: int) -> str:
-    """26000001 formatida raqam yaratadi."""
-    prefix = "26"
+    """26000001 formatida raqam yaratadi (barcha shartnomalar uchun unikal)."""
+    from app.services.practice_application import get_next_shared_contract_number
 
-    # Eng katta sequence'ni topamiz
-    stmt = (
-        select(Contract.number)
-        .where(Contract.number.like(f"{prefix}%"))
-        .order_by(Contract.number.desc())
-        .limit(1)
-    )
-    last = (await db.execute(stmt)).scalar_one_or_none()
-
-    if last is None:
-        seq = 1
-    else:
-        try:
-            seq = int(last[len(prefix):]) + 1
-        except (ValueError, IndexError):
-            seq = 1
-
-    return f"{prefix}{seq:06d}"
+    return await get_next_shared_contract_number(db)
 
 
 # ─── Read helpers ─────────────────────────────────────────
@@ -248,6 +231,9 @@ async def create_contract(db: AsyncSession, data: BaseModel, created_by: UUID) -
     number = await _next_contract_number(db, ContractTemplate(payload["template_ref"]), year)
     qr_token = secrets.token_urlsafe(16)
 
+    tpl_id = payload.get("contract_template_id")
+    var_vals = payload.get("variable_values")
+
     contract = Contract(
         number=number,
         template_ref=payload["template_ref"],
@@ -265,6 +251,18 @@ async def create_contract(db: AsyncSession, data: BaseModel, created_by: UUID) -
     db.add(contract)
     await db.commit()
     await db.refresh(contract)
+
+    from app.services import practice_application as pa_svc
+
+    try:
+        await pa_svc.generate_official_contract_pdf(
+            db, contract.id, template_id=tpl_id, variable_values=var_vals
+        )
+    except Exception as e:  # noqa: BLE001
+        from loguru import logger
+
+        logger.warning(f"Rasmiy shartnoma PDF generatsiya xatosi ({contract.id}): {e}")
+
     return await get_contract(db, contract.id)
 
 
@@ -310,8 +308,6 @@ async def revoke_contract(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[
 
 async def generate_pdf(db: AsyncSession, id_: UUID) -> dict[str, Any]:
     """Shartnomaning PDF + QR variantini generatsiya qiladi va fayl yo'lini saqlaydi."""
-    from app.services import pdf as pdf_svc
-
     contract = await db.get(Contract, id_)
     if not contract:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Shartnoma topilmadi: {id_}")
@@ -321,23 +317,18 @@ async def generate_pdf(db: AsyncSession, id_: UUID) -> dict[str, Any]:
             f"Regen faqat DRAFT/GENERATED holatda ({contract.status})",
         )
 
-    organization = await db.get(Organization, contract.organization_id)
-    if not organization:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Tashkilot topilmadi")
+    from app.services import practice_application as pa_svc
 
     try:
-        pdf_bytes = pdf_svc.render_contract_pdf(contract, organization)
+        await pa_svc.generate_official_contract_pdf(db, contract.id)
+    except HTTPException:
+        raise
     except Exception as e:  # noqa: BLE001
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             f"PDF generatsiya xatoligi: {e}",
         ) from e
 
-    contract.pdf_path = pdf_svc.save_contract_pdf(contract, pdf_bytes)
-    contract.status = ContractStatus.GENERATED
-    contract.generated_at = datetime.now(UTC)
-
-    await db.commit()
     return await get_contract(db, contract.id)
 
 

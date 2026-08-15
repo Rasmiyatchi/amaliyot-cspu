@@ -24,7 +24,8 @@ class ContractStudentSnapshot(BaseModel):
 class ContractCreate(BaseModel):
     """Admin yaratish — mavjud assignments asosida (snapshot nusxa olinadi)."""
 
-    template_ref: ContractTemplate
+    template_ref: ContractTemplate = ContractTemplate.FOUR_PLUS_TWO
+    contract_template_id: UUID | None = None
     organization_id: UUID
     academic_year_id: UUID
     practice_type_id: UUID
@@ -32,6 +33,7 @@ class ContractCreate(BaseModel):
     start_date: date
     end_date: date
     notes: str | None = None
+    variable_values: dict[str, Any] | None = None
 
 
 class ContractUpdate(BaseModel):

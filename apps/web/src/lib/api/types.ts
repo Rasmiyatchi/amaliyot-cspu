@@ -378,7 +378,8 @@ export type Contract = {
 };
 
 export type ContractCreate = {
-  template_ref: ContractTemplate;
+  template_ref?: ContractTemplate | string;
+  contract_template_id?: UUID | null;
   organization_id: UUID;
   academic_year_id: UUID;
   practice_type_id: UUID;
@@ -386,6 +387,7 @@ export type ContractCreate = {
   start_date: ISODate;
   end_date: ISODate;
   notes?: string | null;
+  variable_values?: Record<string, unknown> | null;
 };
 
 // ─── System Settings ─────────────────────────────────────

@@ -88,19 +88,30 @@ async def generate_pdf(id_: UUID, db: SessionDep, _: RequireAdmin) -> ContractRe
 
 @router.get("/{id_}/pdf")
 async def download_pdf(id_: UUID, db: SessionDep, _: RequireAdmin) -> FileResponse:
-    """Saqlangan PDF faylini yuklab olish."""
+    """Saqlangan PDF faylini yuklab olish yoki ko'rish."""
     contract = await svc.get_contract(db, id_)
     if not contract["pdf_path"]:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "PDF hali generatsiya qilinmagan")
-    from app.services.pdf import STORAGE_DIR
+        contract = await svc.generate_pdf(db, id_)
 
-    abs_path = STORAGE_DIR.parent.parent / contract["pdf_path"]
+    base = Path(__file__).parent.parent.parent.parent
+    clean_rel = str(contract["pdf_path"] or "").lstrip("/\\")
+    if clean_rel.startswith("storage/") or clean_rel.startswith("storage\\"):
+        abs_path = base / clean_rel
+    else:
+        abs_path = base / "storage" / "contracts" / clean_rel
+
     if not abs_path.exists():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "PDF fayli topilmadi")
+        contract = await svc.generate_pdf(db, id_)
+        clean_rel = str(contract["pdf_path"] or "").lstrip("/\\")
+        abs_path = (base / clean_rel) if (clean_rel.startswith("storage/") or clean_rel.startswith("storage\\")) else (base / "storage" / "contracts" / clean_rel)
+        if not abs_path.exists():
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "PDF fayli topilmadi")
+
     return FileResponse(
-        abs_path,
+        path=str(abs_path),
         media_type="application/pdf",
         filename=f"{contract['number']}.pdf",
+        content_disposition_type="inline",
     )
 
 

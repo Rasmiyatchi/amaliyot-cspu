@@ -1,10 +1,11 @@
 import { HTTPError } from "ky";
-import { Loader2 } from "lucide-react";
+import { FileText, Loader2, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,12 +28,13 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useAcademicYears } from "@/lib/api/academic";
 import { useAssignments } from "@/lib/api/assignments";
+import { useContractTemplates } from "@/lib/api/contract-templates";
 import { useCreateContract } from "@/lib/api/contracts";
 import { useOrganizations } from "@/lib/api/organizations";
 import { usePracticeTypes } from "@/lib/api/practice-types";
-import type { ContractTemplate } from "@/lib/api/types";
+import type { ContractTemplate, UUID } from "@/lib/api/types";
 
-const TEMPLATES: { value: ContractTemplate; labelKey: string }[] = [
+const FALLBACK_TEMPLATES: { value: ContractTemplate; labelKey: string }[] = [
   { value: "4_plus_2", labelKey: "contractsContractFormDialog.templates.fourPlusTwo" },
   { value: "pedagogical", labelKey: "contractsContractFormDialog.templates.pedagogical" },
   { value: "qualifying", labelKey: "contractsContractFormDialog.templates.qualifying" },
@@ -45,7 +47,9 @@ type Props = { open: boolean; onClose: () => void };
 export function ContractFormDialog({ open, onClose }: Props) {
   const { t } = useTranslation();
   const create = useCreateContract();
+  const contractTemplates = useContractTemplates();
 
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [templateRef, setTemplateRef] = useState<ContractTemplate>("4_plus_2");
   const [organizationId, setOrganizationId] = useState("");
   const [academicYearId, setAcademicYearId] = useState("");
@@ -54,10 +58,32 @@ export function ContractFormDialog({ open, onClose }: Props) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
 
   const organizations = useOrganizations({ is_active: true }, 1, 100);
   const academicYears = useAcademicYears();
   const practiceTypes = usePracticeTypes();
+
+  // Active templates list
+  const activeTemplates = useMemo(() => {
+    if (!contractTemplates.data) return [];
+    return contractTemplates.data.filter((t) => t.status === "active");
+  }, [contractTemplates.data]);
+
+  // Set default template when modal opens
+  useEffect(() => {
+    if (open) {
+      if (activeTemplates.length > 0 && !selectedTemplateId) {
+        const firstTpl = activeTemplates[0];
+        if (firstTpl) {
+          setSelectedTemplateId(firstTpl.id);
+          if (firstTpl.practice_type_id) {
+            setPracticeTypeId(firstTpl.practice_type_id);
+          }
+        }
+      }
+    }
+  }, [open, activeTemplates, selectedTemplateId]);
 
   // Aktiv AY avtomatik
   useEffect(() => {
@@ -66,6 +92,22 @@ export function ContractFormDialog({ open, onClose }: Props) {
       if (active) setAcademicYearId(active.id);
     }
   }, [open, academicYears.data, academicYearId]);
+
+  // Currently selected template object
+  const currentTemplate = useMemo(() => {
+    return (contractTemplates.data ?? []).find((t) => t.id === selectedTemplateId);
+  }, [contractTemplates.data, selectedTemplateId]);
+
+  // Custom student input variables for current template
+  const customVariables = useMemo(() => {
+    if (!currentTemplate) return [];
+    // If template has variables array
+    const vars = (currentTemplate as unknown as { variables?: Array<{ key: string; label: string; source: string }> }).variables;
+    if (Array.isArray(vars)) {
+      return vars.filter((v) => v.source === "student_input");
+    }
+    return [];
+  }, [currentTemplate]);
 
   // Filter bo'yicha matching assignmentlar
   const assignmentFilters = useMemo(
@@ -79,7 +121,16 @@ export function ContractFormDialog({ open, onClose }: Props) {
   const assignments = useAssignments(assignmentFilters, 1, 100);
   const canShowAssignments = !!organizationId && !!practiceTypeId && !!academicYearId;
 
+  const handleTemplateChange = (val: string) => {
+    setSelectedTemplateId(val);
+    const found = (contractTemplates.data ?? []).find((t) => t.id === val);
+    if (found?.practice_type_id) {
+      setPracticeTypeId(found.practice_type_id);
+    }
+  };
+
   const resetAll = () => {
+    setSelectedTemplateId("");
     setTemplateRef("4_plus_2");
     setOrganizationId("");
     setPracticeTypeId("");
@@ -87,6 +138,7 @@ export function ContractFormDialog({ open, onClose }: Props) {
     setStartDate("");
     setEndDate("");
     setNotes("");
+    setVariableValues({});
     create.reset();
   };
 
@@ -107,7 +159,7 @@ export function ContractFormDialog({ open, onClose }: Props) {
   };
 
   const canSubmit =
-    !!templateRef &&
+    (!!selectedTemplateId || !!templateRef) &&
     !!organizationId &&
     !!academicYearId &&
     !!practiceTypeId &&
@@ -118,6 +170,7 @@ export function ContractFormDialog({ open, onClose }: Props) {
   const handleSubmit = async () => {
     try {
       await create.mutateAsync({
+        contract_template_id: (selectedTemplateId as UUID) || null,
         template_ref: templateRef,
         organization_id: organizationId,
         academic_year_id: academicYearId,
@@ -126,6 +179,7 @@ export function ContractFormDialog({ open, onClose }: Props) {
         start_date: startDate,
         end_date: endDate,
         notes: notes || null,
+        variable_values: Object.keys(variableValues).length > 0 ? variableValues : null,
       });
       toast.success(t("contractsContractFormDialog.createdToast"));
       handleClose();
@@ -138,27 +192,57 @@ export function ContractFormDialog({ open, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t("contractsContractFormDialog.title")}</DialogTitle>
-          <DialogDescription>
-            {t("contractsContractFormDialog.subtitle")}
-          </DialogDescription>
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle>{t("contractsContractFormDialog.title")}</DialogTitle>
+              <DialogDescription>
+                {t("contractsContractFormDialog.subtitle")}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Template + AY */}
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <Label>{t("contractsContractFormDialog.templateLabel")} *</Label>
-              <Select value={templateRef} onValueChange={(v) => setTemplateRef(v as ContractTemplate)}>
+              <Label className="flex items-center gap-1.5">
+                <span>{t("contractsContractFormDialog.templateLabel")} *</span>
+                {activeTemplates.length > 0 && (
+                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
+                    <Sparkles className="mr-1 h-3 w-3 text-amber-500" />
+                    {activeTemplates.length} ta faol shablon
+                  </Badge>
+                )}
+              </Label>
+              <Select
+                value={selectedTemplateId || (activeTemplates[0]?.id ?? templateRef)}
+                onValueChange={handleTemplateChange}
+              >
                 <SelectTrigger className="mt-1.5">
-                  <SelectValue />
+                  <SelectValue placeholder="Shablonni tanlang..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {TEMPLATES.map((tpl) => (
-                    <SelectItem key={tpl.value} value={tpl.value}>
-                      {t(tpl.labelKey)}
-                    </SelectItem>
-                  ))}
+                  {contractTemplates.isLoading ? (
+                    <div className="p-2 text-center text-xs text-muted-foreground">
+                      Shablonlar yuklanmoqda...
+                    </div>
+                  ) : activeTemplates.length > 0 ? (
+                    activeTemplates.map((tpl) => (
+                      <SelectItem key={tpl.id} value={tpl.id}>
+                        {tpl.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    FALLBACK_TEMPLATES.map((tpl) => (
+                      <SelectItem key={tpl.value} value={tpl.value}>
+                        {t(tpl.labelKey)}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -220,6 +304,33 @@ export function ContractFormDialog({ open, onClose }: Props) {
               </Select>
             </div>
           </div>
+
+          {/* Dinamik maydonlar (agar shablonda maxsus student_input parametrlari bo'lsa) */}
+          {customVariables.length > 0 && (
+            <div className="rounded-lg border border-border/80 bg-muted/30 p-3 space-y-3">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Shablon parametrlarini to'ldirish
+              </Label>
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                {customVariables.map((v) => (
+                  <div key={v.key}>
+                    <Label className="text-xs">{v.label}</Label>
+                    <Input
+                      placeholder={v.label}
+                      value={variableValues[v.key] ?? ""}
+                      onChange={(e) =>
+                        setVariableValues((prev) => ({
+                          ...prev,
+                          [v.key]: e.target.value,
+                        }))
+                      }
+                      className="mt-1 h-8 text-xs"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <Separator />
 

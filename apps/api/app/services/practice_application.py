@@ -34,22 +34,31 @@ _EDU_FORM_LABEL = {
 
 
 def _qr_png(url: str) -> bytes:
-    qr = qrcode.QRCode(box_size=4, border=2)
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=4,
+        border=2,
+    )
     qr.add_data(url)
     qr.make(fit=True)
     buf = io.BytesIO()
     img = qr.make_image(fill_color="black", back_color="white")
     try:
         img.save(buf, format="PNG")
-    except (TypeError, ValueError, KeyError):
-        img.save(buf)
+    except (TypeError, ValueError, KeyError, AttributeError):
+        try:
+            img.save(buf)
+        except Exception:
+            if hasattr(img, "_img"):
+                img._img.save(buf, format="PNG")
     return buf.getvalue()
 
 
-async def _next_contract_number(db: AsyncSession, year: int) -> str:
-    """26000001 formatida takrorlanmas raqam."""
+async def get_next_shared_contract_number(db: AsyncSession) -> str:
+    """26000001 formatida hamma shartnomalar uchun unikal raqam."""
     prefix = "26"
-    last = (
+    last_app = (
         await db.execute(
             select(PracticeApplication.contract_number)
             .where(PracticeApplication.contract_number.like(f"{prefix}%"))
@@ -57,13 +66,38 @@ async def _next_contract_number(db: AsyncSession, year: int) -> str:
             .limit(1)
         )
     ).scalar_one_or_none()
-    seq = 1
-    if last:
+
+    from app.models.contract import Contract
+
+    last_contract = (
+        await db.execute(
+            select(Contract.number)
+            .where(Contract.number.like(f"{prefix}%"))
+            .order_by(Contract.number.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    seq_app = 0
+    if last_app:
         try:
-            seq = int(last[len(prefix):]) + 1
+            seq_app = int(last_app[len(prefix):])
         except (ValueError, IndexError):
-            seq = 1
-    return f"{prefix}{seq:06d}"
+            pass
+
+    seq_contract = 0
+    if last_contract:
+        try:
+            seq_contract = int(last_contract[len(prefix):])
+        except (ValueError, IndexError):
+            pass
+
+    max_seq = max(seq_app, seq_contract) + 1
+    return f"{prefix}{max_seq:06d}"
+
+
+async def _next_contract_number(db: AsyncSession, year: int) -> str:
+    return await get_next_shared_contract_number(db)
 
 
 async def _student_for_user(db: AsyncSession, user: User) -> Student:
@@ -698,6 +732,165 @@ async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
     }
 
 
+async def generate_official_contract_pdf(
+    db: AsyncSession,
+    contract_id: UUID,
+    template_id: UUID | None = None,
+    variable_values: dict[str, Any] | None = None,
+) -> tuple[str, bytes]:
+    """Admin yaratgan rasmiy shartnoma (Contract) uchun yagona standartda PDF va QR kod generatsiya qiladi."""
+    from app.models.contract import Contract
+    from app.models.enums import ContractStatus
+    from app.models.organization import Organization
+    from app.services import pdf as pdf_svc
+    from app.services.pdf import STORAGE_DIR as PDF_STORAGE_DIR
+
+    contract = await db.get(Contract, contract_id)
+    if not contract:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Shartnoma topilmadi: {contract_id}")
+
+    organization = await db.get(Organization, contract.organization_id)
+    if not organization:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Tashkilot topilmadi")
+
+    if not contract.qr_token:
+        contract.qr_token = secrets.token_urlsafe(16)
+
+    # Shablonni qidiramiz
+    tpl = None
+    if template_id:
+        tpl = await db.get(ContractTemplateDoc, template_id)
+
+    if not tpl and contract.practice_type_id:
+        tpl = (
+            await db.execute(
+                select(ContractTemplateDoc)
+                .where(
+                    ContractTemplateDoc.practice_type_id == contract.practice_type_id,
+                    ContractTemplateDoc.status == ContractTemplateStatus.ACTIVE,
+                )
+                .order_by(ContractTemplateDoc.created_at.desc())
+            )
+        ).scalars().first()
+
+    if not tpl:
+        tpl = (
+            await db.execute(
+                select(ContractTemplateDoc)
+                .where(ContractTemplateDoc.status == ContractTemplateStatus.ACTIVE)
+                .order_by(ContractTemplateDoc.created_at.desc())
+            )
+        ).scalars().first()
+
+    now = datetime.now(UTC)
+    start_d = contract.start_date or now.date()
+    end_d = contract.end_date or now.date()
+
+    org_address = ", ".join(
+        p
+        for p in [organization.region, organization.district, organization.address_line]
+        if p
+    )
+    org_director = organization.director_full_name or ""
+
+    ctx: dict[str, Any] = {
+        "contract_no": contract.number,
+        "contract_number": contract.number,
+        "day": start_d.strftime("%d"),
+        "contract_day": start_d.strftime("%d"),
+        "month": start_d.strftime("%m"),
+        "contract_month": start_d.strftime("%m"),
+        "year": str(start_d.year)[-2:],
+        "contract_year": str(start_d.year),
+        "contract_date": start_d.strftime("%d.%m.%Y"),
+        "practice_start_date": start_d.strftime("%d.%m.%Y"),
+        "practice_end_date": end_d.strftime("%d.%m.%Y"),
+        "obyekt": organization.name or "",
+        "manzil": org_address,
+        "rahbar": org_director,
+        "telefon": organization.phone or "",
+        "inn": organization.inn or "",
+        "shartnoma_turi": (
+            tpl.name
+            if tpl
+            else (
+                contract.template_ref.value
+                if hasattr(contract.template_ref, "value")
+                else str(contract.template_ref)
+            )
+        ),
+        "university_name": "Chirchiq davlat pedagogika universiteti",
+        "university_rector_full_name": "",
+    }
+
+    students = contract.students or []
+    if students:
+        s0 = students[0]
+        ctx.update({
+            "fish": s0.get("full_name", ""),
+            "ism": s0.get("full_name", ""),
+            "student_name": s0.get("full_name", ""),
+            "student_full_name": s0.get("full_name", ""),
+            "yonalish": s0.get("direction_name", ""),
+            "student_field": s0.get("direction_name", ""),
+            "specialty_name": s0.get("direction_name", ""),
+            "speciality_name": s0.get("direction_name", ""),
+            "shifr": s0.get("direction_code", ""),
+            "kurs": s0.get("course", ""),
+            "course": s0.get("course", ""),
+            "guruh": s0.get("group_name", ""),
+            "group_name": s0.get("group_name", ""),
+            "faculty_name": s0.get("faculty_name", ""),
+            "supervisor_name": s0.get("supervisor_name", ""),
+        })
+
+    if variable_values:
+        for k, v in variable_values.items():
+            if v is not None and v != "":
+                ctx[k] = v
+
+    appendix_students = [
+        {
+            "full_name": s.get("full_name") or "",
+            "faculty_name": s.get("faculty_name") or "",
+            "course": s.get("course") or "",
+            "direction_name": s.get("direction_name") or "",
+            "supervisor_name": s.get("supervisor_name") or None,
+            "start_date": s.get("start_date") or ctx["practice_start_date"],
+            "end_date": s.get("end_date") or ctx["practice_end_date"],
+        }
+        for s in students
+    ]
+
+    if tpl and tpl.html_content:
+        from app.services.pdf import render_student_contract_pdf
+
+        str_ctx = {k: str(v) for k, v in ctx.items()}
+        pdf_bytes = render_student_contract_pdf(
+            tpl.html_content,
+            str_ctx,
+            contract.qr_token,
+            appendix_students=appendix_students,
+            contract_number=contract.number,
+            contract_date=ctx["contract_date"],
+        )
+    else:
+        pdf_bytes = pdf_svc.render_contract_pdf(contract, organization)
+
+    PDF_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{contract.number.replace('/', '_')}.pdf"
+    file_path = PDF_STORAGE_DIR / filename
+    file_path.write_bytes(pdf_bytes)
+
+    rel_path = f"storage/contracts/{filename}"
+    contract.pdf_path = rel_path
+    contract.status = ContractStatus.GENERATED
+    contract.generated_at = now
+    await db.commit()
+
+    return rel_path, pdf_bytes
+
+
 async def get_public_contract_pdf_path(db: AsyncSession, qr_token: str) -> tuple[Path, str]:
     """QR token, shartnoma raqami yoki ID orqali ochiq (public) PDF faylini topish."""
     from sqlalchemy import or_
@@ -721,17 +914,17 @@ async def get_public_contract_pdf_path(db: AsyncSession, qr_token: str) -> tuple
 
         if obj.contract_file:
             base = Path(__file__).parent.parent.parent
-            rel = str(obj.contract_file.get("path", ""))
-            if rel.startswith("storage/"):
+            rel = str(obj.contract_file.get("path", "")).lstrip("/\\")
+            if rel.startswith("storage/") or rel.startswith("storage\\"):
                 file_path = base / rel
             else:
-                file_path = base / "storage" / "contract_templates" / rel
+                file_path = base / "storage" / "contracts" / rel
 
             if not file_path.exists() and obj.contract_template_id:
                 await _generate_contract(db, obj)
                 await db.commit()
-                rel = str(obj.contract_file.get("path", ""))
-                file_path = (base / rel) if rel.startswith("storage/") else (base / "storage" / "contract_templates" / rel)
+                rel = str(obj.contract_file.get("path", "")).lstrip("/\\")
+                file_path = (base / rel) if (rel.startswith("storage/") or rel.startswith("storage\\")) else (base / "storage" / "contracts" / rel)
 
             if file_path.exists():
                 return file_path, obj.contract_number or str(obj.id)
@@ -750,11 +943,24 @@ async def get_public_contract_pdf_path(db: AsyncSession, qr_token: str) -> tuple
         pass
 
     contract = (await db.execute(select(Contract).where(or_(*c_conds)))).scalar_one_or_none()
-    if contract and contract.pdf_path:
-        base = Path(__file__).parent.parent.parent
-        file_path = base / contract.pdf_path
-        if file_path.exists():
-            return file_path, contract.number or str(contract.id)
+    if contract:
+        if not contract.pdf_path:
+            await generate_official_contract_pdf(db, contract.id)
+            await db.refresh(contract)
+
+        if contract.pdf_path:
+            base = Path(__file__).parent.parent.parent
+            rel = contract.pdf_path.lstrip("/\\")
+            file_path = (base / rel) if (rel.startswith("storage/") or rel.startswith("storage\\")) else (base / "storage" / "contracts" / rel)
+
+            if not file_path.exists():
+                await generate_official_contract_pdf(db, contract.id)
+                await db.refresh(contract)
+                rel = contract.pdf_path.lstrip("/\\")
+                file_path = (base / rel) if (rel.startswith("storage/") or rel.startswith("storage\\")) else (base / "storage" / "contracts" / rel)
+
+            if file_path.exists():
+                return file_path, contract.number or str(contract.id)
 
     raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi")
 

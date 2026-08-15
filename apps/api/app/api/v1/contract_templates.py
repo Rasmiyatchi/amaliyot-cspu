@@ -21,7 +21,7 @@ _DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.doc
 
 
 @router.get("", response_model=list[ContractTemplateDocRead])
-async def list_templates(db: SessionDep, _: RequireSuperAdmin) -> list[ContractTemplateDocRead]:
+async def list_templates(db: SessionDep, _: CurrentUser) -> list[ContractTemplateDocRead]:
     items = await svc.list_templates(db)
     return [ContractTemplateDocRead.model_validate(i) for i in items]
 
