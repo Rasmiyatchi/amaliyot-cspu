@@ -3,17 +3,18 @@ import { useTranslation } from "react-i18next";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { ArchiveCard } from "@/components/archive-card";
-import { StudentApplicationCard } from "@/components/student/application-card";
-import { StudentInquiryCard } from "@/components/student/inquiry-card";
-import { NotificationsBell } from "@/components/notifications-bell";
+import { AttendanceCalendarCard } from "@/components/student/attendance-calendar-card";
 import { StudentAcademicPanel } from "@/components/student/academic-panel";
-import { FinalReportCard } from "@/components/student/final-report-card";
+import { StudentApplicationCard } from "@/components/student/application-card";
 import { CheckInButton } from "@/components/student/check-in-button";
 import { StudentDocumentsCard } from "@/components/student/documents-card";
+import { FinalReportCard } from "@/components/student/final-report-card";
+import { StudentInquiryCard } from "@/components/student/inquiry-card";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { dateLocale } from "@/i18n";
-import { useAttendanceDays, useTodayStatus } from "@/lib/api/attendance";
+import { useTodayStatus } from "@/lib/api/attendance";
 import { useMyAssignments } from "@/lib/api/assignments";
 import { useAuthStore } from "@/stores/auth";
 
@@ -27,11 +28,6 @@ export function StudentDashboard() {
     assignments?.find((a) => a.status === "active" || a.status === "draft") ?? null;
 
   const { data: today } = useTodayStatus(activeAssignment?.id ?? null);
-  const { data: recent } = useAttendanceDays(
-    activeAssignment ? { assignment_id: activeAssignment.id } : {},
-    1,
-    7,
-  );
 
   return (
     <main className="container py-8">
@@ -81,7 +77,7 @@ export function StudentDashboard() {
 
         {activeAssignment && (
           <>
-            {/* Check-in tugma */}
+            {/* Bugungi davomat (Check-in / Check-out) */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">{t("student.todayAttendance")}</CardTitle>
@@ -97,53 +93,8 @@ export function StudentDashboard() {
               </CardContent>
             </Card>
 
-            {/* Oxirgi 7 kun */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t("student.recentDays")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {recent && recent.items.length === 0 && (
-                  <EmptyState
-                    icon={CalendarDays}
-                    title={t("student.noAttendanceTitle")}
-                    description={t("student.noAttendanceDescription")}
-                    accent="info"
-                    compact
-                  />
-                )}
-                {recent && recent.items.length > 0 && (
-                  <div className="space-y-2">
-                    {recent.items.map((d) => (
-                      <div
-                        key={d.id}
-                        className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
-                      >
-                        <div>
-                          <div className="font-mono text-xs text-muted-foreground">
-                            {d.date}
-                          </div>
-                          {d.check_in_at && (
-                            <div className="text-xs">
-                              {new Date(d.check_in_at).toLocaleTimeString(dateLocale(), {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                              {d.check_out_at &&
-                                ` — ${new Date(d.check_out_at).toLocaleTimeString(dateLocale(), {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}`}
-                            </div>
-                          )}
-                        </div>
-                        <AttendanceStatusBadge status={d.status} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* To'liq davomat va Taqvim (Kalendar + Statistika + Ro'yxat) */}
+            <AttendanceCalendarCard assignment={activeAssignment} />
 
             {/* Amaliyot muddati */}
             <Card>

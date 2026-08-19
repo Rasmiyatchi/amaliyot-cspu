@@ -1,5 +1,6 @@
 """Organization CRUD service."""
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -8,8 +9,22 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import OrganizationKind
+from app.models.enums import AssignmentStatus, OrganizationKind
 from app.models.organization import Organization
+from app.models.practice_assignment import PracticeAssignment
+
+ACTIVE_STATUSES = (AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE)
+
+
+def _assigned_count_subquery() -> Any:
+    return (
+        select(func.count(PracticeAssignment.id))
+        .where(
+            PracticeAssignment.organization_id == Organization.id,
+            PracticeAssignment.status.in_(ACTIVE_STATUSES),
+        )
+        .scalar_subquery()
+    )
 
 
 async def list_organizations(
@@ -21,7 +36,11 @@ async def list_organizations(
     region: str | None = None,
     is_active: bool | None = None,
 ) -> tuple[list[Organization], int]:
-    base = select(Organization)
+    assigned_subq = _assigned_count_subquery()
+    base = select(
+        Organization,
+        func.coalesce(assigned_subq, 0).label("assigned_students_count"),
+    )
     count_stmt = select(func.count(Organization.id))
 
     def apply(stmt):  # type: ignore[no-untyped-def]
@@ -43,18 +62,28 @@ async def list_organizations(
     count_stmt = apply(count_stmt)  # type: ignore[no-untyped-call]
 
     total = (await db.execute(count_stmt)).scalar_one()
-    items = (
+    rows = (
         (await db.execute(base.order_by(Organization.name).offset(offset).limit(limit)))
-        .scalars()
         .all()
     )
-    return list(items), total
+    items: list[Organization] = []
+    for org, count in rows:
+        org.assigned_students_count = int(count or 0)
+        items.append(org)
+    return items, total
 
 
 async def get_organization(db: AsyncSession, id_: UUID) -> Organization:
-    org = await db.get(Organization, id_)
-    if not org:
+    assigned_subq = _assigned_count_subquery()
+    stmt = select(
+        Organization,
+        func.coalesce(assigned_subq, 0).label("assigned_students_count"),
+    ).where(Organization.id == id_)
+    row = (await db.execute(stmt)).first()
+    if not row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Tashkilot topilmadi: {id_}")
+    org, count = row
+    org.assigned_students_count = int(count or 0)
     return org
 
 
@@ -69,6 +98,7 @@ async def create_organization(db: AsyncSession, data: BaseModel) -> Organization
             status.HTTP_409_CONFLICT, "Tashkilot yaratishda xatolik (takroriy qiymat)"
         ) from e
     await db.refresh(org)
+    org.assigned_students_count = 0
     return org
 
 
@@ -82,7 +112,7 @@ async def update_organization(db: AsyncSession, id_: UUID, data: BaseModel) -> O
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "O'zgartirish mos emas") from e
     await db.refresh(org)
-    return org
+    return await get_organization(db, id_)
 
 
 async def delete_organization(db: AsyncSession, id_: UUID) -> None:

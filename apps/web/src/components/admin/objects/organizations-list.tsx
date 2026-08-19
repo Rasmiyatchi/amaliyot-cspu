@@ -125,7 +125,7 @@ export function OrganizationsList() {
                 <TableHead className="w-[100px]">{t("objectsOrganizationsList.kindLabel")}</TableHead>
                 <TableHead>{t("objectsOrganizationsList.columns.director")}</TableHead>
                 <TableHead>{t("objectsOrganizationsList.columns.region")}</TableHead>
-                <TableHead className="w-[80px]">{t("objectsOrganizationsList.columns.capacity")}</TableHead>
+                <TableHead className="w-[120px]">{t("objectsOrganizationsList.columns.capacity")}</TableHead>
                 <TableHead className="w-[80px]">{t("common.status")}</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
@@ -156,7 +156,21 @@ export function OrganizationsList() {
                       <div className="text-xs text-muted-foreground">{o.district}</div>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm">{o.capacity}</TableCell>
+                  <TableCell className="text-sm">
+                    <div className="flex items-center gap-1.5 font-mono text-xs">
+                      <span
+                        className={
+                          (o.assigned_students_count ?? 0) > 0
+                            ? "font-semibold text-primary"
+                            : "font-medium text-foreground"
+                        }
+                      >
+                        {o.assigned_students_count ?? 0}
+                      </span>
+                      <span className="text-muted-foreground">/</span>
+                      <span className="text-muted-foreground">{o.capacity}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {o.is_active ? (
                       <Badge variant="success">{t("objectsOrganizationsList.activeBadge")}</Badge>

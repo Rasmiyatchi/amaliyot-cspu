@@ -32,15 +32,15 @@ class AttendanceEventRead(BaseModel):
     assignment_id: UUID
     kind: AttendanceEventKind
     event_at: datetime
-    lat: Decimal | None
-    lng: Decimal | None
-    accuracy_m: Decimal | None
-    distance_m: Decimal | None
-    is_within_fence: bool
-    wifi_ssid: str | None
-    device_id: str | None
-    note: str | None
-    created_at: datetime
+    lat: Decimal | float | None = None
+    lng: Decimal | float | None = None
+    accuracy_m: Decimal | float | None = None
+    distance_m: Decimal | float | None = None
+    is_within_fence: bool = False
+    wifi_ssid: str | None = None
+    device_id: str | None = None
+    note: str | None = None
+    created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -53,12 +53,12 @@ class AttendanceDayRead(BaseModel):
     assignment_id: UUID
     date: date
     status: AttendanceDayStatus
-    check_in_at: datetime | None
-    check_out_at: datetime | None
-    approved_by_id: UUID | None
+    check_in_at: datetime | None = None
+    check_out_at: datetime | None = None
+    approved_by_id: UUID | None = None
     approved_by_name: str | None = None
-    approved_at: datetime | None
-    note: str | None
+    approved_at: datetime | None = None
+    note: str | None = None
 
     # Kontekst ma'lumotlari (listda)
     student_id: UUID | None = None
@@ -67,8 +67,8 @@ class AttendanceDayRead(BaseModel):
     organization_name: str | None = None
     area_name: str | None = None
 
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

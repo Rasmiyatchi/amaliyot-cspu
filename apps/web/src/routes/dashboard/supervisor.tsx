@@ -1,19 +1,13 @@
-import { HTTPError } from "ky";
 import {
   CalendarCheck,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   ClipboardCheck,
   Clock,
   Download,
   FileText,
   Inbox,
   Loader2,
-  MapPin,
   Trophy,
   Users,
-  XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,11 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { dateLocale } from "@/i18n";
-import {
-  useApproveDay,
-  useAttendanceDays,
-  useRejectDay,
-} from "@/lib/api/attendance";
+import { useAttendanceDays } from "@/lib/api/attendance";
 import { useMyAssignments } from "@/lib/api/assignments";
 import { useSupervisorStats } from "@/lib/api/stats";
 import type { AttendanceDay, UUID } from "@/lib/api/types";
@@ -45,109 +35,60 @@ const fmtTime = (s: string | null) =>
     ? new Date(s).toLocaleTimeString(dateLocale(), { hour: "2-digit", minute: "2-digit" })
     : "—";
 
+const fmtDuration = (inTime: string | null, outTime: string | null) => {
+  if (!inTime || !outTime) return null;
+  const diffMs = new Date(outTime).getTime() - new Date(inTime).getTime();
+  if (diffMs <= 0) return null;
+  const totalMins = Math.floor(diffMs / (60 * 1000));
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  if (hours > 0) return `${hours} soat ${mins} daqiqa`;
+  return `${mins} daqiqa`;
+};
+
 type DayRowProps = {
   day: AttendanceDay;
 };
 
 function DayRow({ day }: DayRowProps) {
-  const { t } = useTranslation();
-  const approve = useApproveDay();
-  const reject = useRejectDay();
-  const [expanded, setExpanded] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
-
-  const handleApprove = async () => {
-    try {
-      await approve.mutateAsync({ id: day.id, data: {} });
-      toast.success(t("supervisor.approvedGreen"));
-    } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
-    }
-  };
-
-  const handleReject = async () => {
-    if (rejectReason.trim().length < 3) {
-      toast.error(t("supervisor.writeReason"));
-      return;
-    }
-    try {
-      await reject.mutateAsync({
-        id: day.id,
-        data: { note: rejectReason.trim() },
-      });
-      toast.success(t("supervisor.markedRed"));
-      setExpanded(false);
-      setRejectReason("");
-    } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
-    }
-  };
-
-  const canAct = day.status === "pending";
-  const busy = approve.isPending || reject.isPending;
+  const duration = fmtDuration(day.check_in_at, day.check_out_at);
 
   return (
-    <div className="rounded-md border border-border">
-      <div className="flex items-center gap-3 p-3">
+    <div className="rounded-lg border border-border/80 bg-card p-3 shadow-xs hover:border-border transition-colors">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="truncate font-medium">{day.student_full_name}</div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{day.date}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-foreground truncate">
+              {day.student_full_name ?? "—"}
+            </span>
+            {day.student_hemis_id && (
+              <span className="text-xs text-muted-foreground font-mono">
+                ({day.student_hemis_id})
+              </span>
+            )}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground/80">{day.date}</span>
             <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
+              <Clock className="h-3 w-3 text-muted-foreground" />
               {fmtTime(day.check_in_at)} — {fmtTime(day.check_out_at)}
             </span>
+            {duration && (
+              <span className="rounded bg-muted/60 px-1.5 py-0.5 text-[11px] font-medium text-foreground">
+                {duration}
+              </span>
+            )}
+            {day.note && (
+              <span className="italic text-muted-foreground/90 truncate max-w-xs">
+                {day.note}
+              </span>
+            )}
           </div>
         </div>
-        <AttendanceStatusBadge status={day.status} />
-        {canAct && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setExpanded(!expanded)}
-            disabled={busy}
-          >
-            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
-        )}
+        <div className="self-start sm:self-center shrink-0">
+          <AttendanceStatusBadge status={day.status} />
+        </div>
       </div>
-
-      {expanded && canAct && (
-        <div className="border-t border-border bg-muted/20 p-3 space-y-2">
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={handleApprove}
-              disabled={busy}
-            >
-              {approve.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              <CheckCircle2 className="h-4 w-4" />
-              {t("supervisor.approveGreen")}
-            </Button>
-          </div>
-          <div>
-            <div className="mb-1 text-xs text-muted-foreground">{t("supervisor.rejectReasonLabel")}</div>
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder={t("supervisor.rejectReasonPlaceholder")}
-              rows={2}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={handleReject}
-              disabled={busy || rejectReason.trim().length < 3}
-              className="mt-2"
-            >
-              {reject.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              <XCircle className="h-4 w-4" />
-              {t("supervisor.toRed")}
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -192,9 +133,6 @@ export function SupervisorDashboard() {
     () => (days?.items ?? []).filter((d) => myAssignmentIds.has(d.assignment_id)),
     [days, myAssignmentIds],
   );
-
-  const pendingDays = visibleDays.filter((d) => d.status === "pending");
-  const otherDays = visibleDays.filter((d) => d.status !== "pending");
 
   return (
     <main className="container py-8">
@@ -320,13 +258,18 @@ export function SupervisorDashboard() {
               </Button>
             </div>
 
-            {/* Kutilayotgan tasdiqlar */}
+            {/* Talabalar davomati (Read-only) */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <CalendarCheck className="h-4 w-4 text-warning" />
-                  {t("supervisor.pendingCount", { n: pendingDays.length })}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <CalendarCheck className="h-4 w-4 text-primary" />
+                    <span>{t("common.attendance")} ({visibleDays.length})</span>
+                  </CardTitle>
+                  <span className="text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded">
+                    Read-only
+                  </span>
+                </div>
               </CardHeader>
               <CardContent>
                 {daysPending && (
@@ -334,43 +277,23 @@ export function SupervisorDashboard() {
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
                 )}
-                {!daysPending && pendingDays.length === 0 && (
+                {!daysPending && visibleDays.length === 0 && (
                   <EmptyState
-                    icon={CheckCircle2}
-                    title={t("supervisor.allApprovedTitle")}
-                    description={t("supervisor.allApprovedDesc")}
-                    accent="success"
+                    icon={CalendarCheck}
+                    title="Davomat yozuvlari topilmadi"
+                    description="Talabalar check-in / check-out qilganida ularning davomat yozuvlari shu yerda ko'rinadi"
                     compact
                   />
                 )}
-                {!daysPending && pendingDays.length > 0 && (
+                {!daysPending && visibleDays.length > 0 && (
                   <div className="space-y-2">
-                    {pendingDays.map((d) => (
+                    {visibleDays.map((d) => (
                       <DayRow key={d.id} day={d} />
                     ))}
                   </div>
                 )}
               </CardContent>
             </Card>
-
-            {/* Yakunlangan kunlar */}
-            {otherDays.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <MapPin className="h-4 w-4" />
-                    {t("supervisor.completedDaysCount", { n: otherDays.length })}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {otherDays.map((d) => (
-                      <DayRow key={d.id} day={d} />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Tasks / Journal / Analyses — tanlangan assignment bo'yicha */}
             {selectedAssignmentId !== "all" && (

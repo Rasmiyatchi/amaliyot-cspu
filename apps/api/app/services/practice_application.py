@@ -14,13 +14,21 @@ from fastapi import HTTPException, status
 from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.config import settings
 from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.contract_template import ContractTemplateDoc
-from app.models.enums import ApplicationStatus, ContractTemplateStatus, EducationForm
+from app.models.enums import (
+    ApplicationStatus,
+    AssignmentStatus,
+    ContractTemplateStatus,
+    EducationForm,
+)
 from app.models.practice_application import PracticeApplication
+from app.models.practice_assignment import PracticeAssignment
 from app.models.student import Student
+from app.models.supervisor import Supervisor
 from app.models.user import User
 from app.schemas.practice_application import ApplicationCreate
 from app.services import contract_template as ct_svc
@@ -424,6 +432,47 @@ async def _build_contract_context(
                 "academic_year": row.academic_year_name or "",
             }
         )
+
+    # Amaliyot biriktirishi (PracticeAssignment) orqali rahbar va amaliyot muddatini olish
+    sup_user = aliased(User)
+    assign_stmt = (
+        select(
+            PracticeAssignment.start_date,
+            PracticeAssignment.end_date,
+            (
+                sup_user.last_name + " " + sup_user.first_name + " " + func.coalesce(sup_user.middle_name, "")
+            ).label("supervisor_name"),
+        )
+        .outerjoin(Supervisor, Supervisor.id == PracticeAssignment.supervisor_id)
+        .outerjoin(sup_user, sup_user.id == Supervisor.user_id)
+        .where(
+            PracticeAssignment.student_id == obj.student_id,
+            PracticeAssignment.status.in_([AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE]),
+        )
+        .order_by(PracticeAssignment.created_at.desc())
+    )
+    assign_row = (await db.execute(assign_stmt)).mappings().first()
+
+    if assign_row:
+        s_name = (assign_row["supervisor_name"] or "").strip()
+        if s_name:
+            ctx["supervisor_name"] = s_name
+            ctx["amaliyot_rahbari"] = s_name
+            if not ctx.get("rahbar"):
+                ctx["rahbar"] = s_name
+
+        st_d = assign_row["start_date"]
+        en_d = assign_row["end_date"]
+        if st_d:
+            ctx["practice_start_date"] = st_d.strftime("%d.%m.%Y")
+            ctx["start_date"] = st_d.strftime("%d.%m.%Y")
+        if en_d:
+            ctx["practice_end_date"] = en_d.strftime("%d.%m.%Y")
+            ctx["end_date"] = en_d.strftime("%d.%m.%Y")
+        if st_d and en_d:
+            ctx["practice_duration"] = f"{st_d.strftime('%d.%m.%Y')} — {en_d.strftime('%d.%m.%Y')}"
+            ctx["amaliyot_muddati"] = ctx["practice_duration"]
+
     # XAVFSIZLIK: placeholders_data ATAYLAB o'qilmaydi — talaba yuborgan xom dict
     # tizim maydonlarini (F.I.Sh, rektor...) bosib, imzolanadigan hujjatga istalgan
     # HTML kiritishga yo'l ochardi. Yagona qonuniy yo'l — validate_student_input
@@ -441,25 +490,43 @@ async def preview_contract_pdf(db: AsyncSession, id_: UUID) -> bytes:
     if not obj.contract_template_id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Shartnoma shabloni tanlanmagan")
 
-    tpl, ctx, _ = await _build_contract_context(db, obj)
+    tpl, ctx, fish = await _build_contract_context(db, obj)
 
     if tpl.html_content:
         from app.services.pdf import render_student_contract_pdf
 
         str_ctx = {k: str(v) for k, v in ctx.items()}
-        return render_student_contract_pdf(tpl.html_content, str_ctx, "")
+        appendix_students = [
+            {
+                "full_name": ctx.get("student_full_name") or ctx.get("fish") or fish,
+                "faculty_name": ctx.get("faculty_name") or "",
+                "course": ctx.get("course") or "",
+                "direction_name": ctx.get("specialty_name") or ctx.get("yonalish") or "",
+                "supervisor_name": ctx.get("supervisor_name") or None,
+                "start_date": ctx.get("practice_start_date") or ctx.get("start_date") or "",
+                "end_date": ctx.get("practice_end_date") or ctx.get("end_date") or "",
+            }
+        ]
+        return render_student_contract_pdf(
+            tpl.html_content,
+            str_ctx,
+            "",
+            appendix_students=appendix_students,
+            contract_number=ctx.get("contract_number", "PREVIEW"),
+            contract_date=ctx.get("contract_date", ""),
+        )
     verify_url = "https://chdpu.uz/verify/preview"
     return ct_svc.render_docx(tpl, ctx, qr_png=_qr_png(verify_url))
 
 
 async def _generate_contract(db: AsyncSession, obj: PracticeApplication) -> None:
-    """Tasdiqlangan ariza uchun DOCX shartnoma generatsiya qiladi (raqam+QR+ilova)."""
+    """Tasdiqlangan ariza uchun DOCX/PDF shartnoma generatsiya qiladi (raqam+QR+ilova)."""
     tpl = await db.get(ContractTemplateDoc, obj.contract_template_id)
     if not tpl:
         return  # shablon o'chirilgan bo'lsa — generatsiya qilinmaydi
 
     now = datetime.now(UTC)
-    number = await _next_contract_number(db, now.year)
+    number = obj.contract_number or (await _next_contract_number(db, now.year))
 
     # Build common context
     _, ctx, fish = await _build_contract_context(db, obj)
@@ -476,14 +543,13 @@ async def _generate_contract(db: AsyncSession, obj: PracticeApplication) -> None
         str_ctx = {k: str(v) for k, v in ctx.items()}
         appendix_students = [
             {
-                "full_name": ctx.get("student_full_name") or "",
+                "full_name": ctx.get("student_full_name") or ctx.get("fish") or fish,
                 "faculty_name": ctx.get("faculty_name") or "",
                 "course": ctx.get("course") or "",
-                "direction_name": ctx.get("specialty_name") or "",
-                # Ariza bosqichida amaliyot rahbari hali biriktirilmagan
-                "supervisor_name": None,
-                "start_date": ctx.get("practice_start_date") or "",
-                "end_date": ctx.get("practice_end_date") or "",
+                "direction_name": ctx.get("specialty_name") or ctx.get("yonalish") or "",
+                "supervisor_name": ctx.get("supervisor_name") or None,
+                "start_date": ctx.get("practice_start_date") or ctx.get("start_date") or "",
+                "end_date": ctx.get("practice_end_date") or ctx.get("end_date") or "",
             }
         ]
         pdf_bytes = render_student_contract_pdf(
@@ -858,6 +924,24 @@ async def generate_official_contract_pdf(
     }
 
     students = contract.students or []
+    # Eng so'nggi biriktirish (rahbar va muddat) ma'lumotlarini olish uchun snapshot'ni yangilaymiz
+    assignment_ids = []
+    for s in students:
+        if isinstance(s, dict) and s.get("assignment_id"):
+            try:
+                assignment_ids.append(UUID(str(s["assignment_id"])))
+            except (ValueError, TypeError):
+                pass
+
+    if assignment_ids:
+        from app.services.contract import _snapshot_students
+        try:
+            refreshed = await _snapshot_students(db, assignment_ids, contract.organization_id)
+            contract.students = refreshed
+            students = refreshed
+        except Exception as e:
+            logger.warning(f"Could not refresh snapshot for contract {contract.id}: {e}")
+
     if students:
         s0 = students[0]
         ctx.update({

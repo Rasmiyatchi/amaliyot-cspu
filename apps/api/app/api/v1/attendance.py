@@ -1,9 +1,8 @@
-"""Attendance endpoints — davomat."""
-
 from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, status
+from sqlalchemy import select
 
 from app.api.deps import (
     CurrentUser,
@@ -13,7 +12,9 @@ from app.api.deps import (
     RequireSupervisor,
 )
 from app.db.session import SessionDep
-from app.models.enums import AttendanceDayStatus
+from app.models.enums import AttendanceDayStatus, UserRole
+from app.models.student import Student
+from app.models.supervisor import Supervisor
 from app.schemas.attendance import (
     AttendanceApproveRequest,
     AttendanceDayDetail,
@@ -39,7 +40,7 @@ async def list_days(
     db: SessionDep,
     user: CurrentUser,
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=500),
     assignment_id: UUID | None = None,
     student_id: UUID | None = None,
     status_filter: AttendanceDayStatus | None = Query(None, alias="status"),
@@ -49,7 +50,14 @@ async def list_days(
     direction_id: UUID | None = None,
     faculty_id: UUID | None = None,
 ) -> Paginated[AttendanceDayRead]:
-    # RBAC: admin/supervisor/student hammasi foydalana oladi; filtr farqli
+    # RBAC: Talaba faqat o'z davomatini ko'radi va avto-sync ishga tushadi
+    if user.role == UserRole.STUDENT:
+        stmt = select(Student.id).where(Student.user_id == user.id)
+        current_student_id = (await db.execute(stmt)).scalar_one_or_none()
+        if not current_student_id:
+            return Paginated(items=[], total=0, page=page, page_size=page_size)
+        student_id = current_student_id
+
     offset = (page - 1) * page_size
     items, total = await svc.list_days(
         db,
@@ -137,20 +145,24 @@ async def student_today(
     return AttendanceDayDetail.model_validate(data)
 
 
-# ─── Supervizor: approve / reject ──────────────────────
+# ─── Super Admin: approve / reject ────────────────────────────
 
 
-@router.post("/days/{day_id}/approve", response_model=AttendanceDayDetail)
-async def supervisor_approve(
+@router.post(
+    "/days/{day_id}/approve",
+    response_model=AttendanceDayDetail,
+    summary="Super Admin: Yashilga tasdiqlash",
+)
+async def admin_approve(
     day_id: UUID,
     payload: AttendanceApproveRequest,
     request: Request,
     db: SessionDep,
-    user: RequireSupervisor,
+    user: RequireSuperAdmin,
 ) -> AttendanceDayDetail:
     from app.services import audit_log as audit
 
-    result = await svc.supervisor_approve(db, day_id, user.id, payload)
+    result = await svc.admin_approve(db, day_id, user.id, payload)
     await audit.log(
         db,
         actor=user,
@@ -165,17 +177,21 @@ async def supervisor_approve(
     return AttendanceDayDetail.model_validate(result)
 
 
-@router.post("/days/{day_id}/reject", response_model=AttendanceDayDetail)
-async def supervisor_reject(
+@router.post(
+    "/days/{day_id}/reject",
+    response_model=AttendanceDayDetail,
+    summary="Super Admin: Qizilga rad etish",
+)
+async def admin_reject(
     day_id: UUID,
     payload: AttendanceRejectRequest,
     request: Request,
     db: SessionDep,
-    user: RequireSupervisor,
+    user: RequireSuperAdmin,
 ) -> AttendanceDayDetail:
     from app.services import audit_log as audit
 
-    result = await svc.supervisor_reject(db, day_id, user.id, payload)
+    result = await svc.admin_reject(db, day_id, user.id, payload)
     await audit.log(
         db,
         actor=user,
@@ -190,20 +206,20 @@ async def supervisor_reject(
     return AttendanceDayDetail.model_validate(result)
 
 
-# ─── Admin: mark red ───────────────────────────────────
+# ─── Super Admin: mark red ───────────────────────────────────
 
 
 @router.post(
     "/assignments/{assignment_id}/mark-red",
     response_model=AttendanceDayDetail,
-    summary="Admin: Check-in yo'q kunni qizilga",
+    summary="Super Admin: Check-in yo'q kunni qizilga",
 )
 async def admin_mark_red(
     assignment_id: UUID,
     payload: AttendanceMarkRedRequest,
     request: Request,
     db: SessionDep,
-    user: RequireAdmin,
+    user: RequireSuperAdmin,
 ) -> AttendanceDayDetail:
     from app.services import audit_log as audit
 
@@ -214,7 +230,7 @@ async def admin_mark_red(
         action="update",
         entity_type="attendance_day",
         entity_id=result.get("id") if isinstance(result, dict) else None,
-        summary=f"Admin davomatni qizil qildi ({payload.date})",
+        summary=f"SuperAdmin davomatni qizil qildi ({payload.date})",
         metadata={
             "new_status": "red",
             "date": str(payload.date),

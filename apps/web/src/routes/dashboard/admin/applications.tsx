@@ -571,6 +571,7 @@ function ApplicationDetailDialog({
 }: DetailProps) {
   const { t } = useTranslation();
   const archive = useArchiveApplication();
+  const unarchive = useUnarchiveApplication();
   const { data: formFields } = useTemplateFormFields(app?.contract_template_id);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -752,7 +753,7 @@ function ApplicationDetailDialog({
                 unarchive.mutateAsync(app.id).then(() => {
                   toast.success(t("adminContracts.unarchivedSuccess"));
                   onClose();
-                }).catch((e) => {
+                }).catch((e: unknown) => {
                   toast.error(e instanceof Error ? e.message : t("common.error"));
                 });
               }}

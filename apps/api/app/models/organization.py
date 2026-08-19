@@ -88,5 +88,8 @@ class Organization(UUIDMixin, TimestampMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
+    # API serialization uchun biriktirilgan talabalar soni (service layer to'ldiradi)
+    assigned_students_count: int = 0
+
     def __repr__(self) -> str:
         return f"<Organization {self.name} ({self.kind})>"

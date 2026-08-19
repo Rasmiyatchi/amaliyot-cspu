@@ -11,7 +11,7 @@ Biznes mantiq:
 """
 
 import math
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -23,13 +23,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.academic import Direction, Group
 from app.models.area import Area
 from app.models.attendance import AttendanceDay, AttendanceEvent, AttendanceOverride
-from app.models.enums import AttendanceDayStatus, AttendanceEventKind, NotificationType
+from app.models.enums import (
+    AssignmentStatus,
+    AttendanceDayStatus,
+    AttendanceEventKind,
+    NotificationType,
+)
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.student import Student
 from app.models.supervisor import Supervisor
 from app.models.user import User
 from app.services import notification as notification_svc
+
+MIN_PRACTICE_SECONDS = 6 * 3600  # 6 soat = 21600 soniya
+UZB_TZ = timezone(timedelta(hours=5))
+
 
 # ─── Geo-fence ────────────────────────────────────────────
 
@@ -171,6 +180,92 @@ def _verify_day_in_range(assignment: PracticeAssignment, day: date) -> None:
         )
 
 
+# ─── Missed Days Sync (Auto Red) ─────────────────────────
+
+
+async def sync_missed_attendance_days(
+    db: AsyncSession,
+    *,
+    assignment_id: UUID | None = None,
+    student_id: UUID | None = None,
+) -> None:
+    """O'tib ketgan / qolib ketgan kunlarni avtomatik ravishda RED (qolib ketgan)
+    holatiga o'tkazadi va bazada yaratadi/yangilaydi.
+    """
+    today = datetime.now(UZB_TZ).date()
+    yesterday = today - timedelta(days=1)
+
+    stmt = select(PracticeAssignment)
+    if assignment_id:
+        stmt = stmt.where(PracticeAssignment.id == assignment_id)
+    elif student_id:
+        stmt = stmt.where(PracticeAssignment.student_id == student_id)
+    else:
+        stmt = stmt.where(
+            PracticeAssignment.status.in_([AssignmentStatus.ACTIVE, AssignmentStatus.DRAFT])
+        )
+
+    assignments = (await db.execute(stmt)).scalars().all()
+    if not assignments:
+        return
+
+    has_changes = False
+    for assign in assignments:
+        start_d = assign.start_date
+        end_d = min(assign.end_date, yesterday)
+        if start_d > end_d:
+            continue
+
+        days_stmt = select(AttendanceDay).where(
+            AttendanceDay.assignment_id == assign.id,
+            AttendanceDay.date >= start_d,
+            AttendanceDay.date <= end_d,
+        )
+        existing_days = (await db.execute(days_stmt)).scalars().all()
+        existing_map = {d.date: d for d in existing_days}
+
+        # 1. Mavjud bo'lib, lekin PENDING qolib ketgan o'tgan kunlarni RED qilish
+        for d in existing_days:
+            if d.status == AttendanceDayStatus.PENDING:
+                d.status = AttendanceDayStatus.RED
+                if not d.note:
+                    d.note = "Kun davomida to'liq davomat (kelish/ketish) yakunlanmadi"
+                has_changes = True
+
+        # 2. Umuman davomat yozuvi bo'lmagan o'tgan ish kunlarini RED sifatida yaratish
+        cur = start_d
+        new_days = []
+        required_wkdays = set(assign.required_weekdays) if assign.required_weekdays else None
+
+        while cur <= end_d:
+            # Agar required_weekdays belgilangan bo'lsa (ISO 1=Du..7=Ya):
+            # Aks holda 1..6 (Dushanba-Shanba) amaliyot kuni hisoblanadi
+            is_workday = (
+                (cur.isoweekday() in required_wkdays)
+                if required_wkdays
+                else (cur.isoweekday() <= 6)
+            )
+
+            if is_workday and cur not in existing_map:
+                new_day = AttendanceDay(
+                    assignment_id=assign.id,
+                    date=cur,
+                    status=AttendanceDayStatus.RED,
+                    note="Amaliyotga kelinmadi (qolib ketgan kun)",
+                )
+                new_days.append(new_day)
+                existing_map[cur] = new_day
+                has_changes = True
+            cur += timedelta(days=1)
+
+        if new_days:
+            db.add_all(new_days)
+
+    if has_changes:
+        await db.flush()
+        await db.commit()
+
+
 # ─── Student actions ─────────────────────────────────────
 
 
@@ -182,12 +277,17 @@ async def student_check_in(
 ) -> dict[str, Any]:
     assignment = await _get_assignment_for_student(db, assignment_id, student_user_id)
     now = datetime.now(UTC)
-    today = now.date()
+    today = datetime.now(UZB_TZ).date()
     _verify_day_in_range(assignment, today)
 
+    org_id = assignment.organization_id
+
+    # O'tgan qolib ketgan kunlarni sinxronizatsiya qilish
+    await sync_missed_attendance_days(db, assignment_id=assignment_id)
+
     organization = None
-    if assignment.organization_id:
-        organization = await db.get(Organization, assignment.organization_id)
+    if org_id:
+        organization = await db.get(Organization, org_id)
 
     data = payload.model_dump()
     distance, within = _evaluate_geo(
@@ -229,6 +329,7 @@ async def student_check_in(
 
     if attendance_day.check_in_at is None:
         attendance_day.check_in_at = now
+        attendance_day.status = AttendanceDayStatus.PENDING
 
     await db.commit()
     return await get_day(db, attendance_day.id)
@@ -242,23 +343,49 @@ async def student_check_out(
 ) -> dict[str, Any]:
     assignment = await _get_assignment_for_student(db, assignment_id, student_user_id)
     now = datetime.now(UTC)
-    today = now.date()
+    today = datetime.now(UZB_TZ).date()
     _verify_day_in_range(assignment, today)
+
+    org_id = assignment.organization_id
 
     stmt = select(AttendanceDay).where(
         AttendanceDay.assignment_id == assignment_id,
         AttendanceDay.date == today,
     )
     attendance_day = (await db.execute(stmt)).scalar_one_or_none()
-    if not attendance_day:
+    if not attendance_day or not attendance_day.check_in_at:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Bugun check-in qilmagansiz",
+            "Bugun avval kelish (check-in) qayd etilmagan",
+        )
+
+    # 6 soatlik majburiy amaliyot vaqti qoidasi
+    check_in_time = attendance_day.check_in_at
+    if check_in_time.tzinfo is None:
+        check_in_time = check_in_time.replace(tzinfo=UTC)
+
+    elapsed_seconds = (now - check_in_time).total_seconds()
+    if elapsed_seconds < MIN_PRACTICE_SECONDS:
+        remaining_seconds = int(MIN_PRACTICE_SECONDS - elapsed_seconds)
+        rem_hours = remaining_seconds // 3600
+        rem_minutes = (remaining_seconds % 3600) // 60
+        rem_seconds = remaining_seconds % 60
+        parts = []
+        if rem_hours > 0:
+            parts.append(f"{rem_hours} soat")
+        if rem_minutes > 0:
+            parts.append(f"{rem_minutes} daqiqa")
+        if not parts:
+            parts.append(f"{rem_seconds} soniya")
+        rem_str = " ".join(parts)
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Ketishni qayd etish uchun kamida 6 soat amaliyot o'tgan bo'lishi shart. Qolgan vaqt: {rem_str}",
         )
 
     organization = None
-    if assignment.organization_id:
-        organization = await db.get(Organization, assignment.organization_id)
+    if org_id:
+        organization = await db.get(Organization, org_id)
 
     data = payload.model_dump()
     distance, within = _evaluate_geo(
@@ -268,6 +395,12 @@ async def student_check_out(
         wifi_ssid=data.get("wifi_ssid"),
         organization=organization,
     )
+    if not within:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Geo-fence tashqarisida — tashkilot hududida emassiz"
+            + (f" (masofa: {distance:.0f} m)" if distance is not None else ""),
+        )
 
     event = AttendanceEvent(
         attendance_day_id=attendance_day.id,
@@ -286,32 +419,31 @@ async def student_check_out(
     db.add(event)
     attendance_day.check_out_at = now
 
+    # Avtomatik ravishda Yashil (Green / Bajarilgan) holatga o'tadi
+    attendance_day.status = AttendanceDayStatus.GREEN
+
     await db.commit()
     return await get_day(db, attendance_day.id)
 
 
-# ─── Supervisor actions ─────────────────────────────────
+# ─── Admin actions (Approve / Reject) ────────────────────
 
 
-async def supervisor_approve(
+async def admin_approve(
     db: AsyncSession,
     day_id: UUID,
-    supervisor_user_id: UUID,
+    admin_user_id: UUID,
     payload: BaseModel,
 ) -> dict[str, Any]:
     attendance_day = await db.get(AttendanceDay, day_id)
     if not attendance_day:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kun topilmadi")
 
-    await _get_assignment_for_supervisor(
-        db, attendance_day.assignment_id, supervisor_user_id
-    )
-
     if attendance_day.status == AttendanceDayStatus.GREEN:
         raise HTTPException(status.HTTP_409_CONFLICT, "Allaqachon yashil")
 
     attendance_day.status = AttendanceDayStatus.GREEN
-    attendance_day.approved_by_id = supervisor_user_id
+    attendance_day.approved_by_id = admin_user_id
     attendance_day.approved_at = datetime.now(UTC)
     data = payload.model_dump(exclude_unset=True)
     if data.get("note") is not None:
@@ -321,23 +453,19 @@ async def supervisor_approve(
     return await get_day(db, attendance_day.id)
 
 
-async def supervisor_reject(
+async def admin_reject(
     db: AsyncSession,
     day_id: UUID,
-    supervisor_user_id: UUID,
+    admin_user_id: UUID,
     payload: BaseModel,
 ) -> dict[str, Any]:
     attendance_day = await db.get(AttendanceDay, day_id)
     if not attendance_day:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kun topilmadi")
 
-    await _get_assignment_for_supervisor(
-        db, attendance_day.assignment_id, supervisor_user_id
-    )
-
     data = payload.model_dump()
     attendance_day.status = AttendanceDayStatus.RED
-    attendance_day.approved_by_id = supervisor_user_id
+    attendance_day.approved_by_id = admin_user_id
     attendance_day.approved_at = datetime.now(UTC)
     attendance_day.note = data["note"]
 
@@ -359,6 +487,11 @@ async def supervisor_reject(
     return await get_day(db, attendance_day.id)
 
 
+# Orqaga moslik uchun aliaslar
+supervisor_approve = admin_approve
+supervisor_reject = admin_reject
+
+
 # ─── Admin actions ──────────────────────────────────────
 
 
@@ -374,7 +507,7 @@ async def admin_mark_red(
     day: date = data["date"]
     _verify_day_in_range(assignment, day)
 
-    today = datetime.now(UTC).date()
+    today = datetime.now(UZB_TZ).date()
     if day >= today:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -464,7 +597,11 @@ def _base_day_select() -> Any:
             AttendanceDay.updated_at,
             Student.id.label("student_id"),
             Student.hemis_id.label("student_hemis_id"),
-            (User.last_name + " " + User.first_name).label("student_full_name"),
+            func.concat(
+                func.coalesce(User.last_name, ""),
+                " ",
+                func.coalesce(User.first_name, ""),
+            ).label("student_full_name"),
             Organization.name.label("organization_name"),
             Area.name.label("area_name"),
         )
@@ -510,6 +647,11 @@ async def list_days(
     direction_id: UUID | None = None,
     faculty_id: UUID | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
+    # O'tgan qolib ketgan kunlarni avto-qizil qilish
+    await sync_missed_attendance_days(
+        db, assignment_id=assignment_id, student_id=student_id
+    )
+
     base = _base_day_select()
     count_stmt = (
         select(func.count(AttendanceDay.id))
@@ -575,6 +717,7 @@ async def get_day(db: AsyncSession, day_id: UUID) -> dict[str, Any]:
         await db.execute(
             select(AttendanceEvent)
             .where(AttendanceEvent.attendance_day_id == day_id)
+            .execution_options(populate_existing=True)
             .order_by(AttendanceEvent.event_at.asc())
         )
     ).scalars().all()
@@ -613,7 +756,10 @@ async def student_today_status(
 ) -> dict[str, Any] | None:
     """Bugun uchun AttendanceDay (agar mavjud bo'lsa)."""
     await _get_assignment_for_student(db, assignment_id, student_user_id)
-    today = datetime.now(UTC).date()
+    # Talabaning o'tgan qolib ketgan kunlarini ham avto-sinxr qilish
+    await sync_missed_attendance_days(db, assignment_id=assignment_id)
+
+    today = datetime.now(UZB_TZ).date()
 
     stmt = select(AttendanceDay.id).where(
         AttendanceDay.assignment_id == assignment_id,

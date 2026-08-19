@@ -382,6 +382,85 @@ def _extract_validation_kwargs(
     }
 
 
+async def sync_assignments_to_contracts(db: AsyncSession, assignment_ids: list[UUID]) -> None:
+    """Biriktirishlar (rahbar yoki muddat) o'zgarganda shartnomalar va ularning ilovalarini avtomatik yangilash."""
+    if not assignment_ids:
+        return
+
+    from app.models.contract import Contract
+    from app.models.enums import ApplicationStatus, ContractStatus
+    from app.models.practice_application import PracticeApplication
+    from app.services import practice_application as pa_svc
+    from app.services.contract import _snapshot_students
+
+    str_ids = {str(aid) for aid in assignment_ids}
+
+    # 1. Rasmiy shartnomalar (Contract) ni yangilash
+    try:
+        contracts = (
+            await db.execute(
+                select(Contract).where(
+                    Contract.status.in_([ContractStatus.DRAFT, ContractStatus.GENERATED, ContractStatus.ACTIVE])
+                )
+            )
+        ).scalars().all()
+
+        for contract in contracts:
+            c_students = contract.students or []
+            has_match = any(
+                isinstance(st, dict) and str(st.get("assignment_id")) in str_ids
+                for st in c_students
+            )
+            if has_match:
+                all_c_assign_ids = []
+                for st in c_students:
+                    if isinstance(st, dict) and st.get("assignment_id"):
+                        try:
+                            all_c_assign_ids.append(UUID(str(st["assignment_id"])))
+                        except (ValueError, TypeError):
+                            pass
+                if all_c_assign_ids:
+                    try:
+                        refreshed = await _snapshot_students(db, all_c_assign_ids, contract.organization_id)
+                        contract.students = refreshed
+                        if contract.pdf_path or contract.status in (ContractStatus.GENERATED, ContractStatus.ACTIVE):
+                            await pa_svc.generate_official_contract_pdf(db, contract.id)
+                    except Exception as e:
+                        logger.warning(f"Shartnoma {contract.id} snapshotini yangilashda xatolik: {e}")
+    except Exception as e:
+        logger.warning(f"Official contracts sync xatoligi: {e}")
+
+    # 2. Talaba arizalari (PracticeApplication) shartnomalarini yangilash
+    try:
+        assignments = (
+            await db.execute(
+                select(PracticeAssignment).where(PracticeAssignment.id.in_(assignment_ids))
+            )
+        ).scalars().all()
+        student_ids = {a.student_id for a in assignments if a.student_id}
+
+        if student_ids:
+            apps = (
+                await db.execute(
+                    select(PracticeApplication).where(
+                        PracticeApplication.student_id.in_(student_ids),
+                        PracticeApplication.status.in_([ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE]),
+                    )
+                )
+            ).scalars().all()
+
+            for app_obj in apps:
+                if app_obj.contract_template_id and (app_obj.contract_file or app_obj.contract_number):
+                    try:
+                        await pa_svc._generate_contract(db, app_obj)
+                    except Exception as e:
+                        logger.warning(f"Ariza {app_obj.id} shartnomasini yangilashda xatolik: {e}")
+    except Exception as e:
+        logger.warning(f"Applications contract sync xatoligi: {e}")
+
+    await db.commit()
+
+
 async def create_assignment(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
     payload = data.model_dump()
     try:
@@ -398,6 +477,7 @@ async def create_assignment(db: AsyncSession, data: BaseModel) -> dict[str, Any]
     db.add(assignment)
     await db.commit()
     await db.refresh(assignment)
+    await sync_assignments_to_contracts(db, [assignment.id])
     return await get_assignment(db, assignment.id)
 
 
@@ -438,6 +518,7 @@ async def bulk_create_assignments(db: AsyncSession, data: BaseModel) -> BulkAssi
 
     if created_ids:
         await db.commit()
+        await sync_assignments_to_contracts(db, created_ids)
     logger.info(
         f"Bulk assignment: requested={len(student_ids)} created={len(created_ids)} "
         f"failed={len(errors)}"
@@ -496,6 +577,7 @@ async def update_assignment(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
         setattr(assignment, key, value)
 
     await db.commit()
+    await sync_assignments_to_contracts(db, [assignment.id])
     return await get_assignment(db, assignment.id)
 
 

@@ -266,6 +266,17 @@ _APPENDIX_COLS = (
 )
 
 
+def _format_date_str(d: object) -> str:
+    if not d:
+        return ""
+    if hasattr(d, "strftime"):
+        return d.strftime("%d.%m.%Y")
+    d_str = str(d)[:10].strip()
+    if len(d_str) == 10 and d_str[4] == "-" and d_str[7] == "-":
+        return f"{d_str[8:10]}.{d_str[5:7]}.{d_str[0:4]}"
+    return d_str
+
+
 def render_appendix_html(
     contract_number: str, contract_date: str, students: list[dict[str, object]]
 ) -> str:
@@ -282,9 +293,9 @@ def render_appendix_html(
 
     rows = []
     for i, st in enumerate(students, 1):
-        start = str(st.get("start_date") or "")[:10]
-        end = str(st.get("end_date") or "")[:10]
-        muddat = f"{start} — {end}" if start and end else "—"
+        start = _format_date_str(st.get("start_date"))
+        end = _format_date_str(st.get("end_date"))
+        muddat = f"{start} — {end}" if start and end else (start or end or "—")
         rows.append(
             f"<tr><td>{i}</td>"
             f"<td class='left'>{esc(st.get('full_name'))}</td>"

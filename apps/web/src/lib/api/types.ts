@@ -190,6 +190,7 @@ export type Organization = {
   bank_correspondent: string | null;
   bank_mfo: string | null;
   capacity: number;
+  assigned_students_count?: number;
   work_days: number[];
   work_hours: Record<string, unknown>;
   geo_lat: number | null;
@@ -202,7 +203,10 @@ export type Organization = {
   updated_at: ISODateTime;
 };
 
-export type OrganizationCreate = Omit<Organization, "id" | "created_at" | "updated_at">;
+export type OrganizationCreate = Omit<
+  Organization,
+  "id" | "created_at" | "updated_at" | "assigned_students_count"
+>;
 
 // ─── Area ─────────────────────────────────────────────────
 export type Area = {

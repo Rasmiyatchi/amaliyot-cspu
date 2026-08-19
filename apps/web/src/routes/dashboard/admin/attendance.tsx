@@ -40,6 +40,7 @@ import { dateLocale } from "@/i18n";
 import { useAttendanceDays, type AttendanceFilters } from "@/lib/api/attendance";
 import { useAssignments } from "@/lib/api/assignments";
 import { useDirections, useFaculties, useGroups } from "@/lib/api/academic";
+import { useAuthStore } from "@/stores/auth";
 import type {
   AttendanceDay,
   AttendanceDayStatus,
@@ -50,6 +51,8 @@ const ALL = "__all__";
 
 export function AttendancePage() {
   const { t } = useTranslation();
+  const role = useAuthStore((s) => s.user?.role);
+  const isSuperAdmin = role === "super_admin";
   const [filters, setFilters] = useState<AttendanceFilters>({});
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<AttendanceDay | null>(null);
@@ -120,7 +123,7 @@ export function AttendancePage() {
             )}
             {t("adminAttendance.csvExport")}
           </Button>
-          {selectedAssignment && (
+          {selectedAssignment && isSuperAdmin && (
             <Button
               variant="destructive"
               onClick={() => setMarkRedFor(selectedAssignment)}

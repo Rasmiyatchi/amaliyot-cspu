@@ -55,6 +55,7 @@ export function useAttendanceDays(
   filters: AttendanceFilters = {},
   page = 1,
   pageSize = 50,
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: attendanceKeys.days(filters, page, pageSize),
@@ -63,6 +64,7 @@ export function useAttendanceDays(
         .get(`v1/attendance/days?${qs(filters, page, pageSize)}`)
         .json<Paginated<AttendanceDay>>(),
     placeholderData: (prev) => prev,
+    enabled: options?.enabled ?? true,
   });
 }
 

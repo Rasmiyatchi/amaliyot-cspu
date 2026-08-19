@@ -113,7 +113,7 @@ export function DayDetailDialog({ day, onClose }: Props) {
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
-            {day.status === "pending" && (
+            {isSuperAdmin && day.status === "pending" && (
               <>
                 <Button onClick={handleApprove} disabled={approve.isPending}>
                   {approve.isPending && <Loader2 className="h-4 w-4 animate-spin" />}

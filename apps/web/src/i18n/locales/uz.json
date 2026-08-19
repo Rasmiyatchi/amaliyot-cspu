@@ -1363,7 +1363,7 @@
     "activeBadge": "Aktiv",
     "allKinds": "Barcha turlar",
     "columns": {
-      "capacity": "Sig'im",
+      "capacity": "Biriktirilgan / Sig'im",
       "director": "Direktor",
       "region": "Viloyat"
     },
@@ -1545,6 +1545,24 @@
     "todayAttendance": "Bugungi davomat",
     "welcome": "Xush kelibsiz, {{name}}!"
   },
+  "studentAttendance": {
+    "absentDays": "Qolib ketgan (Qizil)",
+    "attendanceRate": "Davomat",
+    "dayDetailTitle": "kunlik davomati",
+    "filterAbsent": "Qolib ketganlar",
+    "filterAll": "Barchasi",
+    "filterPresent": "Faqat kelganlar",
+    "nextMonth": "Keyingi oy",
+    "noRecords": "Davomat yozuvlari yo'q",
+    "presentDays": "Kelgan kunlar",
+    "prevMonth": "Oldingi oy",
+    "subtitle": "Kunlik amaliyot davomati, qatnashgan va qolib ketgan kunlar tarixi",
+    "tabCalendar": "Taqvim",
+    "tabList": "Ro'yxat",
+    "title": "Davomat va Taqvim",
+    "today": "Bugun",
+    "totalWorkdays": "Jami qaydlar"
+  },
   "studentAcademicPanel": {
     "analysesTab": "Dars tahlillari",
     "approved": "Tasdiqlangan",
@@ -1640,15 +1658,21 @@
     "title": "Mening shartnomalarim"
   },
   "studentCheckInButton": {
-    "checkIn": "Kelish",
-    "checkInSuccess": "Kelish qayd etildi",
-    "checkOut": "Ketish",
-    "checkOutSuccess": "Ketish qayd etildi",
-    "doneToday": "Bugun yakunlangan",
-    "gpsFailed": "GPS olib bo'lmadi",
-    "gpsHint": "GPS avtomatik ishlaydi. Tashkilot hududida bo'lishingiz kerak.",
+    "checkIn": "Kelish (Check-in)",
+    "checkInSuccess": "Kelish muvaffaqiyatli qayd etildi",
+    "checkOut": "Ketish (Check-out)",
+    "checkOutSuccess": "Ketish muvaffaqiyatli qayd etildi (Yashil)",
+    "doneToday": "Bugungi davomat to'liq yakunlandi (Yashil)",
+    "durationSpent": "Amaliyot davomiyligi",
+    "gpsFailed": "GPS koordinatalarini olib bo'lmadi",
+    "gpsHint": "GPS avtomatik tekshiriladi. Tashkilot hududida bo'lishingiz shart.",
     "gpsUnavailable": "GPS qurilmangizda yoqilmagan",
-    "noActivePractice": "Hozir aktiv amaliyotingiz yo'q"
+    "lockHint": "Ketishni qayd etish uchun kamida 6 soat o'tishi shart",
+    "lockedTitle": "Majburiy 6 soatlik amaliyot vaqti ketmoqda",
+    "noActivePractice": "Hozir aktiv amaliyotingiz yo'q",
+    "readyForCheckOut": "6 soatlik amaliyot vaqti to'ldi! Endi ketishni qayd etishingiz mumkin.",
+    "remainingTime": "Qolgan vaqt",
+    "unlocksAt": "Ketish ochiladi"
   },
   "studentDocumentsCard": {
     "empty": "Hali fayl yuklamagansiz. Topshiriq, kundalik yoki dars tahlilida fayl biriktiring.",
