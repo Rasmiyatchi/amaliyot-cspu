@@ -187,6 +187,7 @@
     "colDirectionCourse": "Специальность / Курс",
     "colManagerPhone": "Тел. руководителя",
     "colObject": "Объект",
+    "colStudentResidence": "Место жительства студента",
     "confirmScan": "Подтвердить скан",
     "confirmScanPrompt": "Подтвердить скан? Договор будет закрыт, и студент не сможет повторно загрузить скан.",
     "contractDocx": "Договор (DOCX)",
@@ -225,6 +226,7 @@
       "underReview": "На рассмотрении"
     },
     "studentsCount": "Студентов: {{count}}",
+    "studentResidence": "Место жительства студента",
     "subtitle": "Рассматривайте заявки студентов и одобряйте их с QR",
     "templateName": "Шаблон договора",
     "title": "Заявки на практику",
@@ -441,6 +443,7 @@
     "colCreated": "Дата создания",
     "colNumber": "Номер договора",
     "colPeriod": "Учебный год / Срок",
+    "colStudentResidence": "Место жительства студента",
     "emptyDescription": "Сначала выполните прикрепление, затем создайте договор",
     "emptyTitle": "Договоров нет",
     "newContract": "Новый договор",
@@ -457,7 +460,15 @@
       "rejected": "Отклонённые",
       "signed": "Подписанные"
     },
-    "title": "Договоры"
+    "title": "Договоры",
+    "archiveButton": "В архив",
+    "unarchiveButton": "Восстановить из архива",
+    "archiveConfirmTitle": "Архивация договора",
+    "archiveConfirmMessage": "Вы действительно хотите отправить этот договор в архив?",
+    "unarchiveConfirmTitle": "Восстановление из архива",
+    "unarchiveConfirmMessage": "Вы действительно хотите восстановить этот договор из архива?",
+    "archivedSuccess": "Договор отправлен в архив",
+    "unarchivedSuccess": "Договор восстановлен из архива"
   },
   "adminCredentialsSection": {
     "credentialsUpdated": "Учётные данные обновлены",
@@ -1090,6 +1101,7 @@
     "sessionExpired": "Сессия истекла",
     "status": "Статус",
     "student": "Студент",
+    "studentResidence": "Место жительства студента",
     "students": "Студенты",
     "success": "Успешно",
     "supervisor": "Руководитель",

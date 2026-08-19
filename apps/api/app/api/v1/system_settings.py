@@ -40,3 +40,12 @@ async def update_settings(
     data: SystemSettingsUpdate, db: SessionDep, _: RequireSuperAdmin
 ) -> SystemSettingsRead:
     return SystemSettingsRead.model_validate(await svc.update_settings(db, data))
+
+
+@router.post("/reset-database", summary="Super admin only — Bazani 0 dan tozalash")
+async def reset_database(db: SessionDep, _: RequireSuperAdmin) -> dict:
+    from app.services.data_cleaner import reset_all_data
+
+    counts = await reset_all_data(db)
+    return {"message": "Baza muvaffaqiyatli tozalandi", "counts": counts}
+

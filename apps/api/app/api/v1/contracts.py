@@ -167,6 +167,22 @@ async def revoke_contract(
     return ContractRead.model_validate(await svc.revoke_contract(db, id_, data))
 
 
+@router.post("/{id_}/archive", response_model=ContractRead)
+async def archive_contract(
+    id_: UUID, db: SessionDep, _: RequireAdmin
+) -> ContractRead:
+    """Shartnomani arxivga o'tkazish (status -> EXPIRED)."""
+    return ContractRead.model_validate(await svc.archive_contract(db, id_))
+
+
+@router.post("/{id_}/unarchive", response_model=ContractRead)
+async def unarchive_contract(
+    id_: UUID, db: SessionDep, _: RequireAdmin
+) -> ContractRead:
+    """Shartnomani arxivdan chiqarish (status -> ACTIVE/GENERATED/DRAFT)."""
+    return ContractRead.model_validate(await svc.unarchive_contract(db, id_))
+
+
 @router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_contract(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
     await svc.delete_contract(db, id_)

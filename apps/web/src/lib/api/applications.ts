@@ -278,12 +278,38 @@ export function useConfirmScan() {
   });
 }
 
+/** Admin: arizani arxivlash (status -> ARCHIVED). */
+export function useArchiveApplication() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) =>
+      api.post(`v1/practice-applications/${id}/archive`).json<PracticeApplication>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+/** Admin: arizani arxivdan chiqarish (status -> APPROVED/ACTIVE). */
+export function useUnarchiveApplication() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) =>
+      api.post(`v1/practice-applications/${id}/unarchive`).json<PracticeApplication>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
 /** Admin uchun: tasdiqlangan va shartnoma fayli mavjud arizalar ro'yxati. */
-export function useApprovedContracts(search?: string) {
+export function useApprovedContracts(
+  search?: string,
+  statuses?: ApplicationStatus[]
+) {
   const qs = new URLSearchParams();
   if (search) qs.set("search", search);
+  if (statuses && statuses.length > 0) {
+    statuses.forEach((s) => qs.append("status", s));
+  }
   return useQuery({
-    queryKey: [...KEY, "approved-contracts", search],
+    queryKey: [...KEY, "approved-contracts", search, statuses],
     queryFn: () =>
       api.get(`v1/practice-applications/approved-contracts?${qs}`).json<PracticeApplication[]>(),
     placeholderData: (prev) => prev,

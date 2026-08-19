@@ -127,16 +127,27 @@ async def download_scan(id_: UUID, db: SessionDep, user: CurrentUser) -> FileRes
 async def list_approved_contracts(
     db: SessionDep,
     _: RequireAdmin,
+    status_filter: list[ApplicationStatus] | None = Query(None, alias="status"),
     search: str | None = Query(None, min_length=1, max_length=100),
 ) -> list[ApplicationRead]:
     """Tasdiqlangan va shartnoma fayli mavjud arizalar — admin 'Shartnomalar' bo'limi uchun."""
-    rows = await svc.list_all(
-        db,
-        status_filter=ApplicationStatus.APPROVED,
-        search=search,
-    )
-    # Faqat shartnoma fayli bor arizalar
-    rows = [r for r in rows if r.get("contract_file")]
+    if status_filter:
+        rows = await svc.list_all(
+            db,
+            status_filter=status_filter,
+            search=search,
+            exclude_archived=False,
+        )
+    else:
+        # Default ("Barchasi" / All): faqat faol tasdiqlanganlar (ARCHIVED va EXPIRED chiqarilmaydi)
+        rows = await svc.list_all(
+            db,
+            status_filter=[ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE],
+            search=search,
+            exclude_archived=True,
+        )
+    # Faqat shartnoma fayli yoki raqami bor arizalar
+    rows = [r for r in rows if r.get("contract_file") or r.get("contract_number")]
     return [ApplicationRead.model_validate(r) for r in rows]
 
 
@@ -144,11 +155,17 @@ async def list_approved_contracts(
 async def list_applications(
     db: SessionDep,
     _: RequireAdmin,
-    status_filter: ApplicationStatus | None = Query(None, alias="status"),
+    status_filter: list[ApplicationStatus] | None = Query(None, alias="status"),
     region: str | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
 ) -> list[ApplicationRead]:
-    rows = await svc.list_all(db, status_filter=status_filter, region=region, search=search)
+    rows = await svc.list_all(
+        db,
+        status_filter=status_filter,
+        region=region,
+        search=search,
+        exclude_archived=status_filter is None,
+    )
     return [ApplicationRead.model_validate(r) for r in rows]
 
 
@@ -192,6 +209,22 @@ async def resubmit_application(
 async def confirm_scan(id_: UUID, db: SessionDep, user: RequireAdmin) -> ApplicationRead:
     """Admin: imzolangan skanni tasdiqlash — shartnoma yopiladi (ACTIVE)."""
     return ApplicationRead.model_validate(await svc.confirm_scan(db, id_, user))
+
+
+@router.post("/{id_}/archive", response_model=ApplicationRead)
+async def archive_application(
+    id_: UUID, db: SessionDep, user: RequireAdmin
+) -> ApplicationRead:
+    """Arizani arxivga o'tkazish (status -> ARCHIVED)."""
+    return ApplicationRead.model_validate(await svc.archive_application(db, id_, user))
+
+
+@router.post("/{id_}/unarchive", response_model=ApplicationRead)
+async def unarchive_application(
+    id_: UUID, db: SessionDep, user: RequireAdmin
+) -> ApplicationRead:
+    """Arizani arxivdan chiqarish (status -> APPROVED/ACTIVE)."""
+    return ApplicationRead.model_validate(await svc.unarchive_application(db, id_, user))
 
 
 @router.post("/{id_}/return", response_model=ApplicationRead)

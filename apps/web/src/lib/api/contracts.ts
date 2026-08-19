@@ -116,6 +116,24 @@ export function useRevokeContract() {
   });
 }
 
+export function useArchiveContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) =>
+      api.post(`v1/contracts/${id}/archive`).json<Contract>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: contractKeys.all }),
+  });
+}
+
+export function useUnarchiveContract() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) =>
+      api.post(`v1/contracts/${id}/unarchive`).json<Contract>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: contractKeys.all }),
+  });
+}
+
 export function useDeleteContract() {
   const qc = useQueryClient();
   return useMutation({

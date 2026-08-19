@@ -113,6 +113,9 @@ async def list_contracts(
             stmt = stmt.where(Contract.academic_year_id == academic_year_id)
         if status_filter:
             stmt = stmt.where(Contract.status.in_(status_filter))
+        else:
+            # "Barchasi" (All) tab — faqat faol shartnomalar (arxivdagi EXPIRED chiqarilmaydi)
+            stmt = stmt.where(Contract.status != ContractStatus.EXPIRED)
         if search:
             like = f"%{search}%"
             stmt = stmt.where(or_(Contract.number.like(like), Organization.name.ilike(like)))
@@ -302,6 +305,35 @@ async def revoke_contract(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[
     contract.status = ContractStatus.REVOKED
     contract.revoked_reason = payload["reason"]
     contract.revoked_at = datetime.now(UTC)
+    await db.commit()
+    return await get_contract(db, contract.id)
+
+
+async def archive_contract(db: AsyncSession, id_: UUID) -> dict[str, Any]:
+    """Shartnomani arxivga o'tkazish (status -> EXPIRED)."""
+    contract = await db.get(Contract, id_)
+    if not contract:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Shartnoma topilmadi: {id_}")
+    contract.status = ContractStatus.EXPIRED
+    await db.commit()
+    return await get_contract(db, contract.id)
+
+
+async def unarchive_contract(db: AsyncSession, id_: UUID) -> dict[str, Any]:
+    """Shartnomani arxivdan chiqarish (faol holatga qaytarish)."""
+    contract = await db.get(Contract, id_)
+    if not contract:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Shartnoma topilmadi: {id_}")
+    if contract.status != ContractStatus.EXPIRED:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Faqat arxivdagi shartnomalarni arxivdan chiqarish mumkin"
+        )
+    if contract.scan_path:
+        contract.status = ContractStatus.ACTIVE
+    elif contract.pdf_path:
+        contract.status = ContractStatus.GENERATED
+    else:
+        contract.status = ContractStatus.DRAFT
     await db.commit()
     return await get_contract(db, contract.id)
 

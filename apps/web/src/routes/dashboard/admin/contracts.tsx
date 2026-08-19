@@ -1,4 +1,6 @@
 import {
+  Archive,
+  ArchiveRestore,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
@@ -19,6 +21,7 @@ import { FilePreviewModal, type PreviewFile } from "@/components/file-preview-mo
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/loading-skeletons";
@@ -34,23 +37,35 @@ import {
 import { dateLocale } from "@/i18n";
 import {
   downloadContractPdf,
+  useArchiveContract,
   useContracts,
+  useUnarchiveContract,
   type ContractFilters,
 } from "@/lib/api/contracts";
 import {
   useApprovedContracts,
+  useArchiveApplication,
+  useUnarchiveApplication,
+  type ApplicationStatus,
   type PracticeApplication,
 } from "@/lib/api/applications";
-import type { Contract, ContractStatus } from "@/lib/api/types";
+import type { Contract, ContractStatus, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
 
 const STATUS_TABS: { value: string; labelKey: string; statuses?: ContractStatus[] }[] = [
-  { value: ALL, labelKey: "common.all" },
+  { value: ALL, labelKey: "common.all", statuses: ["draft", "generated", "active", "revoked"] },
   { value: "yangi", labelKey: "adminContracts.tabs.new", statuses: ["draft", "generated"] },
   { value: "imzolangan", labelKey: "adminContracts.tabs.signed", statuses: ["active"] },
   { value: "rad", labelKey: "adminContracts.tabs.rejected", statuses: ["revoked"] },
   { value: "arxiv", labelKey: "adminContracts.tabs.archive", statuses: ["expired"] },
+];
+
+const APP_STATUS_TABS: { value: string; labelKey: string; statuses?: ApplicationStatus[] }[] = [
+  { value: ALL, labelKey: "common.all", statuses: ["approved", "active"] },
+  { value: "yangi", labelKey: "adminContracts.tabs.new", statuses: ["approved"] },
+  { value: "imzolangan", labelKey: "adminContracts.tabs.signed", statuses: ["active"] },
+  { value: "arxiv", labelKey: "adminContracts.tabs.archive", statuses: ["archived", "expired"] },
 ];
 
 
@@ -61,6 +76,7 @@ export function ContractsPage() {
   const debouncedSearch = useDebounce(searchInput, 300);
   const [page, setPage] = useState(1);
   const [statusTab, setStatusTab] = useState(ALL);
+  const [appStatusTab, setAppStatusTab] = useState(ALL);
   const [selected, setSelected] = useState<Contract | null>(null);
   const [creating, setCreating] = useState(false);
   const [pdfBusyId, setPdfBusyId] = useState<string | null>(null);
@@ -68,6 +84,17 @@ export function ContractsPage() {
 
   // Ikki xil shartnoma turi uchun tab
   const [sourceTab, setSourceTab] = useState<"official" | "application">("application");
+  const [confirmTarget, setConfirmTarget] = useState<{
+    type: "official" | "application";
+    action: "archive" | "unarchive";
+    id: UUID;
+    name?: string;
+  } | null>(null);
+
+  const archiveContract = useArchiveContract();
+  const unarchiveContract = useUnarchiveContract();
+  const archiveApp = useArchiveApplication();
+  const unarchiveApp = useUnarchiveApplication();
 
   const pageSize = 20;
 
@@ -88,11 +115,39 @@ export function ContractsPage() {
   }, [debouncedSearch]);
 
   const { data, isPending, error, isFetching } = useContracts(filters, page, pageSize);
+  const selectedAppTab = APP_STATUS_TABS.find((s) => s.value === appStatusTab);
   const {
     data: appContracts,
     isPending: appPending,
     error: appError,
-  } = useApprovedContracts(debouncedSearch || undefined);
+  } = useApprovedContracts(debouncedSearch || undefined, selectedAppTab?.statuses);
+
+  const handleConfirmAction = async () => {
+    if (!confirmTarget) return;
+    const { type, action, id } = confirmTarget;
+    try {
+      if (type === "official") {
+        if (action === "archive") {
+          await archiveContract.mutateAsync(id);
+          toast.success(t("adminContracts.archivedSuccess"));
+        } else {
+          await unarchiveContract.mutateAsync(id);
+          toast.success(t("adminContracts.unarchivedSuccess"));
+        }
+      } else {
+        if (action === "archive") {
+          await archiveApp.mutateAsync(id);
+          toast.success(t("adminContracts.archivedSuccess"));
+        } else {
+          await unarchiveApp.mutateAsync(id);
+          toast.success(t("adminContracts.unarchivedSuccess"));
+        }
+      }
+      setConfirmTarget(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
 
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / pageSize));
 
@@ -199,6 +254,7 @@ export function ContractsPage() {
                       <TableHead className="w-[130px]">{t("adminContracts.colCreated")}</TableHead>
                       <TableHead className="w-[140px]">{t("adminContracts.colContract")}</TableHead>
                       <TableHead className="w-[120px]">{t("common.status")}</TableHead>
+                      <TableHead className="w-[140px] text-right">{t("common.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -245,6 +301,47 @@ export function ContractsPage() {
                         <TableCell>
                           <ContractStatusBadge status={c.status} />
                         </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          {c.status === "expired" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1.5 px-2.5 text-xs text-primary border-primary/30 hover:bg-primary/10 hover:text-primary"
+                              onClick={() =>
+                                setConfirmTarget({
+                                  type: "official",
+                                  action: "unarchive",
+                                  id: c.id,
+                                  name: c.number,
+                                })
+                              }
+                              disabled={unarchiveContract.isPending}
+                              title={t("adminContracts.unarchiveButton")}
+                            >
+                              <ArchiveRestore className="h-3.5 w-3.5" />
+                              {t("adminContracts.unarchiveButton")}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1.5 px-2.5 text-xs text-muted-foreground hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() =>
+                                setConfirmTarget({
+                                  type: "official",
+                                  action: "archive",
+                                  id: c.id,
+                                  name: c.number,
+                                })
+                              }
+                              disabled={archiveContract.isPending}
+                              title={t("adminContracts.archiveButton")}
+                            >
+                              <Archive className="h-3.5 w-3.5" />
+                              {t("adminContracts.archiveButton")}
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -289,6 +386,22 @@ export function ContractsPage() {
       {/* ── Ariza shartnomalar ── */}
       {sourceTab === "application" && (
         <>
+          <Tabs
+            value={appStatusTab}
+            onValueChange={(v) => {
+              setAppStatusTab(v);
+            }}
+            className="mb-4"
+          >
+            <TabsList>
+              {APP_STATUS_TABS.map((tab) => (
+                <TabsTrigger key={tab.value} value={tab.value}>
+                  {t(tab.labelKey)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
           {appPending && <TableSkeleton columns={6} rows={5} />}
           {appError && (
             <Alert variant="destructive">
@@ -315,10 +428,11 @@ export function ContractsPage() {
                     <TableHead>{t("adminContracts.colNumber")}</TableHead>
                     <TableHead>{t("common.student")}</TableHead>
                     <TableHead>{t("common.organization")}</TableHead>
-                    <TableHead>{t("common.area")}</TableHead>
+                    <TableHead>{t("adminContracts.colStudentResidence")}</TableHead>
                     <TableHead>{t("adminContracts.colApprovedDate")}</TableHead>
                     <TableHead className="w-[140px]">{t("adminContracts.colContract")}</TableHead>
-                    <TableHead className="w-[100px]">{t("common.status")}</TableHead>
+                    <TableHead className="w-[120px]">{t("common.status")}</TableHead>
+                    <TableHead className="w-[140px] text-right">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -366,7 +480,56 @@ export function ContractsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="success">{t("adminContracts.pdfReady")}</Badge>
+                        {a.status === "archived" || a.status === "expired" ? (
+                          <Badge variant="outline">{t("adminContracts.tabs.archive")}</Badge>
+                        ) : a.status === "active" ? (
+                          <Badge variant="success">{t("adminContracts.tabs.signed")}</Badge>
+                        ) : a.status === "approved" ? (
+                          <Badge variant="secondary">{t("adminContracts.tabs.new")}</Badge>
+                        ) : (
+                          <Badge variant="default">{a.status}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {a.status === "archived" || a.status === "expired" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1.5 px-2.5 text-xs text-primary border-primary/30 hover:bg-primary/10 hover:text-primary"
+                            onClick={() =>
+                              setConfirmTarget({
+                                type: "application",
+                                action: "unarchive",
+                                id: a.id,
+                                name: a.student_name ?? a.contract_number ?? undefined,
+                              })
+                            }
+                            disabled={unarchiveApp.isPending}
+                            title={t("adminContracts.unarchiveButton")}
+                          >
+                            <ArchiveRestore className="h-3.5 w-3.5" />
+                            {t("adminContracts.unarchiveButton")}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1.5 px-2.5 text-xs text-muted-foreground hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() =>
+                              setConfirmTarget({
+                                type: "application",
+                                action: "archive",
+                                id: a.id,
+                                name: a.student_name ?? a.contract_number ?? undefined,
+                              })
+                            }
+                            disabled={archiveApp.isPending}
+                            title={t("adminContracts.archiveButton")}
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                            {t("adminContracts.archiveButton")}
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -380,6 +543,34 @@ export function ContractsPage() {
       <ContractFormDialog open={creating} onClose={() => setCreating(false)} />
       <ContractDetailDialog contract={selected} onClose={() => setSelected(null)} />
       <FilePreviewModal attachment={previewFile} onClose={() => setPreviewFile(null)} />
+
+      <ConfirmDialog
+        open={!!confirmTarget}
+        title={
+          confirmTarget?.action === "archive"
+            ? t("adminContracts.archiveConfirmTitle")
+            : t("adminContracts.unarchiveConfirmTitle")
+        }
+        description={
+          confirmTarget?.action === "archive"
+            ? t("adminContracts.archiveConfirmMessage")
+            : t("adminContracts.unarchiveConfirmMessage")
+        }
+        confirmText={
+          confirmTarget?.action === "archive"
+            ? t("adminContracts.archiveButton")
+            : t("adminContracts.unarchiveButton")
+        }
+        variant={confirmTarget?.action === "archive" ? "destructive" : "default"}
+        isPending={
+          archiveContract.isPending ||
+          unarchiveContract.isPending ||
+          archiveApp.isPending ||
+          unarchiveApp.isPending
+        }
+        onConfirm={handleConfirmAction}
+        onClose={() => setConfirmTarget(null)}
+      />
     </div>
   );
 }

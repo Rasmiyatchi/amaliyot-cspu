@@ -1,5 +1,5 @@
 import { HTTPError } from "ky";
-import { AlertCircle, Download, FileText, Loader2, Upload, XCircle } from "lucide-react";
+import { AlertCircle, Archive, ArchiveRestore, Download, FileText, Loader2, Upload, XCircle } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -25,8 +25,10 @@ import {
 } from "@/components/ui/table";
 import { dateLocale } from "@/i18n";
 import {
+  useArchiveContract,
   useGenerateContractPdf,
   useRevokeContract,
+  useUnarchiveContract,
   useUploadContractScan,
 } from "@/lib/api/contracts";
 import type { Contract } from "@/lib/api/types";
@@ -39,6 +41,8 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
   const gen = useGenerateContractPdf();
   const upload = useUploadContractScan();
   const revoke = useRevokeContract();
+  const archive = useArchiveContract();
+  const unarchive = useUnarchiveContract();
   const fileRef = useRef<HTMLInputElement>(null);
   const [revokeReason, setRevokeReason] = useState("");
   const [revokeMode, setRevokeMode] = useState(false);
@@ -96,6 +100,26 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
       toast.success(t("contractsContractDetailDialog.revokedToast"));
       setRevokeMode(false);
       setRevokeReason("");
+    } catch (e) {
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+    }
+  };
+
+  const handleArchive = async () => {
+    try {
+      await archive.mutateAsync(contract.id);
+      toast.success(t("adminContracts.archivedSuccess"));
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+    }
+  };
+
+  const handleUnarchive = async () => {
+    try {
+      await unarchive.mutateAsync(contract.id);
+      toast.success(t("adminContracts.unarchivedSuccess"));
+      onClose();
     } catch (e) {
       toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
@@ -172,6 +196,33 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
                 onChange={(e) => handleUploadScan(e.target.files?.[0] ?? null)}
               />
             </>
+          )}
+          {contract.status === "expired" ? (
+            <Button
+              variant="outline"
+              onClick={handleUnarchive}
+              disabled={unarchive.isPending}
+            >
+              {unarchive.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArchiveRestore className="h-4 w-4" />
+              )}
+              {t("adminContracts.unarchiveButton")}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={handleArchive}
+              disabled={archive.isPending}
+            >
+              {archive.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Archive className="h-4 w-4" />
+              )}
+              {t("adminContracts.archiveButton")}
+            </Button>
           )}
           {contract.status !== "revoked" && contract.status !== "expired" && (
             <Button

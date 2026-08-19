@@ -226,13 +226,24 @@ async def list_my(db: AsyncSession, user: User) -> list[dict[str, Any]]:
 async def list_all(
     db: AsyncSession,
     *,
-    status_filter: ApplicationStatus | None = None,
+    status_filter: ApplicationStatus | list[ApplicationStatus] | None = None,
     region: str | None = None,
     search: str | None = None,
+    exclude_archived: bool = True,
 ) -> list[dict[str, Any]]:
     stmt = _read_select()
     if status_filter:
-        stmt = stmt.where(PracticeApplication.status == status_filter)
+        if isinstance(status_filter, (list, tuple, set)):
+            stmt = stmt.where(PracticeApplication.status.in_(status_filter))
+        else:
+            stmt = stmt.where(PracticeApplication.status == status_filter)
+    elif exclude_archived:
+        # "Barchasi" (All) tab — faqat faol arizalar (arxivdagi ARCHIVED va EXPIRED chiqarilmaydi)
+        stmt = stmt.where(
+            PracticeApplication.status.not_in(
+                [ApplicationStatus.ARCHIVED, ApplicationStatus.EXPIRED]
+            )
+        )
     if region:
         stmt = stmt.where(PracticeApplication.region == region)
     if search:
@@ -293,6 +304,29 @@ async def confirm_scan(db: AsyncSession, id_: UUID, user: User) -> dict[str, Any
     if obj.status != ApplicationStatus.APPROVED:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ariza tasdiqlanmagan")
     obj.status = ApplicationStatus.ACTIVE
+    await db.commit()
+    return await get_one(db, id_)
+
+
+async def archive_application(db: AsyncSession, id_: UUID, user: User) -> dict[str, Any]:
+    """Admin arizani arxivga o'tkazadi (status -> ARCHIVED)."""
+    obj = await _get_obj(db, id_)
+    obj.status = ApplicationStatus.ARCHIVED
+    await db.commit()
+    return await get_one(db, id_)
+
+
+async def unarchive_application(db: AsyncSession, id_: UUID, user: User) -> dict[str, Any]:
+    """Admin arizani arxivdan chiqaradi (faol holatga qaytaradi)."""
+    obj = await _get_obj(db, id_)
+    if obj.status not in (ApplicationStatus.ARCHIVED, ApplicationStatus.EXPIRED):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Faqat arxivdagi arizalarni arxivdan chiqarish mumkin"
+        )
+    if obj.scan_file:
+        obj.status = ApplicationStatus.ACTIVE
+    else:
+        obj.status = ApplicationStatus.APPROVED
     await db.commit()
     return await get_one(db, id_)
 

@@ -1,5 +1,7 @@
 import {
   AlertCircle,
+  Archive,
+  ArchiveRestore,
   Check,
   ClipboardEdit,
   Download,
@@ -16,6 +18,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -42,10 +45,12 @@ import {
   useAppendix,
   useApplications,
   useApproveApplication,
+  useArchiveApplication,
   useConfirmScan,
   useRejectApplication,
   useReturnApplication,
   useTemplateFormFields,
+  useUnarchiveApplication,
   type ApplicationStatus,
   type PracticeApplication,
 } from "@/lib/api/applications";
@@ -60,6 +65,7 @@ const STATUS_TABS: { value: string; labelKey: string }[] = [
   { value: "active", labelKey: "adminApplications.status.active" },
   { value: "revision_required", labelKey: "adminApplications.status.revisionRequired" },
   { value: "rejected", labelKey: "adminApplications.status.rejected" },
+  { value: "archived", labelKey: "adminApplications.status.archived" },
 ];
 type BadgeVariant = "secondary" | "success" | "destructive" | "warning" | "default";
 const STATUS_BADGE: Record<ApplicationStatus, { labelKey: string; variant: BadgeVariant }> = {
@@ -90,10 +96,16 @@ export function ApplicationsPage() {
   const reject = useRejectApplication();
   const returnApp = useReturnApplication();
   const confirmScan = useConfirmScan();
+  const archive = useArchiveApplication();
+  const unarchive = useUnarchiveApplication();
 
   const [detailApp, setDetailApp] = useState<PracticeApplication | null>(null);
   const [returnDialog, setReturnDialog] = useState<{ open: boolean, app: PracticeApplication | null }>({ open: false, app: null });
   const [returnReason, setReturnReason] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState<{
+    action: "archive" | "unarchive";
+    app: PracticeApplication;
+  } | null>(null);
 
   const handleApprove = async (a: PracticeApplication) => {
     try {
@@ -141,6 +153,24 @@ export function ApplicationsPage() {
     try {
       await confirmScan.mutateAsync(a.id);
       toast.success(t("adminApplications.toastScanConfirmed"));
+      setDetailApp(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
+
+  const handleArchiveConfirm = async () => {
+    if (!archiveTarget) return;
+    const { action, app } = archiveTarget;
+    try {
+      if (action === "archive") {
+        await archive.mutateAsync(app.id);
+        toast.success(t("adminContracts.archivedSuccess"));
+      } else {
+        await unarchive.mutateAsync(app.id);
+        toast.success(t("adminContracts.unarchivedSuccess"));
+      }
+      setArchiveTarget(null);
       setDetailApp(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
@@ -209,7 +239,7 @@ export function ApplicationsPage() {
                     <TableHead>{t("common.student")}</TableHead>
                     <TableHead>{t("adminApplications.colDirectionCourse")}</TableHead>
                     <TableHead>{t("common.organization")}</TableHead>
-                    <TableHead>{t("common.area")}</TableHead>
+                    <TableHead>{t("adminApplications.colStudentResidence")}</TableHead>
                     <TableHead>{t("common.status")}</TableHead>
                     <TableHead className="w-[150px]">{t("adminApplications.colAction")}</TableHead>
                   </TableRow>
@@ -361,6 +391,33 @@ export function ApplicationsPage() {
                               <FileCheck className="h-4 w-4" />
                             </Button>
                           )}
+                          {a.status === "archived" || a.status === "expired" ? (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-primary hover:text-primary hover:bg-primary/10"
+                              title={t("adminContracts.unarchiveButton")}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setArchiveTarget({ action: "unarchive", app: a });
+                              }}
+                            >
+                              <ArchiveRestore className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              title={t("adminContracts.archiveButton")}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setArchiveTarget({ action: "archive", app: a });
+                              }}
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -460,6 +517,28 @@ export function ApplicationsPage() {
             </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!archiveTarget}
+        title={
+          archiveTarget?.action === "archive"
+            ? t("adminContracts.archiveConfirmTitle")
+            : t("adminContracts.unarchiveConfirmTitle")
+        }
+        description={
+          archiveTarget?.action === "archive"
+            ? t("adminContracts.archiveConfirmMessage")
+            : t("adminContracts.unarchiveConfirmMessage")
+        }
+        confirmText={
+          archiveTarget?.action === "archive"
+            ? t("adminContracts.archiveButton")
+            : t("adminContracts.unarchiveButton")
+        }
+        variant={archiveTarget?.action === "archive" ? "destructive" : "default"}
+        isPending={archive.isPending || unarchive.isPending}
+        onConfirm={handleArchiveConfirm}
+        onClose={() => setArchiveTarget(null)}
+      />
     </div>
   );
 }
@@ -491,10 +570,22 @@ function ApplicationDetailDialog({
   confirmScanPending,
 }: DetailProps) {
   const { t } = useTranslation();
+  const archive = useArchiveApplication();
   const { data: formFields } = useTemplateFormFields(app?.contract_template_id);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+
+  const handleArchive = async () => {
+    if (!app) return;
+    try {
+      await archive.mutateAsync(app.id);
+      toast.success(t("adminApplications.status.archived") + " qilindi");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
 
   // PDF preview — hujjat mazmunini tasdiqlashdan OLDIN ko'rish
   useEffect(() => {
@@ -565,7 +656,7 @@ function ApplicationDetailDialog({
             <InfoRow label={t("adminApplications.templateName")} value={app.contract_template_name} />
             <InfoRow label={t("common.organization")} value={app.organization_name} />
             <InfoRow
-              label={t("common.area")}
+              label={t("adminApplications.studentResidence")}
               value={[app.region, app.district].filter(Boolean).join(", ") || null}
             />
             <InfoRow label={t("common.note")} value={app.note} />
@@ -654,6 +745,40 @@ function ApplicationDetailDialog({
           <Button variant="ghost" onClick={onClose}>
             {t("common.close")}
           </Button>
+          {app.status === "archived" || app.status === "expired" ? (
+            <Button
+              variant="outline"
+              onClick={() => {
+                unarchive.mutateAsync(app.id).then(() => {
+                  toast.success(t("adminContracts.unarchivedSuccess"));
+                  onClose();
+                }).catch((e) => {
+                  toast.error(e instanceof Error ? e.message : t("common.error"));
+                });
+              }}
+              disabled={unarchive.isPending}
+            >
+              {unarchive.isPending ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <ArchiveRestore className="mr-1 h-4 w-4" />
+              )}
+              {t("adminContracts.unarchiveButton")}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={handleArchive}
+              disabled={archive.isPending}
+            >
+              {archive.isPending ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <Archive className="mr-1 h-4 w-4" />
+              )}
+              {t("adminContracts.archiveButton")}
+            </Button>
+          )}
           {app.status === "approved" && app.has_scan_file && (
             <Button
               variant="success"

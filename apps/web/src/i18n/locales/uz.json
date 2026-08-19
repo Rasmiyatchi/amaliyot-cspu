@@ -187,6 +187,7 @@
     "colDirectionCourse": "Mutaxassislik / Kurs",
     "colManagerPhone": "Rahbar tel.",
     "colObject": "Obyekt",
+    "colStudentResidence": "Talaba yashash joyi",
     "confirmScan": "Skanni tasdiqlash",
     "confirmScanPrompt": "Skanni tasdiqlaysizmi? Shartnoma yopiladi va talaba skanni qayta yuklay olmaydi.",
     "contractDocx": "Shartnoma (DOCX)",
@@ -225,6 +226,7 @@
       "underReview": "Ko'rib chiqilmoqda"
     },
     "studentsCount": "{{count}} ta talaba",
+    "studentResidence": "Talaba yashash joyi",
     "subtitle": "Talabalar yuborgan arizalarni ko'rib chiqing va QR bilan tasdiqlang",
     "templateName": "Shartnoma shabloni",
     "title": "Amaliyot arizalari",
@@ -441,6 +443,7 @@
     "colCreated": "Yaratilgan sana",
     "colNumber": "Shartnoma raqami",
     "colPeriod": "O'quv yili / Muddati",
+    "colStudentResidence": "Talaba yashash joyi",
     "emptyDescription": "Avval Biriktirish qiling, keyin shartnoma yarating",
     "emptyTitle": "Shartnomalar yo'q",
     "newContract": "Yangi shartnoma",
@@ -457,7 +460,15 @@
       "rejected": "Rad etilgan",
       "signed": "Imzolangan"
     },
-    "title": "Shartnomalar"
+    "title": "Shartnomalar",
+    "archiveButton": "Arxivlash",
+    "unarchiveButton": "Arxivdan chiqarish",
+    "archiveConfirmTitle": "Shartnomani arxivlash",
+    "archiveConfirmMessage": "Haqiqatan ham bu shartnomani arxivlamoqchimisiz?",
+    "unarchiveConfirmTitle": "Arxivdan chiqarish",
+    "unarchiveConfirmMessage": "Haqiqatan ham bu shartnomani arxivdan chiqarmoqchimisiz?",
+    "archivedSuccess": "Shartnoma arxivga o'tkazildi",
+    "unarchivedSuccess": "Shartnoma arxivdan chiqarildi"
   },
   "adminCredentialsSection": {
     "credentialsUpdated": "Credentials yangilandi",
@@ -1090,6 +1101,7 @@
     "sessionExpired": "Sessiya tugagan",
     "status": "Holat",
     "student": "Talaba",
+    "studentResidence": "Talaba yashash joyi",
     "students": "Talabalar",
     "success": "Muvaffaqiyatli",
     "supervisor": "Supervizor",
