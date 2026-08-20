@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import i18n from "@/i18n";
 import { api } from "@/lib/api";
 import type {
   AssignmentStatus,
@@ -9,6 +10,7 @@ import type {
   TaskStatus,
   UUID,
 } from "@/lib/api/types";
+import { useAuthStore } from "@/stores/auth";
 
 const REFETCH_MS = 30_000; // polling 30s
 
@@ -29,9 +31,24 @@ export type CapacityAlert = {
   severity: "near_full" | "full";
 };
 
+export type PracticeTypeStat = {
+  id: UUID;
+  code: string;
+  name: string;
+  min_weeks: number;
+  max_weeks: number;
+  requires_contract: boolean;
+  active: number;
+  completed: number;
+  draft: number;
+  cancelled?: number;
+  total: number;
+};
+
 export type AdminStats = {
   students: { total: number; by_status: Record<StudentStatus, number> };
   assignments: { total: number; by_status: Record<AssignmentStatus, number> };
+  practice_types?: PracticeTypeStat[];
   contracts: { total: number; by_status: Record<ContractStatus, number> };
   organizations: number;
   supervisors: number;
@@ -117,4 +134,31 @@ export function useStudentStats() {
     queryFn: () => api.get("v1/stats/student").json<StudentStats | null>(),
     refetchInterval: REFETCH_MS,
   });
+}
+
+/** Dashboard statistika hisobotini PDF sifatida yuklab oladi. */
+export async function downloadStatsPdfReport(): Promise<void> {
+  const token = useAuthStore.getState().accessToken;
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
+
+  const res = await fetch("/api/v1/stats/report.pdf", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Hisobot yuklab bo'lmadi (${res.status})`);
+  }
+
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const match = disposition.match(/filename="?([^";]+)"?/);
+  const filename = match?.[1] ?? "amaliyot_statistikasi.pdf";
+
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(blobUrl);
 }

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <title>Amaliyot Statistikasi Hisoboti</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 1.5cm;
+      @bottom-center {
+        content: "Sahifa " counter(page) " / " counter(pages);
+        font-size: 9px;
+        color: #64748b;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "DejaVu Sans", Arial, sans-serif;
+      color: #0f172a;
+      font-size: 11px;
+      line-height: 1.5;
+      margin: 0;
+    }
+    .header {
+      border-bottom: 2px solid #4f46e5;
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+    }
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: none;
+    }
+    .header-table td {
+      border: none;
+      padding: 0;
+      vertical-align: top;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #4f46e5;
+      margin: 0 0 4px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: #475569;
+      margin: 0;
+    }
+    .meta-box {
+      text-align: right;
+      font-size: 10px;
+      color: #64748b;
+    }
+    .meta-box strong { color: #1e293b; }
+
+    /* Summary Grid */
+    .kpi-grid {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 8px;
+      margin-bottom: 16px;
+      margin-left: -8px;
+      margin-right: -8px;
+    }
+    .kpi-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px 12px;
+      text-align: center;
+      vertical-align: top;
+    }
+    .kpi-title {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .kpi-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #1e1b4b;
+      margin-bottom: 2px;
+    }
+    .kpi-hint {
+      font-size: 9px;
+      color: #64748b;
+    }
+
+    /* Section Headings */
+    .section-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: #1e293b;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      border-left: 3px solid #4f46e5;
+      padding-left: 8px;
+    }
+
+    /* Data Tables */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+      margin-bottom: 16px;
+    }
+    table.data-table th, table.data-table td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 8px;
+      text-align: left;
+      font-size: 10px;
+    }
+    table.data-table th {
+      background: #eef2ff;
+      color: #312e81;
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    table.data-table td.num, table.data-table th.num {
+      text-align: center;
+      white-space: nowrap;
+    }
+    table.data-table tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+    table.data-table tr.total-row td {
+      background: #e0e7ff;
+      font-weight: bold;
+      color: #1e1b4b;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 600;
+    }
+    .badge-active { background: #dcfce7; color: #15803d; }
+    .badge-completed { background: #dbeafe; color: #1d4ed8; }
+    .badge-draft { background: #f1f5f9; color: #475569; }
+
+    .two-col {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+    }
+    .two-col td {
+      width: 50%;
+      vertical-align: top;
+      border: none;
+      padding: 0 6px;
+    }
+    .two-col td:first-child { padding-left: 0; }
+    .two-col td:last-child { padding-right: 0; }
+
+    .footer {
+      margin-top: 30px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 10px;
+      font-size: 9px;
+      color: #94a3b8;
+      text-align: justify;
+    }
+    .sign-box {
+      margin-top: 24px;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .sign-box td {
+      border: none;
+      padding: 4px 0;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <table class="header-table">
+      <tr>
+        <td>
+          <div class="title">Amaliyot Tizimi Statistikasi</div>
+          <div class="subtitle">Super Admin Dashboard Hisoboti</div>
+        </td>
+        <td class="meta-box">
+          <div><strong>Sana:</strong> {{ generated_at }}</div>
+          <div><strong>Shakllantirdi:</strong> {{ admin_name }}</div>
+          <div><strong>Tizim:</strong> Amaliyot Platformasi</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- KPI Cards Grid -->
+  <table class="kpi-grid">
+    <tr>
+      <td class="kpi-card" style="width: 25%;">
+        <div class="kpi-title">Jami Talabalar</div>
+        <div class="kpi-value">{{ stats.students.total }}</div>
+        <div class="kpi-hint">O'qimoqda: {{ stats.students.by_status.studying or 0 }}</div>
+      </td>
+      <td class="kpi-card" style="width: 25%;">
+        <div class="kpi-title">Biriktirishlar</div>
+        <div class="kpi-value">{{ stats.assignments.total }}</div>
+        <div class="kpi-hint">Aktiv: {{ stats.assignments.by_status.active or 0 }} · Yakunlangan: {{ stats.assignments.by_status.completed or 0 }}</div>
+      </td>
+      <td class="kpi-card" style="width: 25%;">
+        <div class="kpi-title">Shartnomalar</div>
+        <div class="kpi-value">{{ stats.contracts.total }}</div>
+        <div class="kpi-hint">PDF tayyor: {{ stats.contracts.by_status.generated or 0 }}</div>
+      </td>
+      <td class="kpi-card" style="width: 25%;">
+        <div class="kpi-title">Davomat (30 kun)</div>
+        <div class="kpi-value">{% if stats.attendance_30d.green_percent is not none %}{{ stats.attendance_30d.green_percent }}%{% else %}—{% endif %}</div>
+        <div class="kpi-hint">Bor: {{ stats.attendance_30d.green }} · Kelmagan: {{ stats.attendance_30d.red }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Amaliyot Turlari Kesimidagi Statistika -->
+  <div class="section-title">1. Amaliyot Turlari Bo'yicha Talabalar Taqsimoti</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th class="num" style="width: 5%;">№</th>
+        <th style="width: 35%;">Amaliyot Turi Nomi</th>
+        <th class="num" style="width: 12%;">Davomiylik</th>
+        <th class="num" style="width: 12%;">Shartnoma</th>
+        <th class="num" style="width: 9%;">Qoralama</th>
+        <th class="num" style="width: 9%;">Aktiv</th>
+        <th class="num" style="width: 9%;">Yakunlangan</th>
+        <th class="num" style="width: 9%;">Jami</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pt in stats.practice_types %}
+      <tr>
+        <td class="num">{{ loop.index }}</td>
+        <td><strong>{{ pt.name }}</strong> <span style="color: #64748b; font-size: 8px;">({{ pt.code }})</span></td>
+        <td class="num">{{ pt.min_weeks }}–{{ pt.max_weeks }} hafta</td>
+        <td class="num">
+          {% if pt.requires_contract %}
+            <span class="badge badge-completed">Majburiy</span>
+          {% else %}
+            <span class="badge badge-draft">Talab etilmaydi</span>
+          {% endif %}
+        </td>
+        <td class="num">{{ pt.draft }}</td>
+        <td class="num"><span class="badge badge-active">{{ pt.active }}</span></td>
+        <td class="num"><span class="badge badge-completed">{{ pt.completed }}</span></td>
+        <td class="num"><strong>{{ pt.total }}</strong></td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" style="text-align: center; color: #64748b; font-style: italic;">Amaliyot turlari bo'yicha ma'lumot topilmadi</td>
+      </tr>
+      {% endfor %}
+      <tr class="total-row">
+        <td colspan="4" style="text-align: right;">JAMI BIRIKTIRISHLAR:</td>
+        <td class="num">{{ total_draft }}</td>
+        <td class="num">{{ total_active }}</td>
+        <td class="num">{{ total_completed }}</td>
+        <td class="num">{{ total_assignments }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Qo'shimcha Ko'rsatkichlar (2 ustun) -->
+  <table class="two-col">
+    <tr>
+      <td>
+        <div class="section-title">2. Subyektlar va Obyektlar</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ko'rsatkich</th>
+              <th class="num">Soni</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Amaliyot Tashkilotlari</td>
+              <td class="num"><strong>{{ stats.organizations }}</strong></td>
+            </tr>
+            <tr>
+              <td>Amaliyot Rahbarlari (Supervizorlar)</td>
+              <td class="num"><strong>{{ stats.supervisors }}</strong></td>
+            </tr>
+            {% if stats.users_total is defined %}
+            <tr>
+              <td>Tizim Foydalanuvchilari (Jami)</td>
+              <td class="num"><strong>{{ stats.users_total }}</strong></td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </td>
+      <td>
+        <div class="section-title">3. Topshiriqlar va Tekshiruvlar</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ko'rsatkich</th>
+              <th class="num">Soni</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Tasdiqlangan topshiriqlar</td>
+              <td class="num">{{ stats.tasks.by_status.approved or 0 }}</td>
+            </tr>
+            <tr>
+              <td>Topshirilgan (tekshiruvda)</td>
+              <td class="num">{{ stats.tasks.by_status.submitted or 0 }}</td>
+            </tr>
+            <tr>
+              <td>Kutilayotgan umumiy tekshiruvlar</td>
+              <td class="num"><strong>{{ stats.pending_reviews.total or 0 }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Imzo va Tasdiq -->
+  <table class="sign-box">
+    <tr>
+      <td style="width: 50%;">
+        <strong>Hisobot shakllantiruvchi administrator:</strong><br/>
+        {{ admin_name }}
+      </td>
+      <td style="width: 50%; text-align: right;">
+        <strong>Sana:</strong> {{ generated_at }}<br/>
+        Imzo: ______________________
+      </td>
+    </tr>
+  </table>
+
+  <div class="footer">
+    Ushbu hujjat {{ generated_at }} vaqtida Amaliyot Platformasi avtomatik statistik hisobot berish xizmati tomonidan generatsiya qilindi.
+  </div>
+
+</body>
+</html>

@@ -20,6 +20,7 @@ from app.models.enums import (
     TaskStatus,
 )
 from app.models.practice_assignment import PracticeAssignment
+from app.models.practice_type import PracticeType
 from app.models.student import Student
 from app.models.supervisor import Supervisor
 from app.models.task import JournalEntry, LessonAnalysis, Task, TaskTemplate
@@ -145,6 +146,56 @@ async def admin_overview(db: AsyncSession) -> dict[str, Any]:
     for s, c in asn_rows:
         assignments_by_status[s.value] = c
 
+    # Practice types statistics
+    pt_rows = (
+        await db.execute(
+            select(PracticeType)
+            .where(PracticeType.is_active.is_(True))
+            .order_by(PracticeType.display_order, PracticeType.name)
+        )
+    ).scalars().all()
+
+    pt_counts_rows = (
+        await db.execute(
+            select(
+                PracticeAssignment.practice_type_id,
+                PracticeAssignment.status,
+                func.count(PracticeAssignment.id),
+            ).group_by(PracticeAssignment.practice_type_id, PracticeAssignment.status)
+        )
+    ).all()
+
+    pt_counts_map: dict[Any, dict[str, int]] = {}
+    for pt_id, st, count in pt_counts_rows:
+        if pt_id not in pt_counts_map:
+            pt_counts_map[pt_id] = {}
+        st_key = st.value if hasattr(st, "value") else str(st)
+        pt_counts_map[pt_id][st_key] = count
+
+    practice_types_stats = []
+    for pt in pt_rows:
+        counts = pt_counts_map.get(pt.id, {})
+        draft = counts.get("draft", 0)
+        active = counts.get("active", 0)
+        completed = counts.get("completed", 0)
+        cancelled = counts.get("cancelled", 0)
+        total = draft + active + completed + cancelled
+        practice_types_stats.append(
+            {
+                "id": str(pt.id),
+                "code": pt.code,
+                "name": pt.name,
+                "min_weeks": pt.min_weeks,
+                "max_weeks": pt.max_weeks,
+                "requires_contract": pt.requires_contract,
+                "active": active,
+                "completed": completed,
+                "draft": draft,
+                "cancelled": cancelled,
+                "total": total,
+            }
+        )
+
     # Contracts
     contract_rows = (
         await db.execute(
@@ -254,6 +305,7 @@ async def admin_overview(db: AsyncSession) -> dict[str, Any]:
             "total": sum(assignments_by_status.values()),
             "by_status": assignments_by_status,
         },
+        "practice_types": practice_types_stats,
         "contracts": {
             "total": sum(contracts_by_status.values()),
             "by_status": contracts_by_status,

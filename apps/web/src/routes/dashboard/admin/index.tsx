@@ -1,20 +1,28 @@
 import {
   AlertCircle,
   AlertTriangle,
+  BookOpen,
   Building2,
   CalendarCheck,
   ClipboardList,
+  Download,
   FileCheck2,
+  FileText,
   History,
+  Loader2,
   ShieldCheck,
   UserCog,
   Users,
 } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { StatCard } from "@/components/admin/stat-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -23,7 +31,11 @@ import {
 } from "@/components/ui/loading-skeletons";
 import { Progress } from "@/components/ui/progress";
 import { dateLocale } from "@/i18n";
-import { useAdminStats, useSuperAdminStats } from "@/lib/api/stats";
+import {
+  downloadStatsPdfReport,
+  useAdminStats,
+  useSuperAdminStats,
+} from "@/lib/api/stats";
 import { useAuthStore } from "@/stores/auth";
 
 export function AdminHome() {
@@ -36,6 +48,22 @@ export function AdminHome() {
   const stats = isSuperAdmin ? superAdmin.data : admin.data;
   const isPending = isSuperAdmin ? superAdmin.isPending : admin.isPending;
   const error = isSuperAdmin ? superAdmin.error : admin.error;
+
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    try {
+      setIsDownloadingPdf(true);
+      await downloadStatsPdfReport();
+      toast.success(
+        t("adminIndex.downloadedPdfToast", "Statistika hisoboti (PDF) saqlandi")
+      );
+    } catch (err: any) {
+      toast.error(err?.message || t("adminIndex.pdfDownloadError"));
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   return (
     <div className="container max-w-7xl py-8">
@@ -252,6 +280,98 @@ export function AdminHome() {
             )}
           </div>
 
+          {/* Amaliyot Turlari Bo'yicha Statistika Card */}
+          <Card className="overflow-hidden border border-border shadow-sm">
+            <CardHeader className="bg-muted/30 pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                  <BookOpen className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  {t("adminIndex.practiceTypesTitle")}
+                </CardTitle>
+                {stats.practice_types && stats.practice_types.length > 0 && (
+                  <Badge variant="outline" className="font-normal text-xs">
+                    {stats.practice_types.length} ta amaliyot turi
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              {!stats.practice_types || stats.practice_types.length === 0 ? (
+                <EmptyState
+                  icon={BookOpen}
+                  title={t("adminIndex.noPracticeTypes")}
+                  description="Tizimda amaliyot turlari hali kiritilmagan"
+                  accent="muted"
+                  compact
+                />
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {stats.practice_types.map((pt) => {
+                    const totalAsn = pt.total || 0;
+                    const activePct =
+                      totalAsn > 0 ? Math.round((pt.active / totalAsn) * 100) : 0;
+                    return (
+                      <div
+                        key={pt.id}
+                        className="flex flex-col justify-between rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h4 className="font-semibold text-sm leading-tight truncate">
+                                {pt.name}
+                              </h4>
+                              <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                                {pt.code}
+                              </p>
+                            </div>
+                            <Badge
+                              variant="secondary"
+                              className="shrink-0 text-[10px] px-2 py-0.5"
+                            >
+                              {pt.min_weeks}–{pt.max_weeks} {t("adminIndex.weeks")}
+                            </Badge>
+                          </div>
+
+                          <div className="mt-4 flex items-baseline justify-between border-t border-border/60 pt-3">
+                            <span className="text-xs text-muted-foreground">
+                              {t("adminIndex.totalStudents")}
+                            </span>
+                            <span className="text-xl font-bold text-foreground">
+                              {pt.total}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
+                            <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium">
+                              {t("adminIndex.activeStudents")}: {pt.active}
+                            </span>
+                            <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-medium">
+                              {t("adminIndex.completedStudents")}: {pt.completed}
+                            </span>
+                            <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium">
+                              {t("adminIndex.draftStudents")}: {pt.draft}
+                            </span>
+                          </div>
+                        </div>
+
+                        {totalAsn > 0 && (
+                          <div className="mt-4 pt-2">
+                            <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
+                              <span>Aktivlik foizi</span>
+                              <span className="font-semibold">{activePct}%</span>
+                            </div>
+                            <Progress value={activePct} className="h-1.5" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
@@ -371,6 +491,40 @@ export function AdminHome() {
               </CardContent>
             </Card>
           )}
+
+          {/* PDF Hisobot Yuklab Olish Tugmasi Banner */}
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 via-indigo-50/50 to-primary/10 p-6 dark:from-primary/10 dark:via-slate-900 dark:to-indigo-950/40 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <FileText className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Statistika Hisobotini Yuklab Olish (PDF)
+                </h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Joriy dashboarddagi barcha ko'rsatkichlar va amaliyot turlari bo'yicha to'liq statistik hisobotni PDF formatida yuklab oling
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleDownloadPdf}
+              disabled={isDownloadingPdf}
+              size="lg"
+              className="shrink-0 gap-2 shadow-md hover:shadow-lg transition-all"
+            >
+              {isDownloadingPdf ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Download className="h-5 w-5" />
+              )}
+              <span>
+                {isDownloadingPdf
+                  ? t("adminIndex.downloadingPdf")
+                  : t("adminIndex.downloadPdfReport")}
+              </span>
+            </Button>
+          </div>
         </div>
       )}
     </div>

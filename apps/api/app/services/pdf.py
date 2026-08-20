@@ -124,6 +124,36 @@ def render_records_pdf(context: dict[str, object]) -> bytes:
     return bytes(pdf_bytes)
 
 
+def render_dashboard_stats_pdf(stats: dict[str, object], admin_name: str) -> bytes:
+    """Dashboard statistika hisobotini PDF sifatida generatsiya qiladi."""
+    from datetime import datetime
+
+    template = _env.get_template("reports/dashboard_stats.html")
+
+    pts: list[dict[str, object]] = stats.get("practice_types", [])  # type: ignore
+    total_draft = sum(int(pt.get("draft", 0)) for pt in pts)
+    total_active = sum(int(pt.get("active", 0)) for pt in pts)
+    total_completed = sum(int(pt.get("completed", 0)) for pt in pts)
+    total_assignments = sum(int(pt.get("total", 0)) for pt in pts)
+
+    generated_at = datetime.now().strftime("%d.%m.%Y %H:%M")
+
+    html_content = template.render(
+        stats=stats,
+        admin_name=admin_name,
+        generated_at=generated_at,
+        total_draft=total_draft,
+        total_active=total_active,
+        total_completed=total_completed,
+        total_assignments=total_assignments,
+    )
+    pdf_bytes: bytes | None = HTML(string=html_content).write_pdf()
+    if pdf_bytes is None:
+        raise RuntimeError("WeasyPrint PDF generation returned None")
+    logger.info(f"Dashboard stats PDF generated ({len(pdf_bytes)} bytes)")
+    return bytes(pdf_bytes)
+
+
 def save_contract_pdf(contract: Contract, pdf_bytes: bytes) -> str:
     """PDF'ni storage'ga saqlaydi, file path qaytaradi."""
     STORAGE_DIR.mkdir(parents=True, exist_ok=True)
