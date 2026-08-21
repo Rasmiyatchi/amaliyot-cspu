@@ -75,7 +75,9 @@ async def import_supervisors(
     user: RequireAdmin,
     file: UploadFile = File(...),  # noqa: B008
 ) -> SupervisorImportResponse:
-    if file.content_type and file.content_type not in _IMPORT_ALLOWED_MIME:
+    filename_lower = (file.filename or "").lower()
+    is_excel_ext = filename_lower.endswith(".xlsx") or filename_lower.endswith(".xls")
+    if file.content_type and file.content_type not in _IMPORT_ALLOWED_MIME and not is_excel_ext:
         raise HTTPException(
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             f"Qo'llab-quvvatlanmaydigan format: {file.content_type}. .xlsx yuklang.",

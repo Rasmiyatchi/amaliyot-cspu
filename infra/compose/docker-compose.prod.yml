@@ -31,7 +31,7 @@ services:
 
   api:
     build:
-      context: https://github.com/Rasmiyatchi/amaliyot-cspu.git#main
+      context: ../..
       dockerfile: infra/docker/api.Dockerfile
     restart: unless-stopped
     environment:
@@ -66,7 +66,7 @@ services:
 
   web:
     build:
-      context: https://github.com/Rasmiyatchi/amaliyot-cspu.git#main
+      context: ../..
       dockerfile: infra/docker/web.Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}

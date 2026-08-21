@@ -731,7 +731,9 @@ async def student_create_journal(
     assignment = await _check_student_owns(db, assignment_id, user.id)
     data = payload.model_dump()
     the_date = data["date"]
-    if the_date.date() < assignment.start_date or the_date.date() > assignment.end_date:
+    if (assignment.start_date and the_date.date() < assignment.start_date) or (
+        assignment.end_date and the_date.date() > assignment.end_date
+    ):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "Sana amaliyot diapazonidan tashqarida "
@@ -890,7 +892,9 @@ async def student_create_lesson_analysis(
     assignment = await _check_student_owns(db, assignment_id, user.id)
     data = payload.model_dump()
     the_date = data["date"]
-    if the_date.date() < assignment.start_date or the_date.date() > assignment.end_date:
+    if (assignment.start_date and the_date.date() < assignment.start_date) or (
+        assignment.end_date and the_date.date() > assignment.end_date
+    ):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "Sana amaliyot diapazonidan tashqarida",

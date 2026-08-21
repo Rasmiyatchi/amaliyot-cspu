@@ -74,7 +74,9 @@ async def hemis_import(
     user: RequireAdmin,
     file: UploadFile = File(...),  # noqa: B008
 ) -> HemisImportResponse:
-    if file.content_type and file.content_type not in ALLOWED_MIME:
+    filename_lower = (file.filename or "").lower()
+    is_excel_ext = filename_lower.endswith(".xlsx") or filename_lower.endswith(".xls")
+    if file.content_type and file.content_type not in ALLOWED_MIME and not is_excel_ext:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=f"Qo'llab-quvvatlanmaydigan format: {file.content_type}. .xlsx fayl yuklang.",

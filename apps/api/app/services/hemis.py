@@ -40,6 +40,13 @@ HEADER_MAP: dict[str, str] = {
     "hemis id": "amaliyot_id",
     "amaliyot id": "amaliyot_id",
     "to'liq ismi": "full_name",
+    "to'liq ism": "full_name",
+    "to'liq ismi sharifi": "full_name",
+    "fish": "full_name",
+    "f.i.sh": "full_name",
+    "f.i.sh.": "full_name",
+    "f.i.o": "full_name",
+    "f.i.o.": "full_name",
     "viloyat": "region",
     "tuman": "district",
     "jins": "gender",
@@ -53,6 +60,8 @@ HEADER_MAP: dict[str, str] = {
     "semestr": "semester",
     "bitiruvchi": "is_graduating",
     "mutaxassislik": "direction_code",
+    "yo'nalish kodi": "direction_code",
+    "mutaxassislik kodi": "direction_code",
     "ta'lim turi": "degree_type",
     "ta'lim shakli": "education_form",
 }
@@ -267,7 +276,13 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
 
             async with db.begin_nested():
                 # ── Yo'nalish — Mutaxassislik shifri (kodi) bo'yicha ──
-                direction_code = str(rec.get("direction_code", "")).strip()
+                raw_code = rec.get("direction_code")
+                if isinstance(raw_code, float) and raw_code.is_integer():
+                    direction_code = str(int(raw_code))
+                else:
+                    direction_code = str(raw_code or "").strip()
+                    if direction_code.endswith(".0"):
+                        direction_code = direction_code[:-2]
                 if direction_code not in direction_cache:
                     # Kod unikal EMAS (bir kodda bir nechta yo'nalish bo'lishi mumkin) —
                     # birinchisini olamiz (shablonda faqat kod bo'lgani uchun).
