@@ -31,24 +31,26 @@ export function RootLayout() {
   return (
     <MaintenanceGuard>
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="container flex h-14 items-center justify-between">
+      <header className="border-b border-border bg-background/95 backdrop-blur-xs sticky top-0 z-40">
+        <div className="container mx-auto flex h-14 items-center justify-between px-3 sm:px-6">
           <Link
             to={user ? landingPathFor(user.role) : "/"}
-            className="text-lg font-semibold tracking-tight hover:text-primary"
+            className="font-bold tracking-tight hover:text-primary whitespace-nowrap shrink-0 mr-1 sm:mr-2"
           >
-            CHDPU Amaliyot Platformasi
+            <span className="hidden md:inline text-base lg:text-lg">CHDPU Amaliyot Platformasi</span>
+            <span className="hidden min-[380px]:inline md:hidden text-sm sm:text-base">CHDPU Amaliyot</span>
+            <span className="inline min-[380px]:hidden text-sm">CHDPU</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
             {user && (
               <>
                 <button
                   onClick={() => setProfileOpen(true)}
-                  className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted"
+                  className="flex items-center gap-2 rounded-md px-1.5 sm:px-2 py-1 transition-colors hover:bg-muted"
                   title={t("rootLayout.myProfile")}
                 >
-                  <div className="hidden text-right sm:block">
+                  <div className="hidden md:block text-right">
                     <div className="text-sm font-medium leading-tight">{user.full_name}</div>
                     <div className="text-xs text-muted-foreground">{user.role}</div>
                   </div>
@@ -63,6 +65,7 @@ export function RootLayout() {
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="h-8 w-8 sm:h-9 sm:w-9"
                   onClick={handleLogout}
                   aria-label={t("rootLayout.logout")}
                   title={t("rootLayout.logout")}

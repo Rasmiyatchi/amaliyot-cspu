@@ -38,6 +38,7 @@ import { useStudents } from "@/lib/api/students";
 import { useSupervisors } from "@/lib/api/supervisors";
 import type { PracticeType, Semester } from "@/lib/api/types";
 import { WeekdayPicker } from "@/components/admin/assignments/weekday-picker";
+import { StudentSearchSelect } from "@/components/admin/assignments/student-search-select";
 
 const NONE = "__none__";
 
@@ -98,22 +99,11 @@ export function AssignmentWizard({ open, onClose }: Props) {
   const groupStudentsQuery = useStudents({ group_id: groupId || undefined }, 1, 100);
   const groupStudents = groupStudentsQuery.data?.items ?? [];
 
-  // Single mode uchun talabalar (kurs bo'yicha filter)
+  // Single mode uchun kurslar bo'yicha filter
   const allowedCourses = useMemo(
     () => practiceType?.allowed_courses ?? [],
     [practiceType],
   );
-  const allStudentsQuery = useStudents(
-    {
-      course: allowedCourses.length === 1 ? allowedCourses[0] : undefined,
-    },
-    1,
-    100,
-  );
-  const allStudents = allStudentsQuery.data?.items ?? [];
-  const studentsForSingle = allowedCourses.length
-    ? allStudents.filter((s) => s.course && allowedCourses.includes(s.course))
-    : allStudents;
 
   // Supervisorlar: tashkilot tanlansa — o'sha tashkilotdagilar + tashkilotga
   // bog'lanmaganlar (import qilinganlar odatda tashkilotsiz keladi; backend ham
@@ -359,31 +349,14 @@ export function AssignmentWizard({ open, onClose }: Props) {
           {mode === "single" ? (
             <div>
               <Label>{t("common.student")} *</Label>
-              <Select value={singleStudentId} onValueChange={setSingleStudentId}>
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder={t("assignmentsAssignmentWizard.studentPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {studentsForSingle.length === 0 ? (
-                    <SelectEmpty
-                      message={
-                        allowedCourses.length
-                          ? t("assignmentsAssignmentWizard.noCourseStudents", {
-                              courses: allowedCourses.join(", "),
-                            })
-                          : t("assignmentsAssignmentWizard.noStudents")
-                      }
-                    />
-                  ) : (
-                    studentsForSingle.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.full_name} ({s.hemis_id}
-                        {s.group_name ? ` · ${s.group_name}` : ""})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <div className="mt-1.5">
+                <StudentSearchSelect
+                  value={singleStudentId}
+                  onValueChange={setSingleStudentId}
+                  allowedCourses={allowedCourses}
+                  placeholder={t("assignmentsAssignmentWizard.studentPlaceholder")}
+                />
+              </div>
               {allowedCourses.length > 0 && (
                 <p className="mt-1 text-xs text-muted-foreground">
                   {t("assignmentsAssignmentWizard.courseFilterHint", {

@@ -143,10 +143,10 @@ export function SupervisorDashboard() {
   );
 
   return (
-    <main className="container py-8">
-      <div className="mx-auto max-w-4xl space-y-6">
+    <main className="container mx-auto px-3 sm:px-6 py-4 sm:py-8 overflow-x-hidden">
+      <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
         {/* Hero banner */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-lg dark:from-blue-800 dark:to-indigo-900">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 p-4 sm:p-6 text-white shadow-lg dark:from-blue-800 dark:to-indigo-900">
           <div className="relative flex items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
               <Users className="h-6 w-6" />

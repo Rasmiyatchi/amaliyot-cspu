@@ -108,12 +108,44 @@ async def list_students(
         if status_filter:
             stmt = stmt.where(Student.status == status_filter)
         if search:
-            like = f"%{search.lower()}%"
+            clean_search = (
+                search.replace("'", "")
+                .replace("’", "")
+                .replace("‘", "")
+                .replace("ʻ", "")
+                .replace("`", "")
+                .lower()
+                .strip()
+            )
+            like = f"%{clean_search}%"
+
+            def _clean_sql(col: Any) -> Any:
+                return func.replace(
+                    func.replace(
+                        func.replace(
+                            func.replace(
+                                func.replace(func.lower(col), "'", ""),
+                                "’", ""
+                            ),
+                            "‘", ""
+                        ),
+                        "ʻ", ""
+                    ),
+                    "`", ""
+                )
+
+            full_name_last_first = _clean_sql(
+                User.last_name + " " + User.first_name + " " + func.coalesce(User.middle_name, "")
+            )
+            full_name_first_last = _clean_sql(
+                User.first_name + " " + User.last_name
+            )
+
             stmt = stmt.where(
-                func.lower(User.first_name).like(like)
-                | func.lower(User.last_name).like(like)
-                | Student.hemis_id.like(f"%{search}%")
-                | User.username.like(f"%{search}%")
+                full_name_last_first.like(like)
+                | full_name_first_last.like(like)
+                | Student.hemis_id.like(f"%{search.strip()}%")
+                | _clean_sql(User.username).like(like)
             )
         return stmt
 

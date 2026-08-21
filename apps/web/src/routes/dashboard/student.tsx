@@ -30,10 +30,10 @@ export function StudentDashboard() {
   const { data: today } = useTodayStatus(activeAssignment?.id ?? null);
 
   return (
-    <main className="container py-8">
-      <div className="mx-auto max-w-3xl space-y-6">
+    <main className="container mx-auto px-3 sm:px-6 py-4 sm:py-8 overflow-x-hidden">
+      <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
         {/* Hero banner */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-6 text-white shadow-lg dark:from-emerald-700 dark:to-teal-900">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-4 sm:p-6 text-white shadow-lg dark:from-emerald-700 dark:to-teal-900">
           <div className="relative flex items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
               <GraduationCap className="h-6 w-6" />

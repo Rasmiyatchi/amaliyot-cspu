@@ -451,7 +451,7 @@ export function AttendanceCalendarCard({ assignment }: Props) {
         {activeTab === "list" && (
           <div className="space-y-3">
             {/* Status filtr tugmalari */}
-            <div className="flex items-center gap-2 pb-2">
+            <div className="flex flex-wrap items-center gap-2 pb-2">
               <Button
                 size="sm"
                 variant={statusFilter === "all" ? "default" : "outline"}

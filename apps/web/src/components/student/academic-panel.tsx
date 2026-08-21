@@ -116,20 +116,28 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
       <Card>
         <CardContent className="pt-6">
           <Tabs defaultValue="tasks">
-            <TabsList>
-              <TabsTrigger value="tasks">
-                <BookOpen className="h-3.5 w-3.5" />
-                {t("studentAcademicPanel.tasksTab")} {tasks ? `(${tasks.length})` : ""}
+            <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-muted/60">
+              <TabsTrigger value="tasks" className="px-1 sm:px-3 py-1.5 text-[11px] sm:text-sm font-medium flex items-center justify-center gap-1 min-w-0">
+                <BookOpen className="h-3.5 w-3.5 shrink-0 hidden sm:inline" />
+                <span className="truncate">
+                  <span className="hidden sm:inline">{t("studentAcademicPanel.tasksTab")}</span>
+                  <span className="sm:hidden">Topshiriq</span>
+                  {tasks ? ` (${tasks.length})` : ""}
+                </span>
               </TabsTrigger>
-              <TabsTrigger value="journal">
-                <NotebookPen className="h-3.5 w-3.5" />
-                {t("studentAcademicPanel.journalTab")}{" "}
-                {journal ? `(${journal.length})` : ""}
+              <TabsTrigger value="journal" className="px-1 sm:px-3 py-1.5 text-[11px] sm:text-sm font-medium flex items-center justify-center gap-1 min-w-0">
+                <NotebookPen className="h-3.5 w-3.5 shrink-0 hidden sm:inline" />
+                <span className="truncate">
+                  {t("studentAcademicPanel.journalTab")} {journal ? `(${journal.length})` : ""}
+                </span>
               </TabsTrigger>
-              <TabsTrigger value="analyses">
-                <Sparkles className="h-3.5 w-3.5" />
-                {t("studentAcademicPanel.analysesTab")}{" "}
-                {analyses ? `(${analyses.length})` : ""}
+              <TabsTrigger value="analyses" className="px-1 sm:px-3 py-1.5 text-[11px] sm:text-sm font-medium flex items-center justify-center gap-1 min-w-0">
+                <Sparkles className="h-3.5 w-3.5 shrink-0 hidden sm:inline" />
+                <span className="truncate">
+                  <span className="hidden sm:inline">{t("studentAcademicPanel.analysesTab")}</span>
+                  <span className="sm:hidden">Tahlil</span>
+                  {analyses ? ` (${analyses.length})` : ""}
+                </span>
               </TabsTrigger>
             </TabsList>
 
