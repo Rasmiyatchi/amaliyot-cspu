@@ -697,7 +697,7 @@ async def _hydrate_approver_name(
             r["approved_by_name"] = None
         return
     name_map = {
-        u[0]: f"{u[1]} {u[2]}".strip()
+        u[0]: f"{u[1] or ''} {u[2] or ''}".strip()
         for u in (
             await db.execute(
                 select(User.id, User.last_name, User.first_name).where(User.id.in_(ids))
@@ -777,6 +777,7 @@ async def student_update_journal(
         entry.rejection_reason = None
 
     await db.commit()
+    await db.refresh(entry)
     items = [_journal_to_dict(entry)]
     await _hydrate_approver_name(db, items)
     return items[0]
@@ -796,12 +797,17 @@ async def supervisor_approve_journal(
 
     student_uid = await _student_user_id_for_assignment(db, entry.assignment_id)
     if student_uid:
+        date_str = (
+            entry.date.strftime("%Y-%m-%d")
+            if hasattr(entry.date, "strftime")
+            else str(entry.date or "")
+        )
         await notification_svc.create(
             db,
             user_id=student_uid,
             type=NotificationType.JOURNAL_APPROVED,
             title="Kundalik tasdiqlandi",
-            body=f"{entry.date.strftime('%Y-%m-%d')} sanadagi yozuv tasdiqlandi",
+            body=f"{date_str} sanadagi yozuv tasdiqlandi",
             data={
                 "assignment_id": str(entry.assignment_id),
                 "journal_id": str(entry.id),
@@ -809,6 +815,7 @@ async def supervisor_approve_journal(
         )
 
     await db.commit()
+    await db.refresh(entry)
     items = [_journal_to_dict(entry)]
     await _hydrate_approver_name(db, items)
     return items[0]
@@ -843,6 +850,7 @@ async def supervisor_reject_journal(
         )
 
     await db.commit()
+    await db.refresh(entry)
     items = [_journal_to_dict(entry)]
     await _hydrate_approver_name(db, items)
     return items[0]
@@ -949,6 +957,7 @@ async def student_update_lesson_analysis(
         analysis.rejection_reason = None
 
     await db.commit()
+    await db.refresh(analysis)
     items = [_analysis_to_dict(analysis)]
     await _hydrate_approver_name(db, items)
     return items[0]
@@ -981,6 +990,7 @@ async def supervisor_approve_lesson_analysis(
         )
 
     await db.commit()
+    await db.refresh(analysis)
     items = [_analysis_to_dict(analysis)]
     await _hydrate_approver_name(db, items)
     return items[0]
@@ -1015,6 +1025,7 @@ async def supervisor_reject_lesson_analysis(
         )
 
     await db.commit()
+    await db.refresh(analysis)
     items = [_analysis_to_dict(analysis)]
     await _hydrate_approver_name(db, items)
     return items[0]

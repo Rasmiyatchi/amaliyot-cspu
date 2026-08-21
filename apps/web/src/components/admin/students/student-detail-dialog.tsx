@@ -46,20 +46,20 @@ const GENDER_LABEL = {
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[140px_1fr] gap-2 text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="break-words">{value ?? <span className="text-muted-foreground">—</span>}</dd>
+    <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] gap-1 sm:gap-2 text-sm min-w-0">
+      <dt className="text-muted-foreground min-w-0 shrink-0">{label}</dt>
+      <dd className="min-w-0 break-words [overflow-wrap:anywhere]">{value ?? <span className="text-muted-foreground">—</span>}</dd>
     </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 min-w-0">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
       </h3>
-      <dl className="space-y-1.5">{children}</dl>
+      <dl className="space-y-1.5 min-w-0">{children}</dl>
     </div>
   );
 }
@@ -102,25 +102,27 @@ export function StudentDetailDialog({ student, onClose }: Props) {
 
   return (
     <Dialog open={!!student} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-full max-w-3xl overflow-y-auto">
         {student && (
           <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+            <DialogHeader className="min-w-0">
+              <DialogTitle className="flex flex-wrap sm:flex-nowrap items-start sm:items-center gap-3 min-w-0">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                   {student.last_name[0]}
                   {student.first_name[0]}
                 </div>
-                <div className="flex-1">
-                  <div>{student.full_name}</div>
-                  <div className="mt-0.5 text-xs font-normal text-muted-foreground">
+                <div className="flex-1 min-w-0">
+                  <div className="truncate font-semibold text-base sm:text-lg">{student.full_name}</div>
+                  <div className="mt-0.5 text-xs font-normal text-muted-foreground break-all">
                     ID: {student.hemis_id} · {student.username}
                   </div>
                 </div>
-                <StudentStatusBadge status={student.status} />
+                <div className="shrink-0">
+                  <StudentStatusBadge status={student.status} />
+                </div>
               </DialogTitle>
-              <DialogDescription>{t("studentsStudentDetailDialog.description")}</DialogDescription>
-              <div className="flex gap-2 pt-2">
+              <DialogDescription className="text-xs sm:text-sm">{t("studentsStudentDetailDialog.description")}</DialogDescription>
+              <div className="flex flex-wrap gap-2 pt-2">
                 <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
                   <Pencil className="h-4 w-4" />
                   {t("common.edit")}
@@ -137,7 +139,7 @@ export function StudentDetailDialog({ student, onClose }: Props) {
               </div>
             </DialogHeader>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 min-w-0">
               <Section title={t("studentsStudentDetailDialog.sectionPersonal")}>
                 <Field
                   label={t("studentsStudentDetailDialog.genderLabel")}
@@ -157,12 +159,12 @@ export function StudentDetailDialog({ student, onClose }: Props) {
                   label={t("common.direction")}
                   value={
                     student.direction_code ? (
-                      <>
-                        <Badge variant="secondary" className="font-mono">
+                      <span className="inline-flex flex-wrap items-center gap-1">
+                        <Badge variant="secondary" className="font-mono text-xs">
                           {student.direction_code}
                         </Badge>{" "}
-                        {student.direction_name}
-                      </>
+                        <span>{student.direction_name}</span>
+                      </span>
                     ) : null
                   }
                 />
@@ -221,18 +223,18 @@ export function StudentDetailDialog({ student, onClose }: Props) {
             <Separator />
 
             {/* Qurilma bog'lash (bitta-qurilma login) */}
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <Smartphone className="h-3.5 w-3.5" />
                 {t("studentsStudentDetailDialog.boundDevice")}
               </h3>
               {student.device_id ? (
-                <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
-                  <div className="min-w-0 text-sm">
-                    <div className="truncate">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3 min-w-0">
+                  <div className="min-w-0 text-sm flex-1">
+                    <div className="font-medium break-words [overflow-wrap:anywhere] text-xs sm:text-sm">
                       {student.device_label ?? t("studentsStudentDetailDialog.unknownDevice")}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground mt-0.5">
                       {t("studentsStudentDetailDialog.boundAt")}{" "}
                       {student.device_bound_at
                         ? new Date(student.device_bound_at).toLocaleString(dateLocale())
@@ -242,7 +244,7 @@ export function StudentDetailDialog({ student, onClose }: Props) {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="shrink-0 text-destructive hover:bg-destructive/10"
+                    className="shrink-0 text-destructive hover:bg-destructive/10 self-start sm:self-auto"
                     onClick={handleResetDevice}
                     disabled={resetDevice.isPending}
                   >

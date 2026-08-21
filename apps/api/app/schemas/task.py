@@ -154,14 +154,14 @@ class JournalRejectRequest(BaseModel):
 class JournalRead(BaseModel):
     id: UUID
     assignment_id: UUID
-    date: datetime
+    date: datetime | date | str
     content_md: str | None = None
     attachments: list[dict[str, Any]] = []
     status: JournalStatus
-    approved_by_id: UUID | None
+    approved_by_id: UUID | None = None
     approved_by_name: str | None = None
-    approved_at: datetime | None
-    rejection_reason: str | None
+    approved_at: datetime | None = None
+    rejection_reason: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -198,18 +198,18 @@ class LessonAnalysisRejectRequest(BaseModel):
 class LessonAnalysisRead(BaseModel):
     id: UUID
     assignment_id: UUID
-    date: datetime
+    date: datetime | date | str
     subject: str
     teacher_name: str
-    grade_level: str | None
+    grade_level: str | None = None
     quarter: int
     analysis_md: str | None = None
     attachments: list[dict[str, Any]] = []
     status: JournalStatus
-    approved_by_id: UUID | None
+    approved_by_id: UUID | None = None
     approved_by_name: str | None = None
-    approved_at: datetime | None
-    rejection_reason: str | None
+    approved_at: datetime | None = None
+    rejection_reason: str | None = None
     created_at: datetime
     updated_at: datetime
 

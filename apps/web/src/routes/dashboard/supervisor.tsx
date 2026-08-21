@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 
 import { downloadSupervisorReport } from "@/lib/api/supervisor-report";
@@ -95,9 +96,16 @@ function DayRow({ day }: DayRowProps) {
 
 export function SupervisorDashboard() {
   const { t } = useTranslation();
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const { data: assignments, isPending: assignmentsPending } = useMyAssignments();
   const { data: supervisorStats } = useSupervisorStats();
+
+  const isAttendanceRoute = location.pathname.endsWith("/attendance");
+  const isTasksRoute = location.pathname.endsWith("/tasks");
+
+  const showAttendance = isAttendanceRoute || (!isTasksRoute && !isAttendanceRoute);
+  const showTasks = isTasksRoute || (!isAttendanceRoute && !isTasksRoute);
 
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<UUID | "all">(
     "all",
@@ -148,7 +156,11 @@ export function SupervisorDashboard() {
                 {t("supervisor.welcome", { name: user?.first_name })}
               </h2>
               <p className="mt-0.5 text-sm text-blue-50">
-                {t("supervisor.subtitle")}
+                {isTasksRoute
+                  ? t("supervisorSupervisorSidebar.nav.tasks")
+                  : isAttendanceRoute
+                    ? t("supervisorSupervisorSidebar.nav.attendance")
+                    : t("supervisor.subtitle")}
               </p>
             </div>
             <div className="shrink-0 [&_button]:text-white [&_button]:hover:bg-white/10">
@@ -218,8 +230,8 @@ export function SupervisorDashboard() {
               </div>
             )}
 
-            {/* Muddati o'tgan topshiriqlar */}
-            <OverdueTasksCard />
+            {/* Muddati o'tgan topshiriqlar (Faqat topshiriqlar ko'rinishida) */}
+            {showTasks && <OverdueTasksCard />}
 
             {/* Assignment tanlov + hisobot */}
             <div className="flex flex-wrap items-center gap-2">
@@ -258,64 +270,69 @@ export function SupervisorDashboard() {
               </Button>
             </div>
 
-            {/* Talabalar davomati (Read-only) */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <CalendarCheck className="h-4 w-4 text-primary" />
-                    <span>{t("common.attendance")} ({visibleDays.length})</span>
-                  </CardTitle>
-                  <span className="text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded">
-                    Read-only
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {daysPending && (
-                  <div className="flex h-16 items-center justify-center">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-                {!daysPending && visibleDays.length === 0 && (
-                  <EmptyState
-                    icon={CalendarCheck}
-                    title="Davomat yozuvlari topilmadi"
-                    description="Talabalar check-in / check-out qilganida ularning davomat yozuvlari shu yerda ko'rinadi"
-                    compact
-                  />
-                )}
-                {!daysPending && visibleDays.length > 0 && (
-                  <div className="space-y-2">
-                    {visibleDays.map((d) => (
-                      <DayRow key={d.id} day={d} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Tasks / Journal / Analyses — tanlangan assignment bo'yicha */}
-            {selectedAssignmentId !== "all" && (
-              <SupervisorReviewPanel assignmentId={selectedAssignmentId} />
-            )}
-            {selectedAssignmentId === "all" && assignments.length === 1 && assignments[0] && (
-              <SupervisorReviewPanel assignmentId={assignments[0].id} />
-            )}
-            {/* 2+ talaba bo'lsa "Barchasi" da panel yo'q — ko'rsatma beramiz,
-                aks holda tasdiqlash UI'si umuman topilmay qoladi. */}
-            {selectedAssignmentId === "all" && assignments.length > 1 && (
+            {/* Talabalar davomati (Read-only) — Faqat Davomat ko'rinishida yoki Bosh sahifada */}
+            {showAttendance && (
               <Card>
-                <CardContent className="py-8 text-center">
-                  <ClipboardCheck className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm font-medium">
-                    {t("supervisor.reviewPromptTitle")}
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {t("supervisor.reviewPromptDesc")}
-                  </p>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <CalendarCheck className="h-4 w-4 text-primary" />
+                      <span>{t("common.attendance")} ({visibleDays.length})</span>
+                    </CardTitle>
+                    <span className="text-xs text-muted-foreground bg-muted/60 px-2 py-0.5 rounded">
+                      Read-only
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {daysPending && (
+                    <div className="flex h-16 items-center justify-center">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  {!daysPending && visibleDays.length === 0 && (
+                    <EmptyState
+                      icon={CalendarCheck}
+                      title="Davomat yozuvlari topilmadi"
+                      description="Talabalar check-in / check-out qilganida ularning davomat yozuvlari shu yerda ko'rinadi"
+                      compact
+                    />
+                  )}
+                  {!daysPending && visibleDays.length > 0 && (
+                    <div className="space-y-2">
+                      {visibleDays.map((d) => (
+                        <DayRow key={d.id} day={d} />
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
+            )}
+
+            {/* Tasks / Journal / Analyses — Faqat Topshiriqlar ko'rinishida yoki Bosh sahifada */}
+            {showTasks && (
+              <>
+                {selectedAssignmentId !== "all" && (
+                  <SupervisorReviewPanel assignmentId={selectedAssignmentId} />
+                )}
+                {selectedAssignmentId === "all" && assignments.length === 1 && assignments[0] && (
+                  <SupervisorReviewPanel assignmentId={assignments[0].id} />
+                )}
+                {/* 2+ talaba bo'lsa "Barchasi" da panel yo'q — ko'rsatma beramiz */}
+                {selectedAssignmentId === "all" && assignments.length > 1 && (
+                  <Card>
+                    <CardContent className="py-8 text-center">
+                      <ClipboardCheck className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                      <p className="text-sm font-medium">
+                        {t("supervisor.reviewPromptTitle")}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {t("supervisor.reviewPromptDesc")}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </>
         )}

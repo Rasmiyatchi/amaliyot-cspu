@@ -61,8 +61,8 @@ export function CredentialsSection({ currentUsername, onSave, isPending }: Props
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
+    <div className="space-y-2 min-w-0">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t("adminCredentialsSection.title")}
         </h3>
@@ -75,11 +75,11 @@ export function CredentialsSection({ currentUsername, onSave, isPending }: Props
       </div>
 
       {!open && (
-        <div className="grid grid-cols-[140px_1fr] gap-2 text-sm">
-          <dt className="text-muted-foreground">{t("adminCredentialsSection.usernameLabel")}</dt>
-          <dd className="font-mono">{currentUsername}</dd>
-          <dt className="text-muted-foreground">{t("adminCredentialsSection.passwordLabel")}</dt>
-          <dd className="text-muted-foreground">••••••••</dd>
+        <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] gap-1 sm:gap-2 text-sm min-w-0">
+          <dt className="text-muted-foreground min-w-0 shrink-0">{t("adminCredentialsSection.usernameLabel")}</dt>
+          <dd className="font-mono min-w-0 break-all">{currentUsername}</dd>
+          <dt className="text-muted-foreground min-w-0 shrink-0">{t("adminCredentialsSection.passwordLabel")}</dt>
+          <dd className="text-muted-foreground min-w-0">••••••••</dd>
         </div>
       )}
 
