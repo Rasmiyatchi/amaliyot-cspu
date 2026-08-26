@@ -10,6 +10,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { AssignmentDetailDialog } from "@/components/admin/assignments/assignment-detail-dialog";
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
 import { AssignmentWizard } from "@/components/admin/assignments/assignment-wizard";
+import { SupervisorSearchSelect } from "@/components/admin/assignments/supervisor-search-select";
 import { OverdueTasksCard } from "@/components/overdue-tasks-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +41,6 @@ import {
 import { useAcademicYears, useDirections, useGroups } from "@/lib/api/academic";
 import { useOrganizations } from "@/lib/api/organizations";
 import { usePracticeTypes } from "@/lib/api/practice-types";
-import { useSupervisors } from "@/lib/api/supervisors";
 import type { AssignmentStatus, PracticeAssignment, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
@@ -65,7 +65,6 @@ export function AssignmentsPage() {
   const [selected, setSelected] = useState<PracticeAssignment | null>(null);
   const pageSize = 20;
   const orgs = useOrganizations({}, 1, 200);
-  const supervisorsQ = useSupervisors({}, 1, 200);
   const academicYearsQ = useAcademicYears();
   const directionsQ = useDirections(undefined, 1, 200);
   const groupsQ = useGroups(
@@ -198,24 +197,13 @@ export function AssignmentsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select
-          value={filters.supervisor_id ?? ALL}
-          onValueChange={(v) =>
-            setFilter({ supervisor_id: v === ALL ? undefined : (v as UUID) })
-          }
-        >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder={t("common.supervisor")} />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>{t("adminAssignments.allSupervisors")}</SelectItem>
-            {(supervisorsQ.data?.items ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.full_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="w-[220px]">
+          <SupervisorSearchSelect
+            value={filters.supervisor_id ?? ""}
+            onValueChange={(v) => setFilter({ supervisor_id: v ? (v as UUID) : undefined })}
+            placeholder={t("adminAssignments.allSupervisors")}
+          />
+        </div>
         <Select
           value={filters.academic_year_id ?? ALL}
           onValueChange={(v) =>

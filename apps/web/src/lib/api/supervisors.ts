@@ -40,6 +40,14 @@ export function useSupervisors(filters: SupervisorFilters = {}, page = 1, pageSi
   });
 }
 
+export function useSupervisor(id: UUID | null) {
+  return useQuery({
+    queryKey: ["supervisors", "detail", id],
+    queryFn: () => (id ? api.get(`v1/supervisors/${id}`).json<Supervisor>() : null),
+    enabled: !!id,
+  });
+}
+
 export function useCreateSupervisor() {
   const qc = useQueryClient();
   return useMutation({

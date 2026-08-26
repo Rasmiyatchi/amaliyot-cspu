@@ -362,6 +362,8 @@
     "srTitle": "Быстрый поиск"
   },
   "adminContractEditor": {
+    "addSpaceAfter": "Добавить интервал после абзаца",
+    "addSpaceBefore": "Добавить интервал перед абзацем",
     "alignCenter": "Выровнять по центру",
     "alignJustify": "Выровнять по ширине",
     "alignLeft": "Выровнять по левому краю",
@@ -381,6 +383,7 @@
     "image": "Изображение",
     "imageUrlPrompt": "URL изображения:",
     "italic": "Курсив (Italic)",
+    "lineSpacing": "Межстрочный и междуабзацный интервал",
     "link": "Ссылка",
     "linkUrlPrompt": "URL:",
     "namePlaceholder": "Название договора...",
@@ -388,6 +391,8 @@
     "orderedList": "Нумерованный список",
     "paragraph": "Обычный текст",
     "redo": "Повторить (Redo)",
+    "removeSpaceAfter": "Удалить интервал после абзаца",
+    "removeSpaceBefore": "Удалить интервал перед абзацем",
     "rowAdd": "Добавить строку",
     "rowDelete": "Удалить строку",
     "saved": "Шаблон успешно сохранён",

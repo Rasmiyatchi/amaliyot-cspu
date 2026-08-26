@@ -220,14 +220,14 @@ def render_student_contract_pdf(
         @page { size: A4; margin: 25mm 20mm; }
         body {
             font-family: "Times New Roman", Georgia, serif;
-            font-size: 14px; line-height: 1.6; color: #1a1a1a;
+            font-size: 14px; line-height: 1.15; color: #1a1a1a;
         }
         h1 { font-size: 20px; font-weight: 700; text-align: center;
-             margin: 24px 0 16px; text-transform: uppercase; }
-        h2 { font-size: 16px; font-weight: 700; margin: 20px 0 12px; }
-        h3 { font-size: 15px; font-weight: 600; margin: 16px 0 8px; }
-        h4 { font-size: 14px; font-weight: 600; margin: 12px 0 8px; }
-        p { margin-bottom: 8px; }
+             margin: 16px 0 12px; text-transform: uppercase; }
+        h2 { font-size: 16px; font-weight: 700; margin: 14px 0 8px; }
+        h3 { font-size: 15px; font-weight: 600; margin: 10px 0 6px; }
+        h4 { font-size: 14px; font-weight: 600; margin: 8px 0 4px; }
+        p { margin-top: 0; margin-bottom: 2px; }
         ul, ol { padding-left: 24px; margin-bottom: 8px; }
         li { margin-bottom: 4px; }
         table { border-collapse: collapse; width: 100%; margin: 16px 0; }

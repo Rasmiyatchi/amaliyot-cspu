@@ -362,6 +362,8 @@
     "srTitle": "Tezkor qidiruv"
   },
   "adminContractEditor": {
+    "addSpaceAfter": "Abzasdan keyin bo'sh joy qo'shish",
+    "addSpaceBefore": "Abzasdan oldin bo'sh joy qo'shish",
     "alignCenter": "Markazga tekislash",
     "alignJustify": "Ikki tomonga tekislash",
     "alignLeft": "Chapga tekislash",
@@ -381,6 +383,7 @@
     "image": "Rasm",
     "imageUrlPrompt": "Rasm URL:",
     "italic": "Kursiv (Italic)",
+    "lineSpacing": "Qatorlar va abzaslar oralig'i",
     "link": "Havola",
     "linkUrlPrompt": "URL:",
     "namePlaceholder": "Shartnoma nomi...",
@@ -388,6 +391,8 @@
     "orderedList": "Raqamli ro'yxat",
     "paragraph": "Oddiy matn",
     "redo": "Takrorlash (Redo)",
+    "removeSpaceAfter": "Abzasdan keyin bo'sh joyni olib tashlash",
+    "removeSpaceBefore": "Abzasdan oldin bo'sh joyni olib tashlash",
     "rowAdd": "Qator qo'shish",
     "rowDelete": "Qatorni o'chirish",
     "saved": "Shablon muvaffaqiyatli saqlandi",

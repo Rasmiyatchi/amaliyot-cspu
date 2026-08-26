@@ -35,10 +35,10 @@ import {
 import { useOrganizations } from "@/lib/api/organizations";
 import { usePracticeTypes } from "@/lib/api/practice-types";
 import { useStudents } from "@/lib/api/students";
-import { useSupervisors } from "@/lib/api/supervisors";
 import type { PracticeType, Semester } from "@/lib/api/types";
 import { WeekdayPicker } from "@/components/admin/assignments/weekday-picker";
 import { StudentSearchSelect } from "@/components/admin/assignments/student-search-select";
+import { SupervisorSearchSelect } from "@/components/admin/assignments/supervisor-search-select";
 
 const NONE = "__none__";
 
@@ -105,19 +105,6 @@ export function AssignmentWizard({ open, onClose }: Props) {
     [practiceType],
   );
 
-  // Supervisorlar: tashkilot tanlansa — o'sha tashkilotdagilar + tashkilotga
-  // bog'lanmaganlar (import qilinganlar odatda tashkilotsiz keladi; backend ham
-  // ularni istalgan tashkilotga biriktirishga ruxsat beradi). Hudud (area) uchun
-  // esa filtr yo'q — barcha faol supervizorlar.
-  const supervisorsQuery = useSupervisors(
-    {
-      organization_id: organizationId || undefined,
-      include_unassigned: true,
-      is_active: true,
-    },
-    1,
-    200,
-  );
 
   // Guruhlarni ruxsat etilgan kurslar bo'yicha filter
   const allGroupsQuery = useGroups({}, 1, 100);
@@ -511,26 +498,14 @@ export function AssignmentWizard({ open, onClose }: Props) {
           {(organizationId || areaId) && (
             <div>
               <Label>{t("common.supervisor")}</Label>
-              <Select
-                value={supervisorId || NONE}
-                onValueChange={(v) => setSupervisorId(v === NONE ? "" : v)}
-              >
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder={t("assignmentsAssignmentWizard.supervisorPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>—</SelectItem>
-                  {(supervisorsQuery.data?.items ?? []).length === 0 ? (
-                    <SelectEmpty message={t("assignmentsAssignmentWizard.noActiveSupervisors")} />
-                  ) : (
-                    (supervisorsQuery.data?.items ?? []).map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.full_name} ({s.position})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <div className="mt-1.5">
+                <SupervisorSearchSelect
+                  value={supervisorId}
+                  onValueChange={setSupervisorId}
+                  organizationId={organizationId}
+                  placeholder={t("assignmentsAssignmentWizard.supervisorPlaceholder")}
+                />
+              </div>
             </div>
           )}
 

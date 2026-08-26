@@ -34,7 +34,7 @@ import {
   useRecords,
   type RecordFilters,
 } from "@/lib/api/records";
-import { useSupervisors } from "@/lib/api/supervisors";
+import { SupervisorSearchSelect } from "@/components/admin/assignments/supervisor-search-select";
 import type { UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
@@ -67,7 +67,6 @@ export function RecordsPage() {
     1,
     200,
   );
-  const supervisorsQ = useSupervisors({}, 1, 200);
 
   const effectiveFilters = useMemo(
     () => ({ ...filters, search: debouncedSearch || undefined }),
@@ -230,22 +229,13 @@ export function RecordsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={filters.supervisor_id ?? ALL}
-            onValueChange={(v) => setFilter({ supervisor_id: v === ALL ? undefined : (v as UUID) })}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder={t("adminRecords.supervisorFilter")} />
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              <SelectItem value={ALL}>{t("adminRecords.allSupervisors")}</SelectItem>
-              {(supervisorsQ.data?.items ?? []).map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="w-[200px]">
+            <SupervisorSearchSelect
+              value={filters.supervisor_id ?? ""}
+              onValueChange={(v) => setFilter({ supervisor_id: v ? (v as UUID) : undefined })}
+              placeholder={t("adminRecords.allSupervisors")}
+            />
+          </div>
           <Input
             type="date"
             value={filters.start_from ?? ""}

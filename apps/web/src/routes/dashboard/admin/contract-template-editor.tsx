@@ -34,6 +34,7 @@ import {
   Rows3,
   Columns3,
   Trash2,
+  Check,
 } from "lucide-react";
 
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -58,7 +59,7 @@ const LineHeight = Extension.create({
   addOptions() {
     return {
       types: ["paragraph", "heading", "listItem"],
-      defaultLineHeight: "normal",
+      defaultLineHeight: "1.15",
     };
   },
   addGlobalAttributes() {
@@ -67,10 +68,10 @@ const LineHeight = Extension.create({
         types: this.options.types,
         attributes: {
           lineHeight: {
-            default: this.options.defaultLineHeight,
-            parseHTML: (element: HTMLElement) => element.style.lineHeight || this.options.defaultLineHeight,
+            default: null,
+            parseHTML: (element: HTMLElement) => element.style.lineHeight || null,
             renderHTML: (attributes: Record<string, any>) => {
-              if (attributes.lineHeight === this.options.defaultLineHeight) return {};
+              if (!attributes.lineHeight) return {};
               return { style: `line-height: ${attributes.lineHeight}` };
             },
           },
@@ -81,10 +82,55 @@ const LineHeight = Extension.create({
   addCommands() {
     return {
       setLineHeight: (lineHeight: string) => ({ commands }: any) => {
-        return this.options.types.every((type: string) => commands.updateAttributes(type, { lineHeight }));
+        return this.options.types.some((type: string) => commands.updateAttributes(type, { lineHeight }));
       },
       unsetLineHeight: () => ({ commands }: any) => {
-        return this.options.types.every((type: string) => commands.resetAttributes(type, "lineHeight"));
+        return this.options.types.some((type: string) => commands.resetAttributes(type, "lineHeight"));
+      },
+    } as any;
+  },
+});
+
+// ─── Custom Paragraph Spacing Extension ──────────────────────
+const ParagraphSpacing = Extension.create({
+  name: "paragraphSpacing",
+  addOptions() {
+    return {
+      types: ["paragraph", "heading"],
+    };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          marginTop: {
+            default: null,
+            parseHTML: (element: HTMLElement) => element.style.marginTop || null,
+            renderHTML: (attributes: Record<string, any>) => {
+              if (!attributes.marginTop) return {};
+              return { style: `margin-top: ${attributes.marginTop}` };
+            },
+          },
+          marginBottom: {
+            default: null,
+            parseHTML: (element: HTMLElement) => element.style.marginBottom || null,
+            renderHTML: (attributes: Record<string, any>) => {
+              if (!attributes.marginBottom) return {};
+              return { style: `margin-bottom: ${attributes.marginBottom}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setMarginTop: (marginTop: string | null) => ({ commands }: any) => {
+        return this.options.types.some((type: string) => commands.updateAttributes(type, { marginTop }));
+      },
+      setMarginBottom: (marginBottom: string | null) => ({ commands }: any) => {
+        return this.options.types.some((type: string) => commands.updateAttributes(type, { marginBottom }));
       },
     } as any;
   },
@@ -119,10 +165,10 @@ const TextIndent = Extension.create({
   addCommands() {
     return {
       setTextIndent: (textIndent: string) => ({ commands }: any) => {
-        return this.options.types.every((type: string) => commands.updateAttributes(type, { textIndent }));
+        return this.options.types.some((type: string) => commands.updateAttributes(type, { textIndent }));
       },
       unsetTextIndent: () => ({ commands }: any) => {
-        return this.options.types.every((type: string) => commands.resetAttributes(type, "textIndent"));
+        return this.options.types.some((type: string) => commands.resetAttributes(type, "textIndent"));
       },
     } as any;
   },
@@ -131,13 +177,6 @@ const TextIndent = Extension.create({
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -218,6 +257,7 @@ export function ContractTemplateEditorPage() {
       TiptapImage,
       TextStyle,
       LineHeight,
+      ParagraphSpacing,
       TextIndent,
       Placeholder.configure({ placeholder: t("adminContractEditor.editorPlaceholder") }),
       Color,
@@ -416,26 +456,8 @@ export function ContractTemplateEditorPage() {
 
             <ToolbarDivider />
 
-            {/* Line Height (Interval) */}
-            <Select
-              value={editor.getAttributes("paragraph").lineHeight || "normal"}
-              onValueChange={(v) =>
-                v === "normal"
-                  ? (editor.chain().focus() as any).unsetLineHeight().run()
-                  : (editor.chain().focus() as any).setLineHeight(v).run()
-              }
-            >
-              <SelectTrigger className="h-8 w-[130px] text-xs">
-                <SelectValue placeholder="Interval" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="1">1.0</SelectItem>
-                <SelectItem value="1.15">1.15</SelectItem>
-                <SelectItem value="1.5">1.5</SelectItem>
-                <SelectItem value="2">2.0</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Line Spacing & Paragraph Spacing Dropdown */}
+            <LineSpacingDropdown editor={editor} />
 
             <ToolbarDivider />
 
@@ -688,4 +710,149 @@ function ToolbarButton({
 
 function ToolbarDivider() {
   return <div className="mx-1 h-6 w-px bg-border" />;
+}
+
+// ─── Line Spacing & Paragraph Spacing Dropdown ─────────
+
+function LineSpacingDropdown({ editor }: { editor: any }) {
+  const { t } = useTranslation();
+
+  const paragraphAttrs = editor.getAttributes("paragraph") || {};
+  const headingAttrs = editor.getAttributes("heading") || {};
+
+  const currentLineHeight = paragraphAttrs.lineHeight || headingAttrs.lineHeight || "1.15";
+  const currentMarginTop = paragraphAttrs.marginTop || headingAttrs.marginTop;
+  const currentMarginBottom = paragraphAttrs.marginBottom || headingAttrs.marginBottom;
+
+  const hasSpaceBefore = Boolean(currentMarginTop && currentMarginTop !== "0px" && currentMarginTop !== "0");
+  const hasSpaceAfter = Boolean(
+    currentMarginBottom
+      ? currentMarginBottom !== "0px" && currentMarginBottom !== "0" && currentMarginBottom !== "2px"
+      : false
+  );
+
+  const setLineHeight = (val: string) => {
+    (editor.chain().focus() as any).setLineHeight(val).run();
+  };
+
+  const toggleSpaceBefore = () => {
+    const newVal = hasSpaceBefore ? "0px" : "10px";
+    (editor.chain().focus() as any).setMarginTop(newVal).run();
+  };
+
+  const toggleSpaceAfter = () => {
+    const newVal = hasSpaceAfter ? "0px" : "10px";
+    (editor.chain().focus() as any).setMarginBottom(newVal).run();
+  };
+
+  const lineHeights = ["1.0", "1.15", "1.5", "2.0", "2.5", "3.0"];
+
+  return (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs font-normal">
+              <LineHeightIcon className="h-4 w-4" />
+              <span className="font-mono text-xs">{currentLineHeight}</span>
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-xs">
+          {t("adminContractEditor.lineSpacing")}
+        </TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="start" className="w-60">
+        {lineHeights.map((lh) => {
+          const isActive = currentLineHeight === lh;
+          return (
+            <DropdownMenuItem
+              key={lh}
+              onClick={() => setLineHeight(lh)}
+              className="flex items-center justify-between text-xs cursor-pointer"
+            >
+              <span>{lh}</span>
+              {isActive && <Check className="h-4 w-4 text-primary" />}
+            </DropdownMenuItem>
+          );
+        })}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={toggleSpaceBefore} className="flex items-center gap-2 text-xs cursor-pointer">
+          <SpaceBeforeIcon className="h-4 w-4 text-muted-foreground" />
+          <span>
+            {hasSpaceBefore
+              ? t("adminContractEditor.removeSpaceBefore")
+              : t("adminContractEditor.addSpaceBefore")}
+          </span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={toggleSpaceAfter} className="flex items-center gap-2 text-xs cursor-pointer">
+          <SpaceAfterIcon className="h-4 w-4 text-muted-foreground" />
+          <span>
+            {hasSpaceAfter
+              ? t("adminContractEditor.removeSpaceAfter")
+              : t("adminContractEditor.addSpaceAfter")}
+          </span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function LineHeightIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 6H9" />
+      <path d="M21 12H9" />
+      <path d="M21 18H9" />
+      <path d="M3 7l2-2 2 2" />
+      <path d="M5 5v14" />
+      <path d="M3 17l2 2 2-2" />
+    </svg>
+  );
+}
+
+function SpaceBeforeIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 3v6" />
+      <path d="M9 6l3 3 3-3" />
+      <path d="M4 14h16" />
+      <path d="M4 18h16" />
+    </svg>
+  );
+}
+
+function SpaceAfterIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 6h16" />
+      <path d="M4 10h16" />
+      <path d="M12 15v6" />
+      <path d="M9 18l3 3 3-3" />
+    </svg>
+  );
 }
