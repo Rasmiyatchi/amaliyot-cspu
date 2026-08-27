@@ -239,3 +239,11 @@ async def return_application(
     return ApplicationRead.model_validate(
         await svc.return_application(db, id_, user, data.return_reason)
     )
+
+
+@router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_application(
+    id_: UUID, db: SessionDep, _: RequireAdmin
+) -> None:
+    """Arxivlangan arizani (shartnomani) butunlay o'chirish (faqat Admin)."""
+    await svc.delete_application(db, id_)

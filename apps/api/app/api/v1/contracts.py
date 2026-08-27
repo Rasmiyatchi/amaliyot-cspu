@@ -146,18 +146,37 @@ async def download_scan(id_: UUID, db: SessionDep, _: RequireAdmin) -> FileRespo
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Skan yuklanmagan")
     from app.services.pdf import STORAGE_DIR
 
-    abs_path = STORAGE_DIR.parent.parent / contract["scan_path"]
-    if not abs_path.exists():
+    clean_scan = str(contract["scan_path"]).lstrip("/\\")
+    base_dir = STORAGE_DIR.parent.parent
+    candidates = [
+        base_dir / clean_scan,
+        base_dir / "storage" / clean_scan,
+        base_dir / "storage" / "contracts" / clean_scan,
+        STORAGE_DIR / clean_scan,
+        Path(contract["scan_path"]),
+    ]
+    abs_path = None
+    for cand in candidates:
+        if cand.exists() and cand.is_file():
+            abs_path = cand
+            break
+
+    if not abs_path:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Skan fayli topilmadi")
 
-    ext = Path(contract["scan_path"]).suffix
+    ext = abs_path.suffix.lower()
     media = {
         ".pdf": "application/pdf",
         ".jpg": "image/jpeg",
         ".jpeg": "image/jpeg",
         ".png": "image/png",
     }.get(ext, "application/octet-stream")
-    return FileResponse(abs_path, media_type=media, filename=f"{contract['number']}{ext}")
+    return FileResponse(
+        path=str(abs_path),
+        media_type=media,
+        filename=f"{contract['number']}_scan{ext}",
+        content_disposition_type="inline",
+    )
 
 
 @router.post("/{id_}/revoke", response_model=ContractRead)
@@ -200,16 +219,12 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
     try:
         data = await svc.verify_by_token(db, qr_token)
 
-        today = date.today()
         status_ = data["status"]
-        is_valid = (
-            status_ == ContractStatus.ACTIVE
-            and data["end_date"] >= today
-            and data["revoked_at"] is None
-        )
 
-        if status_ == ContractStatus.ACTIVE and data["end_date"] < today:
-            status_ = ContractStatus.EXPIRED
+        # Shartnoma bekor qilingan (revoked) bo'lsa yoki revoked_at bo'lsa yaroqsiz (is_valid = False).
+        # Barcha imzolangan/faol shartnomalar rasmiy va yaroqli (is_valid = True).
+        is_revoked = status_ == ContractStatus.REVOKED or data.get("revoked_at") is not None
+        is_valid = not is_revoked
 
         return ContractVerifyResponse(
             number=data["number"],
@@ -225,6 +240,7 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
             revoked_reason=data["revoked_reason"],
             revoked_at=data["revoked_at"],
             is_valid=is_valid,
+            is_expired=False,
             pdf_url=pdf_url,
         )
     except HTTPException:

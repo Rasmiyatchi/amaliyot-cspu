@@ -298,6 +298,15 @@ export function useUnarchiveApplication() {
   });
 }
 
+/** Admin: arizani butunlay o'chirish. */
+export function useDeleteApplication() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) => api.delete(`v1/practice-applications/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
 /** Admin uchun: tasdiqlangan va shartnoma fayli mavjud arizalar ro'yxati. */
 export function useApprovedContracts(
   search?: string,

@@ -55,7 +55,27 @@ export async function downloadContractPdf(id: UUID, number: string): Promise<voi
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+}
+
+/** Shartnoma yuklangan skanini autentifikatsiya bilan yuklab oladi/ko'radi. */
+export async function downloadContractScan(id: UUID, number: string): Promise<void> {
+  const token = useAuthStore.getState().accessToken;
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
+  const res = await fetch(`/api/v1/contracts/${id}/scan`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Skan faylini yuklab bo'lmadi (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, "_blank");
+  if (!win) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${number}_scan`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
 }
 
 export function useContracts(filters: ContractFilters = {}, page = 1, pageSize = 20) {

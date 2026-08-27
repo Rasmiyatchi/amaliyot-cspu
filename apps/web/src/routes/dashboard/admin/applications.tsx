@@ -9,6 +9,7 @@ import {
   FileCheck,
   Layers,
   Loader2,
+  Trash2,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -47,6 +48,7 @@ import {
   useApproveApplication,
   useArchiveApplication,
   useConfirmScan,
+  useDeleteApplication,
   useRejectApplication,
   useReturnApplication,
   useTemplateFormFields,
@@ -98,12 +100,13 @@ export function ApplicationsPage() {
   const confirmScan = useConfirmScan();
   const archive = useArchiveApplication();
   const unarchive = useUnarchiveApplication();
+  const deleteApp = useDeleteApplication();
 
   const [detailApp, setDetailApp] = useState<PracticeApplication | null>(null);
   const [returnDialog, setReturnDialog] = useState<{ open: boolean, app: PracticeApplication | null }>({ open: false, app: null });
   const [returnReason, setReturnReason] = useState("");
   const [archiveTarget, setArchiveTarget] = useState<{
-    action: "archive" | "unarchive";
+    action: "archive" | "unarchive" | "delete";
     app: PracticeApplication;
   } | null>(null);
 
@@ -166,9 +169,12 @@ export function ApplicationsPage() {
       if (action === "archive") {
         await archive.mutateAsync(app.id);
         toast.success(t("adminContracts.archivedSuccess"));
-      } else {
+      } else if (action === "unarchive") {
         await unarchive.mutateAsync(app.id);
         toast.success(t("adminContracts.unarchivedSuccess"));
+      } else if (action === "delete") {
+        await deleteApp.mutateAsync(app.id);
+        toast.success(t("adminContracts.deletedSuccess"));
       }
       setArchiveTarget(null);
       setDetailApp(null);
@@ -392,18 +398,32 @@ export function ApplicationsPage() {
                             </Button>
                           )}
                           {a.status === "archived" || a.status === "expired" ? (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-primary hover:text-primary hover:bg-primary/10"
-                              title={t("adminContracts.unarchiveButton")}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setArchiveTarget({ action: "unarchive", app: a });
-                              }}
-                            >
-                              <ArchiveRestore className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="text-primary hover:text-primary hover:bg-primary/10"
+                                title={t("adminContracts.unarchiveButton")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setArchiveTarget({ action: "unarchive", app: a });
+                                }}
+                              >
+                                <ArchiveRestore className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                title={t("adminContracts.deleteButton")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setArchiveTarget({ action: "delete", app: a });
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
                           ) : (
                             <Button
                               size="icon"
@@ -520,22 +540,28 @@ export function ApplicationsPage() {
       <ConfirmDialog
         open={!!archiveTarget}
         title={
-          archiveTarget?.action === "archive"
+          archiveTarget?.action === "delete"
+            ? t("adminContracts.deleteConfirmTitle")
+            : archiveTarget?.action === "archive"
             ? t("adminContracts.archiveConfirmTitle")
             : t("adminContracts.unarchiveConfirmTitle")
         }
         description={
-          archiveTarget?.action === "archive"
+          archiveTarget?.action === "delete"
+            ? t("adminContracts.deleteConfirmMessage")
+            : archiveTarget?.action === "archive"
             ? t("adminContracts.archiveConfirmMessage")
             : t("adminContracts.unarchiveConfirmMessage")
         }
         confirmText={
-          archiveTarget?.action === "archive"
+          archiveTarget?.action === "delete"
+            ? t("adminContracts.deleteButton")
+            : archiveTarget?.action === "archive"
             ? t("adminContracts.archiveButton")
             : t("adminContracts.unarchiveButton")
         }
-        variant={archiveTarget?.action === "archive" ? "destructive" : "default"}
-        isPending={archive.isPending || unarchive.isPending}
+        variant={archiveTarget?.action === "unarchive" ? "default" : "destructive"}
+        isPending={archive.isPending || unarchive.isPending || deleteApp.isPending}
         onConfirm={handleArchiveConfirm}
         onClose={() => setArchiveTarget(null)}
       />

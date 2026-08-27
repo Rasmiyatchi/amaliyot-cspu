@@ -103,4 +103,6 @@ class ContractVerifyResponse(BaseModel):
     revoked_reason: str | None
     revoked_at: datetime | None
     is_valid: bool
+    is_expired: bool = False
     pdf_url: str | None = None
+    scan_url: str | None = None

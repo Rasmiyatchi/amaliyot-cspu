@@ -472,8 +472,12 @@
     "archiveConfirmMessage": "Вы действительно хотите отправить этот договор в архив?",
     "unarchiveConfirmTitle": "Восстановление из архива",
     "unarchiveConfirmMessage": "Вы действительно хотите восстановить этот договор из архива?",
+    "deleteButton": "Удалить",
+    "deleteConfirmTitle": "Удаление договора",
+    "deleteConfirmMessage": "Вы действительно хотите безвозвратно удалить этот договор? Это действие нельзя отменить.",
     "archivedSuccess": "Договор отправлен в архив",
-    "unarchivedSuccess": "Договор восстановлен из архива"
+    "unarchivedSuccess": "Договор восстановлен из архива",
+    "deletedSuccess": "Договор успешно удалён"
   },
   "adminCredentialsSection": {
     "credentialsUpdated": "Учётные данные обновлены",

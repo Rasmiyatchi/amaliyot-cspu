@@ -63,49 +63,73 @@ def _qr_png(url: str) -> bytes:
     return buf.getvalue()
 
 
-async def get_next_shared_contract_number(db: AsyncSession) -> str:
-    """26000001 formatida hamma shartnomalar uchun unikal raqam."""
-    prefix = "26"
-    last_app = (
-        await db.execute(
-            select(PracticeApplication.contract_number)
-            .where(PracticeApplication.contract_number.like(f"{prefix}%"))
-            .order_by(PracticeApplication.contract_number.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
+async def get_next_shared_contract_number(db: AsyncSession, year: int | None = None) -> str:
+    """Bazada mavjud faol/arxivdagi shartnomalar ichidan eng katta shartnoma raqamini (MAX) topadi va MAX + 1 beradi.
+
+    Agar shartnoma bazadan o'chirilsa, MAX qiymat kamayadi va yangi raqam o'chirilgan o'rinni egallaydi.
+    """
+    if year is None:
+        year = datetime.now(UTC).year
+    prefix = f"{year % 100:02d}"
+
+    # PracticeApplication (talaba arizalari) va Contract (rasmiy shartnomalar) jadvalidagi raqamlar
+    stmt_app = select(PracticeApplication.contract_number).where(
+        PracticeApplication.contract_number.is_not(None)
+    )
+    app_numbers = (await db.execute(stmt_app)).scalars().all()
 
     from app.models.contract import Contract
 
-    last_contract = (
-        await db.execute(
-            select(Contract.number)
-            .where(Contract.number.like(f"{prefix}%"))
-            .order_by(Contract.number.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
+    stmt_contract = select(Contract.number).where(
+        Contract.number.is_not(None)
+    )
+    contract_numbers = (await db.execute(stmt_contract)).scalars().all()
 
-    seq_app = 0
-    if last_app:
-        try:
-            seq_app = int(last_app[len(prefix):])
-        except (ValueError, IndexError):
-            pass
+    all_numbers = list(app_numbers) + list(contract_numbers)
 
-    seq_contract = 0
-    if last_contract:
-        try:
-            seq_contract = int(last_contract[len(prefix):])
-        except (ValueError, IndexError):
-            pass
+    max_seq = None
+    seq_digits_len = 6  # Odatiy format: 26000001 (6 ta nollik padding)
 
-    max_seq = max(seq_app, seq_contract) + 1
-    return f"{prefix}{max_seq:06d}"
+    for num in all_numbers:
+        if not num:
+            continue
+        str_num = str(num).strip()
+
+        # Prefiks mosligini tekshiramiz
+        if str_num.startswith(prefix) and len(str_num) > len(prefix):
+            seq_part = str_num[len(prefix):]
+            clean_seq = "".join(filter(str.isdigit, seq_part))
+            if clean_seq:
+                try:
+                    val = int(clean_seq)
+                    if max_seq is None or val > max_seq:
+                        max_seq = val
+                        seq_digits_len = max(len(clean_seq), 4)
+                except ValueError:
+                    pass
+        else:
+            # Prefiksiz to'g'ridan-to'g'ri raqam bo'lsa
+            clean_digits = "".join(filter(str.isdigit, str_num))
+            if clean_digits and clean_digits.startswith(prefix) and len(clean_digits) > len(prefix):
+                seq_part = clean_digits[len(prefix):]
+                try:
+                    val = int(seq_part)
+                    if max_seq is None or val > max_seq:
+                        max_seq = val
+                        seq_digits_len = max(len(seq_part), 4)
+                except ValueError:
+                    pass
+
+    if max_seq is not None:
+        next_seq = max_seq + 1
+    else:
+        next_seq = 1
+
+    return f"{prefix}{next_seq:0{seq_digits_len}d}"
 
 
 async def _next_contract_number(db: AsyncSession, year: int) -> str:
-    return await get_next_shared_contract_number(db)
+    return await get_next_shared_contract_number(db, year)
 
 
 async def _student_for_user(db: AsyncSession, user: User) -> Student:
@@ -337,6 +361,48 @@ async def unarchive_application(db: AsyncSession, id_: UUID, user: User) -> dict
         obj.status = ApplicationStatus.APPROVED
     await db.commit()
     return await get_one(db, id_)
+
+
+def _remove_application_files(app_obj: PracticeApplication) -> None:
+    """Arizaga bog'langan PDF/DOCX va skan fayllarni diskdan o'chirish."""
+    base_dir = Path(__file__).parent.parent.parent.parent
+    paths = []
+    if app_obj.contract_file and isinstance(app_obj.contract_file, dict):
+        if app_obj.contract_file.get("path"):
+            paths.append(app_obj.contract_file["path"])
+    if app_obj.scan_file and isinstance(app_obj.scan_file, dict):
+        if app_obj.scan_file.get("path"):
+            paths.append(app_obj.scan_file["path"])
+
+    for p in paths:
+        clean = str(p).lstrip("/\\")
+        candidates = [
+            base_dir / clean,
+            base_dir / "storage" / clean,
+            base_dir / "storage" / "contracts" / clean,
+            base_dir / "storage" / "contract_templates" / clean,
+        ]
+        for candidate in candidates:
+            try:
+                if candidate.exists() and candidate.is_file():
+                    candidate.unlink()
+            except Exception as e:
+                logger.warning(f"Ariza faylini o'chirishda xatolik ({candidate}): {e}")
+
+
+async def delete_application(db: AsyncSession, id_: UUID) -> None:
+    """Arxivlangan arizani o'chirish va biriktirilgan fayllarni tozalash."""
+    obj = await _get_obj(db, id_)
+    if obj.status not in (ApplicationStatus.ARCHIVED, ApplicationStatus.EXPIRED, ApplicationStatus.DRAFT):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Faqat arxivlangan (ARCHIVED/EXPIRED) arizalarni o'chirish mumkin.",
+        )
+
+    _remove_application_files(obj)
+
+    await db.delete(obj)
+    await db.commit()
 
 
 async def get_one(db: AsyncSession, id_: UUID) -> dict[str, Any]:

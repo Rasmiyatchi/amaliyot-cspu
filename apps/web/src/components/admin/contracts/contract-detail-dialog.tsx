@@ -1,5 +1,5 @@
 import { HTTPError } from "ky";
-import { AlertCircle, Archive, ArchiveRestore, Download, FileText, Loader2, Upload, XCircle } from "lucide-react";
+import { AlertCircle, Archive, ArchiveRestore, Download, Eye, FileText, Loader2, Trash2, Upload, XCircle } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -25,7 +25,9 @@ import {
 } from "@/components/ui/table";
 import { dateLocale } from "@/i18n";
 import {
+  downloadContractScan,
   useArchiveContract,
+  useDeleteContract,
   useGenerateContractPdf,
   useRevokeContract,
   useUnarchiveContract,
@@ -43,6 +45,7 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
   const revoke = useRevokeContract();
   const archive = useArchiveContract();
   const unarchive = useUnarchiveContract();
+  const deleteContract = useDeleteContract();
   const fileRef = useRef<HTMLInputElement>(null);
   const [revokeReason, setRevokeReason] = useState("");
   const [revokeMode, setRevokeMode] = useState(false);
@@ -78,6 +81,14 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
     a.download = `${contract.number}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleViewScan = async () => {
+    try {
+      await downloadContractScan(contract.id, contract.number);
+    } catch (e) {
+      toast.error(e instanceof HTTPError ? e.message : (e as Error).message || t("common.error"));
+    }
   };
 
   const handleUploadScan = async (file: File | null) => {
@@ -119,6 +130,17 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
     try {
       await unarchive.mutateAsync(contract.id);
       toast.success(t("adminContracts.unarchivedSuccess"));
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(t("adminContracts.deleteConfirmMessage"))) return;
+    try {
+      await deleteContract.mutateAsync(contract.id);
+      toast.success(t("adminContracts.deletedSuccess"));
       onClose();
     } catch (e) {
       toast.error(e instanceof HTTPError ? e.message : t("common.error"));
@@ -175,6 +197,16 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
               {t("contractsContractDetailDialog.downloadPdf")}
             </Button>
           )}
+          {contract.scan_path && (
+            <Button
+              variant="outline"
+              onClick={handleViewScan}
+              className="gap-1.5 text-primary border-primary/30 hover:bg-primary/10 hover:text-primary"
+            >
+              <Eye className="h-4 w-4" />
+              Skanni ko‘rish
+            </Button>
+          )}
           {(contract.status === "generated" || contract.status === "active") && (
             <>
               <Button
@@ -198,18 +230,33 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
             </>
           )}
           {contract.status === "expired" ? (
-            <Button
-              variant="outline"
-              onClick={handleUnarchive}
-              disabled={unarchive.isPending}
-            >
-              {unarchive.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ArchiveRestore className="h-4 w-4" />
-              )}
-              {t("adminContracts.unarchiveButton")}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={handleUnarchive}
+                disabled={unarchive.isPending}
+              >
+                {unarchive.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArchiveRestore className="h-4 w-4" />
+                )}
+                {t("adminContracts.unarchiveButton")}
+              </Button>
+              <Button
+                variant="outline"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                onClick={handleDelete}
+                disabled={deleteContract.isPending}
+              >
+                {deleteContract.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                {t("adminContracts.deleteButton")}
+              </Button>
+            </>
           ) : (
             <Button
               variant="outline"
@@ -292,10 +339,23 @@ export function ContractDetailDialog({ contract, onClose }: Props) {
             <dt className="text-xs text-muted-foreground">
               {t("contractsContractDetailDialog.scanUploadedAt")}
             </dt>
-            <dd>
-              {contract.signed_at_org
-                ? new Date(contract.signed_at_org).toLocaleString(dateLocale())
-                : "—"}
+            <dd className="flex items-center gap-2">
+              <span>
+                {contract.signed_at_org
+                  ? new Date(contract.signed_at_org).toLocaleString(dateLocale())
+                  : "—"}
+              </span>
+              {contract.scan_path && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 gap-1 px-2 text-xs text-primary"
+                  onClick={handleViewScan}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  Ko'rish
+                </Button>
+              )}
             </dd>
           </div>
           <div className="col-span-2">

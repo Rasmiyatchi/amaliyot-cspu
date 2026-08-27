@@ -2,10 +2,12 @@
 
 import secrets
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -434,14 +436,42 @@ async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
     return dict(row)
 
 
+def _remove_contract_files(contract: Contract) -> None:
+    """Shartnomaga bog'langan PDF va skan fayllarni diskdan o'chirish."""
+    base_dir = Path(__file__).parent.parent.parent.parent
+    paths_to_check = []
+    if contract.pdf_path:
+        paths_to_check.append(contract.pdf_path)
+    if contract.scan_path:
+        paths_to_check.append(contract.scan_path)
+
+    for p in paths_to_check:
+        clean = str(p).lstrip("/\\")
+        candidates = [
+            base_dir / clean,
+            base_dir / "storage" / clean,
+            base_dir / "storage" / "contracts" / clean,
+        ]
+        for candidate in candidates:
+            try:
+                if candidate.exists() and candidate.is_file():
+                    candidate.unlink()
+            except Exception as e:
+                logger.warning(f"Faylni o'chirishda xatolik ({candidate}): {e}")
+
+
 async def delete_contract(db: AsyncSession, id_: UUID) -> None:
+    """Arxivlangan shartnomani o'chirish va saqlangan fayllarni tozalash."""
     contract = await db.get(Contract, id_)
     if not contract:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Shartnoma topilmadi: {id_}")
-    if contract.status != ContractStatus.DRAFT:
+    if contract.status not in (ContractStatus.EXPIRED, ContractStatus.DRAFT):
         raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "Faqat DRAFT shartnomasini o'chirish mumkin. Aktiv bo'lsa — REVOKE qiling.",
+            status.HTTP_400_BAD_REQUEST,
+            "Faqat arxivlangan (EXPIRED) yoki qoralama shartnomalarni o'chirish mumkin.",
         )
+
+    _remove_contract_files(contract)
+
     await db.delete(contract)
     await db.commit()

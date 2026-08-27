@@ -750,7 +750,9 @@ export type ContractVerifyResponse = {
   revoked_reason: string | null;
   revoked_at: ISODateTime | null;
   is_valid: boolean;
+  is_expired?: boolean;
   pdf_url?: string | null;
+  scan_url?: string | null;
 };
 
 // ─── Practice Types ──────────────────────────────────────

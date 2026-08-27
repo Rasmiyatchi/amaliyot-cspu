@@ -472,8 +472,12 @@
     "archiveConfirmMessage": "Haqiqatan ham bu shartnomani arxivlamoqchimisiz?",
     "unarchiveConfirmTitle": "Arxivdan chiqarish",
     "unarchiveConfirmMessage": "Haqiqatan ham bu shartnomani arxivdan chiqarmoqchimisiz?",
+    "deleteButton": "O‘chirish",
+    "deleteConfirmTitle": "Shartnomani o‘chirish",
+    "deleteConfirmMessage": "Haqiqatan ham ushbu shartnomani butunlay o‘chirib tashlamoqchimisiz? Bu amalni qaytarib bo‘lmaydi.",
     "archivedSuccess": "Shartnoma arxivga o'tkazildi",
-    "unarchivedSuccess": "Shartnoma arxivdan chiqarildi"
+    "unarchivedSuccess": "Shartnoma arxivdan chiqarildi",
+    "deletedSuccess": "Shartnoma butunlay o'chirib tashlandi"
   },
   "adminCredentialsSection": {
     "credentialsUpdated": "Credentials yangilandi",

@@ -7,6 +7,7 @@ import {
   FileCheck2,
   FileText,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,12 +40,14 @@ import {
   downloadContractPdf,
   useArchiveContract,
   useContracts,
+  useDeleteContract,
   useUnarchiveContract,
   type ContractFilters,
 } from "@/lib/api/contracts";
 import {
   useApprovedContracts,
   useArchiveApplication,
+  useDeleteApplication,
   useUnarchiveApplication,
   type ApplicationStatus,
   type PracticeApplication,
@@ -86,15 +89,17 @@ export function ContractsPage() {
   const [sourceTab, setSourceTab] = useState<"official" | "application">("application");
   const [confirmTarget, setConfirmTarget] = useState<{
     type: "official" | "application";
-    action: "archive" | "unarchive";
+    action: "archive" | "unarchive" | "delete";
     id: UUID;
     name?: string;
   } | null>(null);
 
   const archiveContract = useArchiveContract();
   const unarchiveContract = useUnarchiveContract();
+  const deleteContract = useDeleteContract();
   const archiveApp = useArchiveApplication();
   const unarchiveApp = useUnarchiveApplication();
+  const deleteApp = useDeleteApplication();
 
   const pageSize = 20;
 
@@ -130,17 +135,23 @@ export function ContractsPage() {
         if (action === "archive") {
           await archiveContract.mutateAsync(id);
           toast.success(t("adminContracts.archivedSuccess"));
-        } else {
+        } else if (action === "unarchive") {
           await unarchiveContract.mutateAsync(id);
           toast.success(t("adminContracts.unarchivedSuccess"));
+        } else if (action === "delete") {
+          await deleteContract.mutateAsync(id);
+          toast.success(t("adminContracts.deletedSuccess"));
         }
       } else {
         if (action === "archive") {
           await archiveApp.mutateAsync(id);
           toast.success(t("adminContracts.archivedSuccess"));
-        } else {
+        } else if (action === "unarchive") {
           await unarchiveApp.mutateAsync(id);
           toast.success(t("adminContracts.unarchivedSuccess"));
+        } else if (action === "delete") {
+          await deleteApp.mutateAsync(id);
+          toast.success(t("adminContracts.deletedSuccess"));
         }
       }
       setConfirmTarget(null);
@@ -303,24 +314,44 @@ export function ContractsPage() {
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           {c.status === "expired" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 gap-1.5 px-2.5 text-xs text-primary border-primary/30 hover:bg-primary/10 hover:text-primary"
-                              onClick={() =>
-                                setConfirmTarget({
-                                  type: "official",
-                                  action: "unarchive",
-                                  id: c.id,
-                                  name: c.number,
-                                })
-                              }
-                              disabled={unarchiveContract.isPending}
-                              title={t("adminContracts.unarchiveButton")}
-                            >
-                              <ArchiveRestore className="h-3.5 w-3.5" />
-                              {t("adminContracts.unarchiveButton")}
-                            </Button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 gap-1.5 px-2.5 text-xs text-primary border-primary/30 hover:bg-primary/10 hover:text-primary"
+                                onClick={() =>
+                                  setConfirmTarget({
+                                    type: "official",
+                                    action: "unarchive",
+                                    id: c.id,
+                                    name: c.number,
+                                  })
+                                }
+                                disabled={unarchiveContract.isPending}
+                                title={t("adminContracts.unarchiveButton")}
+                              >
+                                <ArchiveRestore className="h-3.5 w-3.5" />
+                                {t("adminContracts.unarchiveButton")}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 gap-1.5 px-2.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() =>
+                                  setConfirmTarget({
+                                    type: "official",
+                                    action: "delete",
+                                    id: c.id,
+                                    name: c.number,
+                                  })
+                                }
+                                disabled={deleteContract.isPending}
+                                title={t("adminContracts.deleteButton")}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                {t("adminContracts.deleteButton")}
+                              </Button>
+                            </div>
                           ) : (
                             <Button
                               variant="outline"
@@ -492,24 +523,44 @@ export function ContractsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         {a.status === "archived" || a.status === "expired" ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 gap-1.5 px-2.5 text-xs text-primary border-primary/30 hover:bg-primary/10 hover:text-primary"
-                            onClick={() =>
-                              setConfirmTarget({
-                                type: "application",
-                                action: "unarchive",
-                                id: a.id,
-                                name: a.student_name ?? a.contract_number ?? undefined,
-                              })
-                            }
-                            disabled={unarchiveApp.isPending}
-                            title={t("adminContracts.unarchiveButton")}
-                          >
-                            <ArchiveRestore className="h-3.5 w-3.5" />
-                            {t("adminContracts.unarchiveButton")}
-                          </Button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1.5 px-2.5 text-xs text-primary border-primary/30 hover:bg-primary/10 hover:text-primary"
+                              onClick={() =>
+                                setConfirmTarget({
+                                  type: "application",
+                                  action: "unarchive",
+                                  id: a.id,
+                                  name: a.student_name ?? a.contract_number ?? undefined,
+                                })
+                              }
+                              disabled={unarchiveApp.isPending}
+                              title={t("adminContracts.unarchiveButton")}
+                            >
+                              <ArchiveRestore className="h-3.5 w-3.5" />
+                              {t("adminContracts.unarchiveButton")}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1.5 px-2.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() =>
+                                setConfirmTarget({
+                                  type: "application",
+                                  action: "delete",
+                                  id: a.id,
+                                  name: a.student_name ?? a.contract_number ?? undefined,
+                                })
+                              }
+                              disabled={deleteApp.isPending}
+                              title={t("adminContracts.deleteButton")}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              {t("adminContracts.deleteButton")}
+                            </Button>
+                          </div>
                         ) : (
                           <Button
                             variant="outline"
@@ -547,26 +598,34 @@ export function ContractsPage() {
       <ConfirmDialog
         open={!!confirmTarget}
         title={
-          confirmTarget?.action === "archive"
+          confirmTarget?.action === "delete"
+            ? t("adminContracts.deleteConfirmTitle")
+            : confirmTarget?.action === "archive"
             ? t("adminContracts.archiveConfirmTitle")
             : t("adminContracts.unarchiveConfirmTitle")
         }
         description={
-          confirmTarget?.action === "archive"
+          confirmTarget?.action === "delete"
+            ? t("adminContracts.deleteConfirmMessage")
+            : confirmTarget?.action === "archive"
             ? t("adminContracts.archiveConfirmMessage")
             : t("adminContracts.unarchiveConfirmMessage")
         }
         confirmText={
-          confirmTarget?.action === "archive"
+          confirmTarget?.action === "delete"
+            ? t("adminContracts.deleteButton")
+            : confirmTarget?.action === "archive"
             ? t("adminContracts.archiveButton")
             : t("adminContracts.unarchiveButton")
         }
-        variant={confirmTarget?.action === "archive" ? "destructive" : "default"}
+        variant={confirmTarget?.action === "unarchive" ? "default" : "destructive"}
         isPending={
           archiveContract.isPending ||
           unarchiveContract.isPending ||
+          deleteContract.isPending ||
           archiveApp.isPending ||
-          unarchiveApp.isPending
+          unarchiveApp.isPending ||
+          deleteApp.isPending
         }
         onConfirm={handleConfirmAction}
         onClose={() => setConfirmTarget(null)}
