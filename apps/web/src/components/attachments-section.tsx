@@ -82,7 +82,7 @@ export function AttachmentsSection({
   };
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-2 min-w-0", className)}>
       <div className="flex items-center justify-between">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t("attachmentsSection.title", { n: attachments.length })}
@@ -100,7 +100,7 @@ export function AttachmentsSection({
           {attachments.map((a) => (
             <div
               key={a.id}
-              className="flex items-center gap-2 rounded-md border border-border p-2 text-sm"
+              className="flex items-center gap-1.5 sm:gap-2 rounded-md border border-border p-2 text-xs sm:text-sm min-w-0"
             >
               <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
               <button
@@ -108,40 +108,42 @@ export function AttachmentsSection({
                 className="flex-1 min-w-0 text-left hover:underline focus:outline-none cursor-pointer"
                 onClick={() => setPreviewFile(a)}
               >
-                <div className="truncate font-medium">{a.name}</div>
-                <div className="text-xs text-muted-foreground">
+                <div className="truncate font-medium text-xs sm:text-sm">{a.name}</div>
+                <div className="text-[11px] sm:text-xs text-muted-foreground truncate">
                   {fmtSize(a.size)} · {new Date(a.uploaded_at).toLocaleString(dateLocale())}
                 </div>
               </button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-primary"
-                onClick={() => setPreviewFile(a)}
-                title="Saytda ko'rish"
-              >
-                <Eye className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleDownload(a)}
-                title={t("common.download")}
-              >
-                <Download className="h-3.5 w-3.5" />
-              </Button>
-              {canEdit && (
+              <div className="flex items-center gap-0.5 shrink-0">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                  onClick={() => setConfirmDelete(a)}
-                  title={t("common.delete")}
+                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                  onClick={() => setPreviewFile(a)}
+                  title="Saytda ko'rish"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Eye className="h-3.5 w-3.5" />
                 </Button>
-              )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => handleDownload(a)}
+                  title={t("common.download")}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </Button>
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => setConfirmDelete(a)}
+                    title={t("common.delete")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -161,7 +163,7 @@ export function AttachmentsSection({
           }}
           onClick={() => fileRef.current?.click()}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-4 text-center text-sm transition-colors",
+            "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-3 sm:p-4 text-center text-xs sm:text-sm transition-colors min-w-0",
             dragOver
               ? "border-primary bg-primary/5"
               : "border-border hover:border-primary/50 hover:bg-muted/30",
@@ -172,12 +174,12 @@ export function AttachmentsSection({
           ) : (
             <Upload className="h-5 w-5 text-muted-foreground" />
           )}
-          <div className="text-muted-foreground">
+          <div className="text-muted-foreground break-words max-w-full">
             {upload.isPending
               ? t("common.loading")
               : t("attachmentsSection.dropHint")}
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-[11px] sm:text-xs text-muted-foreground">
             {t("attachmentsSection.fileTypes")}
           </div>
           <input

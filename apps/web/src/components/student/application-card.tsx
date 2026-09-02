@@ -328,14 +328,14 @@ function ApplicationDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !isBusy && onClose()}>
-      <DialogContent className="max-h-[92vh] max-w-lg overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-h-[88dvh] sm:max-w-lg overflow-y-auto">
+        <DialogHeader className="pr-6 sm:pr-0 text-left">
+          <DialogTitle className="text-base sm:text-lg font-semibold">
             {isResubmit
               ? t("studentApplicationCard.resubmitTitle")
               : t("studentApplicationCard.newApplication")}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             {isResubmit
               ? t("studentApplicationCard.resubmitDescription")
               : t("studentApplicationCard.dialogDescription")}
@@ -343,22 +343,23 @@ function ApplicationDialog({
         </DialogHeader>
         <div className="space-y-4">
           {isResubmit && resubmitFor?.return_reason && (
-            <Alert variant="destructive">
-              <AlertDescription className="text-xs">
+            <Alert variant="destructive" className="py-2.5 px-3">
+              <AlertDescription className="text-xs break-words">
                 {t("studentApplicationCard.reason", { note: resubmitFor.return_reason })}
               </AlertDescription>
             </Alert>
           )}
           <div>
-            <Label>{t("studentApplicationCard.contractType")}</Label>
+            <Label className="text-xs sm:text-sm">{t("studentApplicationCard.contractType")}</Label>
             {isResubmit ? (
               <Input
                 value={resubmitFor?.contract_template_name ?? resubmitFor?.organization_name ?? ""}
                 disabled
+                className="mt-1 text-xs sm:text-sm"
               />
             ) : (
               <Select value={contractTypeId} onValueChange={setContractTypeId}>
-                <SelectTrigger>
+                <SelectTrigger className="mt-1 text-xs sm:text-sm">
                   <SelectValue placeholder={t("studentApplicationCard.selectTemplatePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -384,9 +385,9 @@ function ApplicationDialog({
           )}
           
           {!isLoadingFields && formFieldsData?.fields && formFieldsData.fields.length > 0 && (
-            <div className="space-y-4 rounded-md border border-border p-4 bg-muted/20">
-              <h4 className="text-sm font-medium">{t("studentApplicationCard.contractDetails")}</h4>
-              <div className="grid gap-4 sm:grid-cols-1">
+            <div className="space-y-3 rounded-md border border-border p-3 sm:p-4 bg-muted/20">
+              <h4 className="text-xs sm:text-sm font-medium">{t("studentApplicationCard.contractDetails")}</h4>
+              <div className="grid gap-3 sm:grid-cols-1">
                 {formFieldsData.fields.map((field) => (
                   <div key={field.key}>
                     <Label className="text-xs mb-1 block">
@@ -400,7 +401,7 @@ function ApplicationDialog({
                           set("variable_values", { ...form.variable_values, [field.key]: v })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="text-xs sm:text-sm">
                           <SelectValue placeholder={field.placeholder || t("studentApplicationCard.selectPlaceholder")} />
                         </SelectTrigger>
                         <SelectContent>
@@ -417,6 +418,7 @@ function ApplicationDialog({
                         }
                         placeholder={field.placeholder || "..."}
                         rows={3}
+                        className="text-xs sm:text-sm"
                       />
                     ) : (
                       <Input
@@ -426,6 +428,7 @@ function ApplicationDialog({
                           set("variable_values", { ...form.variable_values, [field.key]: e.target.value })
                         }
                         placeholder={field.placeholder || "..."}
+                        className="text-xs sm:text-sm"
                       />
                     )}
                   </div>
@@ -436,16 +439,16 @@ function ApplicationDialog({
 
           {!isResubmit && (
             <div>
-              <Label>{t("studentApplicationCard.noteOptional")}</Label>
-              <Textarea value={form.note} onChange={(e) => set("note", e.target.value)} rows={2} />
+              <Label className="text-xs sm:text-sm">{t("studentApplicationCard.noteOptional")}</Label>
+              <Textarea value={form.note} onChange={(e) => set("note", e.target.value)} rows={2} className="mt-1 text-xs sm:text-sm" />
             </div>
           )}
         </div>
-        <DialogFooter className="mt-4">
-          <Button variant="ghost" onClick={onClose} disabled={isBusy}>
+        <DialogFooter className="mt-4 flex-col-reverse sm:flex-row gap-2 sm:gap-2">
+          <Button variant="ghost" onClick={onClose} disabled={isBusy} className="w-full sm:w-auto">
             {t("common.cancel")}
           </Button>
-          <Button onClick={handleSubmit} disabled={isBusy || !contractTypeId}>
+          <Button onClick={handleSubmit} disabled={isBusy || !contractTypeId} className="w-full sm:w-auto">
             {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isResubmit
               ? t("studentApplicationCard.resubmitSubmit")

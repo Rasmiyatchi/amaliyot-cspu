@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { dateLocale } from "@/i18n";
+import { cn } from "@/lib/utils";
 import {
   useAssignmentProgress,
   useAssignmentTasks,
@@ -170,29 +171,30 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                               <button
                                 key={task.id}
                                 onClick={() => setSelectedTaskId(task.id)}
-                                className="flex w-full items-start gap-3 border-b border-border p-3 text-left last:border-0 hover:bg-muted/30"
+                                className="flex w-full items-start gap-2 sm:gap-3 border-b border-border p-3 text-left last:border-0 hover:bg-muted/30 min-w-0"
                               >
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-medium leading-snug">{task.template_title}</div>
-                                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  <div className="font-medium leading-snug break-words text-sm sm:text-base">{task.template_title}</div>
+                                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                                     <TaskTypeLabel type={task.template_type} />
                                     {task.template_quantity > 1 && (
-                                      <Badge variant="outline">
+                                      <Badge variant="outline" className="text-[10px] sm:text-xs">
                                         {t("studentAcademicPanel.quantity", {
                                           count: task.template_quantity,
                                         })}
                                       </Badge>
                                     )}
-                                    {task.template_month_hint && <span>{task.template_month_hint}</span>}
+                                    {task.template_month_hint && <span className="text-[11px] sm:text-xs">{task.template_month_hint}</span>}
                                     {task.due_date && (
                                       <Badge
                                         variant="outline"
-                                        className={
+                                        className={cn(
+                                          "text-[10px] sm:text-xs",
                                           new Date(task.due_date) < new Date() &&
                                           task.status !== "approved"
                                             ? "border-destructive/50 text-destructive"
                                             : ""
-                                        }
+                                        )}
                                       >
                                         {t("studentAcademicPanel.deadline", {
                                           date: task.due_date,
@@ -201,14 +203,14 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                                     )}
                                   </div>
                                   {task.notes && (
-                                    <div className="mt-1 text-xs text-muted-foreground">
+                                    <div className="mt-1 text-xs text-muted-foreground break-words">
                                       {task.notes}
                                     </div>
                                   )}
                                 </div>
                                 <div className="flex shrink-0 flex-col items-end gap-1">
                                   <TaskStatusBadge status={task.status} />
-                                  <span className="font-mono text-xs">
+                                  <span className="font-mono text-xs text-muted-foreground sm:text-foreground">
                                     {task.points_earned ?? "—"}/{task.template_points}
                                   </span>
                                 </div>
@@ -247,17 +249,17 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                     setJournalEdit(j);
                     setJournalOpen(true);
                   }}
-                  className="w-full rounded-md border border-border p-3 text-left hover:bg-muted/30"
+                  className="w-full rounded-md border border-border p-3 text-left hover:bg-muted/30 min-w-0"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="font-mono text-xs text-muted-foreground">
                       {new Date(j.date).toLocaleDateString(dateLocale())}
                     </div>
                     <JournalStatusBadge status={j.status} />
                   </div>
-                  <div className="mt-2 line-clamp-2 text-sm">{j.content_md}</div>
+                  <div className="mt-2 line-clamp-2 text-xs sm:text-sm break-words">{j.content_md}</div>
                   {j.rejection_reason && (
-                    <div className="mt-2 rounded-md bg-destructive/5 px-2 py-1 text-xs text-destructive">
+                    <div className="mt-2 rounded-md bg-destructive/5 px-2 py-1 text-xs text-destructive break-words">
                       {t("studentAcademicPanel.reason", {
                         reason: j.rejection_reason,
                       })}
@@ -292,17 +294,17 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                     setAnalysisEdit(a);
                     setAnalysisOpen(true);
                   }}
-                  className="w-full rounded-md border border-border p-3 text-left hover:bg-muted/30"
+                  className="w-full rounded-md border border-border p-3 text-left hover:bg-muted/30 min-w-0"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="font-medium">{a.subject}</div>
-                    <span className="text-xs text-muted-foreground">· {a.teacher_name}</span>
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <div className="font-medium text-xs sm:text-sm break-words">{a.subject}</div>
+                    <span className="text-xs text-muted-foreground truncate">· {a.teacher_name}</span>
                     {a.grade_level && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-[10px] sm:text-xs">
                         {a.grade_level}
                       </Badge>
                     )}
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs">
                       {t("studentAcademicPanel.quarterN", { n: a.quarter })}
                     </Badge>
                     <JournalStatusBadge status={a.status} />
@@ -310,9 +312,9 @@ export function StudentAcademicPanel({ assignmentId }: Props) {
                   <div className="mt-1 text-xs text-muted-foreground">
                     {new Date(a.date).toLocaleDateString(dateLocale())}
                   </div>
-                  <div className="mt-1 line-clamp-2 text-sm">{a.analysis_md}</div>
+                  <div className="mt-1 line-clamp-2 text-xs sm:text-sm break-words">{a.analysis_md}</div>
                   {a.rejection_reason && (
-                    <div className="mt-2 rounded-md bg-destructive/5 px-2 py-1 text-xs text-destructive">
+                    <div className="mt-2 rounded-md bg-destructive/5 px-2 py-1 text-xs text-destructive break-words">
                       {t("studentAcademicPanel.reason", {
                         reason: a.rejection_reason,
                       })}

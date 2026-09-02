@@ -3,7 +3,7 @@
 Status oqimi:
 - draft (talaba qoralama saqladi, hali yubormadi) — kelajakda kerak bo'lishi mumkin
 - submitted — talaba topshirdi, ko'rib chiqish kutilmoqda
-- approved — super admin (kafedra mudiri) tasdiqladi → arxiv yuklash mumkin
+- approved — amaliyot rahbari (supervisor) tasdiqladi → arxiv yuklash mumkin
 - rejected — sababi bilan rad etilgan, talaba qaytadan yuklashi mumkin
 
 Bog'liqlik: 1 assignment → 0 yoki 1 ta final_report.

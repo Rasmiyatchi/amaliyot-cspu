@@ -57,7 +57,7 @@ async def download_archive(
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN,
                 "Yig'ma jildni olishdan oldin yakuniy hisobotni topshirib, "
-                "kafedra mudiri tasdiqlashi kerak",
+                "amaliyot rahbari (supervisor) tasdiqlashi kerak",
             )
 
     zip_bytes, filename = await svc.build_archive_zip(db, assignment_id)

@@ -113,18 +113,18 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
 
   return (
     <Dialog open={!!attachment} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex flex-col max-w-4xl h-[88vh] p-0 gap-0 overflow-hidden">
+      <DialogContent showClose={false} className="flex flex-col w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-4xl h-[90dvh] max-h-[90dvh] p-0 gap-0 overflow-hidden">
         {/* Header */}
-        <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/20 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0 pr-4">
-            <div className="p-2 rounded-md bg-primary/10 text-primary shrink-0">
+        <DialogHeader className="p-3 sm:p-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/20 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 pr-2">
+            <div className="p-1.5 sm:p-2 rounded-md bg-primary/10 text-primary shrink-0">
               <FileIcon className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <DialogTitle className="text-base font-semibold truncate">
+              <DialogTitle className="text-xs sm:text-base font-semibold truncate text-left">
                 {attachment.name}
               </DialogTitle>
-              <div className="text-xs text-muted-foreground flex items-center gap-2">
+              <div className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1.5">
                 <span>{(attachment.size / 1024 / 1024).toFixed(2)} MB</span>
                 <span>•</span>
                 <span className="uppercase">{ext}</span>
@@ -132,10 +132,10 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <Button variant="outline" size="sm" onClick={handleDownload} className="h-8 text-xs gap-1 px-2 sm:px-3">
               <Download className="h-3.5 w-3.5" />
-              <span>{t("common.download")}</span>
+              <span className="hidden sm:inline">{t("common.download")}</span>
             </Button>
 
             <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">

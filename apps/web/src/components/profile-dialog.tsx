@@ -122,40 +122,40 @@ export function ProfileDialog({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[92vh] max-w-xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-h-[88dvh] sm:max-w-xl overflow-y-auto">
+        <DialogHeader className="pr-6 sm:pr-0 text-left">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <UserCircle className="h-5 w-5 text-primary" />
             {t("profileDialog.title")}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             {user.username} · {user.role}
           </DialogDescription>
         </DialogHeader>
 
         {/* Avatar */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <button
             onClick={() => fileRef.current?.click()}
-            className="group relative h-20 w-20 shrink-0"
+            className="group relative h-16 w-16 sm:h-20 sm:w-20 shrink-0"
             title={t("profileDialog.changeAvatar")}
           >
             {user.avatar_url ? (
               <img
                 src={user.avatar_url}
                 alt="Avatar"
-                className="h-20 w-20 rounded-full object-cover"
+                className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover"
               />
             ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-semibold text-primary">
+              <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-primary/10 text-xl sm:text-2xl font-semibold text-primary">
                 {initials.toUpperCase()}
               </div>
             )}
             <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
               {uploadAvatar.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin text-white" />
+                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-white" />
               ) : (
-                <Camera className="h-5 w-5 text-white" />
+                <Camera className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               )}
             </div>
           </button>
@@ -167,8 +167,8 @@ export function ProfileDialog({ open, onClose }: Props) {
             onChange={(e) => handleAvatarSelect(e.target.files?.[0] ?? null)}
           />
           <div className="flex-1 min-w-0">
-            <div className="text-base font-semibold">{user.full_name}</div>
-            <div className="truncate text-sm text-muted-foreground">
+            <div className="text-sm sm:text-base font-semibold truncate">{user.full_name}</div>
+            <div className="truncate text-xs sm:text-sm text-muted-foreground">
               {user.email ?? t("profileDialog.noEmail")}
             </div>
           </div>
@@ -176,59 +176,64 @@ export function ProfileDialog({ open, onClose }: Props) {
 
         <Separator />
 
-        <Tabs defaultValue="profile">
-          <TabsList>
-            <TabsTrigger value="profile">{t("profileDialog.tabs.profile")}</TabsTrigger>
-            <TabsTrigger value="password">{t("profileDialog.tabs.password")}</TabsTrigger>
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="profile" className="text-xs sm:text-sm">{t("profileDialog.tabs.profile")}</TabsTrigger>
+            <TabsTrigger value="password" className="text-xs sm:text-sm">{t("profileDialog.tabs.password")}</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile" className="space-y-3">
+          <TabsContent value="profile" className="space-y-3 pt-2">
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <Label htmlFor="prof-last">{t("profileDialog.lastName")} *</Label>
+                <Label htmlFor="prof-last" className="text-xs sm:text-sm">{t("profileDialog.lastName")} *</Label>
                 <Input
                   id="prof-last"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
+                  className="mt-1 text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="prof-first">{t("profileDialog.firstName")} *</Label>
+                <Label htmlFor="prof-first" className="text-xs sm:text-sm">{t("profileDialog.firstName")} *</Label>
                 <Input
                   id="prof-first"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  className="mt-1 text-xs sm:text-sm"
                 />
               </div>
               <div className="sm:col-span-2">
-                <Label htmlFor="prof-middle">{t("profileDialog.middleName")}</Label>
+                <Label htmlFor="prof-middle" className="text-xs sm:text-sm">{t("profileDialog.middleName")}</Label>
                 <Input
                   id="prof-middle"
                   value={middleName}
                   onChange={(e) => setMiddleName(e.target.value)}
+                  className="mt-1 text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="prof-email">Email</Label>
+                <Label htmlFor="prof-email" className="text-xs sm:text-sm">Email</Label>
                 <Input
                   id="prof-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="mt-1 text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="prof-phone">{t("profileDialog.phone")}</Label>
+                <Label htmlFor="prof-phone" className="text-xs sm:text-sm">{t("profileDialog.phone")}</Label>
                 <Input
                   id="prof-phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+998 90 123 45 67"
+                  className="mt-1 text-xs sm:text-sm"
                 />
               </div>
             </div>
             <div className="flex justify-end pt-2">
-              <Button onClick={handleSaveProfile} disabled={update.isPending}>
+              <Button onClick={handleSaveProfile} disabled={update.isPending} className="w-full sm:w-auto">
                 {update.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 <Save className="h-4 w-4" />
                 {t("common.save")}
@@ -236,23 +241,23 @@ export function ProfileDialog({ open, onClose }: Props) {
             </div>
           </TabsContent>
 
-          <TabsContent value="password" className="space-y-3">
-            <Alert>
-              <AlertDescription>
+          <TabsContent value="password" className="space-y-3 pt-2">
+            <Alert className="py-2.5 px-3">
+              <AlertDescription className="text-xs">
                 {t("profileDialog.pwdHint")}
               </AlertDescription>
             </Alert>
             <div className="space-y-3">
               <div>
-                <Label htmlFor="cur-pwd">{t("profileDialog.currentPwd")}</Label>
-                <div className="relative">
+                <Label htmlFor="cur-pwd" className="text-xs sm:text-sm">{t("profileDialog.currentPwd")}</Label>
+                <div className="relative mt-1">
                   <Input
                     id="cur-pwd"
                     type={showPwd ? "text" : "password"}
                     value={currentPwd}
                     onChange={(e) => setCurrentPwd(e.target.value)}
                     autoComplete="current-password"
-                    className="pr-10"
+                    className="pr-10 text-xs sm:text-sm"
                   />
                   <button
                     type="button"
@@ -268,23 +273,25 @@ export function ProfileDialog({ open, onClose }: Props) {
                 </div>
               </div>
               <div>
-                <Label htmlFor="new-pwd">{t("profileDialog.newPwd")}</Label>
+                <Label htmlFor="new-pwd" className="text-xs sm:text-sm">{t("profileDialog.newPwd")}</Label>
                 <Input
                   id="new-pwd"
                   type={showPwd ? "text" : "password"}
                   value={newPwd}
                   onChange={(e) => setNewPwd(e.target.value)}
                   autoComplete="new-password"
+                  className="mt-1 text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="new-pwd2">{t("profileDialog.repeatPwd")}</Label>
+                <Label htmlFor="new-pwd2" className="text-xs sm:text-sm">{t("profileDialog.repeatPwd")}</Label>
                 <Input
                   id="new-pwd2"
                   type={showPwd ? "text" : "password"}
                   value={newPwd2}
                   onChange={(e) => setNewPwd2(e.target.value)}
                   autoComplete="new-password"
+                  className="mt-1 text-xs sm:text-sm"
                 />
               </div>
             </div>
@@ -294,6 +301,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                 disabled={
                   changePwd.isPending || !currentPwd || newPwd.length < 4 || newPwd !== newPwd2
                 }
+                className="w-full sm:w-auto"
               >
                 {changePwd.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 {t("profileDialog.changePwdBtn")}
@@ -302,8 +310,8 @@ export function ProfileDialog({ open, onClose }: Props) {
           </TabsContent>
         </Tabs>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
+        <DialogFooter className="pt-2">
+          <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
             {t("common.close")}
           </Button>
         </DialogFooter>

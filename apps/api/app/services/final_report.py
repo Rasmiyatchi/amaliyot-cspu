@@ -99,6 +99,7 @@ async def _hydrate(db: AsyncSession, fr: FinalReport) -> dict[str, Any]:
 async def list_reports(
     db: AsyncSession,
     *,
+    user: User | None = None,
     academic_year_id: UUID | None = None,
     status_filter: FinalReportStatus | None = None,
     assignment_id: UUID | None = None,
@@ -111,11 +112,23 @@ async def list_reports(
     from sqlalchemy import func, or_
 
     from app.models.academic import Direction
+    from app.models.supervisor import Supervisor
 
     stmt = select(FinalReport)
 
+    sup_id: UUID | None = None
+    if user and user.role == UserRole.SUPERVISOR:
+        sup = (
+            await db.execute(
+                select(Supervisor).where(Supervisor.user_id == user.id)
+            )
+        ).scalar_one_or_none()
+        if not sup:
+            return []
+        sup_id = sup.id
+
     needs_join = any(
-        [academic_year_id, group_id, direction_id, faculty_id, course, search]
+        [academic_year_id, group_id, direction_id, faculty_id, course, search, sup_id]
     )
     if needs_join:
         stmt = (
@@ -133,6 +146,8 @@ async def list_reports(
 
     stmt = stmt.order_by(FinalReport.created_at.desc())
 
+    if sup_id:
+        stmt = stmt.where(PracticeAssignment.supervisor_id == sup_id)
     if academic_year_id:
         stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
     if status_filter:
@@ -240,11 +255,28 @@ async def review_report(
     approve: bool,
     note: str | None,
 ) -> dict[str, Any]:
-    """Super admin (kafedra mudiri) tasdiq/rad qiladi."""
-    if user.role != UserRole.SUPER_ADMIN:
+    """Amaliyot rahbari (supervisor) yoki Admin tasdiq/rad qiladi."""
+    if user.role not in (UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN):
         raise HTTPException(
-            status.HTTP_403_FORBIDDEN, "Faqat Super Admin tasdiqlay oladi"
+            status.HTTP_403_FORBIDDEN, "Faqat amaliyot rahbari (supervisor) yoki admin tasdiqlay oladi"
         )
+
+    fr = await db.get(FinalReport, report_id)
+    if not fr:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hisobot topilmadi")
+
+    if user.role == UserRole.SUPERVISOR:
+        from app.models.supervisor import Supervisor
+        sup = (
+            await db.execute(
+                select(Supervisor).where(Supervisor.user_id == user.id)
+            )
+        ).scalar_one_or_none()
+        asn = await db.get(PracticeAssignment, fr.assignment_id)
+        if not sup or not asn or asn.supervisor_id != sup.id:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "Siz bu biriktirishga supervizor emassiz"
+            )
 
     fr = await db.get(FinalReport, report_id)
     if not fr:

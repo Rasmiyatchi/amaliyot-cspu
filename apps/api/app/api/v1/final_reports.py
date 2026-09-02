@@ -1,10 +1,10 @@
-"""Final reports endpoints — talaba submit, super admin review."""
+"""Final reports endpoints — talaba submit, supervisor / admin review."""
 
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, status
 
-from app.api.deps import CurrentUser, RequireSuperAdmin
+from app.api.deps import CurrentUser, RequireSupervisorOrAdmin
 from app.db.session import SessionDep
 from app.models.enums import FinalReportStatus
 from app.schemas.final_report import (
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/final-reports", tags=["final-reports"])
 @router.get("", response_model=list[FinalReportRead])
 async def list_reports(
     db: SessionDep,
-    _: RequireSuperAdmin,
+    user: RequireSupervisorOrAdmin,
     status_filter: FinalReportStatus | None = None,
     academic_year_id: UUID | None = None,
     group_id: UUID | None = None,
@@ -30,9 +30,10 @@ async def list_reports(
     course: int | None = Query(None, ge=1, le=5),
     search: str | None = None,
 ) -> list[FinalReportRead]:
-    """Super Admin: barcha hisobotlar (default: ko'rib chiqish kutayotganlar)."""
+    """Amaliyot rahbari (supervisor) va Adminlar: barcha hisobotlar (default: ko'rib chiqish kutayotganlar)."""
     items = await svc.list_reports(
         db,
+        user=user,
         status_filter=status_filter,
         academic_year_id=academic_year_id,
         group_id=group_id,
@@ -75,14 +76,14 @@ async def submit(
 @router.post(
     "/{report_id}/review",
     response_model=FinalReportRead,
-    summary="Super Admin: tasdiq yoki rad",
+    summary="Amaliyot rahbari (supervisor) / Admin: tasdiq yoki rad",
 )
 async def review(
     report_id: UUID,
     data: FinalReportReviewRequest,
     request: Request,
     db: SessionDep,
-    user: RequireSuperAdmin,
+    user: RequireSupervisorOrAdmin,
 ) -> FinalReportRead:
     item = await svc.review_report(db, user, report_id, data.approve, data.note)
     await audit.log(

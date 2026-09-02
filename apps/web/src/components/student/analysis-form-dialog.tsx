@@ -139,30 +139,30 @@ export function LessonAnalysisFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
-      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-h-[88dvh] sm:max-w-2xl overflow-y-auto">
+        <DialogHeader className="pr-6 sm:pr-0 text-left">
+          <DialogTitle className="text-base sm:text-lg font-semibold">
             {isEdit
               ? t("studentAnalysisFormDialog.editTitle")
               : t("studentAnalysisFormDialog.newTitle")}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             {t("studentAnalysisFormDialog.subtitle")}
           </DialogDescription>
         </DialogHeader>
 
         {analysis?.status === "rejected" && analysis.rejection_reason && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="py-2.5 px-3">
             <AlertDescription>
-              <div className="font-medium">{t("studentAnalysisFormDialog.rejected")}</div>
-              <div className="mt-1 text-sm">{analysis.rejection_reason}</div>
+              <div className="font-medium text-xs sm:text-sm">{t("studentAnalysisFormDialog.rejected")}</div>
+              <div className="mt-1 text-xs sm:text-sm break-words">{analysis.rejection_reason}</div>
             </AlertDescription>
           </Alert>
         )}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label htmlFor="analysis-date">
+            <Label htmlFor="analysis-date" className="text-xs sm:text-sm">
               {t("common.date")} <span className="text-destructive">*</span>
             </Label>
             <Input
@@ -171,15 +171,16 @@ export function LessonAnalysisFormDialog({
               value={date}
               onChange={(e) => setDate(e.target.value)}
               disabled={isApproved}
+              className="mt-1 text-xs sm:text-sm"
             />
           </div>
           <div>
-            <Label htmlFor="analysis-quarter">
+            <Label htmlFor="analysis-quarter" className="text-xs sm:text-sm">
               {t("studentAnalysisFormDialog.quarter")}{" "}
               <span className="text-destructive">*</span>
             </Label>
             <Select value={quarter} onValueChange={setQuarter} disabled={isApproved}>
-              <SelectTrigger id="analysis-quarter">
+              <SelectTrigger id="analysis-quarter" className="mt-1 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -199,7 +200,7 @@ export function LessonAnalysisFormDialog({
             </Select>
           </div>
           <div>
-            <Label htmlFor="analysis-grade">
+            <Label htmlFor="analysis-grade" className="text-xs sm:text-sm">
               {t("studentAnalysisFormDialog.gradeLevel")}{" "}
               <span className="text-destructive">*</span>
             </Label>
@@ -209,10 +210,11 @@ export function LessonAnalysisFormDialog({
               onChange={(e) => setGradeLevel(e.target.value)}
               disabled={isApproved}
               placeholder={t("studentAnalysisFormDialog.gradePlaceholder")}
+              className="mt-1 text-xs sm:text-sm"
             />
           </div>
           <div>
-            <Label htmlFor="analysis-subject">
+            <Label htmlFor="analysis-subject" className="text-xs sm:text-sm">
               {t("studentAnalysisFormDialog.subject")}{" "}
               <span className="text-destructive">*</span>
             </Label>
@@ -222,10 +224,11 @@ export function LessonAnalysisFormDialog({
               onChange={(e) => setSubject(e.target.value)}
               disabled={isApproved}
               placeholder={t("studentAnalysisFormDialog.subjectPlaceholder")}
+              className="mt-1 text-xs sm:text-sm"
             />
           </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="analysis-teacher">
+            <Label htmlFor="analysis-teacher" className="text-xs sm:text-sm">
               {t("studentAnalysisFormDialog.teacher")}{" "}
               <span className="text-destructive">*</span>
             </Label>
@@ -235,12 +238,13 @@ export function LessonAnalysisFormDialog({
               onChange={(e) => setTeacher(e.target.value)}
               disabled={isApproved}
               placeholder={t("studentAnalysisFormDialog.teacherPlaceholder")}
+              className="mt-1 text-xs sm:text-sm"
             />
           </div>
         </div>
 
         <div>
-          <Label>
+          <Label className="text-xs sm:text-sm">
             {t("studentAnalysisFormDialog.fileLabel")}{" "}
             <span className="text-destructive">*</span>
           </Label>
@@ -257,16 +261,16 @@ export function LessonAnalysisFormDialog({
           />
 
           {attachments.length > 0 && (
-            <div className="mb-2 space-y-1.5">
+            <div className="mt-1.5 mb-2 space-y-1.5 min-w-0">
               {attachments.map((att) => (
                 <div
                   key={att.id}
-                  className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2"
+                  className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-2 min-w-0 text-xs sm:text-sm"
                 >
                   <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
-                    <div className="truncate text-sm">{att.name}</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="truncate font-medium">{att.name}</div>
+                    <div className="text-[11px] sm:text-xs text-muted-foreground truncate">
                       {(att.size / 1024).toFixed(1)} KB
                     </div>
                   </div>
@@ -274,6 +278,7 @@ export function LessonAnalysisFormDialog({
                     <Button
                       size="sm"
                       variant="ghost"
+                      className="shrink-0 h-7 text-xs px-2"
                       onClick={() => removeAttachment(att.id)}
                     >
                       {t("studentAnalysisFormDialog.remove")}
@@ -288,18 +293,18 @@ export function LessonAnalysisFormDialog({
             <Button
               type="button"
               variant="outline"
-              className="h-20 w-full border-dashed"
+              className="mt-1.5 h-16 sm:h-20 w-full border-dashed text-xs sm:text-sm gap-2"
               onClick={() => fileInputRef.current?.click()}
               disabled={busy}
             >
               {uploading ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                   {t("common.loading")}
                 </>
               ) : (
                 <>
-                  <Upload className="h-5 w-5" />
+                  <Upload className="h-4 w-4 sm:h-5 sm:w-5" />
                   {t("studentAnalysisFormDialog.choosePdf")}
                 </>
               )}
@@ -307,14 +312,15 @@ export function LessonAnalysisFormDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-2 pt-2">
+          <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
             {t("common.close")}
           </Button>
           {!isApproved && (
             <Button
               onClick={handleSave}
               disabled={busy || attachments.length === 0}
+              className="w-full sm:w-auto"
             >
               {(create.isPending || update.isPending) && (
                 <Loader2 className="h-4 w-4 animate-spin" />

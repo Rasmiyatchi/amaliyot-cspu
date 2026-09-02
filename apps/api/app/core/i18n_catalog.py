@@ -249,9 +249,9 @@ EXACT: dict[str, str] = {
     "User topilmadi": "Пользователь не найден",
     "Username yoki Talaba ID band": "Username или ID студента занят",
     "Yig'ma jildni olishdan oldin yakuniy hisobotni topshirib, "
-    "kafedra mudiri tasdiqlashi kerak": (
+    "amaliyot rahbari (supervisor) tasdiqlashi kerak": (
         "Перед получением портфолио необходимо сдать итоговый отчёт и получить "
-        "подтверждение заведующего кафедрой"
+        "подтверждение руководителя практики (supervisor)"
     ),
     "Yo'nalishga bog'langan guruhlar bor": "К направлению привязаны группы",
     "Yozuv topilmadi": "Запись не найдена",
