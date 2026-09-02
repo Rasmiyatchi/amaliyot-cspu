@@ -5,10 +5,12 @@ Har rol uchun o'ziga xos ko'rsatkichlar. Soddalashtirilgan — MVP uchun yetadi.
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.academic import AcademicYear
 from app.models.attendance import AttendanceDay, AttendanceOverride
 from app.models.contract import Contract
 from app.models.enums import (
@@ -16,6 +18,7 @@ from app.models.enums import (
     AttendanceDayStatus,
     ContractStatus,
     JournalStatus,
+    Semester,
     StudentStatus,
     TaskStatus,
 )
@@ -379,7 +382,12 @@ async def super_admin_overview(db: AsyncSession) -> dict[str, Any]:
     }
 
 
-async def supervisor_overview(db: AsyncSession, user: User) -> dict[str, Any]:
+async def supervisor_overview(
+    db: AsyncSession,
+    user: User,
+    academic_year_id: str | None = None,
+    semester: Semester | None = None,
+) -> dict[str, Any]:
     """Supervizor: o'z talabalari bo'yicha KPI'lar."""
     # Supervisorning assignmentlari
     supervisor_rows = (
@@ -394,17 +402,29 @@ async def supervisor_overview(db: AsyncSession, user: User) -> dict[str, Any]:
     if not supervisor_rows:
         return _empty_supervisor_overview()
 
-    assignments = (
-        (
-            await db.execute(
-                select(PracticeAssignment.id).where(
-                    PracticeAssignment.supervisor_id.in_(supervisor_rows)
-                )
-            )
-        )
-        .scalars()
-        .all()
+    stmt = select(PracticeAssignment.id).where(
+        PracticeAssignment.supervisor_id.in_(supervisor_rows)
     )
+
+    if academic_year_id and academic_year_id.lower() != "all":
+        try:
+            ay_uuid = UUID(academic_year_id)
+            stmt = stmt.where(PracticeAssignment.academic_year_id == ay_uuid)
+        except ValueError:
+            pass
+    elif not academic_year_id:
+        active_ay_id = (
+            await db.execute(
+                select(AcademicYear.id).where(AcademicYear.is_active == True)  # noqa: E712
+            )
+        ).scalar_one_or_none()
+        if active_ay_id:
+            stmt = stmt.where(PracticeAssignment.academic_year_id == active_ay_id)
+
+    if semester:
+        stmt = stmt.where(PracticeAssignment.semester == semester)
+
+    assignments = (await db.execute(stmt)).scalars().all()
     if not assignments:
         return _empty_supervisor_overview()
 

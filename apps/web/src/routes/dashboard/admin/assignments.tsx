@@ -41,7 +41,7 @@ import {
 import { useAcademicYears, useDirections, useGroups } from "@/lib/api/academic";
 import { useOrganizations } from "@/lib/api/organizations";
 import { usePracticeTypes } from "@/lib/api/practice-types";
-import type { AssignmentStatus, PracticeAssignment, UUID } from "@/lib/api/types";
+import type { AssignmentStatus, PracticeAssignment, Semester, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
 
@@ -220,6 +220,21 @@ export function AssignmentsPage() {
                 {y.name}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.semester ?? ALL}
+          onValueChange={(v) =>
+            setFilter({ semester: v === ALL ? undefined : (v as Semester) })
+          }
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder={t("common.semester", { defaultValue: "Semestr" })} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>{t("supervisorStudents.semesters.all", { defaultValue: "Barcha semestrlar" })}</SelectItem>
+            <SelectItem value="fall">{t("common.semesterFall", { defaultValue: "1-semestr (Kuzgi)" })}</SelectItem>
+            <SelectItem value="spring">{t("common.semesterSpring", { defaultValue: "2-semestr (Bahorgi)" })}</SelectItem>
           </SelectContent>
         </Select>
         <Select

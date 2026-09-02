@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query, status
 
 from app.api.deps import CurrentUser, RequireAdmin
 from app.db.session import SessionDep
-from app.models.enums import AssignmentStatus
+from app.models.enums import AssignmentStatus, Semester
 from app.schemas.common import Paginated
 from app.schemas.practice_assignment import (
     BulkAssignmentResult,
@@ -29,6 +29,7 @@ async def list_assignments(
     student_id: UUID | None = None,
     practice_type_id: UUID | None = None,
     academic_year_id: UUID | None = None,
+    semester: Semester | None = None,
     organization_id: UUID | None = None,
     area_id: UUID | None = None,
     supervisor_id: UUID | None = None,
@@ -46,6 +47,7 @@ async def list_assignments(
         student_id=student_id,
         practice_type_id=practice_type_id,
         academic_year_id=academic_year_id,
+        semester=semester,
         organization_id=organization_id,
         area_id=area_id,
         supervisor_id=supervisor_id,
@@ -69,9 +71,14 @@ async def list_assignments(
     summary="Joriy foydalanuvchiga tegishli biriktirishlar",
 )
 async def my_assignments(
-    db: SessionDep, user: CurrentUser
+    db: SessionDep,
+    user: CurrentUser,
+    academic_year_id: str | None = None,
+    semester: Semester | None = None,
 ) -> list[PracticeAssignmentRead]:
-    items = await svc.list_my_assignments(db, user)
+    items = await svc.list_my_assignments(
+        db, user, academic_year_id=academic_year_id, semester=semester
+    )
     return [PracticeAssignmentRead.model_validate(i) for i in items]
 
 

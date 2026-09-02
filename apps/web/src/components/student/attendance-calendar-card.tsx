@@ -45,15 +45,21 @@ function formatTime(s: string | null): string {
   });
 }
 
-function formatDuration(inTime: string | null, outTime: string | null): string | null {
+function formatDuration(
+  inTime: string | null,
+  outTime: string | null,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string | null {
   if (!inTime || !outTime) return null;
   const diffMs = new Date(outTime).getTime() - new Date(inTime).getTime();
   if (diffMs <= 0) return null;
   const totalMins = Math.floor(diffMs / (60 * 1000));
   const hours = Math.floor(totalMins / 60);
   const mins = totalMins % 60;
-  if (hours > 0) return `${hours} soat ${mins} daqiqa`;
-  return `${mins} daqiqa`;
+  const hLabel = t("common.hours", { defaultValue: "soat" });
+  const mLabel = t("common.minutes", { defaultValue: "daqiqa" });
+  if (hours > 0) return `${hours} ${hLabel} ${mins} ${mLabel}`;
+  return `${mins} ${mLabel}`;
 }
 
 export function AttendanceCalendarCard({ assignment }: Props) {
@@ -249,7 +255,9 @@ export function AttendanceCalendarCard({ assignment }: Props) {
             </div>
             <div className="text-lg font-bold text-foreground mt-0.5">
               {stats.totalRecorded}{" "}
-              <span className="text-xs font-normal text-muted-foreground">kun</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {t("studentAttendance.daysSuffix", { defaultValue: "kun" })}
+              </span>
             </div>
           </div>
 
@@ -260,7 +268,9 @@ export function AttendanceCalendarCard({ assignment }: Props) {
             </div>
             <div className="text-lg font-bold text-emerald-700 dark:text-emerald-300 mt-0.5">
               {stats.greenCount}{" "}
-              <span className="text-xs font-normal text-emerald-600/80">kun</span>
+              <span className="text-xs font-normal text-emerald-600/80">
+                {t("studentAttendance.daysSuffix", { defaultValue: "kun" })}
+              </span>
             </div>
           </div>
 
@@ -271,7 +281,9 @@ export function AttendanceCalendarCard({ assignment }: Props) {
             </div>
             <div className="text-lg font-bold text-rose-700 dark:text-rose-300 mt-0.5">
               {stats.redCount}{" "}
-              <span className="text-xs font-normal text-rose-600/80">kun</span>
+              <span className="text-xs font-normal text-rose-600/80">
+                {t("studentAttendance.daysSuffix", { defaultValue: "kun" })}
+              </span>
             </div>
           </div>
 
@@ -320,7 +332,7 @@ export function AttendanceCalendarCard({ assignment }: Props) {
                   variant="outline"
                   className="h-8 w-8"
                   onClick={handlePrevMonth}
-                  title="Oldingi oy"
+                  title={t("studentAttendance.prevMonth", "Oldingi oy")}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -329,7 +341,7 @@ export function AttendanceCalendarCard({ assignment }: Props) {
                   variant="outline"
                   className="h-8 w-8"
                   onClick={handleNextMonth}
-                  title="Keyingi oy"
+                  title={t("studentAttendance.nextMonth", "Keyingi oy")}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -338,7 +350,10 @@ export function AttendanceCalendarCard({ assignment }: Props) {
 
             {/* Hafta kunlari sarlavhasi */}
             <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-muted-foreground pb-1 border-b">
-              {WEEKDAY_NAMES_UZ.map((w, idx) => (
+              {((t("studentAttendance.weekdays", {
+                returnObjects: true,
+                defaultValue: WEEKDAY_NAMES_UZ,
+              }) as string[]) || WEEKDAY_NAMES_UZ).map((w, idx) => (
                 <div
                   key={w}
                   className={idx === 6 ? "text-rose-500/80 dark:text-rose-400" : ""}
@@ -409,17 +424,17 @@ export function AttendanceCalendarCard({ assignment }: Props) {
                       <div className="w-full mt-auto pt-1 text-[10px] sm:text-[11px] truncate flex items-center justify-between">
                         {status === "green" && (
                           <span className="text-emerald-700 dark:text-emerald-300 font-semibold">
-                            Yashil
+                            {t("studentAttendance.statusGreen", "Yashil")}
                           </span>
                         )}
                         {status === "red" && (
                           <span className="text-rose-700 dark:text-rose-300 font-semibold">
-                            Qizil
+                            {t("studentAttendance.statusRed", "Qizil")}
                           </span>
                         )}
                         {status === "pending" && (
                           <span className="text-amber-700 dark:text-amber-300 font-semibold">
-                            Jarayonda
+                            {t("studentAttendance.statusPending", "Jarayonda")}
                           </span>
                         )}
                       </div>
@@ -433,15 +448,15 @@ export function AttendanceCalendarCard({ assignment }: Props) {
             <div className="flex flex-wrap items-center justify-center gap-4 pt-3 border-t text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span>Yashil (Kelgan / Tasdiqlangan)</span>
+                <span>{t("studentAttendance.legendGreen", "Yashil (Kelgan / Tasdiqlangan)")}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
-                <span>Qizil (Kelmagan / Qolib ketgan)</span>
+                <span>{t("studentAttendance.legendRed", "Qizil (Kelmagan / Qolib ketgan)")}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <span>Kutilmoqda / Jarayonda</span>
+                <span>{t("studentAttendance.legendPending", "Kutilmoqda / Jarayonda")}</span>
               </div>
             </div>
           </div>
@@ -492,7 +507,7 @@ export function AttendanceCalendarCard({ assignment }: Props) {
             {filteredDays.length > 0 && (
               <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
                 {filteredDays.map((d) => {
-                  const duration = formatDuration(d.check_in_at, d.check_out_at);
+                  const duration = formatDuration(d.check_in_at, d.check_out_at, t);
                   const isRed = d.status === "red";
                   const isGreen = d.status === "green";
 
@@ -576,13 +591,17 @@ export function AttendanceCalendarCard({ assignment }: Props) {
             <div className="space-y-3 pt-2 text-sm">
               <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-3">
                 <div>
-                  <span className="text-xs text-muted-foreground">Kelish vaqti:</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("studentAttendance.checkInTime", "Kelish vaqti:")}
+                  </span>
                   <div className="font-medium text-foreground">
                     {formatTime(selectedDay.check_in_at)}
                   </div>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground">Ketish vaqti:</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("studentAttendance.checkOutTime", "Ketish vaqti:")}
+                  </span>
                   <div className="font-medium text-foreground">
                     {formatTime(selectedDay.check_out_at)}
                   </div>
@@ -593,12 +612,13 @@ export function AttendanceCalendarCard({ assignment }: Props) {
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <span className="text-muted-foreground flex items-center gap-1.5">
                     <Clock className="h-4 w-4 text-emerald-600" />
-                    <span>Amaliyot davomiyligi:</span>
+                    <span>{t("studentAttendance.duration", "Amaliyot davomiyligi:")}</span>
                   </span>
                   <strong className="text-foreground">
                     {formatDuration(
                       selectedDay.check_in_at,
                       selectedDay.check_out_at,
+                      t,
                     )}
                   </strong>
                 </div>
@@ -607,7 +627,7 @@ export function AttendanceCalendarCard({ assignment }: Props) {
               {selectedDay.note && (
                 <div className="rounded-lg bg-muted/30 p-3 text-xs">
                   <span className="font-semibold text-muted-foreground block mb-1">
-                    Izoh / Sabab:
+                    {t("studentAttendance.noteLabel", "Izoh / Sabab:")}
                   </span>
                   <p className="text-foreground">{selectedDay.note}</p>
                 </div>

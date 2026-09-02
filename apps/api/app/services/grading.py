@@ -28,7 +28,13 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.attendance import AttendanceDay
-from app.models.enums import AssignmentStatus, AttendanceDayStatus, UserRole
+from app.models.enums import (
+    AssignmentStatus,
+    AttendanceDayStatus,
+    TaskCategory,
+    TaskStatus,
+    UserRole,
+)
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
 from app.models.supervisor import Supervisor
@@ -37,8 +43,8 @@ from app.models.user import User
 from app.services.attendance_stats import compute_percent
 
 # Topshiriq ballaridan avtomatik hisoblanadigan mezon kalitlari (seed'dagi nomlar).
-# Admin grading_rules'ga boshqa kalit qo'shsa — u qo'lda baholanadi (xavfsiz default).
 TASK_CRITERION_KEYS = frozenset({"tasks", "practical"})
+EVENT_CRITERION_KEYS = frozenset({"events", "spiritual", "event"})
 
 # (eng kam foiz, max'dan ulush) — kamayish tartibida.
 _ATTENDANCE_BANDS: list[tuple[int, float]] = [
@@ -70,7 +76,12 @@ def _min_total(pt: PracticeType) -> int:
 
 
 def is_auto(criterion: dict[str, Any]) -> bool:
-    return criterion.get("grader") == "system" or criterion["key"] in TASK_CRITERION_KEYS
+    key = str(criterion.get("key", ""))
+    return (
+        criterion.get("grader") == "system"
+        or key in TASK_CRITERION_KEYS
+        or key in EVENT_CRITERION_KEYS
+    )
 
 
 async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, Any]:
@@ -101,19 +112,43 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
         weekdays=asn.required_weekdays,
     )
 
-    # Topshiriq ballari
-    task_row = (
+    # O'quv topshiriqlar ballari (category != SPIRITUAL)
+    academic_task_row = (
         await db.execute(
             select(
                 func.coalesce(func.sum(Task.points_earned), 0),
                 func.coalesce(func.sum(TaskTemplate.points), 0),
             )
             .join(TaskTemplate, TaskTemplate.id == Task.template_id)
-            .where(Task.assignment_id == assignment_id)
+            .where(
+                Task.assignment_id == assignment_id,
+                TaskTemplate.category != TaskCategory.SPIRITUAL,
+            )
         )
     ).first()
-    task_earned = int(task_row[0]) if task_row else 0
-    task_max = int(task_row[1]) if task_row else 0
+    task_earned = int(academic_task_row[0]) if academic_task_row else 0
+    task_max = int(academic_task_row[1]) if academic_task_row else 0
+
+    # Ma'naviy topshiriqlar ballari (category == SPIRITUAL va status == APPROVED)
+    spiritual_task_row = (
+        await db.execute(
+            select(
+                func.coalesce(
+                    func.sum(
+                        func.coalesce(Task.points_earned, TaskTemplate.points)
+                    ),
+                    0,
+                )
+            )
+            .join(TaskTemplate, TaskTemplate.id == Task.template_id)
+            .where(
+                Task.assignment_id == assignment_id,
+                TaskTemplate.category == TaskCategory.SPIRITUAL,
+                Task.status == TaskStatus.APPROVED,
+            )
+        )
+    ).first()
+    spiritual_earned = int(spiritual_task_row[0]) if spiritual_task_row else 0
 
     manual = asn.criteria_scores or {}
     out: list[dict[str, Any]] = []
@@ -135,7 +170,11 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
         elif key in TASK_CRITERION_KEYS:
             # Topshiriq ballari mezon max'iga normallashtiriladi
             entry["score"] = round(task_earned / task_max * cmax) if task_max else 0
-            entry["detail"] = f"Topshiriqlar: {task_earned}/{task_max} ball"
+            entry["detail"] = f"O'quv topshiriqlari: {task_earned}/{task_max} ball"
+        elif key in EVENT_CRITERION_KEYS:
+            # Qabul qilingan ma'naviy topshiriqlarning ballari yig'indisi
+            entry["score"] = min(spiritual_earned, cmax)
+            entry["detail"] = f"Ma'naviy topshiriqlar: {spiritual_earned}/{cmax} ball"
         else:
             score = manual.get(key)
             entry["score"] = int(score) if score is not None else None

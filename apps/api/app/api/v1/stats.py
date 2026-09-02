@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Response, status
 
 from app.api.deps import CurrentUser
 from app.db.session import SessionDep
-from app.models.enums import UserRole
+from app.models.enums import Semester, UserRole
 from app.services import stats as svc
 from app.services.pdf import render_dashboard_stats_pdf
 
@@ -67,10 +67,17 @@ async def super_admin_stats(db: SessionDep, user: CurrentUser) -> dict[str, Any]
     response_model=dict,
     summary="Supervizor bosh sahifasi KPI'lari",
 )
-async def supervisor_stats(db: SessionDep, user: CurrentUser) -> dict[str, Any]:
+async def supervisor_stats(
+    db: SessionDep,
+    user: CurrentUser,
+    academic_year_id: str | None = None,
+    semester: Semester | None = None,
+) -> dict[str, Any]:
     if user.role not in (UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN):
         raise HTTPException(status.HTTP_403_FORBIDDEN)
-    return await svc.supervisor_overview(db, user)
+    return await svc.supervisor_overview(
+        db, user, academic_year_id=academic_year_id, semester=semester
+    )
 
 
 @router.get(

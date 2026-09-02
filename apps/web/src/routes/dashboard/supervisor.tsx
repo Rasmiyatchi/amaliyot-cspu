@@ -4,6 +4,7 @@ import {
   Clock,
   Download,
   FileText,
+  Filter,
   Inbox,
   Loader2,
   Trophy,
@@ -24,27 +25,43 @@ import { SupervisorReviewPanel } from "@/components/supervisor/review-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { dateLocale } from "@/i18n";
+import { useAcademicYears } from "@/lib/api/academic";
 import { useAttendanceDays } from "@/lib/api/attendance";
 import { useMyAssignments } from "@/lib/api/assignments";
 import { useSupervisorStats } from "@/lib/api/stats";
-import type { AttendanceDay, UUID } from "@/lib/api/types";
+import type { AttendanceDay, Semester, UUID } from "@/lib/api/types";
 import { useAuthStore } from "@/stores/auth";
+
+const ALL = "__all__";
 
 const fmtTime = (s: string | null) =>
   s
     ? new Date(s).toLocaleTimeString(dateLocale(), { hour: "2-digit", minute: "2-digit" })
     : "—";
 
-const fmtDuration = (inTime: string | null, outTime: string | null) => {
+const fmtDuration = (
+  inTime: string | null,
+  outTime: string | null,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+) => {
   if (!inTime || !outTime) return null;
   const diffMs = new Date(outTime).getTime() - new Date(inTime).getTime();
   if (diffMs <= 0) return null;
   const totalMins = Math.floor(diffMs / (60 * 1000));
   const hours = Math.floor(totalMins / 60);
   const mins = totalMins % 60;
-  if (hours > 0) return `${hours} soat ${mins} daqiqa`;
-  return `${mins} daqiqa`;
+  const hLabel = t("common.hours", { defaultValue: "soat" });
+  const mLabel = t("common.minutes", { defaultValue: "daqiqa" });
+  if (hours > 0) return `${hours} ${hLabel} ${mins} ${mLabel}`;
+  return `${mins} ${mLabel}`;
 };
 
 type DayRowProps = {
@@ -52,7 +69,8 @@ type DayRowProps = {
 };
 
 function DayRow({ day }: DayRowProps) {
-  const duration = fmtDuration(day.check_in_at, day.check_out_at);
+  const { t } = useTranslation();
+  const duration = fmtDuration(day.check_in_at, day.check_out_at, t);
 
   return (
     <div className="rounded-lg border border-border/80 bg-card p-3 shadow-xs hover:border-border transition-colors">
@@ -98,8 +116,21 @@ export function SupervisorDashboard() {
   const { t } = useTranslation();
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
-  const { data: assignments, isPending: assignmentsPending } = useMyAssignments();
-  const { data: supervisorStats } = useSupervisorStats();
+
+  const { data: academicYears } = useAcademicYears();
+  const [academicYearId, setAcademicYearId] = useState<string>("active");
+  const [semester, setSemester] = useState<string>(ALL);
+
+  const assignmentFilters = useMemo(
+    () => ({
+      academic_year_id: academicYearId === "active" ? undefined : academicYearId,
+      semester: semester === ALL ? undefined : (semester as Semester),
+    }),
+    [academicYearId, semester],
+  );
+
+  const { data: assignments, isPending: assignmentsPending } = useMyAssignments(assignmentFilters);
+  const { data: supervisorStats } = useSupervisorStats(assignmentFilters);
 
   const isAttendanceRoute = location.pathname.endsWith("/attendance");
   const isTasksRoute = location.pathname.endsWith("/tasks");
@@ -166,6 +197,63 @@ export function SupervisorDashboard() {
             <div className="shrink-0 [&_button]:text-white [&_button]:hover:bg-white/10">
               <NotificationsBell />
             </div>
+          </div>
+        </div>
+
+        {/* Period Selector (Semestr va O'quv yili filtri) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3.5 shadow-xs">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold">{t("common.filter", { defaultValue: "Filtrlash:" })}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={academicYearId}
+              onValueChange={(v) => {
+                setAcademicYearId(v);
+                setSelectedAssignmentId("all");
+              }}
+            >
+              <SelectTrigger className="h-9 w-[180px]">
+                <SelectValue placeholder={t("common.academicYear", { defaultValue: "O'quv yili" })} />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                <SelectItem value="active">
+                  {t("supervisorStudents.activeYear", { defaultValue: "Faol o'quv yili" })}
+                </SelectItem>
+                <SelectItem value="all">
+                  {t("common.allYears", { defaultValue: "Barcha yillar" })}
+                </SelectItem>
+                {(academicYears ?? []).map((y) => (
+                  <SelectItem key={y.id} value={y.id}>
+                    {y.name} {y.is_active ? `(${t("common.active", { defaultValue: "Faol" })})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={semester}
+              onValueChange={(v) => {
+                setSemester(v);
+                setSelectedAssignmentId("all");
+              }}
+            >
+              <SelectTrigger className="h-9 w-[170px]">
+                <SelectValue placeholder={t("common.semester", { defaultValue: "Semestr" })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>
+                  {t("supervisorStudents.semesters.all", { defaultValue: "Barcha semestrlar" })}
+                </SelectItem>
+                <SelectItem value="fall">
+                  {t("common.semesterFall", { defaultValue: "1-semestr (Kuzgi)" })}
+                </SelectItem>
+                <SelectItem value="spring">
+                  {t("common.semesterSpring", { defaultValue: "2-semestr (Bahorgi)" })}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -293,8 +381,8 @@ export function SupervisorDashboard() {
                   {!daysPending && visibleDays.length === 0 && (
                     <EmptyState
                       icon={CalendarCheck}
-                      title="Davomat yozuvlari topilmadi"
-                      description="Talabalar check-in / check-out qilganida ularning davomat yozuvlari shu yerda ko'rinadi"
+                      title={t("supervisor.noAttendanceTitle")}
+                      description={t("supervisor.noAttendanceDesc")}
                       compact
                     />
                   )}

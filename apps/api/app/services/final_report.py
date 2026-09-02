@@ -275,7 +275,7 @@ async def review_report(
         asn = await db.get(PracticeAssignment, fr.assignment_id)
         if not sup or not asn or asn.supervisor_id != sup.id:
             raise HTTPException(
-                status.HTTP_403_FORBIDDEN, "Siz bu biriktirishga supervizor emassiz"
+                status.HTTP_403_FORBIDDEN, "Siz bu biriktirishga amaliyot rahbari emassiz"
             )
 
     fr = await db.get(FinalReport, report_id)

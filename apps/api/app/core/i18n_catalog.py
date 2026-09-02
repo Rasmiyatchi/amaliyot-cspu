@@ -179,6 +179,9 @@ EXACT: dict[str, str] = {
         "Факультет с таким названием или кодом уже существует"
     ),
     "Shu username yoki email allaqachon mavjud": "Такой username или email уже существует",
+    "Siz bu biriktirishga amaliyot rahbari emassiz": (
+        "Вы не являетесь руководителем практики для этого прикрепления"
+    ),
     "Siz bu biriktirishga supervizor emassiz": (
         "Вы не являетесь руководителем этого прикрепления"
     ),

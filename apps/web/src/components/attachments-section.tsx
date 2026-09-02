@@ -119,7 +119,7 @@ export function AttachmentsSection({
                   size="icon"
                   className="h-7 w-7 text-muted-foreground hover:text-primary"
                   onClick={() => setPreviewFile(a)}
-                  title="Saytda ko'rish"
+                  title={t("common.viewInBrowser", { defaultValue: "Saytda ko'rish" })}
                 >
                   <Eye className="h-3.5 w-3.5" />
                 </Button>

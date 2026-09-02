@@ -285,6 +285,7 @@ async def list_assignments(
     student_id: UUID | None = None,
     practice_type_id: UUID | None = None,
     academic_year_id: UUID | None = None,
+    semester: Semester | None = None,
     organization_id: UUID | None = None,
     area_id: UUID | None = None,
     supervisor_id: UUID | None = None,
@@ -309,6 +310,8 @@ async def list_assignments(
             stmt = stmt.where(PracticeAssignment.practice_type_id == practice_type_id)
         if academic_year_id:
             stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
+        if semester:
+            stmt = stmt.where(PracticeAssignment.semester == semester)
         if organization_id:
             stmt = stmt.where(PracticeAssignment.organization_id == organization_id)
         if area_id:
@@ -582,13 +585,21 @@ async def update_assignment(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
 
 
 async def list_my_assignments(
-    db: AsyncSession, user: User
+    db: AsyncSession,
+    user: User,
+    academic_year_id: str | None = None,
+    semester: Semester | None = None,
 ) -> list[dict[str, Any]]:
     """Joriy foydalanuvchiga tegishli amaliyot biriktirishlari.
 
     - student → o'z assignmentlari
     - supervisor → rahbarlik qilayotgan assignmentlar
     - admin / super_admin → bo'sh ro'yxat (ular umumiy list'dan foydalanadi)
+
+    Akademik yil va semestr filtrlash:
+    - academic_year_id="all": o'quv yili filtri olib tashlanadi (barcha yillar).
+    - academic_year_id (UUID): berilgan o'quv yili bo'yicha filter.
+    - academic_year_id=None (default): supervizor uchun faol (is_active=True) o'quv yili ishlatiladi.
     """
     from app.models.enums import UserRole
 
@@ -601,6 +612,27 @@ async def list_my_assignments(
         ).where(Supervisor.user_id == user.id)
     else:
         return []
+
+    # O'quv yili filtrasiyasi
+    if academic_year_id and academic_year_id.lower() != "all":
+        try:
+            ay_uuid = UUID(academic_year_id)
+            stmt = stmt.where(PracticeAssignment.academic_year_id == ay_uuid)
+        except ValueError:
+            pass
+    elif not academic_year_id and user.role == UserRole.SUPERVISOR:
+        # Default active academic year
+        active_ay_id = (
+            await db.execute(
+                select(AcademicYear.id).where(AcademicYear.is_active == True)  # noqa: E712
+            )
+        ).scalar_one_or_none()
+        if active_ay_id:
+            stmt = stmt.where(PracticeAssignment.academic_year_id == active_ay_id)
+
+    # Semestr filtrasiyasi
+    if semester:
+        stmt = stmt.where(PracticeAssignment.semester == semester)
 
     rows = (
         (await db.execute(stmt.order_by(PracticeAssignment.start_date.desc())))

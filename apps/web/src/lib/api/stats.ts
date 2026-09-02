@@ -120,10 +120,16 @@ export function useSuperAdminStats() {
   });
 }
 
-export function useSupervisorStats() {
+export function useSupervisorStats(filters?: { academic_year_id?: string; semester?: string }) {
+  const p = new URLSearchParams();
+  if (filters?.academic_year_id) p.set("academic_year_id", filters.academic_year_id);
+  if (filters?.semester) p.set("semester", filters.semester);
+  const qs = p.toString();
+
   return useQuery({
-    queryKey: ["stats", "supervisor"] as const,
-    queryFn: () => api.get("v1/stats/supervisor").json<SupervisorStats>(),
+    queryKey: ["stats", "supervisor", filters] as const,
+    queryFn: () =>
+      api.get(`v1/stats/supervisor${qs ? `?${qs}` : ""}`).json<SupervisorStats>(),
     refetchInterval: REFETCH_MS,
   });
 }

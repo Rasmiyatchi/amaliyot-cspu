@@ -44,17 +44,24 @@ function getPosition(): Promise<GeolocationPosition> {
   });
 }
 
-function formatDuration(ms: number): string {
+function formatDuration(
+  ms: number,
+  t?: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
+  const hStr = t ? t("common.hours", { defaultValue: "soat" }) : "soat";
+  const mStr = t ? t("common.minutes", { defaultValue: "daqiqa" }) : "daqiqa";
+  const sStr = t ? t("common.seconds", { defaultValue: "soniya" }) : "soniya";
+
   const parts: string[] = [];
-  if (hours > 0) parts.push(`${hours} soat`);
-  if (minutes > 0 || hours > 0) parts.push(`${minutes} daqiqa`);
+  if (hours > 0) parts.push(`${hours} ${hStr}`);
+  if (minutes > 0 || hours > 0) parts.push(`${minutes} ${mStr}`);
   if (parts.length === 0 || (hours === 0 && minutes < 5)) {
-    parts.push(`${seconds} soniya`);
+    parts.push(`${seconds} ${sStr}`);
   }
   return parts.join(" ");
 }
@@ -116,7 +123,7 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
       isLocked,
       progressPercent,
       digitalTimer: formatDigitalTimer(remainingMs),
-      durationText: formatDuration(remainingMs),
+      durationText: formatDuration(remainingMs, t),
     };
   }, [hasCheckIn, today?.check_in_at, currentTime]);
 
@@ -174,7 +181,7 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
                 {t("studentCheckInButton.doneToday")}
               </span>
               <Badge variant="success" className="px-2 py-0.5 text-xs">
-                Yashil
+                {t("attendanceAttendanceStatusBadge.status.green", { defaultValue: "Yashil" })}
               </Badge>
             </div>
             <div className="text-sm text-muted-foreground">
@@ -199,7 +206,7 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
               <span>
                 {t("studentCheckInButton.durationSpent")}:{" "}
                 <strong className="text-foreground">
-                  {formatDuration(totalDurationMs)}
+                  {formatDuration(totalDurationMs, t)}
                 </strong>
               </span>
             </div>
@@ -240,7 +247,9 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
 
             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1">
               <div>
-                <span className="text-muted-foreground">Kelgan vaqt:</span>{" "}
+                <span className="text-muted-foreground">
+                  {t("studentCheckInButton.checkInTime", { defaultValue: "Kelgan vaqt:" })}
+                </span>{" "}
                 <strong className="text-foreground">{timingInfo.checkInTimeStr}</strong>
               </div>
               <div className="text-right">

@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { dateLocale } from "@/i18n";
+import { useAcademicYears } from "@/lib/api/academic";
 import { useMyAssignments } from "@/lib/api/assignments";
 import type { AssignmentStatus, PracticeAssignment } from "@/lib/api/types";
 
@@ -47,7 +48,19 @@ const STATUSES: { value: string; labelKey: string }[] = [
 /** Supervizorning "Talabalarim" sahifasi — guruh bo'yicha tartiblangan ro'yxat. */
 export function SupervisorStudentsPage() {
   const { t } = useTranslation();
-  const { data, isPending, error } = useMyAssignments();
+  const { data: academicYears } = useAcademicYears();
+  const [academicYearId, setAcademicYearId] = useState<string>("active");
+  const [semester, setSemester] = useState<string>(ALL);
+
+  const assignmentFilters = useMemo(
+    () => ({
+      academic_year_id: academicYearId === "active" ? undefined : academicYearId,
+      semester: semester === ALL ? undefined : semester,
+    }),
+    [academicYearId, semester],
+  );
+
+  const { data, isPending, error } = useMyAssignments(assignmentFilters);
   const [search, setSearch] = useState("");
   const [grading, setGrading] = useState<PracticeAssignment | null>(null);
   const [status, setStatus] = useState(ALL);
@@ -100,7 +113,7 @@ export function SupervisorStudentsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[220px] flex-1">
+          <div className="relative min-w-[200px] flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={t("supervisorStudents.searchPlaceholder")}
@@ -109,8 +122,40 @@ export function SupervisorStudentsPage() {
               className="pl-8"
             />
           </div>
-          <Select value={status} onValueChange={setStatus}>
+
+          {/* Academic Year Filter */}
+          <Select value={academicYearId} onValueChange={setAcademicYearId}>
             <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder={t("supervisorStudents.academicYear", { defaultValue: "O'quv yili" })} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">
+                {t("supervisorStudents.currentActiveYear", { defaultValue: "Joriy o'quv yili" })}
+              </SelectItem>
+              <SelectItem value={ALL}>{t("supervisorStudents.allYears", { defaultValue: "Barcha yillar" })}</SelectItem>
+              {(academicYears ?? []).map((y) => (
+                <SelectItem key={y.id} value={y.id}>
+                  {y.name} {y.is_active ? `(${t("supervisorStudents.activeSuffix", { defaultValue: "Joriy" })})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Semester Filter */}
+          <Select value={semester} onValueChange={setSemester}>
+            <SelectTrigger className="w-[170px]">
+              <SelectValue placeholder={t("supervisorStudents.semesters.title", { defaultValue: "Semestr" })} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>{t("supervisorStudents.semesters.all", { defaultValue: "Barcha semestrlar" })}</SelectItem>
+              <SelectItem value="fall">{t("supervisorStudents.semesters.fall", { defaultValue: "1-semestr (Kuzgi)" })}</SelectItem>
+              <SelectItem value="spring">{t("supervisorStudents.semesters.spring", { defaultValue: "2-semestr (Bahorgi)" })}</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Status Filter */}
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-[150px]">
               <SelectValue placeholder={t("common.status")} />
             </SelectTrigger>
             <SelectContent>
@@ -121,12 +166,15 @@ export function SupervisorStudentsPage() {
               ))}
             </SelectContent>
           </Select>
-          {(search || status !== ALL) && (
+
+          {(search || status !== ALL || academicYearId !== "active" || semester !== ALL) && (
             <Button
               variant="ghost"
               onClick={() => {
                 setSearch("");
                 setStatus(ALL);
+                setAcademicYearId("active");
+                setSemester(ALL);
               }}
             >
               {t("common.clear")}
@@ -180,7 +228,7 @@ export function SupervisorStudentsPage() {
                       <TableHead className="w-[70px]">{t("common.course")}</TableHead>
                       <TableHead>{t("common.practiceType")}</TableHead>
                       <TableHead>{t("supervisorStudents.table.object")}</TableHead>
-                      <TableHead className="w-[160px]">
+                      <TableHead className="w-[180px]">
                         {t("supervisorStudents.table.period")}
                       </TableHead>
                       <TableHead className="w-[120px]">{t("common.status")}</TableHead>
@@ -212,6 +260,11 @@ export function SupervisorStudentsPage() {
                           {a.organization_name ?? a.area_name ?? "—"}
                         </TableCell>
                         <TableCell className="text-xs">
+                          {a.semester && (
+                            <Badge variant="outline" className="mr-1 py-0 px-1 text-[10px]">
+                              {a.semester === "fall" ? "1-sem" : "2-sem"}
+                            </Badge>
+                          )}
                           {new Date(a.start_date).toLocaleDateString(dateLocale())} —{" "}
                           {new Date(a.end_date).toLocaleDateString(dateLocale())}
                         </TableCell>

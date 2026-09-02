@@ -8,6 +8,7 @@ import type {
   PracticeAssignment,
   PracticeAssignmentBulkCreate,
   PracticeAssignmentCreate,
+  Semester,
   UUID,
 } from "@/lib/api/types";
 
@@ -15,6 +16,7 @@ export type AssignmentFilters = {
   student_id?: UUID;
   practice_type_id?: UUID;
   academic_year_id?: UUID;
+  semester?: Semester;
   organization_id?: UUID;
   area_id?: UUID;
   supervisor_id?: UUID;
@@ -39,6 +41,7 @@ function qs(filters: AssignmentFilters, page: number, pageSize: number): string 
   if (filters.student_id) p.set("student_id", filters.student_id);
   if (filters.practice_type_id) p.set("practice_type_id", filters.practice_type_id);
   if (filters.academic_year_id) p.set("academic_year_id", filters.academic_year_id);
+  if (filters.semester) p.set("semester", filters.semester);
   if (filters.organization_id) p.set("organization_id", filters.organization_id);
   if (filters.area_id) p.set("area_id", filters.area_id);
   if (filters.supervisor_id) p.set("supervisor_id", filters.supervisor_id);
@@ -61,11 +64,15 @@ export function useAssignments(filters: AssignmentFilters = {}, page = 1, pageSi
   });
 }
 
-export function useMyAssignments() {
+export function useMyAssignments(filters?: { academic_year_id?: string; semester?: string }) {
+  const p = new URLSearchParams();
+  if (filters?.academic_year_id) p.set("academic_year_id", filters.academic_year_id);
+  if (filters?.semester) p.set("semester", filters.semester);
+  const qs = p.toString();
   return useQuery({
-    queryKey: [...assignmentKeys.all, "my"] as const,
+    queryKey: [...assignmentKeys.all, "my", filters] as const,
     queryFn: () =>
-      api.get("v1/practice-assignments/my").json<PracticeAssignment[]>(),
+      api.get(`v1/practice-assignments/my${qs ? `?${qs}` : ""}`).json<PracticeAssignment[]>(),
   });
 }
 
