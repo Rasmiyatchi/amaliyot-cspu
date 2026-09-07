@@ -80,7 +80,6 @@ def is_auto(criterion: dict[str, Any]) -> bool:
     return (
         criterion.get("grader") == "system"
         or key in TASK_CRITERION_KEYS
-        or key in EVENT_CRITERION_KEYS
     )
 
 
@@ -172,8 +171,9 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
             entry["score"] = round(task_earned / task_max * cmax) if task_max else 0
             entry["detail"] = f"O'quv topshiriqlari: {task_earned}/{task_max} ball"
         elif key in EVENT_CRITERION_KEYS:
-            # Qabul qilingan ma'naviy topshiriqlarning ballari yig'indisi
-            entry["score"] = min(spiritual_earned, cmax)
+            # Tadbirlar ishtiroki — qo'lda baholanadi
+            score = manual.get(key)
+            entry["score"] = int(score) if score is not None else None
             entry["detail"] = f"Ma'naviy topshiriqlar: {spiritual_earned}/{cmax} ball"
         else:
             score = manual.get(key)
