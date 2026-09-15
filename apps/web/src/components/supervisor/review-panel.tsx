@@ -286,7 +286,26 @@ function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () =>
           </div>
         </div>
 
-        {task.status !== "not_started" && (
+        {task.status === "approved" && (
+          <Alert className="border-success/30 bg-success/5 py-2.5 px-3">
+            <AlertDescription>
+              <div className="font-medium text-xs sm:text-sm">{t("studentTaskSubmitDialog.approvedTitle")}</div>
+              {task.points_earned !== null && (
+                <div className="mt-1 text-xs sm:text-sm font-mono">
+                  {t("studentTaskSubmitDialog.points", {
+                    earned: task.points_earned,
+                    max: task.template_points,
+                  })}
+                </div>
+              )}
+              <div className="mt-1 text-[11px] sm:text-xs text-muted-foreground">
+                Amaliyot rahbari tasdiqlangan holatni o'zgartira olmaydi. Bekor qilish faqat Administrator tomonidan amalga oshiriladi.
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {(task.status === "submitted" || task.status === "rejected") && (
           <>
             <Separator />
             <div className="space-y-3">
@@ -322,7 +341,7 @@ function TaskReviewDialog({ task, onClose }: { task: Task | null; onClose: () =>
           <Button variant="ghost" onClick={onClose}>
             {t("common.close")}
           </Button>
-          {task.status !== "not_started" && (
+          {(task.status === "submitted" || task.status === "rejected") && (
             <>
               <Button
                 variant="destructive"

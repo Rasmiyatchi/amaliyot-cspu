@@ -41,6 +41,7 @@ async def list_records(
     start_from: date | None = None,
     end_to: date | None = None,
     search: str | None = None,
+    is_archived: bool = False,
 ) -> list[dict[str, Any]]:
     sup_user = User.__table__.alias("sup_user")
     stmt = (
@@ -63,6 +64,7 @@ async def list_records(
             PracticeAssignment.final_grade,
             PracticeAssignment.credit_earned,
             PracticeAssignment.status,
+            PracticeAssignment.is_archived,
             (sup_user.c.last_name + " " + sup_user.c.first_name).label("supervisor_name"),
         )
         .join(Student, Student.id == PracticeAssignment.student_id)
@@ -74,6 +76,7 @@ async def list_records(
         .outerjoin(Area, Area.id == PracticeAssignment.area_id)
         .outerjoin(Supervisor, Supervisor.id == PracticeAssignment.supervisor_id)
         .outerjoin(sup_user, sup_user.c.id == Supervisor.user_id)
+        .where(PracticeAssignment.is_archived == is_archived)
     )
 
     if academic_year_id:
@@ -171,6 +174,26 @@ async def list_records(
                 "korxona_grade_max": pts["max"] if pts else None,
                 "qaydnoma_grade": r.final_grade,
                 "credit_earned": r.credit_earned,
+                "is_archived": r.is_archived,
             }
         )
     return rows
+
+
+async def set_record_archive_status(db: AsyncSession, assignment_id: UUID, is_archived: bool) -> None:
+    from fastapi import HTTPException, status
+    assignment = await db.get(PracticeAssignment, assignment_id)
+    if not assignment:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Qaydnoma topilmadi: {assignment_id}")
+    assignment.is_archived = is_archived
+    await db.commit()
+
+
+async def delete_record(db: AsyncSession, assignment_id: UUID) -> None:
+    from fastapi import HTTPException, status
+    assignment = await db.get(PracticeAssignment, assignment_id)
+    if not assignment:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Qaydnoma topilmadi: {assignment_id}")
+    await db.delete(assignment)
+    await db.commit()
+

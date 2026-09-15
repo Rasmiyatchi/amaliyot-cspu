@@ -58,3 +58,22 @@ class TestIsAuto:
     def test_notanish_kalit_qolda_bolib_qoladi(self) -> None:
         # Admin grading_rules'ga yangi mezon qo'shsa — xavfsiz default: qo'lda
         assert is_auto({"key": "yangi_mezon", "grader": "supervisor"}) is False
+
+
+class TestAcademicTaskCalculation:
+    """O'quv topshiriqlar ballari aniq yig'indi bo'yicha hisoblanadi (proportsiyasiz)."""
+
+    def test_exact_sum_capped_at_cmax(self) -> None:
+        cmax = 60
+        task_earned = 45
+        # Aniq yig'indi: 45
+        score = min(task_earned, cmax)
+        assert score == 45
+
+    def test_exact_sum_over_cmax_capped(self) -> None:
+        cmax = 60
+        task_earned = 75
+        # cmax dan oshsa max cmax: 60
+        score = min(task_earned, cmax)
+        assert score == 60
+

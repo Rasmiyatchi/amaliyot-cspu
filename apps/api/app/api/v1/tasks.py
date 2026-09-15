@@ -408,3 +408,41 @@ async def reject_analysis(
     return LessonAnalysisRead.model_validate(
         await svc.supervisor_reject_lesson_analysis(db, analysis_id, user, payload)
     )
+
+
+# ─── Admin Revert Endpoints ─────────────────────────────
+
+
+@router.post(
+    "/tasks/{task_id}/revert",
+    response_model=TaskRead,
+    summary="Admin: topshiriq tasdiqini bekor qilish",
+)
+async def revert_task(
+    task_id: UUID, db: SessionDep, user: RequireAdmin
+) -> TaskRead:
+    return TaskRead.model_validate(await svc.admin_revert_task(db, task_id, user))
+
+
+@router.post(
+    "/journal/{entry_id}/revert",
+    response_model=JournalRead,
+    summary="Admin: kundalik tasdiqini bekor qilish",
+)
+async def revert_journal(
+    entry_id: UUID, db: SessionDep, user: RequireAdmin
+) -> JournalRead:
+    return JournalRead.model_validate(await svc.admin_revert_journal(db, entry_id, user))
+
+
+@router.post(
+    "/lesson-analyses/{analysis_id}/revert",
+    response_model=LessonAnalysisRead,
+    summary="Admin: dars tahlili tasdiqini bekor qilish",
+)
+async def revert_analysis(
+    analysis_id: UUID, db: SessionDep, user: RequireAdmin
+) -> LessonAnalysisRead:
+    return LessonAnalysisRead.model_validate(
+        await svc.admin_revert_lesson_analysis(db, analysis_id, user)
+    )

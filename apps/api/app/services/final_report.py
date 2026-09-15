@@ -298,6 +298,33 @@ async def review_report(
     return await _hydrate(db, fr)
 
 
+async def revert_report(
+    db: AsyncSession,
+    user: User,
+    report_id: UUID,
+) -> dict[str, Any]:
+    """Admin / Super Admin allaqachon tasdiqlangan hisobotni bekor qiladi."""
+    if user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Faqat administrator tasdiqni bekor qila oladi"
+        )
+    fr = await db.get(FinalReport, report_id)
+    if not fr:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hisobot topilmadi")
+    if fr.status != FinalReportStatus.APPROVED:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Faqat tasdiqlangan hisobotni bekor qilish mumkin"
+        )
+
+    fr.status = FinalReportStatus.SUBMITTED
+    fr.reviewer_id = None
+    fr.reviewer_note = None
+    fr.reviewed_at = None
+    await db.commit()
+    await db.refresh(fr)
+    return await _hydrate(db, fr)
+
+
 async def is_archive_unlocked(db: AsyncSession, assignment_id: UUID) -> bool:
     """Arxiv yuklash uchun gate — yakuniy hisobot tasdiqlangan bo'lishi shart."""
     fr = (

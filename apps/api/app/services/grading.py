@@ -111,7 +111,7 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
         weekdays=asn.required_weekdays,
     )
 
-    # O'quv topshiriqlar ballari (category != SPIRITUAL)
+    # O'quv topshiriqlar ballari (category != SPIRITUAL va status == APPROVED)
     academic_task_row = (
         await db.execute(
             select(
@@ -122,6 +122,7 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
             .where(
                 Task.assignment_id == assignment_id,
                 TaskTemplate.category != TaskCategory.SPIRITUAL,
+                Task.status == TaskStatus.APPROVED,
             )
         )
     ).first()
@@ -167,9 +168,9 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
                 f"{att_percent}% davomat" if att_percent is not None else "Davomat ma'lumoti yo'q"
             )
         elif key in TASK_CRITERION_KEYS:
-            # Topshiriq ballari mezon max'iga normallashtiriladi
-            entry["score"] = round(task_earned / task_max * cmax) if task_max else 0
-            entry["detail"] = f"O'quv topshiriqlari: {task_earned}/{task_max} ball"
+            # Topshiriqlardan to'plangan ballarning aniq yig'indisi (max: cmax) — proportsiya ishlatilmaydi
+            entry["score"] = min(task_earned, cmax)
+            entry["detail"] = f"O'quv topshiriqlari: {task_earned}/{cmax} ball"
         elif key in EVENT_CRITERION_KEYS:
             # Tadbirlar ishtiroki — qo'lda baholanadi
             score = manual.get(key)

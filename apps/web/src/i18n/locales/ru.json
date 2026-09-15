@@ -636,7 +636,20 @@
     "specialty": "Специальность",
     "subtitle": "Список студентов на практике и их оценки",
     "supervisorFilter": "Руководитель",
-    "title": "Ведомости"
+    "title": "Ведомости",
+    "actions": "Действия",
+    "archive": "Архивировать",
+    "archiveSuccess": "Ведомость архивирована",
+    "unarchive": "Восстановить",
+    "unarchiveSuccess": "Ведомость восстановлена",
+    "delete": "Удалить",
+    "deleteConfirmTitle": "Удаление ведомости",
+    "deleteConfirmDesc": "Вы действительно хотите удалить эту ведомость?",
+    "deleteSuccess": "Ведомость удалена",
+    "tabs": {
+      "active": "Активные",
+      "archived": "Архив"
+    }
   },
   "adminReports": {
     "allCourses": "Все курсы",

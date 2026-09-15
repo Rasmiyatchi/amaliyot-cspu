@@ -3,9 +3,9 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Response, status
 
-from app.api.deps import RequireAdmin
+from app.api.deps import RequireAdmin, RequireSuperAdmin
 from app.core.config import settings
 from app.db.session import SessionDep
 from app.models.enums import DegreeType, EducationForm
@@ -30,6 +30,7 @@ def _filters(
     start_from: date | None,
     end_to: date | None,
     search: str | None,
+    is_archived: bool = False,
 ) -> dict:
     return {
         "academic_year_id": academic_year_id,
@@ -42,6 +43,7 @@ def _filters(
         "start_from": start_from,
         "end_to": end_to,
         "search": search,
+        "is_archived": is_archived,
     }
 
 
@@ -59,12 +61,13 @@ async def list_records(
     start_from: date | None = None,
     end_to: date | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
+    is_archived: bool = Query(False),
 ) -> list[RecordRow]:
     rows = await svc.list_records(
         db,
         **_filters(
             academic_year_id, direction_id, course, group_id, supervisor_id,
-            education_form, degree_type, start_from, end_to, search,
+            education_form, degree_type, start_from, end_to, search, is_archived,
         ),
     )
     return [RecordRow.model_validate(r) for r in rows]
@@ -84,12 +87,13 @@ async def export_xlsx(
     start_from: date | None = None,
     end_to: date | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
+    is_archived: bool = Query(False),
 ) -> Response:
     rows = await svc.list_records(
         db,
         **_filters(
             academic_year_id, direction_id, course, group_id, supervisor_id,
-            education_form, degree_type, start_from, end_to, search,
+            education_form, degree_type, start_from, end_to, search, is_archived,
         ),
     )
     return Response(
@@ -113,12 +117,13 @@ async def baholash_qaydnomasi(
     start_from: date | None = None,
     end_to: date | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
+    is_archived: bool = Query(False),
 ) -> Response:
     rows = await svc.list_records(
         db,
         **_filters(
             academic_year_id, direction_id, course, group_id, supervisor_id,
-            education_form, degree_type, start_from, end_to, search,
+            education_form, degree_type, start_from, end_to, search, is_archived,
         ),
     )
     pdf_bytes = pdf_svc.render_records_pdf(
@@ -133,3 +138,33 @@ async def baholash_qaydnomasi(
         media_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="baholash_qaydnomasi.pdf"'},
     )
+
+
+@router.post("/{id_}/archive", summary="Qaydnomani arxivlash")
+async def archive_record(
+    id_: UUID,
+    db: SessionDep,
+    _: RequireAdmin,
+) -> dict[str, str]:
+    await svc.set_record_archive_status(db, id_, is_archived=True)
+    return {"message": "Qaydnoma arxivlandi"}
+
+
+@router.post("/{id_}/unarchive", summary="Qaydnomani arxivdan chiqarish (tiklash)")
+async def unarchive_record(
+    id_: UUID,
+    db: SessionDep,
+    _: RequireAdmin,
+) -> dict[str, str]:
+    await svc.set_record_archive_status(db, id_, is_archived=False)
+    return {"message": "Qaydnoma tiklandi"}
+
+
+@router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT, summary="Qaydnomani o'chirish (Super Admin)")
+async def delete_record(
+    id_: UUID,
+    db: SessionDep,
+    _: RequireSuperAdmin,
+) -> None:
+    await svc.delete_record(db, id_)
+

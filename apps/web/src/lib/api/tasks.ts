@@ -344,3 +344,27 @@ export function useDeleteTaskTemplate() {
     onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
   });
 }
+
+export function useRevertTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) => api.post(`v1/tasks/${id}/revert`).json<Task>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+  });
+}
+
+export function useRevertJournal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) => api.post(`v1/journal/${id}/revert`).json<JournalEntry>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+  });
+}
+
+export function useRevertLessonAnalysis() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) => api.post(`v1/lesson-analyses/${id}/revert`).json<LessonAnalysis>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+  });
+}

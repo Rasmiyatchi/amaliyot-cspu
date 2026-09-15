@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     ARRAY,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -121,6 +122,9 @@ class PracticeAssignment(UUIDMixin, TimestampMixin, Base):
         default=AssignmentStatus.DRAFT,
         server_default=AssignmentStatus.DRAFT.value,
         index=True,
+    )
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False, index=True
     )
 
     # Yakuniy baho — grading.compute_breakdown() natijasi, finalize_grade() yozadi.

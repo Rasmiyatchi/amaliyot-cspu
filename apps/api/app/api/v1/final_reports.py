@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, status
 
-from app.api.deps import CurrentUser, RequireSupervisorOrAdmin
+from app.api.deps import CurrentUser, RequireAdmin, RequireSupervisorOrAdmin
 from app.db.session import SessionDep
 from app.models.enums import FinalReportStatus
 from app.schemas.final_report import (
@@ -97,6 +97,31 @@ async def review(
             f"{item.get('student_full_name') or '—'}"
         ),
         metadata={"note": data.note},
+        request=request,
+    )
+    await db.commit()
+    return FinalReportRead.model_validate(item)
+
+
+@router.post(
+    "/{report_id}/revert",
+    response_model=FinalReportRead,
+    summary="Admin: yakuniy hisobot tasdiqini bekor qilish",
+)
+async def revert(
+    report_id: UUID,
+    request: Request,
+    db: SessionDep,
+    user: RequireAdmin,
+) -> FinalReportRead:
+    item = await svc.revert_report(db, user, report_id)
+    await audit.log(
+        db,
+        actor=user,
+        action="revert",
+        entity_type="final_report",
+        entity_id=report_id,
+        summary=f"Yakuniy hisobot tasdiqi bekor qilindi: {item.get('student_full_name') or '—'}",
         request=request,
     )
     await db.commit()

@@ -636,7 +636,20 @@
     "specialty": "Mutaxassislik",
     "subtitle": "Amaliyotdagi talabalar ro'yxati va baholari",
     "supervisorFilter": "Rahbar",
-    "title": "Qaydnomalar"
+    "title": "Qaydnomalar",
+    "actions": "Harakatlar",
+    "archive": "Arxivlash",
+    "archiveSuccess": "Qaydnoma arxivlandi",
+    "unarchive": "Tiklash",
+    "unarchiveSuccess": "Qaydnoma tiklandi",
+    "delete": "O'chirish",
+    "deleteConfirmTitle": "Qaydnomani o'chirish",
+    "deleteConfirmDesc": "Haqiqatan ham bu qaydnomani o'chirmoqchimisiz?",
+    "deleteSuccess": "Qaydnoma o'chirildi",
+    "tabs": {
+      "active": "Faol",
+      "archived": "Arxiv"
+    }
   },
   "adminReports": {
     "allCourses": "Barcha kurs",

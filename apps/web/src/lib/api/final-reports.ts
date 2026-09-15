@@ -106,3 +106,11 @@ export function useReviewFinalReport() {
     onSuccess: () => qc.invalidateQueries({ queryKey: finalReportKeys.all }),
   });
 }
+
+export function useRevertFinalReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: UUID) => api.post(`v1/final-reports/${id}/revert`).json<FinalReport>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: finalReportKeys.all }),
+  });
+}

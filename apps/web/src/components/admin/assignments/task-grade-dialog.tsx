@@ -1,5 +1,5 @@
 import { HTTPError } from "ky";
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Undo2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { dateLocale } from "@/i18n";
-import { useApproveTask, useRejectTask } from "@/lib/api/tasks";
+import { useApproveTask, useRejectTask, useRevertTask } from "@/lib/api/tasks";
 import type { Task } from "@/lib/api/types";
 
 type Props = {
@@ -33,8 +33,9 @@ export function TaskGradeDialog({ task, onClose }: Props) {
 
   const approve = useApproveTask();
   const reject = useRejectTask();
+  const revert = useRevertTask();
 
-  const busy = approve.isPending || reject.isPending;
+  const busy = approve.isPending || reject.isPending || revert.isPending;
 
   if (!task) return null;
 
@@ -71,6 +72,16 @@ export function TaskGradeDialog({ task, onClose }: Props) {
       });
       toast.success(t("assignmentsTaskGradeDialog.rejectedToast"));
       setReason("");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+    }
+  };
+
+  const handleRevert = async () => {
+    try {
+      await revert.mutateAsync(task.id);
+      toast.success("Tasdiq bekor qilindi va topshiriq tahrirga qaytarildi");
       onClose();
     } catch (e) {
       toast.error(e instanceof HTTPError ? e.message : t("common.error"));
@@ -203,10 +214,19 @@ export function TaskGradeDialog({ task, onClose }: Props) {
           </>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="flex-wrap gap-2">
           <Button variant="ghost" onClick={onClose}>
             {t("common.close")}
           </Button>
+
+          {task.status === "approved" && (
+            <Button variant="outline" onClick={handleRevert} disabled={busy}>
+              {revert.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              <Undo2 className="h-4 w-4" />
+              Tasdiqni bekor qilish
+            </Button>
+          )}
+
           {task.status !== "not_started" && (
             <>
               <Button

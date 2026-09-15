@@ -26,3 +26,4 @@ class RecordRow(BaseModel):
     korxona_grade_max: int | None = None
     qaydnoma_grade: int | None = None
     credit_earned: bool | None = None
+    is_archived: bool = False

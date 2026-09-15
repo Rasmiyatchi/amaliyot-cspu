@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import i18n from "@/i18n";
 
 import { api } from "@/lib/api";
@@ -23,6 +23,7 @@ export type RecordRow = {
   korxona_grade_max: number | null;
   qaydnoma_grade: number | null;
   credit_earned: boolean | null;
+  is_archived?: boolean;
 };
 
 export type RecordFilters = {
@@ -36,6 +37,7 @@ export type RecordFilters = {
   start_from?: string;
   end_to?: string;
   search?: string;
+  is_archived?: boolean;
 };
 
 export function recordsQs(filters: RecordFilters): string {
@@ -50,6 +52,7 @@ export function recordsQs(filters: RecordFilters): string {
   if (filters.start_from) p.set("start_from", filters.start_from);
   if (filters.end_to) p.set("end_to", filters.end_to);
   if (filters.search) p.set("search", filters.search);
+  if (filters.is_archived !== undefined) p.set("is_archived", String(filters.is_archived));
   return p.toString();
 }
 
@@ -58,6 +61,36 @@ export function useRecords(filters: RecordFilters = {}) {
     queryKey: ["records", filters],
     queryFn: () => api.get(`v1/records?${recordsQs(filters)}`).json<RecordRow[]>(),
     placeholderData: (prev) => prev,
+  });
+}
+
+export function useArchiveRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentId: UUID) => api.post(`v1/records/${assignmentId}/archive`).json(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["records"] });
+    },
+  });
+}
+
+export function useUnarchiveRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentId: UUID) => api.post(`v1/records/${assignmentId}/unarchive`).json(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["records"] });
+    },
+  });
+}
+
+export function useDeleteRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentId: UUID) => api.delete(`v1/records/${assignmentId}`).json(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["records"] });
+    },
   });
 }
 
@@ -87,3 +120,4 @@ export function downloadRecordsPdf(filters: RecordFilters): Promise<void> {
     "baholash_qaydnomasi.pdf",
   );
 }
+

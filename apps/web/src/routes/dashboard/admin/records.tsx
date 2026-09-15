@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ClipboardCheck, Download, FileText, Loader2 } from "lucide-react";
+import { Archive, ChevronLeft, ChevronRight, ClipboardCheck, Download, FileText, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { dateLocale } from "@/i18n";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/loading-skeletons";
@@ -27,14 +28,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDirections, useGroups } from "@/lib/api/academic";
 import {
   downloadRecordsPdf,
   downloadRecordsXlsx,
+  useArchiveRecord,
+  useDeleteRecord,
   useRecords,
+  useUnarchiveRecord,
   type RecordFilters,
+  type RecordRow,
 } from "@/lib/api/records";
 import { SupervisorSearchSelect } from "@/components/admin/assignments/supervisor-search-select";
+import { useAuthStore } from "@/stores/auth";
 import type { UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
@@ -55,11 +62,20 @@ const PAGE_SIZE = 20;
 
 export function RecordsPage() {
   const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === "super_admin";
+
+  const [tab, setTab] = useState<"active" | "archived">("active");
   const [filters, setFilters] = useState<RecordFilters>({});
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState<"xlsx" | "pdf" | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<RecordRow | null>(null);
+
+  const archiveMut = useArchiveRecord();
+  const unarchiveMut = useUnarchiveRecord();
+  const deleteMut = useDeleteRecord();
 
   const directionsQ = useDirections(undefined, 1, 200);
   const groupsQ = useGroups(
@@ -69,8 +85,12 @@ export function RecordsPage() {
   );
 
   const effectiveFilters = useMemo(
-    () => ({ ...filters, search: debouncedSearch || undefined }),
-    [filters, debouncedSearch],
+    () => ({
+      ...filters,
+      search: debouncedSearch || undefined,
+      is_archived: tab === "archived",
+    }),
+    [filters, debouncedSearch, tab],
   );
 
   const { data, isPending, error } = useRecords(effectiveFilters);
@@ -93,6 +113,35 @@ export function RecordsPage() {
       toast.error(e instanceof Error ? e.message : t("adminRecords.downloadFailed"));
     } finally {
       setExporting(null);
+    }
+  };
+
+  const handleArchive = async (row: RecordRow) => {
+    try {
+      await archiveMut.mutateAsync(row.assignment_id);
+      toast.success(t("adminRecords.archiveSuccess"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
+
+  const handleUnarchive = async (row: RecordRow) => {
+    try {
+      await unarchiveMut.mutateAsync(row.assignment_id);
+      toast.success(t("adminRecords.unarchiveSuccess"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!recordToDelete) return;
+    try {
+      await deleteMut.mutateAsync(recordToDelete.assignment_id);
+      toast.success(t("adminRecords.deleteSuccess"));
+      setRecordToDelete(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -135,6 +184,22 @@ export function RecordsPage() {
             {t("adminRecords.downloadPdf")}
           </Button>
         </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-4">
+        <Tabs
+          value={tab}
+          onValueChange={(v) => {
+            setTab(v as "active" | "archived");
+            setPage(1);
+          }}
+        >
+          <TabsList>
+            <TabsTrigger value="active">{t("adminRecords.tabs.active")}</TabsTrigger>
+            <TabsTrigger value="archived">{t("adminRecords.tabs.archived")}</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Filters */}
@@ -255,7 +320,7 @@ export function RecordsPage() {
         {t("adminRecords.foundCount", { count: rows.length })}
       </div>
 
-      {isPending && !data && <TableSkeleton columns={11} rows={8} />}
+      {isPending && !data && <TableSkeleton columns={12} rows={8} />}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error.message}</AlertDescription>
@@ -278,12 +343,13 @@ export function RecordsPage() {
                 <TableHead className="w-[100px]">{t("adminRecords.attendancePct")}</TableHead>
                 <TableHead className="w-[120px]">{t("adminRecords.orgGrade")}</TableHead>
                 <TableHead className="w-[130px]">{t("adminRecords.recordGrade")}</TableHead>
+                <TableHead className="w-[100px] text-right">{t("adminRecords.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pageRows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={11} className="p-0">
+                  <TableCell colSpan={12} className="p-0">
                     <EmptyState
                       icon={ClipboardCheck}
                       title={t("adminRecords.emptyTitle")}
@@ -327,6 +393,42 @@ export function RecordsPage() {
                       "—"
                     )}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {tab === "active" ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleArchive(r)}
+                          disabled={archiveMut.isPending}
+                          title={t("adminRecords.archive")}
+                        >
+                          <Archive className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleUnarchive(r)}
+                          disabled={unarchiveMut.isPending}
+                          title={t("adminRecords.unarchive")}
+                        >
+                          <RotateCcw className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                        </Button>
+                      )}
+                      {isSuperAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setRecordToDelete(r)}
+                          disabled={deleteMut.isPending}
+                          title={t("adminRecords.delete")}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -359,6 +461,19 @@ export function RecordsPage() {
           </Button>
         </div>
       )}
+
+      {/* Confirmation Modal for Delete */}
+      <ConfirmDialog
+        open={!!recordToDelete}
+        title={t("adminRecords.deleteConfirmTitle")}
+        description={t("adminRecords.deleteConfirmDesc")}
+        confirmText={t("adminRecords.delete")}
+        cancelText={t("common.cancel")}
+        variant="destructive"
+        isPending={deleteMut.isPending}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setRecordToDelete(null)}
+      />
     </div>
   );
 }

@@ -609,6 +609,11 @@ async def supervisor_approve_task(
 
     if user.role == UserRole.SUPERVISOR:
         await _check_supervisor_owns(db, task.assignment_id, user.id)
+        if task.status == TaskStatus.APPROVED:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Tasdiqlangan topshiriqni amaliyot rahbari qayta o'zgartira olmaydi yoki bekor qila olmaydi",
+            )
 
     data = payload.model_dump()
     task.status = TaskStatus.APPROVED
@@ -646,6 +651,11 @@ async def supervisor_reject_task(
 
     if user.role == UserRole.SUPERVISOR:
         await _check_supervisor_owns(db, task.assignment_id, user.id)
+        if task.status == TaskStatus.APPROVED:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Tasdiqlangan topshiriqni amaliyot rahbari rad eta olmaydi",
+            )
 
     data = payload.model_dump()
     task.status = TaskStatus.REJECTED
@@ -664,6 +674,31 @@ async def supervisor_reject_task(
             body=f"{tmpl.title if tmpl else ''}: {data['rejection_reason']}",
             data={"assignment_id": str(task.assignment_id), "task_id": str(task.id)},
         )
+
+    await db.commit()
+    return await get_task(db, task.id)
+
+
+async def admin_revert_task(
+    db: AsyncSession, task_id: UUID, user: User
+) -> dict[str, Any]:
+    if user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Faqat administrator tasdiqni bekor qila oladi"
+        )
+    task = await db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Topshiriq topilmadi")
+    if task.status != TaskStatus.APPROVED:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Faqat tasdiqlangan topshiriqni bekor qilish mumkin"
+        )
+
+    task.status = TaskStatus.SUBMITTED if task.submission_md else TaskStatus.NOT_STARTED
+    task.points_earned = None
+    task.graded_by_id = None
+    task.graded_at = None
+    task.rejection_reason = None
 
     await db.commit()
     return await get_task(db, task.id)
@@ -791,6 +826,11 @@ async def supervisor_approve_journal(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kundalik topilmadi")
     if user.role == UserRole.SUPERVISOR:
         await _check_supervisor_owns(db, entry.assignment_id, user.id)
+        if entry.status == JournalStatus.APPROVED:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Tasdiqlangan kundalikni amaliyot rahbari o'zgartira olmaydi",
+            )
     entry.status = JournalStatus.APPROVED
     entry.approved_by_id = user.id
     entry.approved_at = datetime.now(UTC)
@@ -829,6 +869,11 @@ async def supervisor_reject_journal(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kundalik topilmadi")
     if user.role == UserRole.SUPERVISOR:
         await _check_supervisor_owns(db, entry.assignment_id, user.id)
+        if entry.status == JournalStatus.APPROVED:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Tasdiqlangan kundalikni amaliyot rahbari o'zgartira olmaydi",
+            )
     data = payload.model_dump()
     entry.status = JournalStatus.REJECTED
     entry.rejection_reason = data["rejection_reason"]
@@ -848,6 +893,33 @@ async def supervisor_reject_journal(
                 "journal_id": str(entry.id),
             },
         )
+
+    await db.commit()
+    await db.refresh(entry)
+    items = [_journal_to_dict(entry)]
+    await _hydrate_approver_name(db, items)
+    return items[0]
+
+
+async def admin_revert_journal(
+    db: AsyncSession, entry_id: UUID, user: User
+) -> dict[str, Any]:
+    if user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Faqat administrator tasdiqni bekor qila oladi"
+        )
+    entry = await db.get(JournalEntry, entry_id)
+    if not entry:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kundalik topilmadi")
+    if entry.status != JournalStatus.APPROVED:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Faqat tasdiqlangan kundalikni bekor qilish mumkin"
+        )
+
+    entry.status = JournalStatus.SUBMITTED
+    entry.approved_by_id = None
+    entry.approved_at = None
+    entry.rejection_reason = None
 
     await db.commit()
     await db.refresh(entry)
@@ -971,6 +1043,11 @@ async def supervisor_approve_lesson_analysis(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Dars tahlili topilmadi")
     if user.role == UserRole.SUPERVISOR:
         await _check_supervisor_owns(db, analysis.assignment_id, user.id)
+        if analysis.status == JournalStatus.APPROVED:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Tasdiqlangan dars tahlilini amaliyot rahbari o'zgartira olmaydi",
+            )
     analysis.status = JournalStatus.APPROVED
     analysis.approved_by_id = user.id
     analysis.approved_at = datetime.now(UTC)
@@ -1004,6 +1081,11 @@ async def supervisor_reject_lesson_analysis(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Dars tahlili topilmadi")
     if user.role == UserRole.SUPERVISOR:
         await _check_supervisor_owns(db, analysis.assignment_id, user.id)
+        if analysis.status == JournalStatus.APPROVED:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Tasdiqlangan dars tahlilini amaliyot rahbari o'zgartira olmaydi",
+            )
     data = payload.model_dump()
     analysis.status = JournalStatus.REJECTED
     analysis.rejection_reason = data["rejection_reason"]
@@ -1023,6 +1105,33 @@ async def supervisor_reject_lesson_analysis(
                 "analysis_id": str(analysis.id),
             },
         )
+
+    await db.commit()
+    await db.refresh(analysis)
+    items = [_analysis_to_dict(analysis)]
+    await _hydrate_approver_name(db, items)
+    return items[0]
+
+
+async def admin_revert_lesson_analysis(
+    db: AsyncSession, analysis_id: UUID, user: User
+) -> dict[str, Any]:
+    if user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Faqat administrator tasdiqni bekor qila oladi"
+        )
+    analysis = await db.get(LessonAnalysis, analysis_id)
+    if not analysis:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Dars tahlili topilmadi")
+    if analysis.status != JournalStatus.APPROVED:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Faqat tasdiqlangan tahlilni bekor qilish mumkin"
+        )
+
+    analysis.status = JournalStatus.SUBMITTED
+    analysis.approved_by_id = None
+    analysis.approved_at = None
+    analysis.rejection_reason = None
 
     await db.commit()
     await db.refresh(analysis)
