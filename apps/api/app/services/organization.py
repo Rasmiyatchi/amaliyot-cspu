@@ -45,15 +45,26 @@ async def list_organizations(
 
     def apply(stmt):  # type: ignore[no-untyped-def]
         if search:
-            like = f"%{search.lower()}%"
-            stmt = stmt.where(
-                func.lower(Organization.name).like(like)
-                | func.lower(Organization.director_full_name).like(like)
-            )
+            terms = [t.strip().lower() for t in search.split() if t.strip()]
+            for term in terms:
+                like = f"%{term}%"
+                stmt = stmt.where(
+                    func.lower(Organization.name).like(like)
+                    | func.lower(func.coalesce(Organization.director_full_name, "")).like(like)
+                    | func.lower(func.coalesce(Organization.region, "")).like(like)
+                    | func.lower(func.coalesce(Organization.district, "")).like(like)
+                    | func.lower(func.coalesce(Organization.address_line, "")).like(like)
+                    | func.lower(func.coalesce(Organization.inn, "")).like(like)
+                    | func.lower(func.coalesce(Organization.phone, "")).like(like)
+                )
         if kind:
             stmt = stmt.where(Organization.kind == kind)
         if region:
-            stmt = stmt.where(func.lower(Organization.region).like(f"%{region.lower()}%"))
+            like_reg = f"%{region.lower()}%"
+            stmt = stmt.where(
+                func.lower(func.coalesce(Organization.region, "")).like(like_reg)
+                | func.lower(func.coalesce(Organization.district, "")).like(like_reg)
+            )
         if is_active is not None:
             stmt = stmt.where(Organization.is_active.is_(is_active))
         return stmt

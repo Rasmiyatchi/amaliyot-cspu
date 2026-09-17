@@ -24,9 +24,21 @@ async def list_areas(
 
     def apply(stmt):  # type: ignore[no-untyped-def]
         if search:
-            stmt = stmt.where(func.lower(Area.name).like(f"%{search.lower()}%"))
+            terms = [t.strip().lower() for t in search.split() if t.strip()]
+            for term in terms:
+                like = f"%{term}%"
+                stmt = stmt.where(
+                    func.lower(Area.name).like(like)
+                    | func.lower(func.coalesce(Area.region, "")).like(like)
+                    | func.lower(func.coalesce(Area.district, "")).like(like)
+                    | func.lower(func.coalesce(Area.description, "")).like(like)
+                )
         if region:
-            stmt = stmt.where(func.lower(Area.region).like(f"%{region.lower()}%"))
+            like_reg = f"%{region.lower()}%"
+            stmt = stmt.where(
+                func.lower(func.coalesce(Area.region, "")).like(like_reg)
+                | func.lower(func.coalesce(Area.district, "")).like(like_reg)
+            )
         if is_active is not None:
             stmt = stmt.where(Area.is_active.is_(is_active))
         return stmt

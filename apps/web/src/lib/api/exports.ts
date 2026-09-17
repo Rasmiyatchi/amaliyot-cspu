@@ -64,3 +64,61 @@ export async function downloadExport(
   a.remove();
   URL.revokeObjectURL(blobUrl);
 }
+
+export async function downloadOrganizationsExport(
+  params: Record<string, string | number | undefined> = {},
+): Promise<void> {
+  const token = useAuthStore.getState().accessToken;
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
+
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
+  }
+  const url = `/api/v1/exports/organizations.xlsx${qs.toString() ? "?" + qs.toString() : ""}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(i18n.t("common.exportFailed", { status: res.status }));
+
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const match = disposition.match(/filename="?([^";]+)"?/);
+  const filename = match?.[1] ?? "tashkilotlar.xlsx";
+
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(blobUrl);
+}
+
+export async function downloadAreasExport(
+  params: Record<string, string | number | undefined> = {},
+): Promise<void> {
+  const token = useAuthStore.getState().accessToken;
+  if (!token) throw new Error(i18n.t("common.sessionExpired"));
+
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
+  }
+  const url = `/api/v1/exports/areas.xlsx${qs.toString() ? "?" + qs.toString() : ""}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(i18n.t("common.exportFailed", { status: res.status }));
+
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const match = disposition.match(/filename="?([^";]+)"?/);
+  const filename = match?.[1] ?? "hududlar.xlsx";
+
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(blobUrl);
+}

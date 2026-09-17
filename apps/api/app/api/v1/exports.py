@@ -10,9 +10,20 @@ from fastapi import APIRouter, Query, Request, Response
 
 from app.api.deps import RequireAdmin
 from app.db.session import SessionDep
-from app.models.enums import AttendanceDayStatus, FinalReportStatus, StudentStatus
+from app.models.enums import (
+    AttendanceDayStatus,
+    FinalReportStatus,
+    OrganizationKind,
+    StudentStatus,
+)
+from app.services import area as area_svc
 from app.services import exports as svc
-from app.services.import_templates import build_student_credentials_xlsx
+from app.services import organization as org_svc
+from app.services.import_templates import (
+    build_areas_xlsx,
+    build_organizations_xlsx,
+    build_student_credentials_xlsx,
+)
 
 router = APIRouter(prefix="/exports", tags=["exports"])
 
@@ -170,3 +181,50 @@ async def export_final_reports(
         search=search,
     )
     return _csv_response(content, "yakuniy_hisobotlar")
+
+
+@router.get(
+    "/organizations.xlsx",
+    summary="Obyektlar / Tashkilotlar jadvali (Excel) — filtrlar bilan",
+)
+async def export_organizations(
+    db: SessionDep,
+    _: RequireAdmin,
+    search: str | None = None,
+    kind: OrganizationKind | None = None,
+    region: str | None = None,
+) -> Response:
+    items, _ = await org_svc.list_organizations(
+        db, offset=0, limit=10000, search=search, kind=kind, region=region
+    )
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return Response(
+        content=build_organizations_xlsx(items),
+        media_type=_XLSX_MIME,
+        headers={
+            "Content-Disposition": f'attachment; filename="tashkilotlar_{ts}.xlsx"'
+        },
+    )
+
+
+@router.get(
+    "/areas.xlsx",
+    summary="Obyektlar / Hududlar jadvali (Excel) — filtrlar bilan",
+)
+async def export_areas(
+    db: SessionDep,
+    _: RequireAdmin,
+    search: str | None = None,
+    region: str | None = None,
+) -> Response:
+    items, _ = await area_svc.list_areas(
+        db, offset=0, limit=10000, search=search, region=region
+    )
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return Response(
+        content=build_areas_xlsx(items),
+        media_type=_XLSX_MIME,
+        headers={
+            "Content-Disposition": f'attachment; filename="hududlar_{ts}.xlsx"'
+        },
+    )

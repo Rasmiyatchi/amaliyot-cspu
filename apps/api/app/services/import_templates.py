@@ -261,3 +261,123 @@ def build_supervisors_template() -> bytes:
         ws.cell(row=4, column=i, value=v).fill = _SAMPLE_FILL
     _autosize(ws, _SUPERVISOR_HEADERS)
     return _to_bytes(wb)
+
+
+_ORG_KIND_LABELS = {
+    "school": "Maktab",
+    "mtt": "MTT (Bog'cha)",
+    "lyceum": "Litsey",
+    "college": "Kollej / Texnikum",
+    "company": "Tashkilot / Korxona",
+    "university": "Universitet / OOT",
+    "other": "Boshqa",
+}
+
+_ORGANIZATION_HEADERS = [
+    "№",
+    "Tashkilot nomi",
+    "Turi",
+    "Rahbar F.I.Sh",
+    "Rahbar lavozimi",
+    "Telefon",
+    "INN",
+    "Viloyat",
+    "Tuman",
+    "Manzil",
+    "Sig'im (Kuvvat)",
+    "Biriktirilgan talabalar",
+    "Holati",
+]
+
+
+def build_organizations_xlsx(rows: list) -> bytes:
+    """Tashkilotlar (Obyektlar) ro'yxatini Excel (.xlsx) ga yozadi."""
+
+    def _g(obj, key):
+        return obj.get(key) if isinstance(obj, dict) else getattr(obj, key, None)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Tashkilotlar"
+    for i, h in enumerate(_ORGANIZATION_HEADERS, start=1):
+        c = ws.cell(row=1, column=i, value=h)
+        c.fill = _HEADER_FILL
+        c.font = _HEADER_FONT
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for idx, r in enumerate(rows, start=1):
+        row = idx + 1
+        kind_val = str(_g(r, "kind") or "")
+        if hasattr(kind_val, "value"):
+            kind_val = kind_val.value
+        kind_label = _ORG_KIND_LABELS.get(kind_val, kind_val)
+
+        is_act = _g(r, "is_active")
+        status_label = "Faol" if is_act is True or is_act is None else "Nofaol"
+
+        ws.cell(row=row, column=1, value=idx)
+        ws.cell(row=row, column=2, value=_g(r, "name"))
+        ws.cell(row=row, column=3, value=kind_label)
+        ws.cell(row=row, column=4, value=_g(r, "director_full_name"))
+        ws.cell(row=row, column=5, value=_g(r, "director_position"))
+        ws.cell(row=row, column=6, value=_g(r, "phone"))
+        ws.cell(row=row, column=7, value=_g(r, "inn"))
+        ws.cell(row=row, column=8, value=_g(r, "region"))
+        ws.cell(row=row, column=9, value=_g(r, "district"))
+        ws.cell(row=row, column=10, value=_g(r, "address_line"))
+        ws.cell(row=row, column=11, value=_g(r, "capacity"))
+        ws.cell(row=row, column=12, value=_g(r, "assigned_students_count") or 0)
+        ws.cell(row=row, column=13, value=status_label)
+
+    _autosize(ws, _ORGANIZATION_HEADERS)
+    ws.freeze_panes = "A2"
+    return _to_bytes(wb)
+
+
+_AREA_HEADERS = [
+    "№",
+    "Hudud nomi",
+    "Tavsif",
+    "Viloyat",
+    "Tuman",
+    "Sig'im",
+    "Geolokatsiya (Lat, Lng)",
+    "Holati",
+]
+
+
+def build_areas_xlsx(rows: list) -> bytes:
+    """Hududlar ro'yxatini Excel (.xlsx) ga yozadi."""
+
+    def _g(obj, key):
+        return obj.get(key) if isinstance(obj, dict) else getattr(obj, key, None)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Hududlar"
+    for i, h in enumerate(_AREA_HEADERS, start=1):
+        c = ws.cell(row=1, column=i, value=h)
+        c.fill = _HEADER_FILL
+        c.font = _HEADER_FONT
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for idx, r in enumerate(rows, start=1):
+        row = idx + 1
+        lat = _g(r, "geo_lat")
+        lng = _g(r, "geo_lng")
+        geo_str = f"{lat}, {lng}" if lat and lng else "—"
+        is_act = _g(r, "is_active")
+        status_label = "Faol" if is_act is True or is_act is None else "Nofaol"
+
+        ws.cell(row=row, column=1, value=idx)
+        ws.cell(row=row, column=2, value=_g(r, "name"))
+        ws.cell(row=row, column=3, value=_g(r, "description"))
+        ws.cell(row=row, column=4, value=_g(r, "region"))
+        ws.cell(row=row, column=5, value=_g(r, "district"))
+        ws.cell(row=row, column=6, value=_g(r, "capacity"))
+        ws.cell(row=row, column=7, value=geo_str)
+        ws.cell(row=row, column=8, value=status_label)
+
+    _autosize(ws, _AREA_HEADERS)
+    ws.freeze_panes = "A2"
+    return _to_bytes(wb)

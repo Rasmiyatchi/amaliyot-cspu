@@ -1,4 +1,4 @@
-import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { Download, Loader2, MapPin, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { downloadOrganizationsExport } from "@/lib/api/exports";
 import {
   useDeleteOrganization,
   useOrganizations,
@@ -48,6 +49,8 @@ export function OrganizationsList() {
   const [searchInput, setSearchInput] = useState("");
   const [regionInput, setRegionInput] = useState("");
   const [kind, setKind] = useState<OrganizationKind | undefined>(undefined);
+  const [exporting, setExporting] = useState(false);
+
   const search = useDebounce(searchInput, 300);
   const region = useDebounce(regionInput, 300);
   const { data, isPending, error } = useOrganizations({
@@ -69,29 +72,66 @@ export function OrganizationsList() {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await downloadOrganizationsExport({
+        search: search || undefined,
+        region: region || undefined,
+        kind,
+      });
+      toast.success("Excel fayl yuklab olindi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Input
-          placeholder={t("objectsOrganizationsList.searchPlaceholder")}
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          className="min-w-[200px] max-w-[240px]"
-        />
-        <div className="relative">
+        <div className="relative min-w-[200px] max-w-[260px] flex-1">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={t("objectsOrganizationsList.searchPlaceholder")}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-8 pr-7 text-xs sm:text-sm"
+          />
+          {searchInput && (
+            <button
+              onClick={() => setSearchInput("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="relative min-w-[170px] max-w-[220px]">
           <MapPin className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t("objectsOrganizationsList.regionPlaceholder")}
             value={regionInput}
             onChange={(e) => setRegionInput(e.target.value)}
-            className="min-w-[180px] max-w-[200px] pl-8"
+            className="pl-8 pr-7 text-xs sm:text-sm"
           />
+          {regionInput && (
+            <button
+              onClick={() => setRegionInput("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
+
         <Select
           value={kind ?? ALL}
           onValueChange={(v) => setKind(v === ALL ? undefined : (v as OrganizationKind))}
         >
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[160px] text-xs sm:text-sm">
             <SelectValue placeholder={t("objectsOrganizationsList.kindLabel")} />
           </SelectTrigger>
           <SelectContent>
@@ -103,10 +143,27 @@ export function OrganizationsList() {
             ))}
           </SelectContent>
         </Select>
-        <Button className="ml-auto" onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" />
-          {t("objectsOrganizationsList.newOrganization")}
-        </Button>
+
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting || isPending}
+            className="text-xs sm:text-sm gap-1.5"
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            )}
+            <span>Excel yuklab olish</span>
+          </Button>
+
+          <Button onClick={() => setCreating(true)} className="text-xs sm:text-sm gap-1.5">
+            <Plus className="h-4 w-4" />
+            {t("objectsOrganizationsList.newOrganization")}
+          </Button>
+        </div>
       </div>
 
       {isPending && <TableSkeleton rows={5} columns={5} />}
