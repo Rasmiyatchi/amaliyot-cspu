@@ -201,10 +201,25 @@ async def create_for_student(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Shablon topilmadi")
 
     # Bir talabada bir vaqtda faqat bitta faol ariza bo'lsin
+    # Bir talabada bir vaqtda faqat bitta faol/yangilangan ariza bo'lsin.
+    # Eskirgan/qaytarilgan arizalarni avtomatik arxivga o'tkazamiz, toki dublyaj bo'lib qolmasin.
+    stale_unapproved = (
+        await db.execute(
+            select(PracticeApplication).where(
+                PracticeApplication.student_id == student.id,
+                PracticeApplication.status.in_([
+                    ApplicationStatus.REVISION_REQUIRED,
+                    ApplicationStatus.SUBMITTED,
+                    ApplicationStatus.RESUBMITTED,
+                    ApplicationStatus.REJECTED,
+                ]),
+            )
+        )
+    ).scalars().all()
+    for s_app in stale_unapproved:
+        s_app.status = ApplicationStatus.ARCHIVED
+
     active_statuses = [
-        ApplicationStatus.SUBMITTED,
-        ApplicationStatus.UNDER_REVIEW,
-        ApplicationStatus.RESUBMITTED,
         ApplicationStatus.APPROVED,
         ApplicationStatus.ACTIVE,
     ]
@@ -283,7 +298,13 @@ async def list_all(
         stmt = stmt.where(
             func.lower(User.last_name).like(like)
             | func.lower(User.first_name).like(like)
+            | func.lower(func.coalesce(User.middle_name, "")).like(like)
+            | func.lower(User.last_name + " " + User.first_name).like(like)
+            | func.lower(User.first_name + " " + User.last_name).like(like)
             | func.lower(PracticeApplication.organization_name).like(like)
+            | func.lower(func.coalesce(PracticeApplication.contract_number, "")).like(like)
+            | func.lower(func.coalesce(Direction.name, "")).like(like)
+            | func.lower(func.coalesce(Group.name, "")).like(like)
         )
     rows = (await db.execute(stmt.order_by(PracticeApplication.created_at.desc()))).all()
     return [_to_read(r) for r in rows]
@@ -319,6 +340,24 @@ async def resubmit(
             obj.variable_values = ct_svc.validate_student_input(tpl, variable_values)
     obj.status = ApplicationStatus.RESUBMITTED
     obj.return_reason = None
+
+    # Ushbu talabaning boshqa barcha eskirgan/dublyat arizalarini yopamiz
+    other_stale = (
+        await db.execute(
+            select(PracticeApplication).where(
+                PracticeApplication.student_id == student.id,
+                PracticeApplication.id != id_,
+                PracticeApplication.status.in_([
+                    ApplicationStatus.SUBMITTED,
+                    ApplicationStatus.REVISION_REQUIRED,
+                    ApplicationStatus.REJECTED,
+                ]),
+            )
+        )
+    ).scalars().all()
+    for s_app in other_stale:
+        s_app.status = ApplicationStatus.ARCHIVED
+
     await db.commit()
     return await get_one(db, id_)
 
@@ -666,6 +705,24 @@ async def approve(db: AsyncSession, id_: UUID, user: User) -> dict[str, Any]:
     obj.qr_token = obj.qr_token or secrets.token_urlsafe(12)
     obj.reviewed_by_id = user.id
     obj.reviewed_at = datetime.now(UTC)
+
+    # Ushbu talabaning boshqa barcha eskirgan/dublyat arizalarini arxivga o'tkazamiz
+    stale_apps = (
+        await db.execute(
+            select(PracticeApplication).where(
+                PracticeApplication.student_id == obj.student_id,
+                PracticeApplication.id != id_,
+                PracticeApplication.status.in_([
+                    ApplicationStatus.SUBMITTED,
+                    ApplicationStatus.RESUBMITTED,
+                    ApplicationStatus.REVISION_REQUIRED,
+                    ApplicationStatus.UNDER_REVIEW,
+                ]),
+            )
+        )
+    ).scalars().all()
+    for s_app in stale_apps:
+        s_app.status = ApplicationStatus.ARCHIVED
 
     # Shartnoma turi tanlangan bo'lsa — DOCX shartnoma generatsiya qilamiz.
     if obj.contract_template_id and not obj.contract_file:

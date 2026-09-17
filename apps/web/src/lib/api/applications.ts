@@ -218,10 +218,11 @@ export function useUploadApplicationScan() {
 }
 
 // ─── Admin ────────────────────────────────────────────────
-export function useApplications(filters: { status?: ApplicationStatus; search?: string } = {}) {
+export function useApplications(filters: { status?: ApplicationStatus; search?: string; includeArchived?: boolean } = {}) {
   const qs = new URLSearchParams();
   if (filters.status) qs.set("status", filters.status);
   if (filters.search) qs.set("search", filters.search);
+  if (filters.includeArchived) qs.set("include_archived", "true");
   return useQuery({
     queryKey: [...KEY, "all", filters],
     queryFn: () =>

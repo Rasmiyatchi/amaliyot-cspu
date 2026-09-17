@@ -158,13 +158,14 @@ async def list_applications(
     status_filter: list[ApplicationStatus] | None = Query(None, alias="status"),
     region: str | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
+    include_archived: bool = Query(False),
 ) -> list[ApplicationRead]:
     rows = await svc.list_all(
         db,
         status_filter=status_filter,
         region=region,
         search=search,
-        exclude_archived=status_filter is None,
+        exclude_archived=not include_archived if status_filter is None else False,
     )
     return [ApplicationRead.model_validate(r) for r in rows]
 

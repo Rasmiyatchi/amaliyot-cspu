@@ -2,19 +2,26 @@ import {
   AlertCircle,
   Archive,
   ArchiveRestore,
+  Calendar,
   Check,
+  ChevronLeft,
+  ChevronRight,
   ClipboardEdit,
+  Clock,
   Download,
   Eye,
   FileCheck,
   Layers,
   Loader2,
+  Search,
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+
+import { useDebounce } from "@/hooks/use-debounce";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +46,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   downloadContract,
   downloadApplicationScan,
@@ -86,13 +100,46 @@ const STATUS_BADGE: Record<ApplicationStatus, { labelKey: string; variant: Badge
 /** Superadmin ko'rib chiqishi mumkin bo'lgan statuslar (approve/return/reject). */
 const REVIEWABLE: ApplicationStatus[] = ["submitted", "revision_required", "resubmitted"];
 
+function formatDate(dateStr: string) {
+  if (!dateStr) return "—";
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("uz-UZ", { day: "2-digit", month: "2-digit", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatTime(dateStr: string) {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
 export function ApplicationsPage() {
   const { t } = useTranslation();
   const isSuperAdmin = useAuthStore((s) => s.user?.role === "super_admin");
   const [tab, setTab] = useState(ALL);
   const [view, setView] = useState<"list" | "appendix">("list");
-  const status = tab === ALL ? undefined : (tab as ApplicationStatus);
-  const { data, isPending, error } = useApplications({ status });
+  
+  // Qidiruv va debounced search
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Sahifalash (Pagination)
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Barcha arizalarni qidiruv bo'yicha yuklash (tablar counters ham aniq hisoblanishi uchun)
+  const { data: allApplications, isPending, error } = useApplications({
+    search: debouncedSearch,
+    includeArchived: true,
+  });
+
   const appendix = useAppendix();
   const approve = useApproveApplication();
   const reject = useRejectApplication();
@@ -103,12 +150,64 @@ export function ApplicationsPage() {
   const deleteApp = useDeleteApplication();
 
   const [detailApp, setDetailApp] = useState<PracticeApplication | null>(null);
-  const [returnDialog, setReturnDialog] = useState<{ open: boolean, app: PracticeApplication | null }>({ open: false, app: null });
+  const [returnDialog, setReturnDialog] = useState<{ open: boolean; app: PracticeApplication | null }>({ open: false, app: null });
   const [returnReason, setReturnReason] = useState("");
   const [archiveTarget, setArchiveTarget] = useState<{
     action: "archive" | "unarchive" | "delete";
     app: PracticeApplication;
   } | null>(null);
+
+  // Har bir tab bo'yicha jami arizalar soni (Counter Badges)
+  const counts = useMemo(() => {
+    if (!allApplications) return {} as Record<string, number>;
+    const res: Record<string, number> = {
+      [ALL]: 0,
+      submitted: 0,
+      resubmitted: 0,
+      approved: 0,
+      active: 0,
+      revision_required: 0,
+      rejected: 0,
+      archived: 0,
+    };
+    allApplications.forEach((a) => {
+      if (a.status !== "archived" && a.status !== "expired") {
+        res[ALL] = (res[ALL] || 0) + 1;
+      }
+      if (a.status in res) {
+        res[a.status] = (res[a.status] || 0) + 1;
+      } else if (a.status === "expired") {
+        res.archived = (res.archived || 0) + 1;
+      }
+    });
+    return res;
+  }, [allApplications]);
+
+  // Hozirgi tanlangan tab bo'yicha saralangan ma'lumotlar
+  const filteredData = useMemo(() => {
+    if (!allApplications) return [];
+    if (tab === ALL) {
+      return allApplications.filter((a) => a.status !== "archived" && a.status !== "expired");
+    }
+    if (tab === "archived") {
+      return allApplications.filter((a) => a.status === "archived" || a.status === "expired");
+    }
+    return allApplications.filter((a) => a.status === tab);
+  }, [allApplications, tab]);
+
+  // Tab yoki qidiruv o'zgarganda sahifani 1-ga qaytarish
+  useEffect(() => {
+    setPage(1);
+  }, [tab, debouncedSearch]);
+
+  const totalPages = Math.max(1, Math.ceil((filteredData?.length || 0) / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  // Sahifalangan ma'lumot
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredData.slice(start, start + pageSize);
+  }, [filteredData, currentPage, pageSize]);
 
   const handleApprove = async (a: PracticeApplication) => {
     try {
@@ -216,13 +315,44 @@ export function ApplicationsPage() {
 
       {view === "list" && (
         <>
+          {/* Live Search va Saralash statistikasi */}
+          <div className="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Talaba ismi, familiyasi, tashkilot yoki yo'nalish bo'yicha..."
+                className="pl-9 pr-8 text-sm"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Status Tablari va Jami Arizalar Soni (Counter Badges) */}
           <Tabs value={tab} onValueChange={setTab} className="mb-4">
-            <TabsList className="flex-wrap">
-              {STATUS_TABS.map((tabItem) => (
-                <TabsTrigger key={tabItem.value} value={tabItem.value}>
-                  {t(tabItem.labelKey)}
-                </TabsTrigger>
-              ))}
+            <TabsList className="flex-wrap h-auto p-1 gap-1">
+              {STATUS_TABS.map((tabItem) => {
+                const count = counts[tabItem.value] ?? 0;
+                return (
+                  <TabsTrigger key={tabItem.value} value={tabItem.value} className="gap-1.5 px-3 py-1.5 text-xs">
+                    <span>{t(tabItem.labelKey)}</span>
+                    <Badge
+                      variant={tab === tabItem.value ? "default" : "secondary"}
+                      className="ml-1 rounded-full px-1.5 py-0 text-[11px] font-semibold"
+                    >
+                      {count}
+                    </Badge>
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
           </Tabs>
 
@@ -237,7 +367,7 @@ export function ApplicationsPage() {
             </Alert>
           )}
 
-          {data && (
+          {!isPending && allApplications && (
             <div className="rounded-lg border border-border">
               <Table>
                 <TableHeader>
@@ -246,27 +376,32 @@ export function ApplicationsPage() {
                     <TableHead>{t("adminApplications.colDirectionCourse")}</TableHead>
                     <TableHead>{t("common.organization")}</TableHead>
                     <TableHead>{t("adminApplications.colStudentResidence")}</TableHead>
+                    <TableHead>Ariza sanasi</TableHead>
                     <TableHead>{t("common.status")}</TableHead>
                     <TableHead className="w-[150px]">{t("adminApplications.colAction")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.length === 0 && (
+                  {paginatedData.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="p-0">
+                      <TableCell colSpan={7} className="p-0">
                         <EmptyState
                           icon={ClipboardEdit}
                           title={t("adminApplications.emptyTitle")}
-                          description={t("adminApplications.emptyDescription")}
+                          description={
+                            searchQuery
+                              ? "Qidiruv bo'yicha hech qanday ariza topilmadi"
+                              : t("adminApplications.emptyDescription")
+                          }
                           compact
                         />
                       </TableCell>
                     </TableRow>
                   )}
-                  {data.map((a) => (
+                  {paginatedData.map((a) => (
                     <TableRow
                       key={a.id}
-                      className="cursor-pointer"
+                      className="cursor-pointer hover:bg-muted/40 transition-colors"
                       onClick={() => setDetailApp(a)}
                     >
                       <TableCell className="font-medium">{a.student_name ?? "—"}</TableCell>
@@ -275,12 +410,22 @@ export function ApplicationsPage() {
                         {a.course ? ` · ${t("common.courseN", { n: a.course })}` : ""}
                       </TableCell>
                       <TableCell className="text-sm">
-                        <div>{a.organization_name}</div>
+                        <div className="font-medium">{a.organization_name}</div>
                         <div className="text-xs text-muted-foreground">{a.organization_type}</div>
                       </TableCell>
                       <TableCell className="text-sm">
                         {a.region ?? "—"}
                         {a.district ? `, ${a.district}` : ""}
+                      </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-foreground font-medium">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          {formatDate(a.created_at)}
+                        </div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {formatTime(a.created_at)}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={STATUS_BADGE[a.status]?.variant ?? "default"}>
@@ -444,6 +589,62 @@ export function ApplicationsPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Sahifalash (Pagination Controls) */}
+          {!isPending && filteredData.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Ko'rsatish:</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(val) => {
+                    setPageSize(Number(val));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[70px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>
+                  {Math.min((currentPage - 1) * pageSize + 1, filteredData.length)}-
+                  {Math.min(currentPage * pageSize, filteredData.length)} / {filteredData.length} ta
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Oldingi
+                </Button>
+                <span className="text-xs px-2 font-medium">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="h-8 px-2.5 text-xs"
+                >
+                  Keyingi
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
             </div>
           )}
         </>
@@ -685,6 +886,10 @@ function ApplicationDetailDialog({
             <InfoRow
               label={t("adminApplications.studentResidence")}
               value={[app.region, app.district].filter(Boolean).join(", ") || null}
+            />
+            <InfoRow
+              label="Ariza sanasi"
+              value={app.created_at ? `${formatDate(app.created_at)}, ${formatTime(app.created_at)}` : null}
             />
             <InfoRow label={t("common.note")} value={app.note} />
             {app.contract_number && (
