@@ -23,22 +23,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SelectEmpty } from "@/components/ui/empty-state";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAcademicYears, useGroups } from "@/lib/api/academic";
-import { useAreas } from "@/lib/api/areas";
+import { useAcademicYears } from "@/lib/api/academic";
 import {
   useBulkCreateAssignment,
   useCreateAssignment,
 } from "@/lib/api/assignments";
-import { useOrganizations } from "@/lib/api/organizations";
 import { usePracticeTypes } from "@/lib/api/practice-types";
 import { useStudents } from "@/lib/api/students";
 import type { PracticeType, Semester } from "@/lib/api/types";
 import { WeekdayPicker } from "@/components/admin/assignments/weekday-picker";
 import { StudentSearchSelect } from "@/components/admin/assignments/student-search-select";
 import { SupervisorSearchSelect } from "@/components/admin/assignments/supervisor-search-select";
+import { GroupSearchSelect } from "@/components/admin/assignments/group-search-select";
+import { OrganizationSearchSelect } from "@/components/admin/assignments/organization-search-select";
+import { AreaSearchSelect } from "@/components/admin/assignments/area-search-select";
 
 const NONE = "__none__";
 
@@ -64,8 +64,6 @@ export function AssignmentWizard({ open, onClose }: Props) {
   const { t } = useTranslation();
   const practiceTypes = usePracticeTypes();
   const academicYears = useAcademicYears();
-  const organizations = useOrganizations({ is_active: true }, 1, 100);
-  const areas = useAreas({ is_active: true }, 1, 100);
 
   const [mode, setMode] = useState<Mode>("single");
   const [practiceTypeId, setPracticeTypeId] = useState<string>("");
@@ -104,15 +102,6 @@ export function AssignmentWizard({ open, onClose }: Props) {
     () => practiceType?.allowed_courses ?? [],
     [practiceType],
   );
-
-
-  // Guruhlarni ruxsat etilgan kurslar bo'yicha filter
-  const allGroupsQuery = useGroups({}, 1, 100);
-  const filteredGroups = useMemo(() => {
-    const items = allGroupsQuery.data?.items ?? [];
-    if (!allowedCourses.length) return items;
-    return items.filter((g) => allowedCourses.includes(g.course));
-  }, [allGroupsQuery.data, allowedCourses]);
 
   // Amaliyot turi o'zgarganda — end_date avto-taklif
   useEffect(() => {
@@ -356,30 +345,14 @@ export function AssignmentWizard({ open, onClose }: Props) {
             <div className="space-y-3">
               <div>
                 <Label>{t("common.group")} *</Label>
-                <Select value={groupId} onValueChange={setGroupId}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue placeholder={t("assignmentsAssignmentWizard.groupPlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredGroups.length === 0 ? (
-                      <SelectEmpty
-                        message={
-                          allowedCourses.length
-                            ? t("assignmentsAssignmentWizard.noCourseGroups", {
-                                courses: allowedCourses.join(", "),
-                              })
-                            : t("assignmentsAssignmentWizard.noGroups")
-                        }
-                      />
-                    ) : (
-                      filteredGroups.map((g) => (
-                        <SelectItem key={g.id} value={g.id}>
-                          {g.name} ({t("common.courseN", { n: g.course })})
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <div className="mt-1.5">
+                  <GroupSearchSelect
+                    value={groupId}
+                    onValueChange={setGroupId}
+                    allowedCourses={allowedCourses}
+                    placeholder={t("assignmentsAssignmentWizard.groupPlaceholder")}
+                  />
+                </div>
               </div>
               {groupId && (
                 <div className="rounded-lg border border-border p-3">
@@ -441,54 +414,24 @@ export function AssignmentWizard({ open, onClose }: Props) {
               </Label>
               <div className="mt-1.5 grid gap-3 md:grid-cols-2">
                 {practiceType.object_kind !== "area" && (
-                  <Select
-                    value={organizationId || NONE}
+                  <OrganizationSearchSelect
+                    value={organizationId}
                     onValueChange={(v) => {
-                      setOrganizationId(v === NONE ? "" : v);
-                      if (v !== NONE) setAreaId("");
+                      setOrganizationId(v);
+                      if (v) setAreaId("");
                     }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("assignmentsAssignmentWizard.orgPlaceholder")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE}>—</SelectItem>
-                      {(organizations.data?.items ?? []).length === 0 ? (
-                        <SelectEmpty message={t("assignmentsAssignmentWizard.noOrganizations")} />
-                      ) : (
-                        (organizations.data?.items ?? []).map((o) => (
-                          <SelectItem key={o.id} value={o.id}>
-                            {o.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                    placeholder={t("assignmentsAssignmentWizard.orgPlaceholder")}
+                  />
                 )}
                 {practiceType.object_kind !== "organization" && (
-                  <Select
-                    value={areaId || NONE}
+                  <AreaSearchSelect
+                    value={areaId}
                     onValueChange={(v) => {
-                      setAreaId(v === NONE ? "" : v);
-                      if (v !== NONE) setOrganizationId("");
+                      setAreaId(v);
+                      if (v) setOrganizationId("");
                     }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("assignmentsAssignmentWizard.areaPlaceholder")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE}>—</SelectItem>
-                      {(areas.data?.items ?? []).length === 0 ? (
-                        <SelectEmpty message={t("assignmentsAssignmentWizard.noAreas")} />
-                      ) : (
-                        (areas.data?.items ?? []).map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                    placeholder={t("assignmentsAssignmentWizard.areaPlaceholder")}
+                  />
                 )}
               </div>
             </div>
