@@ -23,6 +23,7 @@ from app.schemas.attendance import (
     AttendanceOverrideRead,
     AttendanceOverrideRequest,
     AttendanceRejectRequest,
+    BulkAttendanceActionRequest,
     CheckInRequest,
     CheckOutRequest,
 )
@@ -273,3 +274,36 @@ async def super_admin_override(
     )
     await db.commit()
     return AttendanceDayDetail.model_validate(result)
+
+
+# ─── Super Admin: bulk update ─────────────────────────────
+
+
+@router.post(
+    "/bulk-update",
+    summary="Super Admin: Davomatni ommaviy tasdiqlash / rad etish",
+)
+async def super_admin_bulk_update(
+    payload: BulkAttendanceActionRequest,
+    request: Request,
+    db: SessionDep,
+    user: RequireSuperAdmin,
+):
+    from app.services import audit_log as audit
+
+    res = await svc.bulk_update_status(
+        db, payload.day_ids, payload.status, user.id, payload.note
+    )
+    await audit.log(
+        db,
+        actor=user,
+        action="bulk_update",
+        entity_type="attendance_day",
+        entity_id=None,
+        summary=f"Davomat ommaviy yangilandi ({res['updated_count']} ta -> {payload.status.value})",
+        metadata={"new_status": payload.status.value, "count": res["updated_count"], "note": payload.note},
+        request=request,
+    )
+    await db.commit()
+    return res
+

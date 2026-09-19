@@ -18,6 +18,7 @@ from app.api.deps import CurrentUser
 from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.db.session import SessionDep
+from app.models.enums import UserRole
 from app.schemas.auth import (
     ChangePasswordRequest,
     ForceChangePasswordRequest,
@@ -117,6 +118,10 @@ async def update_me(
     data: ProfileUpdateRequest, db: SessionDep, user: CurrentUser
 ) -> CurrentUser:
     payload = data.model_dump(exclude_unset=True)
+    if user.role == UserRole.STUDENT:
+        # Talaba familiya, ism va otasining ismini o'zgartira olmaydi — faqat email va telefon
+        for restricted_key in ("first_name", "last_name", "middle_name"):
+            payload.pop(restricted_key, None)
     for key, value in payload.items():
         setattr(user, key, value)
     try:

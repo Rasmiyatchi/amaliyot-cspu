@@ -56,7 +56,7 @@ export function ProfileDialog({ open, onClose }: Props) {
       setLastName(user.last_name);
       setMiddleName(user.middle_name ?? "");
       setEmail(user.email ?? "");
-      setPhone(""); // phone not in User type — leaving blank
+      setPhone(user.phone ?? "");
       setCurrentPwd("");
       setNewPwd("");
       setNewPwd2("");
@@ -65,19 +65,28 @@ export function ProfileDialog({ open, onClose }: Props) {
 
   if (!user) return null;
 
+  const isStudent = user.role === "student";
+
   const handleSaveProfile = async () => {
-    if (!firstName.trim() || !lastName.trim()) {
-      toast.error(t("profileDialog.nameRequired"));
-      return;
-    }
     try {
-      await update.mutateAsync({
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        middle_name: middleName.trim() || null,
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-      });
+      if (isStudent) {
+        await update.mutateAsync({
+          email: email.trim() || null,
+          phone: phone.trim() || null,
+        });
+      } else {
+        if (!firstName.trim() || !lastName.trim()) {
+          toast.error(t("profileDialog.nameRequired"));
+          return;
+        }
+        await update.mutateAsync({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          middle_name: middleName.trim() || null,
+          email: email.trim() || null,
+          phone: phone.trim() || null,
+        });
+      }
       toast.success(t("profileDialog.profileUpdated"));
     } catch (e) {
       toast.error(e instanceof HTTPError ? e.message : t("common.error"));
@@ -190,6 +199,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                   id="prof-last"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
+                  disabled={isStudent}
                   className="mt-1 text-xs sm:text-sm"
                 />
               </div>
@@ -199,6 +209,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                   id="prof-first"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  disabled={isStudent}
                   className="mt-1 text-xs sm:text-sm"
                 />
               </div>
@@ -208,8 +219,16 @@ export function ProfileDialog({ open, onClose }: Props) {
                   id="prof-middle"
                   value={middleName}
                   onChange={(e) => setMiddleName(e.target.value)}
+                  disabled={isStudent}
                   className="mt-1 text-xs sm:text-sm"
                 />
+                {isStudent && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {t("profileDialog.studentNameReadonlyHint", {
+                      defaultValue: "Familiya, ism va otasining ismini faqat administrator o'zgartira oladi.",
+                    })}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="prof-email" className="text-xs sm:text-sm">Email</Label>

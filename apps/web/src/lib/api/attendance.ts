@@ -180,3 +180,19 @@ export function useTodayStatus(assignmentId: UUID | null) {
         .json<AttendanceDayDetail | null>(),
   });
 }
+
+export function useBulkAttendanceUpdate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      day_ids: string[];
+      status: AttendanceDayStatus;
+      note?: string;
+    }) =>
+      api
+        .post("v1/attendance/bulk-update", { json: data })
+        .json<{ updated_count: number; requested_count: number }>(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: attendanceKeys.all }),
+  });
+}
+

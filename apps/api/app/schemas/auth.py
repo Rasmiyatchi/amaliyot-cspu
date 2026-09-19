@@ -31,6 +31,7 @@ class UserMeResponse(BaseModel):
     middle_name: str | None
     full_name: str
     avatar_url: str | None
+    phone: str | None = None
     is_active: bool
     last_login_at: datetime | None
     must_change_password: bool = False

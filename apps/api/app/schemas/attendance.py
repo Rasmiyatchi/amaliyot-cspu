@@ -121,3 +121,13 @@ class AttendanceMarkRedRequest(BaseModel):
 
     date: date
     note: str | None = Field(None, max_length=2000)
+
+
+# ─── Bulk Action ─────────────────────────────────────────
+
+
+class BulkAttendanceActionRequest(BaseModel):
+    day_ids: list[UUID] = Field(..., min_length=1, description="Ommaviy o'zgartiriladigan kunlar ID ro'yxati")
+    status: AttendanceDayStatus = Field(..., description="Yangi status (green/red)")
+    note: str | None = Field(None, max_length=2000)
+

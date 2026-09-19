@@ -12,6 +12,7 @@ export type User = {
   middle_name: string | null;
   full_name: string;
   avatar_url: string | null;
+  phone: string | null;
   is_active: boolean;
   last_login_at: string | null;
   must_change_password?: boolean;

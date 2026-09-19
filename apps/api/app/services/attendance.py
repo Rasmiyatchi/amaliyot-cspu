@@ -769,3 +769,53 @@ async def student_today_status(
     if not day_id:
         return None
     return await get_day(db, day_id)
+
+
+# ─── Bulk Action ─────────────────────────────────────────
+
+
+async def bulk_update_status(
+    db: AsyncSession,
+    day_ids: list[UUID],
+    new_status: AttendanceDayStatus,
+    admin_user_id: UUID,
+    note: str | None = None,
+) -> dict[str, int]:
+    if not day_ids:
+        return {"updated_count": 0, "requested_count": 0}
+
+    stmt = select(AttendanceDay).where(AttendanceDay.id.in_(day_ids))
+    days = (await db.execute(stmt)).scalars().all()
+
+    now = datetime.now(UTC)
+    updated_count = 0
+
+    for day in days:
+        if day.status == new_status:
+            continue
+        old_status = day.status
+        day.status = new_status
+        day.approved_by_id = admin_user_id
+        day.approved_at = now
+        if note is not None:
+            day.note = note
+
+        if new_status == AttendanceDayStatus.RED and old_status != AttendanceDayStatus.RED:
+            student_uid = await _student_user_id_for_assignment(db, day.assignment_id)
+            if student_uid:
+                await notification_svc.create(
+                    db,
+                    user_id=student_uid,
+                    type=NotificationType.ATTENDANCE_REJECTED,
+                    title="Davomat rad etildi",
+                    body=f"{day.date}: {note or 'Rad etildi'}",
+                    data={
+                        "assignment_id": str(day.assignment_id),
+                        "day_id": str(day.id),
+                    },
+                )
+        updated_count += 1
+
+    await db.commit()
+    return {"updated_count": updated_count, "requested_count": len(day_ids)}
+
