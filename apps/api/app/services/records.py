@@ -15,7 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.academic import Direction, Group
 from app.models.area import Area
 from app.models.attendance import AttendanceDay
-from app.models.enums import AttendanceDayStatus, DegreeType, EducationForm
+from app.models.enums import (
+    AssignmentStatus,
+    AttendanceDayStatus,
+    DegreeType,
+    EducationForm,
+    StudentStatus,
+)
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
@@ -42,6 +48,8 @@ async def list_records(
     end_to: date | None = None,
     search: str | None = None,
     is_archived: bool = False,
+    faculty_id: UUID | None = None,
+    status: AssignmentStatus | None = None,
 ) -> list[dict[str, Any]]:
     sup_user = User.__table__.alias("sup_user")
     stmt = (
@@ -76,9 +84,18 @@ async def list_records(
         .outerjoin(Area, Area.id == PracticeAssignment.area_id)
         .outerjoin(Supervisor, Supervisor.id == PracticeAssignment.supervisor_id)
         .outerjoin(sup_user, sup_user.c.id == Supervisor.user_id)
-        .where(PracticeAssignment.is_archived == is_archived)
+        .where(
+            PracticeAssignment.is_archived == is_archived,
+            PracticeAssignment.status != AssignmentStatus.CANCELLED,
+            User.is_active.is_(True),
+            Student.status == StudentStatus.STUDYING,
+        )
     )
 
+    if faculty_id:
+        stmt = stmt.where(Direction.faculty_id == faculty_id)
+    if status:
+        stmt = stmt.where(PracticeAssignment.status == status)
     if academic_year_id:
         stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
     if direction_id:

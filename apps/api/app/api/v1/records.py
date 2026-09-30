@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query, Response, status
 from app.api.deps import RequireAdmin, RequireSuperAdmin
 from app.core.config import settings
 from app.db.session import SessionDep
-from app.models.enums import DegreeType, EducationForm
+from app.models.enums import AssignmentStatus, DegreeType, EducationForm, UserRole
 from app.schemas.record import RecordRow
 from app.services import pdf as pdf_svc
 from app.services import records as svc
@@ -31,6 +31,8 @@ def _filters(
     end_to: date | None,
     search: str | None,
     is_archived: bool = False,
+    faculty_id: UUID | None = None,
+    status: AssignmentStatus | None = None,
 ) -> dict:
     return {
         "academic_year_id": academic_year_id,
@@ -44,13 +46,15 @@ def _filters(
         "end_to": end_to,
         "search": search,
         "is_archived": is_archived,
+        "faculty_id": faculty_id,
+        "status": status,
     }
 
 
 @router.get("", response_model=list[RecordRow], summary="Qaydnomalar ro'yxati")
 async def list_records(
     db: SessionDep,
-    _: RequireAdmin,
+    current_user: RequireAdmin,
     academic_year_id: UUID | None = None,
     direction_id: UUID | None = None,
     course: int | None = Query(None, ge=1, le=5),
@@ -62,12 +66,15 @@ async def list_records(
     end_to: date | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
     is_archived: bool = Query(False),
+    status: AssignmentStatus | None = None,
 ) -> list[RecordRow]:
+    faculty_id = current_user.faculty_id if current_user.role == UserRole.ADMIN else None
     rows = await svc.list_records(
         db,
         **_filters(
             academic_year_id, direction_id, course, group_id, supervisor_id,
             education_form, degree_type, start_from, end_to, search, is_archived,
+            faculty_id, status,
         ),
     )
     return [RecordRow.model_validate(r) for r in rows]
@@ -76,7 +83,7 @@ async def list_records(
 @router.get("/export.xlsx", summary="Qaydnomalarni Excel'ga yuklash")
 async def export_xlsx(
     db: SessionDep,
-    _: RequireAdmin,
+    current_user: RequireAdmin,
     academic_year_id: UUID | None = None,
     direction_id: UUID | None = None,
     course: int | None = Query(None, ge=1, le=5),
@@ -88,12 +95,15 @@ async def export_xlsx(
     end_to: date | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
     is_archived: bool = Query(False),
+    status: AssignmentStatus | None = None,
 ) -> Response:
+    faculty_id = current_user.faculty_id if current_user.role == UserRole.ADMIN else None
     rows = await svc.list_records(
         db,
         **_filters(
             academic_year_id, direction_id, course, group_id, supervisor_id,
             education_form, degree_type, start_from, end_to, search, is_archived,
+            faculty_id, status,
         ),
     )
     return Response(
@@ -106,7 +116,7 @@ async def export_xlsx(
 @router.get("/baholash-qaydnomasi.pdf", summary="Baholash qaydnomasi PDF")
 async def baholash_qaydnomasi(
     db: SessionDep,
-    _: RequireAdmin,
+    current_user: RequireAdmin,
     academic_year_id: UUID | None = None,
     direction_id: UUID | None = None,
     course: int | None = Query(None, ge=1, le=5),
@@ -118,12 +128,15 @@ async def baholash_qaydnomasi(
     end_to: date | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
     is_archived: bool = Query(False),
+    status: AssignmentStatus | None = None,
 ) -> Response:
+    faculty_id = current_user.faculty_id if current_user.role == UserRole.ADMIN else None
     rows = await svc.list_records(
         db,
         **_filters(
             academic_year_id, direction_id, course, group_id, supervisor_id,
             education_form, degree_type, start_from, end_to, search, is_archived,
+            faculty_id, status,
         ),
     )
     pdf_bytes = pdf_svc.render_records_pdf(

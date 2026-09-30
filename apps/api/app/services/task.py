@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.academic import Group
 from app.models.enums import (
+    AssignmentStatus,
     JournalStatus,
     NotificationType,
     Semester,
@@ -44,7 +45,10 @@ async def _get_assignment(db: AsyncSession, assignment_id: UUID) -> PracticeAssi
 
 
 async def _check_student_owns(
-    db: AsyncSession, assignment_id: UUID, user_id: UUID
+    db: AsyncSession,
+    assignment_id: UUID,
+    user_id: UUID,
+    allow_cancelled: bool = False,
 ) -> PracticeAssignment:
     stmt = (
         select(PracticeAssignment)
@@ -58,6 +62,11 @@ async def _check_student_owns(
     if not assignment:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, "Biriktirish sizga tegishli emas"
+        )
+    if not allow_cancelled and assignment.status == AssignmentStatus.CANCELLED:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Amaliyot biriktiruvi bekor qilingan. Ushbu amalni bajarib bo'lmaydi.",
         )
     return assignment
 
