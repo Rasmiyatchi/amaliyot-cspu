@@ -312,6 +312,8 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                 skipped += 1
                 continue
 
+        new_faculties: list[tuple[str, Any]] = []
+        new_departments: list[tuple[tuple[Any, str], Any]] = []
         try:
             # Har bir qator alohida SAVEPOINT'da — xato qator boshqalarni buzmaydi
             async with db.begin_nested():
@@ -324,8 +326,9 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                         faculty = Faculty(name=str(faculty_name).strip())
                         db.add(faculty)
                         await db.flush()
-                        search_name = str(faculty_name).strip().lower()
-                        faculty_cache[search_name] = faculty
+                        # Keshga FAQAT savepoint muvaffaqiyatli tugagach qo'shiladi (pastda):
+                        # qator xato bo'lsa fakultet ham bekor bo'ladi, keshda "o'lik" id qolmasin
+                        new_faculties.append((str(faculty_name).strip().lower(), faculty))
                     faculty_id = faculty.id
                     dept_name = rec.get("department_name")
                     if dept_name:
@@ -336,8 +339,9 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                             dept = Department(faculty_id=faculty_id, name=str(dept_name).strip())
                             db.add(dept)
                             await db.flush()
-                            search_name_dept = str(dept_name).strip().lower()
-                            department_cache[(faculty_id, search_name_dept)] = dept
+                            new_departments.append(
+                                ((faculty_id, str(dept_name).strip().lower()), dept)
+                            )
                         department_id = dept.id
 
                 login = username
@@ -403,6 +407,11 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                             )
                         )
 
+            # Savepoint muvaffaqiyatli — yangi fakultet/kafedralar endi keshga olinadi
+            for key, fac in new_faculties:
+                faculty_cache[key] = fac
+            for dkey, dep in new_departments:
+                department_cache[dkey] = dep
             credentials.append(
                 SupervisorImportCredentials(full_name=full_name, username=login, password=password)
             )

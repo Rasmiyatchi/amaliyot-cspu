@@ -4,8 +4,9 @@ Ubuntu 22.04+ VPS uchun bosqichma-bosqich qo'llanma.
 
 ## 0. Ushbu release (2026-10 — audit va tuzatishlar)
 
-**Migratsiya:** `a1c3e5f7b9d1` (`users.device_info` JSONB). API konteyner ishga tushganda
-`alembic upgrade head` avtomatik bajaradi. HEAD = `a1c3e5f7b9d1`.
+**Migratsiyalar:** `a1c3e5f7b9d1` (`users.device_info` JSONB) → `b2d4f6a8c0e3`
+(`contracts.contract_template_id` + `variable_values`). API konteyner ishga tushganda
+`alembic upgrade head` avtomatik bajaradi. HEAD = `b2d4f6a8c0e3`.
 
 **Diqqat — portlar:** `docker-compose.prod.yml` yana faqat **127.0.0.1** ga bog'lanadi
 (API `127.0.0.1:8000`, web `127.0.0.1:8080`). aaPanel / host Nginx shu serverning o'zida bo'lsa

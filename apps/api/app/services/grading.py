@@ -207,7 +207,14 @@ async def authorize(db: AsyncSession, assignment_id: UUID, user: User) -> Practi
     asn = await db.get(PracticeAssignment, assignment_id)
     if not asn:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Biriktirish topilmadi: {assignment_id}")
-    if user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+    if user.role == UserRole.SUPER_ADMIN:
+        return asn
+    if user.role == UserRole.ADMIN:
+        if "practice" not in (user.permissions or []):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Baholashga ruxsat yo'q")
+        from app.services.scoping import assert_assignment_access
+
+        await assert_assignment_access(db, user, assignment_id)
         return asn
     if user.role != UserRole.SUPERVISOR:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Baholashga ruxsat yo'q")

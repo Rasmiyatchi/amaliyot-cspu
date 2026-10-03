@@ -256,6 +256,11 @@ EXACT: dict[str, str] = {
         "organization_id или area_id — укажите только одно из двух"
     ),
     # ── 2026-10 audit: yangi va qamrab olinmagan xabarlar ──────────────────
+    "Bu holatdagi arizani tasdiqlab bo'lmaydi": "Заявку в этом статусе нельзя подтвердить",
+    "Bu holatdagi arizani rad etib bo'lmaydi": "Заявку в этом статусе нельзя отклонить",
+    "Imzolangan yoki bekor qilingan shartnomani tahrirlab bo'lmaydi": (
+        "Подписанный или отменённый договор нельзя редактировать"
+    ),
     "Ushbu amal faqat administratorlar uchun": "Это действие доступно только администраторам",
     "Fayl PDF, JPG yoki PNG emas": "Файл не является PDF, JPG или PNG",
     "Hujjat PDF fayli topilmadi": "PDF-файл документа не найден",

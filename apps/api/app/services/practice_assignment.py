@@ -402,12 +402,17 @@ async def sync_assignments_to_contracts(db: AsyncSession, assignment_ids: list[U
 
     str_ids = {str(aid) for aid in assignment_ids}
 
-    # 1. Rasmiy shartnomalar (Contract) ni yangilash
+    # 1. Rasmiy shartnomalar (Contract) ni yangilash — faqat IMZOLANMAGAN (DRAFT/GENERATED):
+    # imzolangan (ACTIVE) hujjat keyin o'zgarmasligi kerak. Faqat shu biriktirishni o'z ichiga
+    # olgan shartnomalar JSONB bo'yicha olinadi (ilgari HAMMA shartnoma yuklanardi).
+    from sqlalchemy import or_
+
     try:
         contracts = (
             await db.execute(
                 select(Contract).where(
-                    Contract.status.in_([ContractStatus.DRAFT, ContractStatus.GENERATED, ContractStatus.ACTIVE])
+                    Contract.status.in_([ContractStatus.DRAFT, ContractStatus.GENERATED]),
+                    or_(*[Contract.students.contains([{"assignment_id": i}]) for i in str_ids]),
                 )
             )
         ).scalars().all()
@@ -430,7 +435,7 @@ async def sync_assignments_to_contracts(db: AsyncSession, assignment_ids: list[U
                     try:
                         refreshed = await _snapshot_students(db, all_c_assign_ids, contract.organization_id)
                         contract.students = refreshed
-                        if contract.pdf_path or contract.status in (ContractStatus.GENERATED, ContractStatus.ACTIVE):
+                        if contract.pdf_path or contract.status == ContractStatus.GENERATED:
                             await pa_svc.generate_official_contract_pdf(db, contract.id)
                     except Exception as e:
                         logger.warning(f"Shartnoma {contract.id} snapshotini yangilashda xatolik: {e}")
@@ -451,7 +456,8 @@ async def sync_assignments_to_contracts(db: AsyncSession, assignment_ids: list[U
                 await db.execute(
                     select(PracticeApplication).where(
                         PracticeApplication.student_id.in_(student_ids),
-                        PracticeApplication.status.in_([ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE]),
+                        # ACTIVE = skan tasdiqlangan (imzolangan) — qayta yaratilmaydi
+                        PracticeApplication.status == ApplicationStatus.APPROVED,
                     )
                 )
             ).scalars().all()
@@ -484,7 +490,7 @@ async def create_assignment(db: AsyncSession, data: BaseModel) -> dict[str, Any]
     db.add(assignment)
     await db.commit()
     await db.refresh(assignment)
-    await sync_assignments_to_contracts(db, [assignment.id])
+    # Yangi biriktirish hali hech qaysi shartnomada yo'q — shartnoma sinxronizatsiyasi shart emas
     return await get_assignment(db, assignment.id)
 
 
@@ -514,18 +520,18 @@ async def bulk_create_assignments(db: AsyncSession, data: BaseModel) -> BulkAssi
                 "course": group.course if group else None,
             }
         )
-        db.add(assignment)
         try:
-            await db.flush()
+            # Har talaba alohida savepoint'da — bittasining xatosi oldingilarni bekor qilmasin
+            async with db.begin_nested():
+                db.add(assignment)
+                await db.flush()
             created_ids.append(assignment.id)
         except Exception as e:  # noqa: BLE001
-            await db.rollback()
             errors.append(BulkAssignmentError(student_id=student_id, error=str(e)))
             continue
 
     if created_ids:
         await db.commit()
-        await sync_assignments_to_contracts(db, created_ids)
     logger.info(
         f"Bulk assignment: requested={len(student_ids)} created={len(created_ids)} "
         f"failed={len(errors)}"
@@ -580,11 +586,16 @@ async def update_assignment(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
     ):
         assignment.cancelled_at = datetime.now(UTC)
 
+    contract_fields = {"organization_id", "area_id", "supervisor_id", "start_date", "end_date"}
+    contract_relevant = any(
+        k in payload and getattr(assignment, k) != payload[k] for k in contract_fields
+    )
     for key, value in payload.items():
         setattr(assignment, key, value)
 
     await db.commit()
-    await sync_assignments_to_contracts(db, [assignment.id])
+    if contract_relevant:
+        await sync_assignments_to_contracts(db, [assignment.id])
     return await get_assignment(db, assignment.id)
 
 

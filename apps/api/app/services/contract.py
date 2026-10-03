@@ -374,6 +374,8 @@ async def create_contract(db: AsyncSession, data: BaseModel, created_by: UUID) -
             status=ContractStatus.DRAFT,
             qr_token=qr_token,
             notes=payload.get("notes"),
+            contract_template_id=tpl_id,
+            variable_values=var_vals or None,
         )
         db.add(contract)
         await db.commit()
@@ -405,10 +407,12 @@ async def update_contract(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[
     contract = await db.get(Contract, id_)
     if not contract:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Shartnoma topilmadi: {id_}")
-    if contract.status != ContractStatus.DRAFT:
+    # Shartnoma yaratilishi bilan PDF chiqadi (GENERATED) — imzolanmaguncha (skan yo'q)
+    # sanalar/izohni tuzatish mumkin, PDF o'sha shablon va qiymatlar bilan qayta yaratiladi.
+    if contract.status not in (ContractStatus.DRAFT, ContractStatus.GENERATED):
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            "Faqat DRAFT shartnomani tahrirlash mumkin. Boshqasini bekor qiling.",
+            "Imzolangan yoki bekor qilingan shartnomani tahrirlab bo'lmaydi",
         )
 
     payload = data.model_dump(exclude_unset=True)
@@ -422,7 +426,13 @@ async def update_contract(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[
             status.HTTP_400_BAD_REQUEST, "end_date start_date dan oldin bo'lolmaydi"
         )
 
+    was_generated = contract.status == ContractStatus.GENERATED
     await db.commit()
+    if was_generated:
+        from app.services import practice_application as pa_svc
+
+        # Yangi sanalar bilan PDF — saqlangan shablon va qiymatlar asosida
+        await pa_svc.generate_official_contract_pdf(db, contract.id)
     return await get_contract(db, contract.id)
 
 

@@ -52,8 +52,15 @@ async def preview_contract_pdf(id_: UUID, db: SessionDep, _: RequireAdmin):
             media_type="application/pdf",
             headers={"Content-Disposition": "inline; filename=preview.pdf"},
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Preview xatosi: {e}") from e
+        from loguru import logger
+
+        logger.exception(f"Contract preview error ({id_}): {e}")
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "Shartnomani oldindan ko'rishda xatolik"
+        ) from e
 
 
 @router.get("/{id_}/contract.docx")

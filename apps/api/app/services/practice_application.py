@@ -216,9 +216,9 @@ async def create_for_student(
 ) -> dict[str, Any]:
     student = await _student_for_user(db, user)
 
-    # Template validation
+    # Template validation — faqat FAOL shablon (qoralama/arxivdagisi bilan ariza berib bo'lmaydi)
     tpl = await db.get(ContractTemplateDoc, data.contract_template_id)
-    if not tpl:
+    if not tpl or tpl.status != ContractTemplateStatus.ACTIVE:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Shablon topilmadi")
 
     # Bir talabada bir vaqtda faqat bitta faol ariza bo'lsin
@@ -415,10 +415,12 @@ async def unarchive_application(db: AsyncSession, id_: UUID, user: User) -> dict
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Faqat arxivdagi arizalarni arxivdan chiqarish mumkin"
         )
-    if obj.scan_file:
-        obj.status = ApplicationStatus.ACTIVE
+    if obj.qr_token and obj.reviewed_at:
+        # Avval tasdiqlangan ariza — skan bo'lsa faol, bo'lmasa tasdiqlangan holatga qaytadi
+        obj.status = ApplicationStatus.ACTIVE if obj.scan_file else ApplicationStatus.APPROVED
     else:
-        obj.status = ApplicationStatus.APPROVED
+        # Hech qachon tasdiqlanmagan ariza ko'rib chiqishsiz "tasdiqlangan" bo'lib qolmasin
+        obj.status = ApplicationStatus.SUBMITTED
     await db.commit()
     return await get_one(db, id_)
 
@@ -723,10 +725,28 @@ async def _generate_contract(db: AsyncSession, obj: PracticeApplication) -> None
     obj.contract_file = attachment
 
 
+_REVIEWABLE = (
+    ApplicationStatus.SUBMITTED,
+    ApplicationStatus.RESUBMITTED,
+    ApplicationStatus.UNDER_REVIEW,
+    ApplicationStatus.REVISION_REQUIRED,
+)
+
+
 async def approve(db: AsyncSession, id_: UUID, user: User) -> dict[str, Any]:
     obj = await _get_obj(db, id_)
     if obj.status == ApplicationStatus.APPROVED:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ariza allaqachon tasdiqlangan")
+    if obj.status not in _REVIEWABLE:
+        # ACTIVE (skan tasdiqlangan) ariza qayta "tasdiqlangan"ga tushib, skan yuklash
+        # qayta ochilib qolmasin; rad etilgan/arxivdagi ariza ko'rib chiqishsiz tasdiqlanmasin
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Bu holatdagi arizani tasdiqlab bo'lmaydi",
+        )
+    # Qayta topshirilgan (tuzatilgan) ariza — shartnoma yangi ma'lumotlar bilan qayta yaratiladi
+    if obj.status == ApplicationStatus.RESUBMITTED and obj.contract_file:
+        obj.contract_file = None
     obj.status = ApplicationStatus.APPROVED
     obj.qr_token = obj.qr_token or secrets.token_urlsafe(12)
     obj.reviewed_by_id = user.id
@@ -766,6 +786,11 @@ async def approve(db: AsyncSession, id_: UUID, user: User) -> dict[str, Any]:
 
 async def reject(db: AsyncSession, id_: UUID, user: User, note: str | None) -> dict[str, Any]:
     obj = await _get_obj(db, id_)
+    if obj.status not in (*_REVIEWABLE, ApplicationStatus.APPROVED):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Bu holatdagi arizani rad etib bo'lmaydi",
+        )
     obj.status = ApplicationStatus.REJECTED
     obj.reviewed_by_id = user.id
     obj.reviewed_at = datetime.now(UTC)
@@ -1050,6 +1075,22 @@ async def generate_official_contract_pdf(
     if not contract.qr_token:
         contract.qr_token = secrets.token_urlsafe(16)
 
+    # Qayta generatsiyada yaratilgandagi shablon va qiymatlar ishlatiladi (matn/taraflar o'zgarmasin);
+    # yangi qiymatlar berilsa — saqlab qo'yiladi.
+    if template_id is not None:
+        try:
+            contract.contract_template_id = (
+                template_id if isinstance(template_id, UUID) else UUID(str(template_id))
+            )
+        except (ValueError, TypeError, AttributeError):
+            pass
+    else:
+        template_id = contract.contract_template_id
+    if variable_values is not None:
+        contract.variable_values = variable_values or None
+    else:
+        variable_values = contract.variable_values
+
     # Shablonni qidiramiz
     tpl = None
     if template_id:
@@ -1204,7 +1245,12 @@ async def generate_official_contract_pdf(
 
     rel_path = f"storage/contracts/{filename}"
     contract.pdf_path = rel_path
-    contract.status = ContractStatus.GENERATED
+    # Faqat qoralama → generatsiya qilingan; imzolangan/bekor qilingan holat O'ZGARMAYDI
+    if contract.status == ContractStatus.DRAFT:
+        contract.status = ContractStatus.GENERATED
+    if contract.contract_template_id is None and tpl is not None:
+        # Eski shartnoma: birinchi qayta generatsiyada tanlangan shablon muzlatiladi
+        contract.contract_template_id = tpl.id
     contract.generated_at = now
     await db.commit()
 
