@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, File, Form, UploadFile, status
 from fastapi.responses import FileResponse
 
-from app.api.deps import CurrentUser, RequireSuperAdmin
+from app.api.deps import CurrentUser, RequireAdmin, RequireSuperAdmin
 from app.db.session import SessionDep
 from app.schemas.contract_template import (
     ContractTemplateDocRead,
@@ -21,7 +21,9 @@ _DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.doc
 
 
 @router.get("", response_model=list[ContractTemplateDocRead])
-async def list_templates(db: SessionDep, _: CurrentUser) -> list[ContractTemplateDocRead]:
+async def list_templates(db: SessionDep, _: RequireAdmin) -> list[ContractTemplateDocRead]:
+    # To'liq HTML (qoralamalar ham) faqat adminlar uchun; talaba faqat faol turlarni
+    # /practice-applications/contract-types va /{id}/form-fields orqali ko'radi.
     items = await svc.list_templates(db)
     return [ContractTemplateDocRead.model_validate(i) for i in items]
 
