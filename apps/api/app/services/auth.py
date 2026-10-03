@@ -15,7 +15,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request, status
 from jose import JWTError
-from sqlalchemy import func, select, update
+from sqlalchemy import ColumnElement, and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -25,7 +25,7 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
     hash_refresh_token,
-    verify_password,
+    verify_password_async,
 )
 from app.models.enums import NotificationType, UserRole
 from app.models.refresh_token import RefreshToken
@@ -247,6 +247,57 @@ def build_device_label(info: dict[str, Any]) -> str | None:
 
 # ─── Qurilma bog'lash ────────────────────────────────────
 
+DEVICE_ALERT_COOLDOWN = timedelta(minutes=15)
+
+
+async def _device_alert_recipients(db: AsyncSession, user: User) -> list[Any]:
+    """Super adminlar + talaba fakultetining admini (yoki fakultetga biriktirilmagan admin)."""
+    from app.models.academic import Direction, Group
+    from app.models.student import Student
+
+    student_faculty = (
+        await db.execute(
+            select(Direction.faculty_id)
+            .select_from(Student)
+            .join(Group, Group.id == Student.group_id)
+            .join(Direction, Direction.id == Group.direction_id)
+            .where(Student.user_id == user.id)
+        )
+    ).scalar_one_or_none()
+    admin_scope: ColumnElement[bool] = User.faculty_id.is_(None)
+    if student_faculty is not None:
+        admin_scope = or_(admin_scope, User.faculty_id == student_faculty)
+    rows = await db.execute(
+        select(User.id).where(
+            User.is_active.is_(True),
+            or_(
+                User.role == UserRole.SUPER_ADMIN,
+                and_(User.role == UserRole.ADMIN, admin_scope),
+            ),
+        )
+    )
+    return list(rows.scalars().all())
+
+
+async def _recent_device_alert_exists(db: AsyncSession, user: User) -> bool:
+    """Bir talaba qayta-qayta urinsa adminlar xabarga ko'milib ketmasin (15 daqiqada bir marta)."""
+    from app.models.notification import Notification
+
+    since = datetime.now(UTC) - DEVICE_ALERT_COOLDOWN
+    found = (
+        await db.execute(
+            select(Notification.id)
+            .where(
+                Notification.type == NotificationType.GENERIC,
+                Notification.created_at >= since,
+                Notification.data["kind"].astext == "device_blocked",
+                Notification.data["user_id"].astext == str(user.id),
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    return found is not None
+
 
 async def enforce_device_binding(
     db: AsyncSession,
@@ -266,8 +317,13 @@ async def enforce_device_binding(
     """
     if user.role != UserRole.STUDENT:
         return
-    if not device_id:
-        return
+    if not device_id or len(device_id) < 8:
+        # Veb-ilova har doim yuboradi; yo'q bo'lsa — curl/Postman orqali qoidani chetlab o'tishga
+        # urinish yoki juda eski sahifa. Bog'lanmasdan kirishga ruxsat berilmaydi.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Qurilma aniqlanmadi. Sahifani yangilab, qayta urinib ko'ring.",
+        )
 
     ua, ip = _client_meta(request)
     info = build_device_info(device_info, ua, ip)
@@ -301,19 +357,8 @@ async def enforce_device_binding(
     # Boshqa qurilma — adminlarga xabar + blok
     from app.services import notification as notification_svc
 
-    admin_ids = (
-        (
-            await db.execute(
-                select(User.id).where(
-                    User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
-                    User.is_active.is_(True),
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-    if admin_ids:
+    admin_ids = await _device_alert_recipients(db, user)
+    if admin_ids and not await _recent_device_alert_exists(db, user):
         await notification_svc.create_bulk(
             db,
             user_ids=list(admin_ids),
@@ -415,7 +460,7 @@ async def authenticate(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Bunday login topilmadi",
         )
-    if not verify_password(password, user.password_hash):
+    if not await verify_password_async(password, user.password_hash):
         _record_failure(username, _ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

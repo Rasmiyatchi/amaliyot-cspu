@@ -9,7 +9,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 from app.models.academic import Department, Faculty
 from app.models.enums import UserRole
 from app.models.organization import Organization
@@ -185,7 +185,7 @@ async def create_supervisor(db: AsyncSession, data: BaseModel) -> dict[str, Any]
     # User yaratish
     user = User(
         username=payload["username"],
-        password_hash=hash_password(payload["password"]),
+        password_hash=await hash_password_async(payload["password"]),
         email=payload.get("email"),
         phone=payload.get("phone"),
         first_name=payload["first_name"],
@@ -295,7 +295,7 @@ async def update_credentials(
     if new_username and new_username != user.username:
         user.username = new_username
     if new_password:
-        user.password_hash = hash_password(new_password)
+        user.password_hash = await hash_password_async(new_password)
         from app.services.auth import revoke_all_refresh_tokens
 
         await revoke_all_refresh_tokens(db, user.id)
@@ -310,10 +310,28 @@ async def update_credentials(
 
 
 async def delete_supervisor(db: AsyncSession, id_: UUID) -> None:
-    """Supervisor profile va bog'langan User'ni ham o'chiradi (CASCADE)."""
+    """Supervisor profile va bog'langan User'ni ham o'chiradi (CASCADE).
+
+    `practice_assignments.supervisor_id` ON DELETE SET NULL — o'chirilsa uning talabalari
+    rahbarsiz qolib, topshiriqlarni tasdiqlab bo'lmay qolardi va tarixda ism yo'qolardi.
+    Shuning uchun biriktirishi bor supervizor o'chirilmaydi (faolsizlantiriladi).
+    """
+    from app.models.practice_assignment import PracticeAssignment
+
     supervisor = await db.get(Supervisor, id_)
     if not supervisor:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Supervizor topilmadi: {id_}")
+    has_assignments = (
+        await db.execute(
+            select(PracticeAssignment.id).where(PracticeAssignment.supervisor_id == id_).limit(1)
+        )
+    ).scalar_one_or_none()
+    if has_assignments:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Supervizorga talabalar biriktirilgan — o'chirib bo'lmaydi. "
+            "O'rniga uni faolsizlantiring (is_active = false) yoki talabalarni boshqasiga o'tkazing.",
+        )
     user = await db.get(User, supervisor.user_id)
     try:
         if user:

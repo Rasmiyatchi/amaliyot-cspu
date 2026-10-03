@@ -30,4 +30,4 @@ class CredentialsUpdate(BaseModel):
     """
 
     username: str | None = Field(None, min_length=3, max_length=64)
-    password: str | None = Field(None, min_length=4, max_length=128)
+    password: str | None = Field(None, min_length=6, max_length=128)

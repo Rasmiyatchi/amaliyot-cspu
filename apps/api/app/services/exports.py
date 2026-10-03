@@ -15,7 +15,13 @@ from sqlalchemy.orm import aliased
 from app.models.academic import Direction, Faculty, Group
 from app.models.area import Area
 from app.models.attendance import AttendanceDay
-from app.models.enums import AttendanceDayStatus, FinalReportStatus, StudentStatus
+from app.models.enums import (
+    AssignmentStatus,
+    AttendanceDayStatus,
+    FinalReportStatus,
+    Semester,
+    StudentStatus,
+)
 from app.models.final_report import FinalReport
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
@@ -221,7 +227,13 @@ async def export_attendance(
     faculty_id: UUID | None = None,
     date_from: Any = None,
     date_to: Any = None,
+    search: str | None = None,
 ) -> bytes:
+    # Ekrandagi ro'yxat bilan bir xil bo'lsin: o'tib ketgan, yozuvsiz kunlar avval qizil qilinadi
+    from app.services.attendance import _search_clause, sync_missed_attendance_days
+
+    await sync_missed_attendance_days(db, assignment_id=assignment_id, student_id=student_id)
+
     stmt = (
         select(
             AttendanceDay.date,
@@ -266,6 +278,8 @@ async def export_attendance(
         stmt = stmt.where(AttendanceDay.date >= date_from)
     if date_to:
         stmt = stmt.where(AttendanceDay.date <= date_to)
+    if search:
+        stmt = stmt.where(_search_clause(search))
 
     rows = (await db.execute(stmt)).all()
     headers = [
@@ -291,6 +305,14 @@ async def export_assignments(
     db: AsyncSession,
     *,
     academic_year_id: UUID | None = None,
+    faculty_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    group_id: UUID | None = None,
+    course: int | None = None,
+    status: AssignmentStatus | None = None,
+    semester: Semester | None = None,
+    practice_type_id: UUID | None = None,
+    search: str | None = None,
 ) -> bytes:
     stmt = (
         select(
@@ -319,6 +341,27 @@ async def export_assignments(
     )
     if academic_year_id:
         stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
+    if group_id:
+        stmt = stmt.where(PracticeAssignment.group_id == group_id)
+    if direction_id or faculty_id:
+        direction = aliased(Direction)
+        stmt = stmt.outerjoin(direction, direction.id == Group.direction_id)
+        if direction_id:
+            stmt = stmt.where(direction.id == direction_id)
+        if faculty_id:
+            stmt = stmt.where(direction.faculty_id == faculty_id)
+    if course is not None:
+        stmt = stmt.where(PracticeAssignment.course == course)
+    if status is not None:
+        stmt = stmt.where(PracticeAssignment.status == status)
+    if semester is not None:
+        stmt = stmt.where(PracticeAssignment.semester == semester)
+    if practice_type_id:
+        stmt = stmt.where(PracticeAssignment.practice_type_id == practice_type_id)
+    if search:
+        from app.services.attendance import _search_clause
+
+        stmt = stmt.where(_search_clause(search))
     rows = (await db.execute(stmt)).all()
     headers = [
         "Assignment ID",

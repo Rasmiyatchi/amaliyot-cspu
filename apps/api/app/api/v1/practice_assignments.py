@@ -16,6 +16,7 @@ from app.schemas.practice_assignment import (
     PracticeAssignmentUpdate,
 )
 from app.services import practice_assignment as svc
+from app.services.scoping import assert_assignment_access
 
 router = APIRouter(prefix="/practice-assignments", tags=["practice-assignments"])
 
@@ -87,7 +88,8 @@ async def my_assignments(
 
 
 @router.get("/{id_}", response_model=PracticeAssignmentRead)
-async def get_assignment(id_: UUID, db: SessionDep, _: RequirePractice) -> PracticeAssignmentRead:
+async def get_assignment(id_: UUID, db: SessionDep, user: RequirePractice) -> PracticeAssignmentRead:
+    await assert_assignment_access(db, user, id_)
     return PracticeAssignmentRead.model_validate(await svc.get_assignment(db, id_))
 
 
@@ -120,11 +122,13 @@ async def update_assignment(
     id_: UUID,
     data: PracticeAssignmentUpdate,
     db: SessionDep,
-    _: RequirePractice,
+    user: RequirePractice,
 ) -> PracticeAssignmentRead:
+    await assert_assignment_access(db, user, id_)
     return PracticeAssignmentRead.model_validate(await svc.update_assignment(db, id_, data))
 
 
 @router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_assignment(id_: UUID, db: SessionDep, _: RequirePractice) -> None:
+async def delete_assignment(id_: UUID, db: SessionDep, user: RequirePractice) -> None:
+    await assert_assignment_access(db, user, id_)
     await svc.delete_assignment(db, id_)

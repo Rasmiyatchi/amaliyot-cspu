@@ -58,7 +58,7 @@ async def update_admin(
     db: SessionDep,
     user: RequireSuperAdmin,
 ) -> AdminRead:
-    return AdminRead.model_validate(await svc.update_admin(db, admin_id, data))
+    return AdminRead.model_validate(await svc.update_admin(db, admin_id, data, user.id))
 
 
 @router.patch("/{admin_id}/credentials", response_model=AdminRead)

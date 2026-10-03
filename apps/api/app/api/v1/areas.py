@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import RequirePartners
+from app.api.deps import RequireAdmin, RequirePartners
 from app.db.session import SessionDep
 from app.schemas.area import AreaCreate, AreaRead, AreaUpdate
 from app.schemas.common import Paginated
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/areas", tags=["areas"])
 @router.get("", response_model=Paginated[AreaRead])
 async def list_areas(
     db: SessionDep,
-    _: RequirePartners,
+    _: RequireAdmin,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     search: str | None = Query(None, min_length=1, max_length=100),
@@ -34,7 +34,7 @@ async def list_areas(
 
 
 @router.get("/{id_}", response_model=AreaRead)
-async def get_area(id_: UUID, db: SessionDep, _: RequirePartners) -> AreaRead:
+async def get_area(id_: UUID, db: SessionDep, _: RequireAdmin) -> AreaRead:
     return AreaRead.model_validate(await svc.get_area(db, id_))
 
 

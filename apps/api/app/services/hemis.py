@@ -17,7 +17,7 @@ from openpyxl import load_workbook
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 from app.models.academic import AcademicYear, Direction, Group
 from app.models.enums import DegreeType, EducationForm, Gender, StudentStatus, UserRole
 from app.models.student import Student
@@ -363,7 +363,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
 
                 user = User(
                     username=generated_login,
-                    password_hash=hash_password(password),
+                    password_hash=await hash_password_async(password, temporary=True),
                     role=UserRole.STUDENT,
                     is_active=True,
                     first_name=first_name,

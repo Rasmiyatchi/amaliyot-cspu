@@ -15,7 +15,7 @@ from sqlalchemy.orm import aliased
 
 from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.contract import Contract
-from app.models.enums import AssignmentStatus, ContractStatus, ContractTemplate
+from app.models.enums import AssignmentStatus, ContractStatus, ContractTemplate, StudentStatus
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
@@ -217,9 +217,12 @@ async def _snapshot_direct_students(
     if group_ids:
         grp_student_ids = (
             await db.execute(
-                select(Student.id).where(
+                select(Student.id)
+                .join(User, User.id == Student.user_id)
+                .where(
                     Student.group_id.in_(group_ids),
-                    Student.is_active.is_(True),
+                    Student.status == StudentStatus.STUDYING,
+                    User.is_active.is_(True),
                 )
             )
         ).scalars().all()
@@ -393,7 +396,8 @@ async def create_contract(db: AsyncSession, data: BaseModel, created_by: UUID) -
         logger.exception(f"Contract creation error: {e}")
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            f"Shartnoma yaratishda xatolik yuz berdi: {e}",
+            "Shartnoma yaratishda kutilmagan xatolik yuz berdi. "
+            "Ma'lumotlarni tekshirib qayta urinib ko'ring.",
         ) from e
 
 
@@ -456,7 +460,10 @@ async def unarchive_contract(db: AsyncSession, id_: UUID) -> dict[str, Any]:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Faqat arxivdagi shartnomalarni arxivdan chiqarish mumkin"
         )
-    if contract.scan_path:
+    if contract.revoked_at is not None:
+        # Bekor qilingan shartnoma arxivdan chiqqanda ham bekorligicha qoladi
+        contract.status = ContractStatus.REVOKED
+    elif contract.scan_path:
         contract.status = ContractStatus.ACTIVE
     elif contract.pdf_path:
         contract.status = ContractStatus.GENERATED
@@ -484,9 +491,10 @@ async def generate_pdf(db: AsyncSession, id_: UUID) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001
+        logger.exception(f"Contract PDF generation error ({contract.id}): {e}")
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-            f"PDF generatsiya xatoligi: {e}",
+            "PDF generatsiya qilishda xatolik yuz berdi",
         ) from e
 
     return await get_contract(db, contract.id)
@@ -517,18 +525,15 @@ async def upload_scan(db: AsyncSession, id_: UUID, content: bytes, filename: str
 
 
 async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
-    """Public QR verification — auth talab qilmaydi, minimal ma'lumot."""
-    from uuid import UUID as PyUUID
+    """Public QR verification — auth talab qilmaydi, minimal ma'lumot.
 
-    conds = [
-        Contract.qr_token == qr_token,
-        Contract.number == qr_token,
-    ]
-    try:
-        parsed_uuid = PyUUID(qr_token)
-        conds.append(Contract.id == parsed_uuid)
-    except (ValueError, TypeError, AttributeError):
-        pass
+    Faqat QR ichidagi tasodifiy `qr_token` bo'yicha qidiriladi. Ketma-ket shartnoma raqami yoki
+    UUID bilan ochiq qidirish ATAYLAB yo'q — aks holda 26000001, 26000002 ... raqamlarini
+    terib chiqib barcha shartnomalar (talabalar ro'yxati bilan) anonim ko'rib chiqilardi.
+    """
+    if not qr_token or len(qr_token) < 12:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Shartnoma topilmadi")
+    conds = [Contract.qr_token == qr_token]
 
     row = (
         (
@@ -564,7 +569,7 @@ async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
 
 def _remove_contract_files(contract: Contract) -> None:
     """Shartnomaga bog'langan PDF va skan fayllarni diskdan o'chirish."""
-    base_dir = Path(__file__).parent.parent.parent.parent
+    base_dir = Path(__file__).resolve().parent.parent.parent  # apps/api
     paths_to_check = []
     if contract.pdf_path:
         paths_to_check.append(contract.pdf_path)

@@ -14,7 +14,7 @@ from fastapi import (
     status,
 )
 
-from app.api.deps import RequireSupervisor, RequireSupervisors
+from app.api.deps import RequireAdmin, RequireSupervisor, RequireSupervisors
 from app.db.session import SessionDep
 from app.models.enums import UserRole
 from app.schemas.common import CredentialsUpdate, Paginated
@@ -32,6 +32,7 @@ from app.services import supervisor as svc
 from app.services import supervisor_import as import_svc
 from app.services import supervisor_report as report_svc
 from app.services.import_templates import build_supervisors_template
+from app.services.scoping import assert_supervisor_in_scope
 
 router = APIRouter(prefix="/supervisors", tags=["supervisors"])
 
@@ -134,7 +135,7 @@ async def my_report_pdf(
 @router.get("", response_model=Paginated[SupervisorRead])
 async def list_supervisors(
     db: SessionDep,
-    user: RequireSupervisors,
+    user: RequireAdmin,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
     organization_id: UUID | None = None,
@@ -168,7 +169,8 @@ async def list_supervisors(
 
 
 @router.get("/{id_}", response_model=SupervisorRead)
-async def get_supervisor(id_: UUID, db: SessionDep, _: RequireSupervisors) -> SupervisorRead:
+async def get_supervisor(id_: UUID, db: SessionDep, user: RequireAdmin) -> SupervisorRead:
+    await assert_supervisor_in_scope(db, user, id_)
     return SupervisorRead.model_validate(await svc.get_supervisor(db, id_))
 
 
@@ -198,6 +200,7 @@ async def update_supervisor(
     db: SessionDep,
     user: RequireSupervisors,
 ) -> SupervisorRead:
+    await assert_supervisor_in_scope(db, user, id_)
     result = await svc.update_supervisor(db, id_, data)
     await audit.log(
         db,
@@ -225,6 +228,7 @@ async def update_supervisor_credentials(
     db: SessionDep,
     user: RequireSupervisors,
 ) -> SupervisorRead:
+    await assert_supervisor_in_scope(db, user, id_)
     result = await svc.update_credentials(db, id_, data)
     await audit.log(
         db,
@@ -290,6 +294,7 @@ async def bulk_delete_supervisors(
 async def delete_supervisor(
     id_: UUID, request: Request, db: SessionDep, user: RequireSupervisors
 ) -> None:
+    await assert_supervisor_in_scope(db, user, id_)
     snapshot = await svc.get_supervisor(db, id_)
     await svc.delete_supervisor(db, id_)
     await audit.log(

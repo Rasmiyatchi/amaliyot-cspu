@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import CurrentUser
 from app.core.config import settings
-from app.core.security import hash_password, verify_password
+from app.core.security import hash_password_async, verify_password_async
 from app.db.session import SessionDep
 from app.models.enums import UserRole
 from app.schemas.auth import (
@@ -149,13 +149,13 @@ async def change_my_password(
     user: CurrentUser,
     rt: Annotated[str | None, Cookie()] = None,
 ) -> None:
-    if not verify_password(data.current_password, user.password_hash):
+    if not await verify_password_async(data.current_password, user.password_hash):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Joriy parol noto'g'ri")
     if data.new_password == user.username:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Yangi parol login bilan bir xil bo'lmasin"
         )
-    user.password_hash = hash_password(data.new_password)
+    user.password_hash = await hash_password_async(data.new_password)
     user.must_change_password = False
     # Boshqa qurilma/brauzerlardagi sessiyalar yopiladi; joriy brauzer saqlanadi
     await revoke_all_refresh_tokens(db, user.id, keep_token=rt)
@@ -182,7 +182,7 @@ async def force_change_my_password(
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Yangi parol login bilan bir xil bo'lmasin"
         )
-    user.password_hash = hash_password(data.new_password)
+    user.password_hash = await hash_password_async(data.new_password)
     user.must_change_password = False
     await revoke_all_refresh_tokens(db, user.id, keep_token=rt)
     await db.commit()

@@ -20,7 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings as app_settings
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 from app.models.academic import Department, Faculty
 from app.models.enums import UserRole
 from app.models.organization import Organization
@@ -363,7 +363,7 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
 
                 user = User(
                     username=login,
-                    password_hash=hash_password(password),
+                    password_hash=await hash_password_async(password, temporary=True),
                     role=UserRole.SUPERVISOR,
                     is_active=True,
                     first_name=str(first_name),

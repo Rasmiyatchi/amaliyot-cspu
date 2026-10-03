@@ -51,7 +51,8 @@ class TokenResponse(BaseModel):
 class UserMeResponse(BaseModel):
     id: UUID
     username: str
-    email: EmailStr | None
+    # str (EmailStr emas): bazadagi eski noto'g'ri email kirishni butunlay to'sib qo'ymasin
+    email: str | None
     role: UserRole
     first_name: str
     last_name: str
@@ -70,7 +71,7 @@ class UserMeResponse(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(..., min_length=1, max_length=128)
-    new_password: str = Field(..., min_length=4, max_length=128)
+    new_password: str = Field(..., min_length=6, max_length=128)
 
 
 class ForceChangePasswordRequest(BaseModel):
@@ -79,7 +80,7 @@ class ForceChangePasswordRequest(BaseModel):
     Joriy parolni tekshirmaydi (chunki bu avto-generatsiyalangan login=parol).
     """
 
-    new_password: str = Field(..., min_length=4, max_length=128)
+    new_password: str = Field(..., min_length=6, max_length=128)
 
 
 class ProfileUpdateRequest(BaseModel):

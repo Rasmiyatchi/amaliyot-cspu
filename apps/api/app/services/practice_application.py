@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import secrets
 from datetime import UTC, datetime
@@ -12,7 +13,7 @@ from uuid import UUID
 import qrcode
 from fastapi import HTTPException, status
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -63,6 +64,22 @@ def _qr_png(url: str) -> bytes:
     return buf.getvalue()
 
 
+_UZ_MONTHS = (
+    "yanvar",
+    "fevral",
+    "mart",
+    "aprel",
+    "may",
+    "iyun",
+    "iyul",
+    "avgust",
+    "sentyabr",
+    "oktyabr",
+    "noyabr",
+    "dekabr",
+)
+
+
 async def get_next_shared_contract_number(db: AsyncSession, year: int | None = None) -> str:
     """Bazada mavjud faol/arxivdagi shartnomalar ichidan eng katta shartnoma raqamini (MAX) topadi va MAX + 1 beradi.
 
@@ -71,6 +88,10 @@ async def get_next_shared_contract_number(db: AsyncSession, year: int | None = N
     if year is None:
         year = datetime.now(UTC).year
     prefix = f"{year % 100:02d}"
+
+    # Bir vaqtda ikki admin tasdiqlasa/yaratsa ikkalasi bir xil MAX+1 ni olmasin: tranzaksiya
+    # tugaguncha (commit/rollback) raqam berish ketma-ket bajariladi.
+    await db.execute(text("SELECT pg_advisory_xact_lock(726001)"))
 
     # PracticeApplication (talaba arizalari) va Contract (rasmiy shartnomalar) jadvalidagi raqamlar
     stmt_app = select(PracticeApplication.contract_number).where(
@@ -404,7 +425,7 @@ async def unarchive_application(db: AsyncSession, id_: UUID, user: User) -> dict
 
 def _remove_application_files(app_obj: PracticeApplication) -> None:
     """Arizaga bog'langan PDF/DOCX va skan fayllarni diskdan o'chirish."""
-    base_dir = Path(__file__).parent.parent.parent.parent
+    base_dir = Path(__file__).resolve().parent.parent.parent  # apps/api
     paths = []
     if app_obj.contract_file and isinstance(app_obj.contract_file, dict):
         if app_obj.contract_file.get("path"):
@@ -497,9 +518,12 @@ async def _build_contract_context(
         "contract_number": "PREVIEW",
         "day": now.strftime("%d"),
         "contract_day": now.strftime("%d"),
-        "month": now.strftime("%m"),
+        # Rasmiy shablonlar: "202{year} y. \"{day}\" {month}" → 2026 y. "05" sentyabr
+        "month": _UZ_MONTHS[now.month - 1],
         "contract_month": now.strftime("%m"),
-        "year": str(now.year)[-2:],
+        "month_number": now.strftime("%m"),
+        "year": str(now.year)[-1],
+        "year_short": str(now.year)[-2:],
         "contract_year": str(now.year),
         "contract_date": now.strftime("%d.%m.%Y"),
         "obyekt": obj.object_name or "",
@@ -612,7 +636,8 @@ async def preview_contract_pdf(db: AsyncSession, id_: UUID) -> bytes:
                 "end_date": ctx.get("practice_end_date") or ctx.get("end_date") or "",
             }
         ]
-        return render_student_contract_pdf(
+        return await asyncio.to_thread(
+            render_student_contract_pdf,
             tpl.html_content,
             str_ctx,
             "",
@@ -657,7 +682,8 @@ async def _generate_contract(db: AsyncSession, obj: PracticeApplication) -> None
                 "end_date": ctx.get("practice_end_date") or ctx.get("end_date") or "",
             }
         ]
-        pdf_bytes = render_student_contract_pdf(
+        pdf_bytes = await asyncio.to_thread(
+            render_student_contract_pdf,
             tpl.html_content,
             str_ctx,
             obj.qr_token or "",
@@ -777,8 +803,8 @@ async def list_contract_types(db: AsyncSession) -> list[dict[str, Any]]:
 
 async def contract_file_path(db: AsyncSession, user: User, id_: UUID):
     """Generatsiya qilingan shartnoma faylining yo'li (kirish tekshiruvi bilan)."""
-    from app.models.enums import UserRole
     from app.models.contract_template import ContractTemplateDoc
+    from app.models.enums import UserRole
 
     obj = await _get_obj(db, id_)
     if user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
@@ -944,16 +970,10 @@ async def appendix_by_region(db: AsyncSession) -> list[dict[str, Any]]:
 async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
     from sqlalchemy import or_
 
-    # UUID yoki token yoki shartnoma raqami orqali qidirish
-    conds = [
-        PracticeApplication.qr_token == qr_token,
-        PracticeApplication.contract_number == qr_token,
-    ]
-    try:
-        parsed_uuid = UUID(qr_token)
-        conds.append(PracticeApplication.id == parsed_uuid)
-    except (ValueError, TypeError, AttributeError):
-        pass
+    # Faqat QR token bo'yicha (raqam/UUID bilan ochiq qidirish — ma'lumot sizib chiqishi)
+    if not qr_token or len(qr_token) < 12:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ariza topilmadi")
+    conds = [PracticeApplication.qr_token == qr_token]
 
     row = (
         await db.execute(
@@ -975,8 +995,6 @@ async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
     ).first()
 
     if not row:
-        from fastapi import HTTPException, status
-
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ariza topilmadi")
 
     var_vals = row.variable_values or {}
@@ -1078,9 +1096,12 @@ async def generate_official_contract_pdf(
         "contract_number": contract.number,
         "day": start_d.strftime("%d"),
         "contract_day": start_d.strftime("%d"),
-        "month": start_d.strftime("%m"),
+        # Rasmiy shablonlar: "202{year} y. \"{day}\" {month}" → 2026 y. "05" sentyabr
+        "month": _UZ_MONTHS[start_d.month - 1],
         "contract_month": start_d.strftime("%m"),
-        "year": str(start_d.year)[-2:],
+        "month_number": start_d.strftime("%m"),
+        "year": str(start_d.year)[-1],
+        "year_short": str(start_d.year)[-2:],
         "contract_year": str(start_d.year),
         "contract_date": start_d.strftime("%d.%m.%Y"),
         "practice_start_date": start_d.strftime("%d.%m.%Y"),
@@ -1164,7 +1185,8 @@ async def generate_official_contract_pdf(
         from app.services.pdf import render_student_contract_pdf
 
         str_ctx = {k: str(v) for k, v in ctx.items()}
-        pdf_bytes = render_student_contract_pdf(
+        pdf_bytes = await asyncio.to_thread(
+            render_student_contract_pdf,
             tpl.html_content,
             str_ctx,
             contract.qr_token,
@@ -1173,7 +1195,7 @@ async def generate_official_contract_pdf(
             contract_date=ctx["contract_date"],
         )
     else:
-        pdf_bytes = pdf_svc.render_contract_pdf(contract, organization)
+        pdf_bytes = await asyncio.to_thread(pdf_svc.render_contract_pdf, contract, organization)
 
     PDF_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     filename = f"{contract.number.replace('/', '_')}.pdf"
@@ -1190,75 +1212,48 @@ async def generate_official_contract_pdf(
 
 
 async def get_public_contract_pdf_path(db: AsyncSession, qr_token: str) -> tuple[Path, str]:
-    """QR token, shartnoma raqami yoki ID orqali ochiq (public) PDF faylini topish."""
-    from sqlalchemy import or_
+    """QR token orqali ochiq (public) PDF faylini topish — FAQAT o'qish.
 
-    conds = [
-        PracticeApplication.qr_token == qr_token,
-        PracticeApplication.contract_number == qr_token,
-    ]
-    try:
-        parsed_uuid = UUID(qr_token)
-        conds.append(PracticeApplication.id == parsed_uuid)
-    except (ValueError, TypeError, AttributeError):
-        pass
-
-    obj = (await db.execute(select(PracticeApplication).where(or_(*conds)))).scalar_one_or_none()
-
-    if obj:
-        if not obj.contract_file and obj.contract_template_id and obj.status in (ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE):
-            await _generate_contract(db, obj)
-            await db.commit()
-
-        if obj.contract_file:
-            base = Path(__file__).parent.parent.parent
-            rel = str(obj.contract_file.get("path", "")).lstrip("/\\")
-            if rel.startswith("storage/") or rel.startswith("storage\\"):
-                file_path = base / rel
-            else:
-                file_path = base / "storage" / "contracts" / rel
-
-            if not file_path.exists() and obj.contract_template_id:
-                await _generate_contract(db, obj)
-                await db.commit()
-                rel = str(obj.contract_file.get("path", "")).lstrip("/\\")
-                file_path = (base / rel) if (rel.startswith("storage/") or rel.startswith("storage\\")) else (base / "storage" / "contracts" / rel)
-
-            if file_path.exists():
-                return file_path, obj.contract_number or str(obj.id)
-
-    # Contract modelidan qidiramiz
+    Ommaviy endpoint hech narsa yaratmaydi va statusni o'zgartirmaydi: ilgari fayl topilmasa PDF
+    qayta generatsiya qilinib, bekor qilingan shartnoma GENERATED holatiga qaytib qolardi va
+    biriktirishlar qayta yozilardi. Fayl yo'q bo'lsa — 404 (admin paneldan qayta yaratiladi).
+    """
     from app.models.contract import Contract
 
-    c_conds = [
-        Contract.qr_token == qr_token,
-        Contract.number == qr_token,
-    ]
-    try:
-        parsed_uuid = UUID(qr_token)
-        c_conds.append(Contract.id == parsed_uuid)
-    except (ValueError, TypeError, AttributeError):
-        pass
+    if not qr_token or len(qr_token) < 12:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi")
 
-    contract = (await db.execute(select(Contract).where(or_(*c_conds)))).scalar_one_or_none()
-    if contract:
-        if not contract.pdf_path:
-            await generate_official_contract_pdf(db, contract.id)
-            await db.refresh(contract)
+    base = Path(__file__).resolve().parent.parent.parent  # apps/api
 
-        if contract.pdf_path:
-            base = Path(__file__).parent.parent.parent
-            rel = contract.pdf_path.lstrip("/\\")
-            file_path = (base / rel) if (rel.startswith("storage/") or rel.startswith("storage\\")) else (base / "storage" / "contracts" / rel)
+    def _resolve(rel_path: str) -> Path:
+        rel = str(rel_path or "").replace("\\", "/").lstrip("/")
+        if rel.startswith("storage/"):
+            file_path = base / rel
+        else:
+            file_path = base / "storage" / "contracts" / rel
+        resolved = file_path.resolve()
+        if not str(resolved).startswith(str((base / "storage").resolve())):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi")
+        return resolved
 
-            if not file_path.exists():
-                await generate_official_contract_pdf(db, contract.id)
-                await db.refresh(contract)
-                rel = contract.pdf_path.lstrip("/\\")
-                file_path = (base / rel) if (rel.startswith("storage/") or rel.startswith("storage\\")) else (base / "storage" / "contracts" / rel)
+    obj = (
+        await db.execute(
+            select(PracticeApplication).where(PracticeApplication.qr_token == qr_token)
+        )
+    ).scalar_one_or_none()
+    is_live = obj is not None and obj.status in (ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE)
+    if obj and obj.contract_file and is_live:
+        file_path = _resolve(str(obj.contract_file.get("path", "")))
+        if file_path.exists() and file_path.suffix.lower() == ".pdf":
+            return file_path, obj.contract_number or str(obj.id)
 
-            if file_path.exists():
-                return file_path, contract.number or str(contract.id)
+    contract = (
+        await db.execute(select(Contract).where(Contract.qr_token == qr_token))
+    ).scalar_one_or_none()
+    if contract and contract.pdf_path:
+        file_path = _resolve(contract.pdf_path)
+        if file_path.exists():
+            return file_path, contract.number or str(contract.id)
 
     raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi")
 

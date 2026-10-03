@@ -8,14 +8,18 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, Response
 
-from app.api.deps import RequireAdmin
+from app.api.deps import RequirePartners, RequirePractice, RequireStructure
 from app.db.session import SessionDep
 from app.models.enums import (
+    AssignmentStatus,
     AttendanceDayStatus,
     FinalReportStatus,
     OrganizationKind,
+    Semester,
     StudentStatus,
+    UserRole,
 )
+from app.models.user import User
 from app.services import area as area_svc
 from app.services import exports as svc
 from app.services import organization as org_svc
@@ -26,6 +30,13 @@ from app.services.import_templates import (
 )
 
 router = APIRouter(prefix="/exports", tags=["exports"])
+
+
+def _scoped_faculty(user: User, faculty_id: UUID | None) -> UUID | None:
+    """Fakultetga biriktirilgan admin faqat o'z fakultetini eksport qila oladi."""
+    if user.role == UserRole.ADMIN and user.faculty_id:
+        return user.faculty_id
+    return faculty_id
 
 _XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -47,7 +58,7 @@ def _csv_response(content: bytes, prefix: str) -> Response:
 async def export_credentials(
     request: Request,
     db: SessionDep,
-    user: RequireAdmin,
+    user: RequireStructure,
     faculty_id: UUID | None = None,
     direction_id: UUID | None = None,
     group_id: UUID | None = None,
@@ -58,6 +69,7 @@ async def export_credentials(
 ) -> Response:
     from app.services import audit_log as audit
 
+    faculty_id = _scoped_faculty(user, faculty_id)
     rows = await svc.export_student_credentials(
         db,
         faculty_id=faculty_id,
@@ -99,7 +111,7 @@ async def export_credentials(
 @router.get("/students.csv", summary="Talabalar CSV (filtrlar bilan)")
 async def export_students(
     db: SessionDep,
-    _: RequireAdmin,
+    user: RequireStructure,
     faculty_id: UUID | None = None,
     direction_id: UUID | None = None,
     group_id: UUID | None = None,
@@ -110,7 +122,7 @@ async def export_students(
 ) -> Response:
     content = await svc.export_students(
         db,
-        faculty_id=faculty_id,
+        faculty_id=_scoped_faculty(user, faculty_id),
         direction_id=direction_id,
         group_id=group_id,
         course=course,
@@ -124,7 +136,7 @@ async def export_students(
 @router.get("/attendance.csv", summary="Davomat CSV")
 async def export_attendance(
     db: SessionDep,
-    _: RequireAdmin,
+    user: RequirePractice,
     academic_year_id: UUID | None = None,
     assignment_id: UUID | None = None,
     student_id: UUID | None = None,
@@ -134,6 +146,7 @@ async def export_attendance(
     faculty_id: UUID | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    search: str | None = Query(None, min_length=1, max_length=100),
 ) -> Response:
     content = await svc.export_attendance(
         db,
@@ -143,25 +156,47 @@ async def export_attendance(
         status=status,
         group_id=group_id,
         direction_id=direction_id,
-        faculty_id=faculty_id,
+        faculty_id=_scoped_faculty(user, faculty_id),
         date_from=date_from,
         date_to=date_to,
+        search=search,
     )
     return _csv_response(content, "davomat")
 
 
-@router.get("/assignments.csv", summary="Biriktirishlar CSV")
+@router.get("/assignments.csv", summary="Biriktirishlar CSV (filtrlar bilan)")
 async def export_assignments(
-    db: SessionDep, _: RequireAdmin, academic_year_id: UUID | None = None
+    db: SessionDep,
+    user: RequirePractice,
+    academic_year_id: UUID | None = None,
+    faculty_id: UUID | None = None,
+    direction_id: UUID | None = None,
+    group_id: UUID | None = None,
+    course: int | None = Query(None, ge=1, le=5),
+    status: AssignmentStatus | None = None,
+    semester: Semester | None = None,
+    practice_type_id: UUID | None = None,
+    search: str | None = Query(None, min_length=1, max_length=100),
 ) -> Response:
-    content = await svc.export_assignments(db, academic_year_id=academic_year_id)
+    content = await svc.export_assignments(
+        db,
+        academic_year_id=academic_year_id,
+        faculty_id=_scoped_faculty(user, faculty_id),
+        direction_id=direction_id,
+        group_id=group_id,
+        course=course,
+        status=status,
+        semester=semester,
+        practice_type_id=practice_type_id,
+        search=search,
+    )
     return _csv_response(content, "biriktirishlar")
 
 
 @router.get("/final-reports.csv", summary="Yakuniy hisobotlar CSV (filtrlar bilan)")
 async def export_final_reports(
     db: SessionDep,
-    _: RequireAdmin,
+    user: RequirePractice,
     academic_year_id: UUID | None = None,
     status: FinalReportStatus | None = None,
     group_id: UUID | None = None,
@@ -176,7 +211,7 @@ async def export_final_reports(
         status=status,
         group_id=group_id,
         direction_id=direction_id,
-        faculty_id=faculty_id,
+        faculty_id=_scoped_faculty(user, faculty_id),
         course=course,
         search=search,
     )
@@ -189,12 +224,12 @@ async def export_final_reports(
 )
 async def export_organizations(
     db: SessionDep,
-    _: RequireAdmin,
+    _user: RequirePartners,
     search: str | None = None,
     kind: OrganizationKind | None = None,
     region: str | None = None,
 ) -> Response:
-    items, _ = await org_svc.list_organizations(
+    items, _total = await org_svc.list_organizations(
         db, offset=0, limit=10000, search=search, kind=kind, region=region
     )
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -213,11 +248,11 @@ async def export_organizations(
 )
 async def export_areas(
     db: SessionDep,
-    _: RequireAdmin,
+    _user: RequirePartners,
     search: str | None = None,
     region: str | None = None,
 ) -> Response:
-    items, _ = await area_svc.list_areas(
+    items, _total = await area_svc.list_areas(
         db, offset=0, limit=10000, search=search, region=region
     )
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")

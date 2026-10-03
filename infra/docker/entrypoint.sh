@@ -22,7 +22,8 @@ async def check():
             await engine.dispose()
             return True
         except Exception as err:
-            print(f"   Database not ready yet (attempt {attempt}/30)... waiting 1s", flush=True)
+            reason = f"{type(err).__name__}: {err}".splitlines()[0][:300]
+            print(f"   Database not ready yet (attempt {attempt}/30): {reason}", flush=True)
             await asyncio.sleep(1)
     await engine.dispose()
     return False

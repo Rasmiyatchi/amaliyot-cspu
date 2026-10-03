@@ -3,9 +3,9 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 
-from app.api.deps import RequireAdmin, require_permission
+from app.api.deps import RequireAdmin, RequireStructure
 from app.db.session import SessionDep
 from app.models.enums import StudentStatus, UserRole
 from app.schemas.common import CredentialsUpdate, Paginated
@@ -26,11 +26,9 @@ from app.services.student import reset_device as svc_reset_device
 from app.services.student import update_credentials as svc_update_credentials
 from app.services.student import update_student as svc_update_student
 
-router = APIRouter(
-    prefix="/students",
-    tags=["students"],
-    dependencies=[Depends(require_permission("structure"))],
-)
+# O'qish (GET) — har qanday admin (biriktirish ustasi talabani tanlaydi), fakultet bo'yicha cheklangan.
+# Yozish, o'chirish, login/parol, qurilma — faqat "structure" ruxsati bilan.
+router = APIRouter(prefix="/students", tags=["students"])
 
 
 def _check_faculty_access(user: Any, student: dict[str, Any], action: str = "ko'rish") -> None:
@@ -98,7 +96,7 @@ async def create_student(
     data: StudentCreate,
     request: Request,
     db: SessionDep,
-    user: RequireAdmin,
+    user: RequireStructure,
 ) -> StudentRead:
     result = await svc_create_student(db, data)
     full_name = f"{data.last_name} {data.first_name}".strip()
@@ -125,7 +123,7 @@ async def update_student(
     data: StudentUpdate,
     request: Request,
     db: SessionDep,
-    user: RequireAdmin,
+    user: RequireStructure,
 ) -> StudentRead:
     before = await svc_get_student(db, id_)
     _check_faculty_access(user, before, "tahrirlash")
@@ -165,7 +163,7 @@ async def bulk_delete_students(
     payload: StudentBulkDeleteRequest,
     request: Request,
     db: SessionDep,
-    user: RequireAdmin,
+    user: RequireStructure,
 ) -> StudentBulkDeleteResult:
     """Har bir talaba alohida o'chiriladi — biri xato bersa (masalan amaliyoti bor)
     qolganlari o'chaveradi va xatolar ro'yxatda qaytariladi."""
@@ -212,7 +210,7 @@ async def bulk_delete_students(
     summary="Admin: talabani o'chirish",
 )
 async def delete_student(
-    id_: UUID, request: Request, db: SessionDep, user: RequireAdmin
+    id_: UUID, request: Request, db: SessionDep, user: RequireStructure
 ) -> None:
     # Snapshot for audit before delete
     student = await svc_get_student(db, id_)
@@ -237,7 +235,7 @@ async def delete_student(
     summary="Admin: talaba login/parolini yangilash",
 )
 async def update_student_credentials(
-    id_: UUID, data: CredentialsUpdate, db: SessionDep, user: RequireAdmin
+    id_: UUID, data: CredentialsUpdate, db: SessionDep, user: RequireStructure
 ) -> StudentRead:
     student = await svc_get_student(db, id_)
     _check_faculty_access(user, student, "tahrirlash")
@@ -250,7 +248,7 @@ async def update_student_credentials(
     summary="Admin: talabaning bog'langan qurilmasini o'chirish",
 )
 async def reset_student_device(
-    id_: UUID, db: SessionDep, user: RequireAdmin
+    id_: UUID, db: SessionDep, user: RequireStructure
 ) -> StudentRead:
     student = await svc_get_student(db, id_)
     _check_faculty_access(user, student, "tahrirlash")

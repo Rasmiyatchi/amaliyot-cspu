@@ -3,7 +3,7 @@
 Har rol uchun o'ziga xos ko'rsatkichlar. Soddalashtirilgan — MVP uchun yetadi.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -28,6 +28,7 @@ from app.models.student import Student
 from app.models.supervisor import Supervisor
 from app.models.task import JournalEntry, LessonAnalysis, Task, TaskTemplate
 from app.models.user import User
+from app.services.attendance import today_uzb  # Toshkent sanasi (UTC emas)
 from app.services.attendance_stats import compute_percent, expected_days
 
 
@@ -232,7 +233,7 @@ async def admin_overview(db: AsyncSession) -> dict[str, Any]:
     ).scalar_one()
 
     # Attendance — oxirgi 30 kun
-    thirty_days_ago = (datetime.now(UTC) - timedelta(days=30)).date()
+    thirty_days_ago = today_uzb() - timedelta(days=30)
     att_rows = (
         await db.execute(
             select(AttendanceDay.status, func.count(AttendanceDay.id))
@@ -249,7 +250,7 @@ async def admin_overview(db: AsyncSession) -> dict[str, Any]:
     # kunlarini [30 kun oldin .. bugun] oralig'ida sanaymiz. Yozuvlar soniga bo'lish
     # xato edi: kelmagan kunlar yozuv ham qoldirmaydi, shuning uchun foiz doim ~100%
     # bo'lib chiqardi. Kunlari belgilanmagan biriktirishlar eski yo'lda qoladi.
-    today = datetime.now(UTC).date()
+    today = today_uzb()
     active_rows = (
         await db.execute(
             select(
@@ -442,7 +443,7 @@ async def supervisor_overview(
     if not assignments:
         return _empty_supervisor_overview()
 
-    today = datetime.now(UTC).date()
+    today = today_uzb()
 
     # Bugungi davomat
     today_days = (
@@ -615,7 +616,7 @@ async def student_overview(db: AsyncSession, user: User) -> dict[str, Any] | Non
         )
     ).scalar_one()
 
-    days_left = (assignment.end_date - datetime.now(UTC).date()).days
+    days_left = (assignment.end_date - today_uzb()).days
 
     return {
         "has_assignment": True,

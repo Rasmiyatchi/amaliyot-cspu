@@ -12,7 +12,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 from app.models.academic import Faculty
 from app.models.enums import UserRole
 from app.models.user import User
@@ -106,9 +106,12 @@ async def create_admin(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
             status.HTTP_400_BAD_REQUEST, "Faqat 'admin' yoki 'super_admin' rol qo'llab-quvvatlanadi"
         )
 
+    if payload.get("faculty_id") is not None and await db.get(Faculty, payload["faculty_id"]) is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fakultet topilmadi")
+
     user = User(
         username=payload["username"],
-        password_hash=hash_password(payload["password"]),
+        password_hash=await hash_password_async(payload["password"]),
         email=payload.get("email") or None,
         phone=payload.get("phone") or None,
         first_name=payload["first_name"],
@@ -117,7 +120,7 @@ async def create_admin(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
         role=role,
         is_active=True,
         faculty_id=payload.get("faculty_id") if role == UserRole.ADMIN else None,
-        permissions=payload.get("permissions") or [] if role == UserRole.ADMIN else [],
+        permissions=(payload.get("permissions") or []) if role == UserRole.ADMIN else [],
     )
     db.add(user)
     try:
@@ -139,13 +142,38 @@ async def create_admin(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
 
 
 async def update_admin(
-    db: AsyncSession, admin_id: UUID, data: BaseModel
+    db: AsyncSession, admin_id: UUID, data: BaseModel, current_user_id: UUID | None = None
 ) -> dict[str, Any]:
     user = await db.get(User, admin_id)
     if not user or user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Admin topilmadi")
 
     payload = data.model_dump(exclude_unset=True)
+    demotes = payload.get("role") not in (None, UserRole.SUPER_ADMIN)
+    deactivates = payload.get("is_active") is False
+    if user.role == UserRole.SUPER_ADMIN and (demotes or deactivates):
+        if current_user_id is not None and user.id == current_user_id:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "O'zingizni super admin rolidan chiqarib yoki bloklab bo'lmaydi",
+            )
+        remaining = (
+            await db.execute(
+                select(func.count(User.id)).where(
+                    User.role == UserRole.SUPER_ADMIN,
+                    User.is_active.is_(True),
+                    User.id != user.id,
+                )
+            )
+        ).scalar_one()
+        if remaining == 0:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Tizimda kamida bitta faol super admin qolishi kerak",
+            )
+    new_faculty = payload.get("faculty_id")
+    if new_faculty is not None and await db.get(Faculty, new_faculty) is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fakultet topilmadi")
     if "role" in payload and payload["role"] not in (
         UserRole.ADMIN,
         UserRole.SUPER_ADMIN,
@@ -162,6 +190,11 @@ async def update_admin(
     if user.role == UserRole.SUPER_ADMIN:
         user.faculty_id = None
         user.permissions = []
+
+    if deactivates:
+        from app.services.auth import revoke_all_refresh_tokens
+
+        await revoke_all_refresh_tokens(db, user.id)
 
     try:
         await db.commit()
@@ -228,7 +261,7 @@ async def update_credentials(
     if new_username and new_username != user.username:
         user.username = new_username
     if new_password:
-        user.password_hash = hash_password(new_password)
+        user.password_hash = await hash_password_async(new_password)
         from app.services.auth import revoke_all_refresh_tokens
 
         await revoke_all_refresh_tokens(db, user.id)

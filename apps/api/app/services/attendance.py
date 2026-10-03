@@ -55,6 +55,12 @@ DEFAULT_WORK_WEEKDAYS: frozenset[int] = frozenset({1, 2, 3, 4, 5, 6})  # Du–Sh
 NOTE_PENDING_EXPIRED = "Kun davomida to'liq davomat (kelish/ketish) yakunlanmadi"
 NOTE_MISSING_DAY = "Amaliyotga kelinmadi (qolib ketgan kun)"
 
+# Kech kelgan talaba (masalan 18:30) 6 soatdan keyin yarim tundan o'tib ketishni qayd etadi —
+# ochiq smena shu muddatgacha "kecha" kuniga yoziladi va avto-qizilga aylantirilmaydi.
+OPEN_SHIFT_MAX = timedelta(hours=20)
+# GPS aniqligi (±m) hisobiga radiusga qo'shiladigan maksimal yengillik
+GEO_ACCURACY_ALLOWANCE_MAX_M = 150.0
+
 # Global (barcha biriktirishlar) sinxronizatsiya — har so'rovda emas, kamida shu oraliqda bir marta
 _GLOBAL_SYNC_INTERVAL = timedelta(seconds=90)
 _last_global_sync: datetime | None = None
@@ -85,23 +91,26 @@ def _evaluate_geo(
     wifi_ssid: str | None,
     organization: Organization | None,
 ) -> tuple[float | None, bool]:
-    """Geo-fence/WiFi tekshirish.
+    """Geo-fence tekshirish.
 
     Qaytaradi: (distance_m, is_within_fence).
-    Agar tashkilotning geo markazi yo'q → is_within_fence=True (soft mode).
-    Agar WiFi SSID whitelist'da — masofadan qat'iy nazar within=True.
+    - Hudud (area) amaliyoti yoki tashkilot nuqtasi kiritilmagan → tekshirilmaydi (within=True).
+    - Koordinata kelmasa → within=False, distance=None (chaqiruvchi alohida xabar beradi).
+    - Radiusga GPS aniqligi (±m) qo'shiladi, lekin ko'pi bilan GEO_ACCURACY_ALLOWANCE_MAX_M:
+      bino ichida arzon telefonlar 80–150 m aniqlik beradi, eski 50 m chegara sabab ko'p talaba
+      bino ichida turib "tashqaridasiz" xatosini olardi.
+    - `wifi_ssid` faqat ma'lumot uchun saqlanadi: brauzer Wi-Fi nomini o'qiy olmaydi, uni klient
+      o'zi yozib yuboradi — unga ishonib geo-fence'ni chetlab o'tish mumkin edi.
     """
+    del wifi_ssid
     if organization is None:
-        return None, True  # Area amaliyot — geo tekshirilmaydi (hozircha)
-
-    if wifi_ssid and organization.wifi_ssids and wifi_ssid in organization.wifi_ssids:
         return None, True
 
     if organization.geo_lat is None or organization.geo_lng is None:
-        return None, True  # Tashkilot geo sozlanmagan
+        return None, True
 
     if lat is None or lng is None:
-        return None, False  # Geo kerak, ammo talaba yubormagan
+        return None, False
 
     distance = haversine_m(
         float(organization.geo_lat),
@@ -110,9 +119,26 @@ def _evaluate_geo(
         float(lng),
     )
     radius = float(organization.geo_radius_m or 100)
-    # Accuracy tolerance — GPS xatoligini hisobga olamiz (max 50m)
-    allowance = min(float(accuracy_m or 0), 50.0)
+    allowance = min(float(accuracy_m or 0), GEO_ACCURACY_ALLOWANCE_MAX_M)
     return distance, distance <= radius + allowance
+
+
+def _raise_outside_fence(
+    distance: float | None, organization: Organization | None, accuracy_m: float | None
+) -> None:
+    if distance is None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Joylashuv (GPS) ma'lumoti kelmadi. Telefonda joylashuvni yoqing va brauzerga "
+            "ruxsat bering, so'ng qayta urinib ko'ring.",
+        )
+    radius = int((organization.geo_radius_m if organization else None) or 100)
+    accuracy = f" (GPS aniqligi ±{int(accuracy_m)} m)" if accuracy_m else ""
+    raise HTTPException(
+        status.HTTP_400_BAD_REQUEST,
+        f"Tashkilot hududidan tashqaridasiz: masofa {distance:.0f} m, ruxsat etilgan radius "
+        f"{radius} m{accuracy}. Binoga yaqinroq borib qayta urinib ko'ring.",
+    )
 
 
 # ─── Helpers ─────────────────────────────────────────────
@@ -244,6 +270,10 @@ FROM practice_assignments a
 WHERE a.id = d.assignment_id
   AND d.status = 'pending'
   AND d.date <= CAST(:yesterday AS date)
+  AND NOT (
+    d.check_in_at IS NOT NULL AND d.check_out_at IS NULL
+    AND d.check_in_at > now() - CAST(:open_shift AS interval)
+  )
   {scope}
 """
 
@@ -302,15 +332,17 @@ async def sync_missed_attendance_days(
         "yesterday": yesterday,
         "note_pending": NOTE_PENDING_EXPIRED,
         "note_missing": NOTE_MISSING_DAY,
+        "open_shift": OPEN_SHIFT_MAX,  # asyncpg interval uchun timedelta kutadi
     }
-    if assignment_id is not None:
-        scope = "AND a.id = :assignment_id"
-        params["assignment_id"] = assignment_id
-    elif student_id is not None:
-        scope = "AND a.student_id = :student_id"
+    # Bekor qilingan / yakunlangan biriktirishlarga yangi qizil kun YOZILMAYDI
+    # (yakuniy baho hisoblangan, bekor qilingandan keyingi kunlar "kelmadi" emas).
+    scope = "AND a.status IN ('active', 'draft')"
+    if student_id is not None:
+        scope += " AND a.student_id = :student_id"
         params["student_id"] = student_id
-    else:
-        scope = "AND a.status IN ('active', 'draft')"
+    elif assignment_id is not None:
+        scope += " AND a.id = :assignment_id"
+        params["assignment_id"] = assignment_id
 
     changed = 0
     expired = await db.execute(text(_SQL_EXPIRE_PENDING.format(scope=scope)), params)
@@ -356,11 +388,7 @@ async def student_check_in(
         organization=organization,
     )
     if not within:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            "Geo-fence tashqarisida — tashkilot hududida emassiz"
-            + (f" (masofa: {distance:.0f} m)" if distance is not None else ""),
-        )
+        _raise_outside_fence(distance, organization, data.get("accuracy_m"))
 
     attendance_day = await _get_or_create_day(db, assignment_id, today)
     if attendance_day.status == AttendanceDayStatus.RED:
@@ -394,6 +422,35 @@ async def student_check_in(
     return await get_day(db, attendance_day.id)
 
 
+async def _find_open_day(
+    db: AsyncSession, assignment_id: UUID, today: date, now: datetime
+) -> AttendanceDay | None:
+    """Ketish qayd etiladigan kun: bugungi ochiq kun, bo'lmasa — kechagi ochiq smena
+    (kech kelib yarim tundan keyin ketayotgan talaba uchun), OPEN_SHIFT_MAX ichida."""
+    rows = (
+        (
+            await db.execute(
+                select(AttendanceDay)
+                .where(
+                    AttendanceDay.assignment_id == assignment_id,
+                    AttendanceDay.date.in_([today, today - timedelta(days=1)]),
+                    AttendanceDay.check_in_at.is_not(None),
+                    AttendanceDay.check_out_at.is_(None),
+                )
+                .order_by(AttendanceDay.date.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for day in rows:
+        if day.date == today:
+            return day
+        if day.check_in_at is not None and now - _as_utc(day.check_in_at) <= OPEN_SHIFT_MAX:
+            return day
+    return None
+
+
 async def student_check_out(
     db: AsyncSession,
     assignment_id: UUID,
@@ -404,46 +461,37 @@ async def student_check_out(
     _verify_assignment_open(assignment)
     now = datetime.now(UTC)
     today = today_uzb()
-    _verify_day_in_range(assignment, today)
 
-    org_id = assignment.organization_id
-
-    stmt = select(AttendanceDay).where(
-        AttendanceDay.assignment_id == assignment_id,
-        AttendanceDay.date == today,
-    )
-    attendance_day = (await db.execute(stmt)).scalar_one_or_none()
-    if not attendance_day or not attendance_day.check_in_at:
+    attendance_day = await _find_open_day(db, assignment_id, today, now)
+    if attendance_day is None:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "Bugun avval kelish (check-in) qayd etilmagan",
         )
+    _verify_day_in_range(assignment, attendance_day.date)
+    if attendance_day.status == AttendanceDayStatus.RED:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Bu kun qizil deb belgilangan — ketishni qayd etib bo'lmaydi",
+        )
 
     # 6 soatlik majburiy amaliyot vaqti qoidasi
-    check_in_time = _as_utc(attendance_day.check_in_at)
+    check_in_time = _as_utc(attendance_day.check_in_at or now)
     elapsed_seconds = (now - check_in_time).total_seconds()
     if elapsed_seconds < MIN_PRACTICE_SECONDS:
         remaining_seconds = int(MIN_PRACTICE_SECONDS - elapsed_seconds)
-        rem_hours = remaining_seconds // 3600
-        rem_minutes = (remaining_seconds % 3600) // 60
-        rem_seconds = remaining_seconds % 60
-        parts = []
-        if rem_hours > 0:
-            parts.append(f"{rem_hours} soat")
-        if rem_minutes > 0:
-            parts.append(f"{rem_minutes} daqiqa")
-        if not parts:
-            parts.append(f"{rem_seconds} soniya")
-        rem_str = " ".join(parts)
+        # Tilga bog'liq bo'lmagan format (rus tiliga katalog orqali o'giriladi)
+        rem_minutes_total = max(1, -(-remaining_seconds // 60))
+        rem_str = f"{rem_minutes_total // 60}:{rem_minutes_total % 60:02d}"
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "Ketishni qayd etish uchun kamida 6 soat amaliyot o'tgan bo'lishi shart. "
-            f"Qolgan vaqt: {rem_str}",
+            f"Qolgan vaqt: {rem_str} (soat:daqiqa)",
         )
 
     organization = None
-    if org_id:
-        organization = await db.get(Organization, org_id)
+    if assignment.organization_id:
+        organization = await db.get(Organization, assignment.organization_id)
 
     data = payload.model_dump()
     distance, within = _evaluate_geo(
@@ -454,11 +502,7 @@ async def student_check_out(
         organization=organization,
     )
     if not within:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            "Geo-fence tashqarisida — tashkilot hududida emassiz"
-            + (f" (masofa: {distance:.0f} m)" if distance is not None else ""),
-        )
+        _raise_outside_fence(distance, organization, data.get("accuracy_m"))
 
     event = AttendanceEvent(
         attendance_day_id=attendance_day.id,
@@ -1344,14 +1388,24 @@ async def student_today_status(
 
     today = today_uzb()
 
-    stmt = select(AttendanceDay.id).where(
-        AttendanceDay.assignment_id == assignment_id,
-        AttendanceDay.date == today,
-    )
-    day_id = (await db.execute(stmt)).scalar_one_or_none()
-    if not day_id:
+    today_day = (
+        await db.execute(
+            select(AttendanceDay).where(
+                AttendanceDay.assignment_id == assignment_id,
+                AttendanceDay.date == today,
+            )
+        )
+    ).scalar_one_or_none()
+    if today_day is not None and today_day.check_in_at is not None:
+        return await get_day(db, today_day.id)
+    # Bugun hali kelinmagan bo'lsa-yu, kechagi smena ochiq qolgan bo'lsa (kech kelib yarim
+    # tundan keyin ketayotgan talaba) — "ketish" tugmasi chiqishi uchun o'sha kun qaytariladi.
+    open_day = await _find_open_day(db, assignment_id, today, datetime.now(UTC))
+    if open_day is not None:
+        return await get_day(db, open_day.id)
+    if today_day is None:
         return None
-    return await get_day(db, day_id)
+    return await get_day(db, today_day.id)
 
 
 # ─── Bulk Action ─────────────────────────────────────────

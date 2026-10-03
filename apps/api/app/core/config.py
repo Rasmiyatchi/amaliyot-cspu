@@ -65,7 +65,17 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if s.APP_ENV == "production":
+        import warnings
+
+        if s.SECRET_KEY == "dev-only-change-me":  # noqa: S105
+            warnings.warn("SECRET_KEY production'da standart qiymatda!", stacklevel=1)
+        if s.SUPERADMIN_PASSWORD == "SuperSecret123!":  # noqa: S105
+            warnings.warn("SUPERADMIN_PASSWORD production'da standart qiymatda!", stacklevel=1)
+        if not s.WEB_URL.startswith("http"):
+            warnings.warn("WEB_URL bo'sh — shartnoma QR kodlari ishlamaydi!", stacklevel=1)
+    return s
 
 
 settings = get_settings()

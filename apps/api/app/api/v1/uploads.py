@@ -13,7 +13,6 @@ RBAC:
 - Admin / Super admin: hammasi
 """
 
-from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
@@ -148,7 +147,7 @@ async def serve_file(
     path: str = FPath(..., description="Storage'ga nisbiy yo'l"),
     user: CurrentUser = ...,  # noqa: B008
 ) -> FileResponse:
-    abs_path = svc.absolute_path(path)
+    abs_path = svc.uploads_path(path)
     if not abs_path.exists() or not abs_path.is_file():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Fayl topilmadi")
 

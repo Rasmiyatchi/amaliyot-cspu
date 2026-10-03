@@ -1,5 +1,6 @@
 """Supervizor talabalar yakuniy hisoboti — PDF uchun ma'lumot yig'ish."""
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -40,9 +41,7 @@ async def build_context(
     """
     if academic_year_id is None:
         academic_year_id = (
-            await db.execute(
-                select(AcademicYear.id).where(AcademicYear.is_active.is_(True))
-            )
+            await db.execute(select(AcademicYear.id).where(AcademicYear.is_active.is_(True)))
         ).scalar_one_or_none()
     supervisor_ids = (
         (await db.execute(select(Supervisor.id).where(Supervisor.user_id == user.id)))
@@ -56,9 +55,7 @@ async def build_context(
 
     if supervisor_ids:
         sup = (
-            await db.execute(
-                select(Supervisor.position).where(Supervisor.id == supervisor_ids[0])
-            )
+            await db.execute(select(Supervisor.position).where(Supervisor.id == supervisor_ids[0]))
         ).first()
         if sup:
             position = sup[0]
@@ -202,8 +199,6 @@ async def build_context(
     }
 
 
-async def render_pdf(
-    db: AsyncSession, user: User, academic_year_id: UUID | None = None
-) -> bytes:
+async def render_pdf(db: AsyncSession, user: User, academic_year_id: UUID | None = None) -> bytes:
     context = await build_context(db, user, academic_year_id)
-    return pdf_svc.render_supervisor_report_pdf(context)
+    return await asyncio.to_thread(pdf_svc.render_supervisor_report_pdf, context)

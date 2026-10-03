@@ -63,8 +63,10 @@ SYSTEM_VARIABLES = {
     "guruh",
     "talim_shakli",
     "day",
-    "month",
-    "year",
+    "month",  # o'zbekcha oy nomi: "sentyabr"
+    "month_number",  # "09"
+    "year",  # yilning OXIRGI raqami — shablonlarda "202{year}" ko'rinishida
+    "year_short",  # "26"
 }
 
 

@@ -255,6 +255,108 @@ EXACT: dict[str, str] = {
     "organization_id yoki area_id — faqat bittasi ko'rsatilishi kerak": (
         "organization_id или area_id — укажите только одно из двух"
     ),
+    # ── 2026-10 audit: yangi va qamrab olinmagan xabarlar ──────────────────
+    "Ushbu amal faqat administratorlar uchun": "Это действие доступно только администраторам",
+    "Fayl PDF, JPG yoki PNG emas": "Файл не является PDF, JPG или PNG",
+    "Hujjat PDF fayli topilmadi": "PDF-файл документа не найден",
+    "Fakultet topilmadi": "Факультет не найден",
+    "O'zingizni super admin rolidan chiqarib yoki bloklab bo'lmaydi": (
+        "Нельзя снять с себя роль супер-администратора или заблокировать себя"
+    ),
+    "Tizimda kamida bitta faol super admin qolishi kerak": (
+        "В системе должен остаться хотя бы один активный супер-администратор"
+    ),
+    "Bu kun qizil deb belgilangan — ketishni qayd etib bo'lmaydi": (
+        "Этот день отмечен красным — уход отметить нельзя"
+    ),
+    "Bugun avval kelish (check-in) qayd etilmagan": "Сегодня ещё не отмечен приход (check-in)",
+    "Joylashuv (GPS) ma'lumoti kelmadi. Telefonda joylashuvni yoqing va brauzerga ruxsat bering, "
+    "so'ng qayta urinib ko'ring.": (
+        "Данные о местоположении (GPS) не получены. Включите геолокацию на телефоне, разрешите её "
+        "браузеру и попробуйте снова."
+    ),
+    "Faqat arxivdagi shartnomalarni arxivdan chiqarish mumkin": (
+        "Из архива можно вернуть только архивные договоры"
+    ),
+    "Faqat arxivlangan (EXPIRED) yoki qoralama shartnomalarni o'chirish mumkin.": (
+        "Удалять можно только архивные (EXPIRED) или черновые договоры."
+    ),
+    "PDF generatsiya qilishda xatolik yuz berdi": "Ошибка при создании PDF",
+    "Shartnoma yaratishda kutilmagan xatolik yuz berdi. Ma'lumotlarni tekshirib qayta urinib "
+    "ko'ring.": (
+        "Непредвиденная ошибка при создании договора. Проверьте данные и попробуйте снова."
+    ),
+    "Faqat administrator tasdiqni bekor qila oladi": (
+        "Отменить подтверждение может только администратор"
+    ),
+    "Faqat amaliyot rahbari (supervisor) yoki admin tasdiqlay oladi": (
+        "Подтвердить может только руководитель практики (supervisor) или администратор"
+    ),
+    "Faqat tasdiqlangan hisobotni bekor qilish mumkin": (
+        "Отменить можно только подтверждённый отчёт"
+    ),
+    "Faqat arxivdagi arizalarni arxivdan chiqarish mumkin": (
+        "Из архива можно вернуть только архивные заявки"
+    ),
+    "Faqat arxivlangan (ARCHIVED/EXPIRED) arizalarni o'chirish mumkin.": (
+        "Удалять можно только архивные (ARCHIVED/EXPIRED) заявки."
+    ),
+    "Shartnoma fayli hali shakllantirilmagan": "Файл договора ещё не сформирован",
+    "Faol yoki yakunlangan amaliyot qaydnomasini o'chirib bo'lmaydi — u bilan birga davomat, "
+    "topshiriqlar va baholar ham o'chib ketadi. Arxivlang.": (
+        "Нельзя удалить ведомость активной или завершённой практики — вместе с ней удалятся "
+        "посещаемость, задания и оценки. Переместите её в архив."
+    ),
+    "Talabaning amaliyot yoki ariza tarixi bor — o'chirib bo'lmaydi. O'rniga talaba statusini "
+    "o'zgartiring (bitirgan / haydalgan).": (
+        "У студента есть история практики или заявок — удалить нельзя. Вместо этого измените "
+        "статус студента (выпускник / отчислен)."
+    ),
+    "Supervizorga talabalar biriktirilgan — o'chirib bo'lmaydi. O'rniga uni faolsizlantiring "
+    "(is_active = false) yoki talabalarni boshqasiga o'tkazing.": (
+        "К руководителю прикреплены студенты — удалить нельзя. Деактивируйте его (is_active = "
+        "false) или передайте студентов другому руководителю."
+    ),
+    "Amaliyot biriktiruvi bekor qilingan. Ushbu amalni bajarib bo'lmaydi.": (
+        "Прикрепление к практике отменено. Это действие выполнить нельзя."
+    ),
+    "Faqat tasdiqlangan kundalikni bekor qilish mumkin": (
+        "Отменить можно только подтверждённый дневник"
+    ),
+    "Faqat tasdiqlangan tahlilni bekor qilish mumkin": (
+        "Отменить можно только подтверждённый анализ"
+    ),
+    "Faqat tasdiqlangan topshiriqni bekor qilish mumkin": (
+        "Отменить можно только подтверждённое задание"
+    ),
+    "Tasdiqlangan dars tahlilini amaliyot rahbari o'zgartira olmaydi": (
+        "Руководитель практики не может изменить подтверждённый анализ урока"
+    ),
+    "Tasdiqlangan kundalikni amaliyot rahbari o'zgartira olmaydi": (
+        "Руководитель практики не может изменить подтверждённый дневник"
+    ),
+    "Tasdiqlangan topshiriqni amaliyot rahbari qayta o'zgartira olmaydi yoki bekor qila olmaydi": (
+        "Руководитель практики не может повторно изменить или отменить подтверждённое задание"
+    ),
+    "Tasdiqlangan topshiriqni amaliyot rahbari rad eta olmaydi": (
+        "Руководитель практики не может отклонить подтверждённое задание"
+    ),
+    "Topshiriqni tasdiqlash uchun ball kiriting": "Чтобы подтвердить задание, укажите балл",
+    "Biriktirma fayli topilmadi": "Файл вложения не найден",
+    "Biriktirma sizga tegishli emas": "Вложение вам не принадлежит",
+    "Noto'g'ri biriktirma": "Неверное вложение",
+    "Sizda boshqa fakultet talabasini ko'rish huquqi yo'q": (
+        "У вас нет права просматривать студентов другого факультета"
+    ),
+    "Sizda boshqa fakultet talabasini tahrirlash huquqi yo'q": (
+        "У вас нет права редактировать студентов другого факультета"
+    ),
+    "Sizda boshqa fakultet talabasini o'chirish huquqi yo'q": (
+        "У вас нет права удалять студентов другого факультета"
+    ),
+    "Fakultetga biriktirilgan adminlar bor — avval ularning fakultetini o'zgartiring": (
+        "К факультету привязаны администраторы — сначала измените их факультет"
+    ),
     # ── auth.py (aniq login xatolari, parol almashtirish qulfi) ──────────────
     "Bu profil boshqa qurilmaga bog'langan. Yangi qurilmadan kirish uchun "
     "administratorga murojaat qiling (eski qurilmani o'chirishi kerak). "
@@ -266,6 +368,9 @@ EXACT: dict[str, str] = {
         "откройте сайт в Chrome или Safari."
     ),
     "Bunday login topilmadi": "Такой логин не найден",
+    "Qurilma aniqlanmadi. Sahifani yangilab, qayta urinib ko'ring.": (
+        "Устройство не определено. Обновите страницу и попробуйте снова."
+    ),
     "Parol noto'g'ri": "Неверный пароль",
     "Avval parolni o'zgartirishingiz kerak": "Сначала необходимо сменить пароль",
     "Yangi parol login bilan bir xil bo'lmasin": "Новый пароль не должен совпадать с логином",
@@ -287,6 +392,34 @@ EXACT: dict[str, str] = {
 }
 
 PATTERNS: list[tuple[str, str]] = [
+    # ── 2026-10 audit ────────────────────────────────────────────────────────
+    (
+        r"Sizda ushbu modulga kirish huquqi yo'q \((?P<perm>[a-z_]+)\)",
+        "У вас нет доступа к этому модулю ({perm})",
+    ),
+    (
+        r"Ball maksimaldan oshmasin \(max (?P<max>\d+)\)",
+        "Балл не должен превышать максимум (макс. {max})",
+    ),
+    (
+        r"Tashkilot hududidan tashqaridasiz: masofa (?P<d>\d+) m, ruxsat etilgan radius "
+        r"(?P<r>\d+) m \(GPS aniqligi ±(?P<acc>\d+) m\)\. "
+        r"Binoga yaqinroq borib qayta urinib ko'ring\.",
+        "Вы находитесь вне территории организации: расстояние {d} м, допустимый радиус {r} м "
+        "(точность GPS ±{acc} м). Подойдите ближе к зданию и попробуйте снова.",
+    ),
+    (
+        r"Tashkilot hududidan tashqaridasiz: masofa (?P<d>\d+) m, ruxsat etilgan radius "
+        r"(?P<r>\d+) m\. Binoga yaqinroq borib qayta urinib ko'ring\.",
+        "Вы находитесь вне территории организации: расстояние {d} м, допустимый радиус {r} м. "
+        "Подойдите ближе к зданию и попробуйте снова.",
+    ),
+    (
+        r"Ketishni qayd etish uchun kamida 6 soat amaliyot o'tgan bo'lishi shart\. "
+        r"Qolgan vaqt: (?P<rem>\d+:\d{2}) \(soat:daqiqa\)",
+        "Для отметки ухода должно пройти не менее 6 часов практики. Осталось: {rem} (ч:мин)",
+    ),
+    (r"Qaydnoma topilmadi: (?P<id>.+)", "Ведомость не найдена: {id}"),
     # ── auth.py (brute-force himoyasi) ───────────────────────────────────────
     (
         r"Juda ko'p urinish\. (?P<minutes>\d+) daqiqadan keyin qayta urinib ko'ring",

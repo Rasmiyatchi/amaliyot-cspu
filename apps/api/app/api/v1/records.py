@@ -1,9 +1,10 @@
 """Qaydnomalar (records) endpointlari — agregatsiya + Excel + PDF."""
 
+import asyncio
 from datetime import date, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, Query, Request, Response, status
 
 from app.api.deps import RequireAdmin, RequireSuperAdmin
 from app.core.config import settings
@@ -72,9 +73,19 @@ async def list_records(
     rows = await svc.list_records(
         db,
         **_filters(
-            academic_year_id, direction_id, course, group_id, supervisor_id,
-            education_form, degree_type, start_from, end_to, search, is_archived,
-            faculty_id, status,
+            academic_year_id,
+            direction_id,
+            course,
+            group_id,
+            supervisor_id,
+            education_form,
+            degree_type,
+            start_from,
+            end_to,
+            search,
+            is_archived,
+            faculty_id,
+            status,
         ),
     )
     return [RecordRow.model_validate(r) for r in rows]
@@ -101,9 +112,19 @@ async def export_xlsx(
     rows = await svc.list_records(
         db,
         **_filters(
-            academic_year_id, direction_id, course, group_id, supervisor_id,
-            education_form, degree_type, start_from, end_to, search, is_archived,
-            faculty_id, status,
+            academic_year_id,
+            direction_id,
+            course,
+            group_id,
+            supervisor_id,
+            education_form,
+            degree_type,
+            start_from,
+            end_to,
+            search,
+            is_archived,
+            faculty_id,
+            status,
         ),
     )
     return Response(
@@ -134,17 +155,28 @@ async def baholash_qaydnomasi(
     rows = await svc.list_records(
         db,
         **_filters(
-            academic_year_id, direction_id, course, group_id, supervisor_id,
-            education_form, degree_type, start_from, end_to, search, is_archived,
-            faculty_id, status,
+            academic_year_id,
+            direction_id,
+            course,
+            group_id,
+            supervisor_id,
+            education_form,
+            degree_type,
+            start_from,
+            end_to,
+            search,
+            is_archived,
+            faculty_id,
+            status,
         ),
     )
-    pdf_bytes = pdf_svc.render_records_pdf(
+    pdf_bytes = await asyncio.to_thread(
+        pdf_svc.render_records_pdf,
         {
             "rows": rows,
             "app_name": settings.APP_NAME,
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        }
+        },
     )
     return Response(
         content=pdf_bytes,
@@ -173,11 +205,28 @@ async def unarchive_record(
     return {"message": "Qaydnoma tiklandi"}
 
 
-@router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT, summary="Qaydnomani o'chirish (Super Admin)")
+@router.delete(
+    "/{id_}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Qaydnomani o'chirish (Super Admin, faqat qoralama/bekor qilingan)",
+)
 async def delete_record(
     id_: UUID,
+    request: Request,
     db: SessionDep,
-    _: RequireSuperAdmin,
+    user: RequireSuperAdmin,
 ) -> None:
-    await svc.delete_record(db, id_)
+    from app.services import audit_log as audit
 
+    snapshot = await svc.delete_record(db, id_)
+    await audit.log(
+        db,
+        actor=user,
+        action="delete",
+        entity_type="practice_assignment",
+        entity_id=id_,
+        summary="Qaydnoma (biriktirish) o'chirildi",
+        metadata=snapshot,
+        request=request,
+    )
+    await db.commit()

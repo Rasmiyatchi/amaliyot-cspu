@@ -127,7 +127,6 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
         )
     ).first()
     task_earned = int(academic_task_row[0]) if academic_task_row else 0
-    task_max = int(academic_task_row[1]) if academic_task_row else 0
 
     # Ma'naviy topshiriqlar ballari (category == SPIRITUAL va status == APPROVED)
     spiritual_task_row = (

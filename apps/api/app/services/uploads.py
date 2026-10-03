@@ -120,6 +120,59 @@ def absolute_path(rel_path: str) -> Path:
     return candidate
 
 
+def uploads_path(rel_path: str) -> Path:
+    """Faqat `storage/uploads/` ichidagi faylga yo'l (shartnomalar, shablonlar va h.k. emas).
+
+    `/uploads/file/...` ommaviy (auth'li) xizmati va biriktirma o'chirish shu orqali ishlaydi —
+    shartnoma PDF/skanlari (ketma-ket raqamli nomlar) faqat o'z endpoint'lari orqali beriladi.
+    """
+    candidate = absolute_path(rel_path)
+    try:
+        candidate.relative_to(STORAGE_ROOT.resolve())
+    except ValueError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Fayl topilmadi") from e
+    return candidate
+
+
+_ATTACHMENT_KEYS = ("id", "name", "path", "mime", "size", "uploaded_at", "uploaded_by_id")
+
+
+def clean_client_attachments(
+    raw: list[Any] | None,
+    *,
+    user_id: UUID,
+    existing: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Klient yuborgan biriktirmalar ro'yxatini tekshiradi.
+
+    Ruxsat: (a) yozuvda allaqachon bor biriktirma (id bo'yicha, bazadagi nusxasi olinadi) yoki
+    (b) shu foydalanuvchi o'zi yuklagan va `storage/uploads/` ichida mavjud fayl. Boshqa yo'l
+    (masalan `contracts/26000001.pdf`) rad etiladi — aks holda keyingi "biriktirmani o'chirish"
+    begona faylni diskdan o'chirib yuborardi.
+    """
+    existing_by_id = {str(a.get("id")): a for a in (existing or []) if isinstance(a, dict)}
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in raw or []:
+        if not isinstance(item, dict):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Noto'g'ri biriktirma")
+        att_id = str(item.get("id") or "")
+        if att_id and att_id in seen:
+            continue
+        if att_id and att_id in existing_by_id:
+            out.append(existing_by_id[att_id])
+            seen.add(att_id)
+            continue
+        if str(item.get("uploaded_by_id") or "") != str(user_id):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Biriktirma sizga tegishli emas")
+        path = uploads_path(str(item.get("path") or ""))
+        if not path.is_file():
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Biriktirma fayli topilmadi")
+        out.append({k: item.get(k) for k in _ATTACHMENT_KEYS})
+        seen.add(att_id)
+    return out
+
+
 # ─── Entity attachment management ────────────────────────
 
 
@@ -215,7 +268,7 @@ async def detach_from_entity(
 
     # Faylni diskdan ham o'chiramiz (best effort)
     with contextlib.suppress(Exception):
-        path = absolute_path(removed.get("path", ""))
+        path = uploads_path(removed.get("path", ""))
         if path.exists():
             path.unlink()
 

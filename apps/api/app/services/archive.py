@@ -3,6 +3,7 @@
 Har PDF alohida olinishi mumkin, yoki ZIP'da barchasi birga.
 """
 
+import asyncio
 from datetime import UTC, datetime
 from io import BytesIO
 from pathlib import Path
@@ -69,36 +70,38 @@ def _fmt_date(d: Any) -> str:
 # ─── Context loader ─────────────────────────────────────
 
 
-async def _load_assignment_context(
-    db: AsyncSession, assignment_id: UUID
-) -> dict[str, Any]:
+async def _load_assignment_context(db: AsyncSession, assignment_id: UUID) -> dict[str, Any]:
     """Assignment + student + org/area + supervisor ma'lumotlarini yuklaydi."""
     assignment = await db.get(PracticeAssignment, assignment_id)
     if not assignment:
-        raise HTTPException(
-            status.HTTP_404_NOT_FOUND, f"Biriktirish topilmadi: {assignment_id}"
-        )
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Biriktirish topilmadi: {assignment_id}")
 
     student_row = (
-        await db.execute(
-            select(
-                Student.id,
-                Student.hemis_id,
-                (
-                    User.last_name + " " + User.first_name
-                    + func.coalesce(" " + User.middle_name, "")
-                ).label("full_name"),
-                Group.name.label("group_name"),
-                PracticeAssignment.course,
-                Direction.code.label("direction_code"),
-                Direction.name.label("direction_name"),
+        (
+            await db.execute(
+                select(
+                    Student.id,
+                    Student.hemis_id,
+                    (
+                        User.last_name
+                        + " "
+                        + User.first_name
+                        + func.coalesce(" " + User.middle_name, "")
+                    ).label("full_name"),
+                    Group.name.label("group_name"),
+                    PracticeAssignment.course,
+                    Direction.code.label("direction_code"),
+                    Direction.name.label("direction_name"),
+                )
+                .join(User, User.id == Student.user_id)
+                .outerjoin(Group, Group.id == assignment.group_id)
+                .outerjoin(Direction, Direction.id == Group.direction_id)
+                .where(Student.id == assignment.student_id)
             )
-            .join(User, User.id == Student.user_id)
-            .outerjoin(Group, Group.id == assignment.group_id)
-            .outerjoin(Direction, Direction.id == Group.direction_id)
-            .where(Student.id == assignment.student_id)
         )
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
 
     student = dict(student_row) if student_row else {}
     if student.get("full_name"):
@@ -106,9 +109,7 @@ async def _load_assignment_context(
 
     pt = (
         await db.execute(
-            select(PracticeType.name).where(
-                PracticeType.id == assignment.practice_type_id
-            )
+            select(PracticeType.name).where(PracticeType.id == assignment.practice_type_id)
         )
     ).scalar_one_or_none()
 
@@ -125,9 +126,7 @@ async def _load_assignment_context(
         from app.models.area import Area
 
         area_name = (
-            await db.execute(
-                select(Area.name).where(Area.id == assignment.area_id)
-            )
+            await db.execute(select(Area.name).where(Area.id == assignment.area_id))
         ).scalar_one_or_none()
 
     supervisor_name = None
@@ -265,9 +264,7 @@ async def _load_stats(db: AsyncSession, assignment_id: UUID) -> dict[str, Any]:
                 break
 
     return {
-        "total_days": (assignment.end_date - assignment.start_date).days + 1
-        if assignment
-        else 0,
+        "total_days": (assignment.end_date - assignment.start_date).days + 1 if assignment else 0,
         "attendance_total": att_total,
         "attendance_green": green,
         "attendance_red": red,
@@ -304,7 +301,8 @@ def _render_pdf(template_name: str, context: dict[str, Any]) -> bytes:
 async def render_cover_pdf(db: AsyncSession, assignment_id: UUID) -> bytes:
     ctx = await _load_assignment_context(db, assignment_id)
     stats = await _load_stats(db, assignment_id)
-    return _render_pdf(
+    return await asyncio.to_thread(
+        _render_pdf,
         "archive/cover.html",
         {
             "title": "Yig'ma jild",
@@ -351,16 +349,15 @@ async def render_journal_pdf(db: AsyncSession, assignment_id: UUID) -> bytes:
             "content_md": e.content_md,
             "status": e.status.value,
             "status_label": _STATUS_LABEL.get(e.status.value, e.status.value),
-            "approved_by_name": approver_map.get(e.approved_by_id)
-            if e.approved_by_id
-            else None,
+            "approved_by_name": approver_map.get(e.approved_by_id) if e.approved_by_id else None,
             "approved_at": _fmt_date(e.approved_at),
             "rejection_reason": e.rejection_reason,
         }
         for e in rows
     ]
 
-    return _render_pdf(
+    return await asyncio.to_thread(
+        _render_pdf,
         "archive/journal.html",
         {
             "title": "Kundalik",
@@ -408,16 +405,15 @@ async def render_analyses_pdf(db: AsyncSession, assignment_id: UUID) -> bytes:
             "analysis_md": a.analysis_md,
             "status": a.status.value,
             "status_label": _STATUS_LABEL.get(a.status.value, a.status.value),
-            "approved_by_name": approver_map.get(a.approved_by_id)
-            if a.approved_by_id
-            else None,
+            "approved_by_name": approver_map.get(a.approved_by_id) if a.approved_by_id else None,
             "approved_at": _fmt_date(a.approved_at),
             "rejection_reason": a.rejection_reason,
         }
         for a in rows
     ]
 
-    return _render_pdf(
+    return await asyncio.to_thread(
+        _render_pdf,
         "archive/analyses.html",
         {
             "title": "Dars tahlillari",
@@ -432,31 +428,35 @@ async def render_tasks_pdf(db: AsyncSession, assignment_id: UUID) -> bytes:
     ctx = await _load_assignment_context(db, assignment_id)
 
     rows = (
-        await db.execute(
-            select(
-                Task.id,
-                Task.status,
-                Task.submission_md,
-                Task.points_earned,
-                Task.graded_by_id,
-                Task.graded_at,
-                Task.rejection_reason,
-                TaskTemplate.title.label("template_title"),
-                TaskTemplate.points.label("template_points"),
-                TaskTemplate.month_hint.label("template_month_hint"),
-                TaskTemplate.semester,
-                TaskTemplate.category,
-                TaskTemplate.display_order,
-            )
-            .join(TaskTemplate, TaskTemplate.id == Task.template_id)
-            .where(Task.assignment_id == assignment_id)
-            .order_by(
-                TaskTemplate.semester,
-                TaskTemplate.category,
-                TaskTemplate.display_order,
+        (
+            await db.execute(
+                select(
+                    Task.id,
+                    Task.status,
+                    Task.submission_md,
+                    Task.points_earned,
+                    Task.graded_by_id,
+                    Task.graded_at,
+                    Task.rejection_reason,
+                    TaskTemplate.title.label("template_title"),
+                    TaskTemplate.points.label("template_points"),
+                    TaskTemplate.month_hint.label("template_month_hint"),
+                    TaskTemplate.semester,
+                    TaskTemplate.category,
+                    TaskTemplate.display_order,
+                )
+                .join(TaskTemplate, TaskTemplate.id == Task.template_id)
+                .where(Task.assignment_id == assignment_id)
+                .order_by(
+                    TaskTemplate.semester,
+                    TaskTemplate.category,
+                    TaskTemplate.display_order,
+                )
             )
         )
-    ).mappings().all()
+        .mappings()
+        .all()
+    )
 
     grader_ids = {r["graded_by_id"] for r in rows if r.get("graded_by_id")}
     grader_map: dict[UUID, str] = {}
@@ -465,9 +465,7 @@ async def render_tasks_pdf(db: AsyncSession, assignment_id: UUID) -> bytes:
             u_id: f"{last} {first}".strip()
             for u_id, last, first in (
                 await db.execute(
-                    select(User.id, User.last_name, User.first_name).where(
-                        User.id.in_(grader_ids)
-                    )
+                    select(User.id, User.last_name, User.first_name).where(User.id.in_(grader_ids))
                 )
             ).all()
         }
@@ -491,9 +489,7 @@ async def render_tasks_pdf(db: AsyncSession, assignment_id: UUID) -> bytes:
             sections.append(current)
             current_key = key
 
-        status_val = (
-            r["status"].value if hasattr(r["status"], "value") else str(r["status"])
-        )
+        status_val = r["status"].value if hasattr(r["status"], "value") else str(r["status"])
         assert current is not None
         current["tasks"].append(
             {
@@ -504,15 +500,14 @@ async def render_tasks_pdf(db: AsyncSession, assignment_id: UUID) -> bytes:
                 "status_label": _STATUS_LABEL.get(status_val, status_val),
                 "submission_md": r["submission_md"],
                 "points_earned": r["points_earned"],
-                "graded_by_name": grader_map.get(r["graded_by_id"])
-                if r["graded_by_id"]
-                else None,
+                "graded_by_name": grader_map.get(r["graded_by_id"]) if r["graded_by_id"] else None,
                 "graded_at": _fmt_date(r["graded_at"]),
                 "rejection_reason": r["rejection_reason"],
             }
         )
 
-    return _render_pdf(
+    return await asyncio.to_thread(
+        _render_pdf,
         "archive/tasks.html",
         {
             "title": "Topshiriqlar",

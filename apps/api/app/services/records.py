@@ -87,8 +87,10 @@ async def list_records(
         .where(
             PracticeAssignment.is_archived == is_archived,
             PracticeAssignment.status != AssignmentStatus.CANCELLED,
-            User.is_active.is_(True),
-            Student.status == StudentStatus.STUDYING,
+            # Bitirgan / akademik ta'tildagi talabaning bahosi rasmiy qaydnomadan YO'QOLMASLIGI
+            # kerak (bitiruvchilar qaydnomasi aynan shu payt chiqariladi) — faqat haydalganlar
+            # faol ro'yxatdan chiqariladi. Hisob bloklangani bahoni o'chirmaydi.
+            Student.status != StudentStatus.EXPELLED,
         )
     )
 
@@ -206,11 +208,28 @@ async def set_record_archive_status(db: AsyncSession, assignment_id: UUID, is_ar
     await db.commit()
 
 
-async def delete_record(db: AsyncSession, assignment_id: UUID) -> None:
+async def delete_record(db: AsyncSession, assignment_id: UUID) -> dict[str, Any]:
+    """Qaydnoma = biriktirish. O'chirish butun amaliyot tarixini (davomat, topshiriqlar,
+    yakuniy hisobot) ham o'chiradi — shuning uchun faqat QORALAMA yoki BEKOR qilingan
+    biriktirish o'chiriladi. Faol/yakunlangan yozuvlar uchun arxivlash ishlatiladi.
+    """
     from fastapi import HTTPException, status
+
     assignment = await db.get(PracticeAssignment, assignment_id)
     if not assignment:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Qaydnoma topilmadi: {assignment_id}")
+    if assignment.status not in (AssignmentStatus.DRAFT, AssignmentStatus.CANCELLED):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Faol yoki yakunlangan amaliyot qaydnomasini o'chirib bo'lmaydi — "
+            "u bilan birga davomat, topshiriqlar va baholar ham o'chib ketadi. Arxivlang.",
+        )
+    snapshot = {
+        "student_id": str(assignment.student_id),
+        "status": assignment.status.value,
+        "start_date": str(assignment.start_date),
+        "end_date": str(assignment.end_date),
+    }
     await db.delete(assignment)
-    await db.commit()
-
+    await db.flush()
+    return snapshot

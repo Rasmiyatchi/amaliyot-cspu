@@ -2,9 +2,9 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Query, status
 
-from app.api.deps import RequireAdmin, require_permission
+from app.api.deps import RequireAdmin, RequireStructure, RequireSupervisorOrAdmin
 from app.db.session import SessionDep
 from app.models.enums import UserRole
 from app.schemas.academic import (
@@ -27,11 +27,10 @@ from app.schemas.academic import (
 from app.schemas.common import Paginated
 from app.services import academic as svc
 
-router = APIRouter(
-    prefix="/academic",
-    tags=["academic"],
-    dependencies=[Depends(require_permission("structure"))],
-)
+# O'qish (GET) — har qanday admin (biriktirish/shartnoma formalari ma'lumotnoma sifatida ishlatadi;
+# fakultet admini o'z fakulteti bilan cheklanadi), o'quv yillari — supervizor ham.
+# Yozish — faqat "structure" ruxsati bilan.
+router = APIRouter(prefix="/academic", tags=["academic"])
 
 
 # ─── Faculty ──────────────────────────────────────────────
@@ -54,19 +53,19 @@ async def list_faculties(
 
 
 @router.post("/faculties", response_model=FacultyRead, status_code=status.HTTP_201_CREATED)
-async def create_faculty(data: FacultyCreate, db: SessionDep, _: RequireAdmin) -> FacultyRead:
+async def create_faculty(data: FacultyCreate, db: SessionDep, _: RequireStructure) -> FacultyRead:
     return FacultyRead.model_validate(await svc.create_faculty(db, data))
 
 
 @router.patch("/faculties/{id_}", response_model=FacultyRead)
 async def update_faculty(
-    id_: UUID, data: FacultyUpdate, db: SessionDep, _: RequireAdmin
+    id_: UUID, data: FacultyUpdate, db: SessionDep, _: RequireStructure
 ) -> FacultyRead:
     return FacultyRead.model_validate(await svc.update_faculty(db, id_, data))
 
 
 @router.delete("/faculties/{id_}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_faculty(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
+async def delete_faculty(id_: UUID, db: SessionDep, _: RequireStructure) -> None:
     await svc.delete_faculty(db, id_)
 
 
@@ -92,19 +91,19 @@ async def list_directions(
 
 
 @router.post("/directions", response_model=DirectionRead, status_code=status.HTTP_201_CREATED)
-async def create_direction(data: DirectionCreate, db: SessionDep, _: RequireAdmin) -> DirectionRead:
+async def create_direction(data: DirectionCreate, db: SessionDep, _: RequireStructure) -> DirectionRead:
     return DirectionRead.model_validate(await svc.create_direction(db, data))
 
 
 @router.patch("/directions/{id_}", response_model=DirectionRead)
 async def update_direction(
-    id_: UUID, data: DirectionUpdate, db: SessionDep, _: RequireAdmin
+    id_: UUID, data: DirectionUpdate, db: SessionDep, _: RequireStructure
 ) -> DirectionRead:
     return DirectionRead.model_validate(await svc.update_direction(db, id_, data))
 
 
 @router.delete("/directions/{id_}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_direction(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
+async def delete_direction(id_: UUID, db: SessionDep, _: RequireStructure) -> None:
     await svc.delete_direction(db, id_)
 
 
@@ -131,26 +130,26 @@ async def list_departments(
 
 @router.post("/departments", response_model=DepartmentRead, status_code=status.HTTP_201_CREATED)
 async def create_department(
-    data: DepartmentCreate, db: SessionDep, _: RequireAdmin
+    data: DepartmentCreate, db: SessionDep, _: RequireStructure
 ) -> DepartmentRead:
     return DepartmentRead.model_validate(await svc.create_department(db, data))
 
 
 @router.patch("/departments/{id_}", response_model=DepartmentRead)
 async def update_department(
-    id_: UUID, data: DepartmentUpdate, db: SessionDep, _: RequireAdmin
+    id_: UUID, data: DepartmentUpdate, db: SessionDep, _: RequireStructure
 ) -> DepartmentRead:
     return DepartmentRead.model_validate(await svc.update_department(db, id_, data))
 
 
 @router.delete("/departments/{id_}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_department(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
+async def delete_department(id_: UUID, db: SessionDep, _: RequireStructure) -> None:
     await svc.delete_department(db, id_)
 
 
 # ─── AcademicYear ─────────────────────────────────────────
 @router.get("/academic-years", response_model=list[AcademicYearRead])
-async def list_academic_years(db: SessionDep, _: RequireAdmin) -> list[AcademicYearRead]:
+async def list_academic_years(db: SessionDep, _: RequireSupervisorOrAdmin) -> list[AcademicYearRead]:
     items = await svc.list_academic_years(db)
     return [AcademicYearRead.model_validate(i) for i in items]
 
@@ -161,20 +160,20 @@ async def list_academic_years(db: SessionDep, _: RequireAdmin) -> list[AcademicY
     status_code=status.HTTP_201_CREATED,
 )
 async def create_academic_year(
-    data: AcademicYearCreate, db: SessionDep, _: RequireAdmin
+    data: AcademicYearCreate, db: SessionDep, _: RequireStructure
 ) -> AcademicYearRead:
     return AcademicYearRead.model_validate(await svc.create_academic_year(db, data))
 
 
 @router.patch("/academic-years/{id_}", response_model=AcademicYearRead)
 async def update_academic_year(
-    id_: UUID, data: AcademicYearUpdate, db: SessionDep, _: RequireAdmin
+    id_: UUID, data: AcademicYearUpdate, db: SessionDep, _: RequireStructure
 ) -> AcademicYearRead:
     return AcademicYearRead.model_validate(await svc.update_academic_year(db, id_, data))
 
 
 @router.delete("/academic-years/{id_}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_academic_year(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
+async def delete_academic_year(id_: UUID, db: SessionDep, _: RequireStructure) -> None:
     await svc.delete_academic_year(db, id_)
 
 
@@ -203,15 +202,15 @@ async def list_groups(
 
 
 @router.post("/groups", response_model=GroupRead, status_code=status.HTTP_201_CREATED)
-async def create_group(data: GroupCreate, db: SessionDep, _: RequireAdmin) -> GroupRead:
+async def create_group(data: GroupCreate, db: SessionDep, _: RequireStructure) -> GroupRead:
     return GroupRead.model_validate(await svc.create_group(db, data))
 
 
 @router.patch("/groups/{id_}", response_model=GroupRead)
-async def update_group(id_: UUID, data: GroupUpdate, db: SessionDep, _: RequireAdmin) -> GroupRead:
+async def update_group(id_: UUID, data: GroupUpdate, db: SessionDep, _: RequireStructure) -> GroupRead:
     return GroupRead.model_validate(await svc.update_group(db, id_, data))
 
 
 @router.delete("/groups/{id_}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_group(id_: UUID, db: SessionDep, _: RequireAdmin) -> None:
+async def delete_group(id_: UUID, db: SessionDep, _: RequireStructure) -> None:
     await svc.delete_group(db, id_)

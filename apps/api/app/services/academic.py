@@ -79,7 +79,18 @@ async def update_faculty(db: AsyncSession, id_: UUID, data: BaseModel) -> Facult
 
 
 async def delete_faculty(db: AsyncSession, id_: UUID) -> None:
+    from app.models.user import User
+
     f = await _get_or_404(db, Faculty, id_, "Fakultet")
+    # users.faculty_id ON DELETE SET NULL: fakultet o'chsa, unga cheklangan admin jim ravishda
+    # BUTUN universitet admini bo'lib qolardi.
+    scoped_admin = (
+        await db.execute(select(User.id).where(User.faculty_id == id_).limit(1))
+    ).scalar_one_or_none()
+    if scoped_admin:
+        raise _409(
+            "Fakultetga biriktirilgan adminlar bor — avval ularning fakultetini o'zgartiring"
+        )
     try:
         await db.delete(f)
         await db.commit()

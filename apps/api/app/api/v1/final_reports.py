@@ -14,6 +14,7 @@ from app.schemas.final_report import (
 )
 from app.services import audit_log as audit
 from app.services import final_report as svc
+from app.services.scoping import assert_assignment_access, effective_faculty_id
 
 router = APIRouter(prefix="/final-reports", tags=["final-reports"])
 
@@ -38,7 +39,7 @@ async def list_reports(
         academic_year_id=academic_year_id,
         group_id=group_id,
         direction_id=direction_id,
-        faculty_id=faculty_id,
+        faculty_id=effective_faculty_id(user, faculty_id),
         course=course,
         search=search,
     )
@@ -47,8 +48,9 @@ async def list_reports(
 
 @router.get("/by-assignment/{assignment_id}", response_model=FinalReportRead | None)
 async def get_for_assignment(
-    assignment_id: UUID, db: SessionDep, _: CurrentUser
+    assignment_id: UUID, db: SessionDep, user: CurrentUser
 ) -> FinalReportRead | None:
+    await assert_assignment_access(db, user, assignment_id)
     item = await svc.get_report_for_assignment(db, assignment_id)
     if not item:
         return None

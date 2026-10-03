@@ -24,6 +24,7 @@ from app.models.enums import (
     JournalStatus,
     NotificationType,
     Semester,
+    TaskCategory,
     TaskStatus,
     UserRole,
 )
@@ -35,6 +36,18 @@ from app.models.user import User
 from app.services import notification as notification_svc
 
 # ─── Access helpers ─────────────────────────────────────
+from app.services.uploads import clean_client_attachments
+
+
+def _semester_filter(assignment: PracticeAssignment) -> Any:
+    """Semestrli (4+2) biriktirishga faqat o'sha semestr shablonlari tushadi.
+
+    Kuzgi va bahorgi baholar alohida (qaror #4) — aks holda kuzgi biriktirishga bahorgi
+    topshiriqlar ham qo'shilib, maksimal ball ~120 bo'lib ketardi.
+    """
+    if assignment.semester is None:
+        return TaskTemplate.id.is_not(None)
+    return TaskTemplate.semester == assignment.semester
 
 
 async def _get_assignment(db: AsyncSession, assignment_id: UUID) -> PracticeAssignment:
@@ -263,6 +276,7 @@ async def ensure_tasks_for_assignment(
                     TaskTemplate.practice_type_id == assignment.practice_type_id,
                     TaskTemplate.course == course,
                     TaskTemplate.is_active.is_(True),
+                    _semester_filter(assignment),
                 )
             )
         )
@@ -329,6 +343,7 @@ async def add_tasks_by_template_ids(
                     TaskTemplate.practice_type_id == assignment.practice_type_id,
                     TaskTemplate.course == course,
                     TaskTemplate.is_active.is_(True),
+                    _semester_filter(assignment),
                 )
             )
         )
@@ -413,6 +428,7 @@ async def list_available_templates_for_assignment(
                     TaskTemplate.practice_type_id == assignment.practice_type_id,
                     TaskTemplate.course == course,
                     TaskTemplate.is_active.is_(True),
+                    _semester_filter(assignment),
                 )
                 .order_by(
                     TaskTemplate.semester,
@@ -599,7 +615,9 @@ async def student_submit_task(
 
     data = payload.model_dump()
     task.submission_md = data["submission_md"]
-    task.attachments = data.get("attachments") or []
+    task.attachments = clean_client_attachments(
+        data.get("attachments"), user_id=user.id, existing=task.attachments
+    )
     task.status = TaskStatus.SUBMITTED
     task.submitted_at = datetime.now(UTC)
     # Agar oldin reject qilingan bo'lsa, sababni tozalaymiz (revision loop)
@@ -621,20 +639,36 @@ async def supervisor_approve_task(
         if task.status == TaskStatus.APPROVED:
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,
-                "Tasdiqlangan topshiriqni amaliyot rahbari qayta o'zgartira olmaydi yoki bekor qila olmaydi",
+                "Tasdiqlangan topshiriqni amaliyot rahbari qayta o'zgartira olmaydi "
+                "yoki bekor qila olmaydi",
             )
 
     data = payload.model_dump()
+    tmpl = await db.get(TaskTemplate, task.template_id)
+    new_points = data.get("points_earned")
+    # Ballsiz tasdiqlash — bahoda 0 bo'lib qolardi va supervizor keyin tuzata olmasdi.
+    # Ma'naviy (spiritual) topshiriqlar ball bilan baholanmaydi.
+    if tmpl is not None and tmpl.category != TaskCategory.SPIRITUAL:
+        if new_points is None and task.points_earned is None:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Topshiriqni tasdiqlash uchun ball kiriting",
+            )
+        if new_points is not None and tmpl.points is not None and new_points > tmpl.points:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"Ball maksimaldan oshmasin (max {tmpl.points})",
+            )
+
     task.status = TaskStatus.APPROVED
     task.graded_by_id = user.id
     task.graded_at = datetime.now(UTC)
-    if data.get("points_earned") is not None:
-        task.points_earned = data["points_earned"]
+    if new_points is not None:
+        task.points_earned = new_points
 
     # Notification — talabaga
     student_uid = await _student_user_id_for_assignment(db, task.assignment_id)
     if student_uid:
-        tmpl = await db.get(TaskTemplate, task.template_id)
         points_note = (
             f" ({task.points_earned} ball)" if task.points_earned is not None else ""
         )
@@ -787,7 +821,7 @@ async def student_create_journal(
         assignment_id=assignment_id,
         date=the_date,
         content_md=data["content_md"],
-        attachments=data.get("attachments") or [],
+        attachments=clean_client_attachments(data.get("attachments"), user_id=user.id),
         status=JournalStatus.SUBMITTED,
     )
     db.add(entry)
@@ -814,7 +848,9 @@ async def student_update_journal(
     if "content_md" in data and data["content_md"] is not None:
         entry.content_md = data["content_md"]
     if "attachments" in data and data["attachments"] is not None:
-        entry.attachments = data["attachments"]
+        entry.attachments = clean_client_attachments(
+            data["attachments"], user_id=user.id, existing=entry.attachments
+        )
     # Revision loop — SUBMITTED ga qaytadi
     if entry.status == JournalStatus.REJECTED:
         entry.status = JournalStatus.SUBMITTED
@@ -997,7 +1033,7 @@ async def student_create_lesson_analysis(
         grade_level=data.get("grade_level"),
         quarter=data["quarter"],
         analysis_md=data["analysis_md"],
-        attachments=data.get("attachments") or [],
+        attachments=clean_client_attachments(data.get("attachments"), user_id=user.id),
         status=JournalStatus.SUBMITTED,
     )
     db.add(analysis)
@@ -1021,6 +1057,10 @@ async def student_update_lesson_analysis(
         )
 
     data = payload.model_dump(exclude_unset=True)
+    if data.get("attachments") is not None:
+        data["attachments"] = clean_client_attachments(
+            data["attachments"], user_id=user.id, existing=analysis.attachments
+        )
     for key in (
         "date",
         "subject",

@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 from app.models.academic import Direction, Faculty, Group
 from app.models.enums import AssignmentStatus, StudentStatus, UserRole
 from app.models.practice_assignment import PracticeAssignment
@@ -215,7 +215,7 @@ async def update_credentials(db: AsyncSession, id_: UUID, data: BaseModel) -> di
     if new_username and new_username != user.username:
         user.username = new_username
     if new_password:
-        user.password_hash = hash_password(new_password)
+        user.password_hash = await hash_password_async(new_password, temporary=True)
         user.must_change_password = True  # admin reset → talaba o'zgartirsin
         # Eski parol bilan ochilgan sessiyalar yopiladi
         from app.services.auth import revoke_all_refresh_tokens
@@ -283,7 +283,7 @@ async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
 
     user = User(
         username=username,
-        password_hash=hash_password(password),
+        password_hash=await hash_password_async(password, temporary=True),
         role=UserRole.STUDENT,
         is_active=True,
         first_name=first_name,
@@ -407,10 +407,32 @@ async def reset_device(db: AsyncSession, id_: UUID) -> dict[str, Any]:
 
 
 async def delete_student(db: AsyncSession, id_: UUID) -> None:
-    """Admin: talaba va u bilan bog'liq User'ni o'chirish."""
+    """Admin: talaba va u bilan bog'liq User'ni o'chirish.
+
+    `practice_assignments.student_id` ON DELETE CASCADE — o'chirilsa amaliyot tarixi (davomat,
+    topshiriqlar, yakuniy baho, arizalar) ham jim yo'qolardi. Shuning uchun amaliyot yoki arizasi
+    bor talaba o'chirilmaydi: statusini "haydalgan/bitirgan" qilish kerak.
+    """
+    from app.models.practice_application import PracticeApplication
+
     student = await db.get(Student, id_)
     if not student:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Talaba topilmadi: {id_}")
+    has_history = (
+        await db.execute(
+            select(PracticeAssignment.id).where(PracticeAssignment.student_id == id_).limit(1)
+        )
+    ).scalar_one_or_none() or (
+        await db.execute(
+            select(PracticeApplication.id).where(PracticeApplication.student_id == id_).limit(1)
+        )
+    ).scalar_one_or_none()
+    if has_history:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Talabaning amaliyot yoki ariza tarixi bor — o'chirib bo'lmaydi. "
+            "O'rniga talaba statusini o'zgartiring (bitirgan / haydalgan).",
+        )
     user_id = student.user_id
     await db.delete(student)
     user = await db.get(User, user_id)

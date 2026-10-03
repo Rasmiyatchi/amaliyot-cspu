@@ -1,25 +1,46 @@
-"""
-Ma'lumotlar bazasini 0 dan tozalash va tizimni boshlang'ich holatga keltirish skripti.
-Ishga tushirish: uv run python scripts/clean_and_reset_data.py
+"""Ma'lumotlar bazasini sinov ma'lumotlaridan tozalash (faqat terminal orqali).
+
+Ishga tushirish (apps/api ichida):
+    uv run python scripts/clean_and_reset_data.py
+
+Production'da qo'shimcha: ALLOW_DATABASE_RESET=1 muhit o'zgaruvchisi va terminalda "TOZALASH"
+so'zini yozib tasdiqlash shart. Super admin(lar), shartnoma shablonlari va audit jurnali saqlanadi.
 """
 
 import asyncio
-from loguru import logger
-from app.db.session import SessionLocal
-from app.services.data_cleaner import reset_all_data
-from app.core.config import settings
+import sys
 
-async def main():
-    logger.info("🧹 Ma'lumotlar bazasini tozalash boshlandi...")
+from app.core.config import settings
+from app.db.session import SessionLocal
+from app.services.data_cleaner import ResetNotAllowedError, reset_all_data
+from loguru import logger
+
+CONFIRM_WORD = "TOZALASH"
+
+
+def confirm() -> bool:
+    print(f"Muhit: {settings.APP_ENV}. Barcha talabalar, supervizorlar, adminlar, biriktirishlar,")
+    print("davomat, shartnomalar va yuklangan fayllar O'CHIRILADI (super admin saqlanadi).")
+    answer = input(f'Davom etish uchun "{CONFIRM_WORD}" deb yozing: ').strip()
+    return answer == CONFIRM_WORD
+
+
+async def main() -> int:
     async with SessionLocal() as db:
-        counts = await reset_all_data(db)
-        logger.info("📊 Tozalashdan keyingi jadval ko'rsatkichlari:")
-        for tbl, cnt in sorted(counts.items()):
-            logger.info(f"  • {tbl}: {cnt} ta yozuv")
-            
-    logger.success("✨ Baza muvaffaqiyatli tozalandi va 0 dan boshlash uchun tayyor holga keltirildi!")
-    logger.info(f"👤 Super Admin: {settings.SUPERADMIN_USERNAME}")
-    logger.info(f"🔒 Parol: {settings.SUPERADMIN_PASSWORD}")
+        try:
+            deleted = await reset_all_data(db)
+        except ResetNotAllowedError as e:
+            logger.error(str(e))
+            return 2
+
+    for table, count in sorted(deleted.items()):
+        logger.info(f"  • {table}: {count} ta yozuv o'chirildi")
+    logger.success("Baza tozalandi. Super admin login va paroli o'zgartirilmadi.")
+    return 0
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    if not confirm():
+        print("Bekor qilindi.")
+        sys.exit(1)
+    sys.exit(asyncio.run(main()))
