@@ -10,7 +10,8 @@
     "isActive": "Aktiv (boshqalarini deaktiv qiladi)",
     "nameFormat": "Masalan 2025-2026",
     "startDate": "Boshlanishi",
-    "updatedToast": "O'quv yili yangilandi"
+    "updatedToast": "O'quv yili yangilandi",
+    "endBeforeStart": "Tugash sanasi boshlanish sanasidan keyin bo'lishi kerak"
   },
   "academicAcademicYearList": {
     "active": "Aktiv",
@@ -113,7 +114,6 @@
     "searchPlaceholder": "Qidiruv (guruh nomi)"
   },
   "adminAcademic": {
-    "subtitle": "Fakultetlar, yo'nalishlar, guruhlar va o'quv yillari",
     "tabs": {
       "academicYears": "O'quv yillari",
       "departments": "Kafedralar",
@@ -121,12 +121,12 @@
       "faculties": "Fakultetlar",
       "groups": "Guruhlar",
       "students": "Talabalar"
-    },
-    "title": "Akademik tuzilma"
+    }
   },
   "adminAdminLayout": {
     "menuLabel": "Menyu",
-    "navTitle": "Navigatsiya"
+    "navTitle": "Navigatsiya",
+    "brand": "CHDPU Amaliyot"
   },
   "adminAdminSidebar": {
     "collapse": "Yig'ish",
@@ -134,7 +134,6 @@
     "logout": "Chiqish",
     "myProfile": "Profilim",
     "nav": {
-      "academic": "Fakultet/guruh",
       "academicYears": "O'quv yillari",
       "admins": "Administratorlar",
       "applications": "Arizalar",
@@ -162,7 +161,6 @@
       "monitoringPractices": "Amaliyotlar",
       "monitoringSupervisors": "Rahbarlar",
       "monitoringTasks": "Topshiriqlar",
-      "objects": "Amaliyot obyektlari",
       "organizations": "Tashkilotlar",
       "partners": "Hamkorlar",
       "practice": "Amaliyot",
@@ -177,16 +175,15 @@
       "taskTemplates": "Topshiriqlar"
     },
     "searchHint": "Qidiruv...",
-    "sections": {
-      "academic": "Akademik",
-      "practices": "Amaliyot",
-      "studyProcess": "Jarayon",
-      "system": "Tizim"
+    "brandTitle": "CHDPU AMALIYOT",
+    "brandSubtitle": "Boshqaruv paneli",
+    "roles": {
+      "superAdmin": "Superadministrator",
+      "admin": "Administrator"
     }
   },
   "adminAdmins": {
     "allStatuses": "Barcha holat",
-    "colEmail": "Email",
     "colRole": "Rol",
     "colUsername": "Username",
     "deleteConfirm": "{{name}} ({{username}}) o'chirilsinmi? Bu amalni qaytarib bo'lmaydi.",
@@ -201,7 +198,13 @@
     "statusBlocked": "Bloklangan",
     "subtitle": "Admin va super admin foydalanuvchilarni boshqarish",
     "superAdminOnly": "Bu sahifaga faqat Super Admin kira oladi",
-    "title": "Adminlar"
+    "title": "Adminlar",
+    "allFaculties": "Barcha fakultetlar",
+    "colFaculty": "Fakultet (cheklov)",
+    "colPermissions": "Modul ruxsatlari",
+    "fullAccess": "To'liq ruxsat (barcha modullar)",
+    "modulesCount": "{{n}} ta modul",
+    "noAccess": "Ruxsat yo'q"
   },
   "adminApplications": {
     "appendixEmptyDescription": "Bir hududga 2+ tasdiqlangan talaba bo'lganda ilova shakllanadi",
@@ -209,8 +212,6 @@
     "approveWithQr": "QR bilan tasdiqlash",
     "colAction": "Amal",
     "colDirectionCourse": "Mutaxassislik / Kurs",
-    "colManagerPhone": "Rahbar tel.",
-    "colObject": "Obyekt",
     "colStudentResidence": "Talaba yashash joyi",
     "confirmScan": "Skanni tasdiqlash",
     "confirmScanPrompt": "Skanni tasdiqlaysizmi? Shartnoma yopiladi va talaba skanni qayta yuklay olmaydi.",
@@ -227,12 +228,10 @@
     "pdfPreview": "Shartnoma PDF ko'rinishi",
     "previewLoadFailed": "PDF ko'rinishni yuklab bo'lmadi ({{status}})",
     "reason": "Sabab: {{reason}}",
-    "rejectReasonPrompt": "Rad etish sababi (ixtiyoriy):",
     "returnDialogDescription": "Talabaga nima uchun arizasi qaytarilayotgani va nimani to'g'irlashi kerakligini yozing.",
     "returnDialogTitle": "Arizani tuzatishga qaytarish",
     "returnForRevision": "Kamchilik sababli qaytarish",
     "returnReasonPlaceholder": "Masalan: Tashkilot nomi noto'g'ri kiritilgan...",
-    "returnReasonRequired": "Qaytarish sababini kiriting",
     "returnSubmit": "Qaytarish",
     "scanBadge": "SKAN",
     "scanCopy": "Skan qilingan nusxa",
@@ -243,7 +242,6 @@
       "draft": "Qoralama",
       "expired": "Muddati o'tgan",
       "new": "Yangi",
-      "pending": "Kutilmoqda",
       "rejected": "Rad etilgan",
       "resubmitted": "Qayta yuborilgan",
       "revisionRequired": "Tuzatish kerak",
@@ -260,7 +258,14 @@
     "toastScanConfirmed": "Skan tasdiqlandi — shartnoma yopildi",
     "viewAppendix": "Ilova (hudud)",
     "viewList": "Arizalar",
-    "viewScan": "Skanni ko'rish"
+    "viewScan": "Skanni ko'rish",
+    "searchPlaceholder": "Talaba, tashkilot yoki yo'nalish bo'yicha qidirish...",
+    "colSubmittedAt": "Ariza sanasi",
+    "emptySearch": "Qidiruv bo'yicha ariza topilmadi",
+    "perPage": "Ko'rsatish:",
+    "range": "{{from}}–{{to}} / {{total}}",
+    "rejectDialogTitle": "Arizani rad etish",
+    "rejectDialogDescription": "Rad etish sababi talabaga ko'rsatiladi."
   },
   "adminAssignments": {
     "allCourses": "Barcha kurslar",
@@ -291,12 +296,10 @@
     "title": "Amaliyotlar Monitoringi"
   },
   "adminAttendance": {
-    "allAssignments": "Barcha biriktirishlar",
     "allDirections": "Barcha yo'nalishlar",
     "allFaculties": "Barcha fakultetlar",
     "allGroups": "Barcha guruhlar",
     "assignment": "Biriktirish",
-    "assignmentPlaceholder": "Biriktirish tanlang",
     "checkIn": "Kelish",
     "checkOut": "Ketish",
     "csvExport": "CSV eksport",
@@ -305,8 +308,6 @@
     "emptyAssignment": "Bu biriktirishda hali hech kim check-in qilmagan",
     "emptyDefault": "Talaba check-in qilgach yoki qizilga belgilangach bu yerda paydo bo'ladi",
     "emptyTitle": "Davomat yozuvlari yo'q",
-    "markRed": "Qizilga belgilash",
-    "noActiveAssignments": "Aktiv biriktirish yo'q",
     "object": "Obyekt",
     "status": {
       "green": "Yashil",
@@ -364,10 +365,14 @@
       "delete": "O'chirdi",
       "export": "Eksport qildi",
       "import": "Import qildi",
-      "loginReset": "Parol reset",
-      "override": "Override",
+      "loginReset": "Parolni tikladi",
+      "override": "Holatni o'zgartirdi",
       "reject": "Rad etdi",
-      "update": "Tahrirladi"
+      "update": "Tahrirladi",
+      "bulkUpdate": "Ommaviy o'zgartirdi",
+      "revert": "Qaytardi",
+      "grade": "Baholadi",
+      "finalize": "Yakunladi"
     },
     "actionColumn": "Amal",
     "actionFilter": "Amal turi",
@@ -385,7 +390,8 @@
       "practiceAssignment": "Biriktirish",
       "studentCredentials": "Login/parol",
       "systemSettings": "Sozlama",
-      "taskTemplate": "Topshiriq shabloni"
+      "taskTemplate": "Topshiriq shabloni",
+      "database": "Ma'lumotlar bazasi"
     },
     "entityColumn": "Entity",
     "entityFilter": "Entity turi",
@@ -403,14 +409,12 @@
     },
     "noResults": "Hech narsa topilmadi",
     "pages": {
-      "academic": "Akademik",
       "admins": "Adminlar",
       "assignments": "Biriktirish",
       "attendance": "Davomat",
       "contracts": "Shartnomalar",
       "documents": "Hujjatlar",
       "home": "Bosh sahifa",
-      "objects": "Obyektlar",
       "practiceTypes": "Amaliyot turlari",
       "reports": "Yakuniy hisobotlar",
       "settings": "Sozlamalar",
@@ -440,8 +444,6 @@
     "docOnly": "Faqat .doc yoki .docx fayl yuklang",
     "editorPlaceholder": "Shartnoma matnini yozing…",
     "emptyContent": "Shartnoma matni bo'sh",
-    "font": "Shrift",
-    "fontDefault": "Standart",
     "heading1": "Sarlavha 1",
     "heading2": "Sarlavha 2",
     "heading3": "Sarlavha 3",
@@ -469,7 +471,10 @@
     "uploadWord": "Word yuklash",
     "variables": "O'zgaruvchilar",
     "wordLoaded": "Word fayl yuklandi va tahrirlash uchun tayyor",
-    "wordReadError": "Word faylni o'qishda xatolik yuz berdi"
+    "wordReadError": "Word faylni o'qishda xatolik yuz berdi",
+    "indent": "Xat boshi (abzas chekinishi)",
+    "table": "Jadval",
+    "invalidUrl": "Manzil http:// yoki https:// bilan boshlanishi kerak"
   },
   "adminContractTemplates": {
     "activate": "Faollashtirish",
@@ -481,7 +486,6 @@
     "docxOnly": ".docx fayl yuklang",
     "emptyDescription": "DOCX shablon yuklab boshlang",
     "emptyTitle": "Shablon yo'q",
-    "fields": "Maydonlar:",
     "generalOption": "Umumiy (turidan mustaqil)",
     "inactive": "Nofaol",
     "nameLabel": "Nom",
@@ -494,10 +498,8 @@
     "statusActive": "Faol",
     "statusArchived": "Arxivlangan",
     "statusDraft": "Qoralama",
-    "subtitle": "DOCX shablon yuklang — <0>{{placeholder}}</0> joylar avtomatik aniqlanadi",
     "subtitleEditor": "Shartnoma shablonlarini yarating va tahrirlang",
     "title": "Shartnoma shablonlari",
-    "uploadButton": "Shablon yuklash",
     "uploadDescription": "DOCX faylda to'ldiriladigan joylar <0>{{p1}}</0>, <1>{{p2}}</1> ko'rinishida belgilanadi. QR uchun <2>{{p3}}</2> ishlating.",
     "uploadDocx": "DOCX yuklash",
     "uploadTitle": "Shartnoma shabloni yuklash",
@@ -519,7 +521,6 @@
     "newContract": "Yangi shartnoma",
     "pdfButton": "Shartnoma PDF",
     "pdfDownloadFailed": "PDF yuklab bo'lmadi",
-    "pdfReady": "PDF tayyor",
     "searchPlaceholder": "Shartnoma raqami yoki kompaniya nomi bo'yicha qidirish",
     "sourceApplications": "Ariza shartnomalar",
     "sourceOfficial": "Rasmiy shartnomalar",
@@ -552,11 +553,12 @@
     "newUsername": "Yangi username",
     "noChanges": "O'zgartirish yo'q",
     "passwordLabel": "Parol",
-    "passwordMinLength": "Parol kamida 4 belgi bo'lishi kerak",
     "passwordPlaceholder": "Bo'sh qoldirsangiz eski parol qoladi",
     "show": "Ko'rsatish",
     "title": "Login va parol",
-    "usernameLabel": "Username"
+    "usernameLabel": "Username",
+    "passwordMinLengthN": "Parol kamida {{n}} belgi bo'lishi kerak",
+    "usernameMinLength": "Login kamida {{n}} belgi bo'lishi kerak"
   },
   "adminDocuments": {
     "deleteConfirmBtn": "Ha, o'chirish",
@@ -618,7 +620,16 @@
     "totalStudents": "Jami talaba",
     "users": "Foydalanuvchilar",
     "weeks": "hafta",
-    "welcome": "Xush kelibsiz, {{name}}"
+    "welcome": "Xush kelibsiz, {{name}}",
+    "downloadedPdfToast": "Statistika hisoboti (PDF) yuklab olindi",
+    "kickerSuper": "CHDPU · SUPERADMINISTRATOR",
+    "kickerAdmin": "CHDPU · ADMINISTRATOR",
+    "totalStudentsCounter": "JAMI TALABA",
+    "practiceTypeCount": "Amaliyot turlari: {{count}}",
+    "noPracticeTypesDesc": "Tizimga hali amaliyot turlari kiritilmagan",
+    "activityPct": "Faollik ulushi",
+    "pdfBannerTitle": "Statistika hisobotini yuklab olish (PDF)",
+    "pdfBannerDesc": "Joriy ko'rsatkichlar va amaliyot turlari bo'yicha to'liq statistik hisobot PDF formatida"
   },
   "adminInquiries": {
     "closedToast": "Yopildi",
@@ -632,7 +643,8 @@
       "open": "Ochiq",
       "resolved": "Yopilgan"
     },
-    "title": "Talaba murojaatlari"
+    "title": "Talaba murojaatlari",
+    "resolveBtn": "Hal qilindi"
   },
   "adminObjects": {
     "subtitle": "Amaliyot tashkilotlari (shartnomali) va hududlar",
@@ -663,7 +675,8 @@
     "title": "Amaliyot turlari",
     "weeksCol": "Haftalar",
     "weeksRange": "{{min}}–{{max}} hafta",
-    "weeksSingle": "{{n}} hafta"
+    "weeksSingle": "{{n}} hafta",
+    "inactiveBadge": "Nofaol"
   },
   "adminRecords": {
     "allCourses": "Barcha kurs",
@@ -700,7 +713,6 @@
     "searchPlaceholder": "Ism yoki familiya bo'yicha qidiring...",
     "specialty": "Mutaxassislik",
     "subtitle": "Amaliyotdagi talabalar ro'yxati va baholari",
-    "supervisorFilter": "Rahbar",
     "title": "Qaydnomalar",
     "actions": "Harakatlar",
     "archive": "Arxivlash",
@@ -709,12 +721,23 @@
     "unarchiveSuccess": "Qaydnoma tiklandi",
     "delete": "O'chirish",
     "deleteConfirmTitle": "Qaydnomani o'chirish",
-    "deleteConfirmDesc": "Haqiqatan ham bu qaydnomani o'chirmoqchimisiz?",
     "deleteSuccess": "Qaydnoma o'chirildi",
     "tabs": {
       "active": "Faol",
       "archived": "Arxiv"
-    }
+    },
+    "startFromLabel": "Boshlanish sanasi (dan)",
+    "endToLabel": "Tugash sanasi (gacha)",
+    "deleteTarget": "{{student}} — {{practice}}",
+    "deleteRemovesTitle": "Butunlay o'chiriladi (qaytarib bo'lmaydi):",
+    "deleteRemovesAssignment": "talabaning shu amaliyotga biriktirilishi",
+    "deleteRemovesAttendance": "barcha davomat yozuvlari",
+    "deleteRemovesWork": "topshiriqlar, kundalik, dars tahlillari va yakuniy hisobot",
+    "deleteRemovesGrade": "baholar va qaydnomadagi yakuniy ball",
+    "deleteOnlyDraft": "Faqat qoralama yoki bekor qilingan amaliyotni o'chirish mumkin. Faol va yakunlanganlarini arxivlang.",
+    "deletePermanently": "Butunlay o'chirish",
+    "archiveInstead": "Arxivlash",
+    "archiveInsteadHint": "Qaydnomani o'chirish o'rniga arxivlashingiz mumkin — ma'lumotlar saqlanadi va istalgan vaqtda tiklanadi."
   },
   "adminReports": {
     "allCourses": "Barcha kurs",
@@ -760,7 +783,8 @@
     "excelImport": "Excel Import",
     "newStudent": "Yangi talaba",
     "selectedCount": "<0>{{n}}</0> ta talaba tanlandi",
-    "subtitle": "Excel'dan import, ro'yxat va tafsilotlar"
+    "subtitle": "Excel'dan import, ro'yxat va tafsilotlar",
+    "bulkDeleteTitle": "Talabalarni o'chirish"
   },
   "adminSupervisors": {
     "active": "Faol",
@@ -786,7 +810,12 @@
     "searchPlaceholder": "Qidiruv (F.I.SH. yoki username)",
     "selectedCount": "<0>{{n}}</0> ta supervizor tanlandi",
     "subtitle": "Tashkilotlardagi amaliyot rahbarlari",
-    "title": "Rahbarlar (supervizorlar)"
+    "title": "Rahbarlar (supervizorlar)",
+    "bulkDeleteHint": "Talabalar biriktirilgan supervizorlar o'chirilmaydi — ularni faolsizlantiring.",
+    "bulkDeleteTitle": "Supervizorlarni o'chirish",
+    "deleteTitle": "Supervizorni o'chirish",
+    "selectAllOnPage": "Sahifadagi hammasini tanlash",
+    "selectRow": "Tanlash: {{name}}"
   },
   "adminSystemSettings": {
     "allowedTypesLabel": "Ruxsat etilgan turlar (vergul bilan)",
@@ -818,7 +847,9 @@
     "siteNameLabel": "Sayt nomi *",
     "subtitle": "Platforma global konfiguratsiyasi",
     "superAdminOnly": "Bu sahifaga faqat Super Admin kira oladi",
-    "title": "Tizim sozlamalari"
+    "title": "Tizim sozlamalari",
+    "siteNameRequired": "Sayt nomini kiriting",
+    "maxSizeRange": "Fayl hajmi {{min}}–{{max}} MB oralig'ida butun son bo'lishi kerak"
   },
   "adminTaskTemplates": {
     "deleteConfirm": "Ha, o'chirish",
@@ -841,21 +872,72 @@
     "create": "Yaratish",
     "createDescription": "Admin yoki super admin foydalanuvchi yaratish",
     "createTitle": "Yangi admin",
-    "credentialsRequired": "Username (≥3) va parol (≥4) majburiy",
     "editDescription": "Profil ma'lumotlari va rolini o'zgartirish",
     "editTitle": "Adminni tahrirlash",
     "email": "Email",
     "firstName": "Ism",
     "lastName": "Familiya",
     "middleName": "Otasining ismi",
-    "nameRequired": "Ism va familiya majburiy",
     "password": "Parol",
     "phone": "Telefon",
     "role": "Rol",
     "roleAdmin": "Admin",
     "roleSuperAdmin": "Super Admin",
     "superAdminWarning": "<0>Diqqat:</0> Super admin to'liq tizim ustidan nazoratga ega bo'ladi (override, sozlamalar, boshqa adminlarni boshqarish).",
-    "username": "Username"
+    "username": "Login",
+    "allFacultiesOption": "Barcha fakultetlar (umumiy administrator)",
+    "clearAll": "Tozalash",
+    "emailInvalid": "Email noto'g'ri",
+    "facultyPlaceholder": "Fakultetni tanlang",
+    "facultyScopeLabel": "Fakultet bo'yicha cheklash",
+    "firstNameRequired": "Ism majburiy",
+    "lastNameRequired": "Familiya majburiy",
+    "modules": {
+      "structure": {
+        "name": "Akademik tuzilma",
+        "desc": "Fakultetlar, kafedralar, yo'nalishlar, guruhlar va talabalar boshqaruvi"
+      },
+      "practice": {
+        "name": "Amaliyot jarayonlari",
+        "desc": "Amaliyot turlari, talabalarni biriktirish, davomat va yakuniy baholar"
+      },
+      "contracts": {
+        "name": "Shartnomalar va arizalar",
+        "desc": "Talabalarning amaliyot arizalari va 3 tomonlama shartnomalarni tasdiqlash"
+      },
+      "supervisors": {
+        "name": "Rahbarlar (supervizorlar)",
+        "desc": "Universitet va tashkilot rahbarlarini biriktirish va boshqarish"
+      },
+      "partners": {
+        "name": "Hamkorlar va tashkilotlar",
+        "desc": "Maktablar, MTT, kasb-hunar maktablari va korxonalar bazasi"
+      },
+      "monitoring": {
+        "name": "Monitoring markazi",
+        "desc": "Amaliyot jarayonlarini kuzatish, xaritalar va statistik ko'rsatkichlar"
+      },
+      "inquiries": {
+        "name": "Murojaatlar",
+        "desc": "Talabalar va rahbarlardan kelgan murojaatlar bilan ishlash"
+      },
+      "system": {
+        "name": "Tizim sozlamalari",
+        "desc": "Tizim konfiguratsiyasi, integratsiyalar va audit loglarini ko'rish"
+      }
+    },
+    "noPermissionsConfirmTitle": "Admin hech qaysi modulga kira olmaydi",
+    "noPermissionsConfirmBody": "Hech qanday modul tanlanmagan. Bu admin faqat bosh sahifani ko'radi — barcha bo'limlar unga yopiq bo'ladi. Shunday saqlansinmi?",
+    "noPermissionsConfirmAction": "Ha, ruxsatsiz saqlash",
+    "noPermissionsWarning": "Hech qanday modul tanlanmagan — admin faqat bosh sahifani ko'radi.",
+    "passwordMin": "Parol kamida {{n}} belgi bo'lishi kerak",
+    "permissionsLabel": "Modul ruxsatlari",
+    "scopeAllHint": "Bu administrator barcha fakultetlarning talabalari va guruhlarini ko'radi.",
+    "scopeFacultyHint": "Diqqat: bu administrator faqat tanlangan fakultetga tegishli talabalar, guruhlar va ma'lumotlarni ko'radi va boshqaradi.",
+    "selectAll": "Barchasini tanlash",
+    "selfRoleLocked": "O'zingizning rolingiz va holatingizni o'zgartira olmaysiz.",
+    "superAdminFullAccess": "Super administrator barcha fakultetlar va modullarga cheklovsiz to'liq kirish huquqiga ega.",
+    "usernameMin": "Login kamida 3 ta belgi"
   },
   "archiveCard": {
     "description": "Amaliyot natijalari: umumiy hisobot, kundalik, dars tahlillari va topshiriqlar. Shartnoma (agar bo'lsa) ZIP'ga avtomatik qo'shiladi.",
@@ -881,12 +963,9 @@
     "cancelPromptDesc": "Bekor qilish sababini yozing — talabaga ko'rsatiladi",
     "cancelPromptPlaceholder": "Masalan: tashkilot rad etdi, yoki...",
     "cancelPromptTitle": "Amaliyotni bekor qilish",
-    "cancelledDefault": "Bekor qilindi",
     "deleteTaskDesc": "<0>{{title}}</0> — bu amal bekor qilib bo'lmaydi.",
     "deleteTaskTitle": "Topshiriqni o'chirish",
     "finish": "Yakunlash",
-    "finishConfirmDesc": "Status ACTIVE'dan COMPLETED'ga o'tadi. Yakuniy baholash kutiladi.",
-    "finishConfirmTitle": "Amaliyotni yakunlash?",
     "journalApproved": "Kundalik tasdiqlandi",
     "noAnalyses": "Dars tahlili yo'q",
     "noJournal": "Kundalik yozuvlari yo'q",
@@ -905,7 +984,6 @@
     "rejectedLabel": "Rad etilgan",
     "rejectedToast": "Rad etildi",
     "start": "Boshlash",
-    "startConfirmDesc": "Status DRAFT'dan ACTIVE'ga o'tadi. Talaba check-in qila boshlashi mumkin.",
     "startConfirmTitle": "Amaliyotni boshlash?",
     "startPractice": "Amaliyotni boshlash",
     "submittedLabel": "Yuborilgan",
@@ -918,8 +996,8 @@
     },
     "tasksCreated": "{{n}} ta topshiriq yaratildi",
     "toastCancelled": "Amaliyot bekor qilindi",
-    "toastCompleted": "Amaliyot yakunlandi",
-    "toastStarted": "Amaliyot boshlandi"
+    "toastStarted": "Amaliyot boshlandi",
+    "startConfirmDescription": "Amaliyot faol holatga o'tadi — talaba davomatni (kelish/ketish) belgilay boshlaydi."
   },
   "assignmentsAssignmentWizard": {
     "areaPlaceholder": "Hudud...",
@@ -940,13 +1018,7 @@
     "groupSelected": "Guruhda {{n}} talaba · tanlangan:",
     "modeGroup": "Butun guruh",
     "modeSingle": "Yakka talaba",
-    "noActiveSupervisors": "Faol supervizor topilmadi",
-    "noAreas": "Hududlar yo'q — avval qo'shing",
     "noCourseGroups": "{{courses}}-kurs guruhlari yo'q",
-    "noCourseStudents": "{{courses}}-kurs talabalari yo'q",
-    "noGroups": "Guruhlar yo'q",
-    "noOrganizations": "Tashkilotlar yo'q — avval qo'shing",
-    "noStudents": "Talabalar yo'q",
     "notesPlaceholder": "Ixtiyoriy izohlar",
     "objectKindArea": "hudud",
     "objectKindBoth": "ikkalasi",
@@ -968,7 +1040,13 @@
     "weekdaysLabel": "Amaliyot kunlari",
     "weekdaysMismatch": "Diqqat: {{selected}} kun tanlandi, amaliyot turida esa {{expected}} kun/hafta ko'rsatilgan.",
     "weekdaysRecommend": "\"{{name}}\" uchun tavsiya: {{days}} kun/hafta.",
-    "whoLabel": "Kim biriktiriladi?"
+    "whoLabel": "Kim biriktiriladi?",
+    "endBeforeStart": "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas.",
+    "durationTooShort": "Davomiylik juda qisqa: {{weeks}} hafta — bu amaliyot turi uchun kamida {{min}} hafta kerak.",
+    "durationTooLong": "Davomiylik juda uzun: {{weeks}} hafta — ruxsat etilgan eng ko'p muddat {{max}} hafta (ta'til bilan {{allowed}} hafta).",
+    "durationOverMax": "Davomiylik {{weeks}} hafta — me'yordagi {{max}} haftadan ko'p. Ta'til hisobga olinsa ruxsat etiladi, sanalarni tekshiring.",
+    "endSuggested": "Tugash sanasi amaliyot turining eng kam muddati ({{weeks}} hafta) bo'yicha taklif qilindi — kerak bo'lsa o'zgartiring.",
+    "deselectAll": "Tanlovni bekor qilish"
   },
   "assignmentsGradePanel": {
     "autoBadge": "Avtomatik",
@@ -976,7 +1054,6 @@
     "creditNotEarned": "olinmadi",
     "enough": "yetarli",
     "finalizeButton": "Amaliyotni yakunlash",
-    "finalizeConfirm": "Amaliyotni yakunlaysizmi? Umumiy ball chiqariladi.",
     "finalizeError": "Yakunlab bo'lmadi",
     "finalizedInfo": "Amaliyot yakunlangan — yakuniy ball {{grade}}/{{max}}, kredit {{credit}}.",
     "finalizedToast": "Yakunlandi — {{grade}}/{{max}} ball, kredit {{credit}}",
@@ -985,7 +1062,25 @@
     "minPointsInfo": "Kredit uchun kamida {{min}} ball kerak —",
     "notEnough": "yetmaydi",
     "saveError": "Saqlab bo'lmadi",
-    "scoreRangeError": "Ball 0 va {{max}} oralig'ida butun son bo'lishi kerak"
+    "scoreRangeError": "Ball 0 va {{max}} oralig'ida butun son bo'lishi kerak",
+    "finalizeTitle": "Amaliyotni yakunlash",
+    "finalizeDescription": "Yakuniy ball va kredit qaydnomaga yoziladi, amaliyot holati \"Yakunlangan\"ga o'tadi.",
+    "computedGrade": "Hisoblangan yakuniy ball",
+    "creditThreshold": "Kredit uchun kamida {{min}} ball",
+    "creditWillBeEarned": "kredit olinadi",
+    "creditWillNotBeEarned": "kredit olinmaydi",
+    "noCriteria": "Bu amaliyot turida baholash mezonlari sozlanmagan — yakuniy ball 0 bo'ladi.",
+    "missingTitle": "Hali baholanmagan mezonlar bor",
+    "missingList": "Yakunlashdan oldin baholang: {{names}}",
+    "finalizeIrreversible": "Yakunlangandan keyin mezon ballarini o'zgartirib bo'lmaydi.",
+    "goToGrading": "Baholashga o'tish",
+    "incomplete": "baholash tugallanmagan",
+    "finalReportTitle": "Yakuniy hisobot",
+    "reportApprovedToast": "Yakuniy hisobot tasdiqlandi",
+    "reportRejectedToast": "Yakuniy hisobot rad etildi",
+    "reportRejectTitle": "Yakuniy hisobotni rad etish",
+    "reportRejectDescription": "Sabab talabaga ko'rsatiladi — u hisobotni tuzatib qayta yuboradi.",
+    "scoreFor": "{{name}} uchun ball (0–{{max}})"
   },
   "assignmentsTaskGradeDialog": {
     "approvedTitle": "Tasdiqlangan",
@@ -994,7 +1089,6 @@
     "maxPoints": "max {{points}} ball",
     "notSubmitted": "Talaba hali yubormagan",
     "pointsEarned": "({{earned}}/{{max}} ball)",
-    "pointsLabel": "Ball (0–{{max}})",
     "pointsRange": "Ball 0–{{max}} oralig'ida bo'lishi kerak",
     "quantityTimes": " · {{count}} ta",
     "reasonRequired": "Sababni yozing",
@@ -1003,7 +1097,14 @@
     "rejectedTitle": "Rad etilgan",
     "rejectedToast": "Rad etildi",
     "studentAnswer": "Talaba javobi",
-    "submittedAt": "Yuborilgan: {{date}}"
+    "submittedAt": "Yuborilgan: {{date}}",
+    "pointsLabelRequired": "Ball (0–{{max}}) *",
+    "pointsLabelOptional": "Ball (0–{{max}}, ixtiyoriy)",
+    "pointsRequiredHint": "Tasdiqlash uchun ball kiriting — u yakuniy bahoning \"O'quv topshiriqlar\" mezoniga qo'shiladi.",
+    "pointsOptionalHint": "Ma'naviy topshiriq: ball kiritilmasa, shablon bali hisoblanadi.",
+    "approveWithPoints": "Tasdiqlash ({{points}} / {{max}})",
+    "revert": "Tasdiqni bekor qilish",
+    "revertedToast": "Tasdiq bekor qilindi va topshiriq tahrirga qaytarildi"
   },
   "assignmentsTasksAddDialog": {
     "allAlreadyAdded": "Barcha mos topshiriqlar allaqachon qo'shilgan.",
@@ -1081,7 +1182,10 @@
     "rejectPlaceholder": "Nima uchun qizilga?",
     "rejectReason": "Rad etish sababi",
     "toRed": "Qizilga",
-    "withinFence": "✓ hududda"
+    "withinFence": "✓ hududda",
+    "overrideButton": "Holatni o'zgartirish",
+    "coordinates": "Koordinatalar",
+    "device": "Qurilma"
   },
   "attendanceOverrideDialog": {
     "description": "Hozirgi status: <0>{{status}}</0>. Bu amal audit jurnalga yoziladi.",
@@ -1091,7 +1195,6 @@
     "reasonPlaceholder": "Masalan: tibbiy ma'lumotnoma taqdim etdi (№123, 2026-04-20)",
     "reasonRequired": "Sabab (kamida 3 belgi) majburiy",
     "statusGreen": "Yashil",
-    "statusPending": "Kutilmoqda",
     "statusRed": "Qizil",
     "submit": "Override tasdiqlash",
     "title": "Super admin override"
@@ -1099,13 +1202,9 @@
   "auth": {
     "login": {
       "backHome": "Bosh sahifaga",
-      "backShort": "Bosh",
-      "copyright": "© {{year}} Chirchiq Davlat Pedagogika Universiteti",
-      "heroText": "Talabalar amaliyotini boshqarish uchun zamonaviy tizim. Geo-fence davomat, QR shartnomalar va sillabus topshiriqlari bir joyda.",
       "hide": "Yashirish",
       "password": "Parol",
       "show": "Ko'rsatish",
-      "studentHint": "<0>Talaba</0>: import qilinganida berilgan login va parol bilan kiring. Birinchi kirishda parol o'zgartiriladi.",
       "submit": "Kirish",
       "submitting": "Kirilmoqda...",
       "subtitle": "Login va parolingizni kiriting",
@@ -1182,7 +1281,6 @@
     "downloadFailed": "Yuklab olinmadi",
     "edit": "Tahrirlash",
     "error": "Xatolik",
-    "exportFailed": "Eksport bo'lmadi ({{status}})",
     "faculty": "Fakultet",
     "fullName": "F.I.SH.",
     "group": "Guruh",
@@ -1192,26 +1290,19 @@
     "name": "Nomi",
     "next": "Keyingi",
     "no": "Yo'q",
-    "noAccessToken": "Kirish tokeni yo'q",
-    "notFound": "Topilmadi",
     "note": "Izoh",
     "organization": "Tashkilot",
-    "page": "Sahifa",
     "practiceType": "Amaliyot turi",
     "previous": "Oldingi",
     "reject": "Rad etish",
     "save": "Saqlash",
-    "saved": "Saqlandi",
     "search": "Qidirish",
     "semester": "Semestr",
     "semesterFall": "Kuzgi",
     "semesterSpring": "Bahorgi",
-    "sessionExpired": "Sessiya tugagan",
     "status": "Holat",
     "student": "Talaba",
-    "studentResidence": "Talaba yashash joyi",
     "students": "Talabalar",
-    "success": "Muvaffaqiyatli",
     "supervisor": "Supervizor",
     "total": "Jami",
     "unexpectedError": "Kutilmagan xatolik",
@@ -1221,7 +1312,8 @@
     "yes": "Ha",
     "quickSelect": "Tezkor tanlash:",
     "selectAll": "Sahifadagi barchasi",
-    "seconds": "soniya"
+    "seconds": "soniya",
+    "formInvalid": "Formada xatolar bor — belgilangan maydonlarni tekshiring"
   },
   "contractsContractDetailDialog": {
     "downloadPdf": "PDF yuklab olish",
@@ -1239,19 +1331,17 @@
     "revokedToast": "Shartnoma bekor qilindi",
     "scanUploaded": "Skan yuklandi",
     "scanUploadedAt": "Skan yuklangan",
-    "sessionExpired": "Sessiya tugagan, qayta kiring",
     "studentsCount": "{{count}} talaba",
     "template": "Shablon",
-    "uploadScan": "Skan yuklash"
+    "uploadScan": "Skan yuklash",
+    "view": "Ko'rish"
   },
   "contractsContractFormDialog": {
-    "assignmentsLabel": "Biriktirishlar",
     "create": "Yaratish",
     "createdToast": "Shartnoma yaratildi — PDF generatsiyaga tayyor",
     "endDateLabel": "Tugash",
     "noAcademicYears": "O'quv yillari yo'q",
     "noAssignmentsForFilter": "Tanlangan tashkilot va amaliyot turi uchun biriktirishlar yo'q",
-    "noOrganizations": "Tashkilotlar yo'q",
     "optionalPlaceholder": "Ixtiyoriy",
     "selectAllWithCount": "Hammasi ({{n}})",
     "selectFiltersFirst": "Avval tashkilot, amaliyot turi va o'quv yilini tanlang",
@@ -1267,7 +1357,27 @@
       "production": "Ishlab chiqarish",
       "qualifying": "Malakaviy amaliyot"
     },
-    "title": "Yangi shartnoma"
+    "title": "Yangi shartnoma",
+    "activeTemplatesCount": "Faol shablonlar: {{count}}",
+    "templatePlaceholder": "Shablonni tanlang...",
+    "templateParamsTitle": "Shablon parametrlarini to'ldirish",
+    "bindingTitle": "Shartnoma kimlarga tegishli (ixtiyoriy)",
+    "bindingAssignments": "Biriktirishlar",
+    "bindingStudents": "Talabalar",
+    "bindingGroups": "Guruhlar",
+    "bindingGeneral": "Umumiy",
+    "existingAssignments": "Mavjud amaliyot biriktirishlari:",
+    "canCreateAnyway": "Shartnomani biriktirishlarsiz ham yaratish mumkin.",
+    "studentsHint": "Talabalarni qidirib tanlang:",
+    "studentsSearchPlaceholder": "F.I.SH. yoki HEMIS ID bo'yicha qidirish...",
+    "selectedStudents": "Tanlangan talabalar: {{count}}",
+    "removeStudent": "{{name}} — olib tashlash",
+    "studentsEmpty": "Talabalar ro'yxati bo'sh",
+    "groupsHint": "Shartnomani to'g'ridan-to'g'ri guruhlarga biriktirish (hali amaliyotga biriktirilmagan talabalar uchun):",
+    "groupsCount": "Guruhlar: {{count}}",
+    "studentsCount": "Talabalar: {{count}}",
+    "generalTitle": "Tashkilot bilan umumiy shartnoma",
+    "generalDescription": "Shartnoma alohida talabalarsiz, tashkilot darajasida tuziladi. Talabalarni keyinroq biriktirish mumkin."
   },
   "documentsDocumentFormDialog": {
     "chooseFile": "Fayl tanlash (PDF, DOC, XLS, PPT)",
@@ -1296,7 +1406,8 @@
       "created": "Hujjat qo'shildi",
       "fileUploaded": "Fayl yuklandi",
       "updated": "Hujjat yangilandi"
-    }
+    },
+    "anyOption": "Barchasi uchun (ko'rsatilmagan)"
   },
   "errorBoundary": {
     "description": "Ilovada kutilmagan xatolik yuz berdi. Qayta urinib ko'ring yoki bosh sahifaga qayting.",
@@ -1314,59 +1425,108 @@
     "unsupportedTitle": "Ushbu fayl turini to'g'ridan-to'g'ri ko'rib bo'lmaydi"
   },
   "home": {
-    "badge": "Chirchiq Davlat Pedagogika Universiteti",
-    "ctaGoDashboard": "Dashboard'ga o'tish",
-    "ctaSubtitle": "Tizimga kiring va sizning rolingizga mos dashboard ochiladi.",
-    "ctaTitle": "Amaliyotni boshlash uchun tayyormisiz?",
-    "features": {
-      "archiveZip": {
-        "desc": "Hisobot, kundalik, dars tahlillari va shartnoma — bir bosishda PDF'lar to'plami sifatida yuklab olish.",
-        "title": "Yig'ma jild ZIP"
-      },
-      "geoAttendance": {
-        "desc": "Talaba telefon GPS'i orqali check-in qiladi. Tashkilot hududidan tashqarida bo'lsa avtomatik rad etiladi.",
-        "title": "Geo-fence davomat"
-      },
-      "qrContract": {
-        "desc": "Bir bosishda PDF + QR kod generatsiya. Qabul qiluvchi tashkilot skanlab tekshiradi — public verify ishlaydi.",
-        "title": "QR shartnoma"
-      },
-      "syllabusTasks": {
-        "desc": "4+2 amaliyot sillabusidan 43 ta tayyor topshiriq. Talaba yuboradi, supervizor ball qo'yadi.",
-        "title": "Sillabus topshiriqlar"
+    "hero": {
+      "eyebrow": "CHDPU · 4+2 AMALIYOT TIZIMI",
+      "titleLine1": "RAQAMLI",
+      "titleLine2": "AMALIYOT",
+      "description": "Chirchiq davlat pedagogika universiteti talabalari amaliyot jarayonini boshqarish, topshiriqlar va natijalarni nazorat qilish uchun yagona raqamli platforma.",
+      "practiceInfo": "Amaliyot ma'lumotlari",
+      "noteSecure": "Xavfsiz kirish",
+      "noteRealtime": "Real vaqtda kuzatuv"
+    },
+    "search": {
+      "index": "01 / AMALIYOTINGIZ",
+      "title": "Amaliyotingizni toping",
+      "description": "Amaliyot ma'lumotlari shaxsiy — ular faqat shaxsiy kabinetingizda ko'rinadi."
+    },
+    "statsBand": {
+      "index": "02 / PLATFORMA IMKONIYATLARI",
+      "titleLine1": "AMALIYOT",
+      "titleLine2": "PLATFORMASI",
+      "description": "Nazariya va real pedagogik tajribani yagona raqamli muhitda birlashtiramiz.",
+      "practiceTypes": "AMALIYOT TURLARI",
+      "syllabusTasks": "SILLABUS TOPSHIRIQLARI",
+      "gradingScale": "BALLIK BAHOLASH",
+      "userRoles": "FOYDALANUVCHI ROLLARI"
+    },
+    "journey": {
+      "index": "03 / JARAYON",
+      "titleLine1": "Amaliyot qanday",
+      "titleLine2": "ishlaydi?",
+      "description": "Biriktirishdan yakuniy natijagacha — har bir bosqich aniq, shaffof va nazoratda.",
+      "steps": {
+        "s1": {
+          "title": "Profil",
+          "desc": "Talaba ma'lumotlari tasdiqlanadi."
+        },
+        "s2": {
+          "title": "Amaliyot joyi",
+          "desc": "Hamkor maktab yoki tashkilotga biriktiriladi."
+        },
+        "s3": {
+          "title": "Topshiriqlar",
+          "desc": "Reja asosida vazifalar bajariladi."
+        },
+        "s4": {
+          "title": "Davomat",
+          "desc": "Amaliyot kunlari qayd etiladi."
+        },
+        "s5": {
+          "title": "Natija",
+          "desc": "Yakuniy hisobot va baho."
+        }
       }
     },
-    "featuresLink": "Imkoniyatlar",
-    "featuresSubtitle": "Amaliyotning butun siklini qamrab oluvchi yagona platforma — talabani biriktirishdan tortib, yig'ma jildgacha.",
-    "featuresTitle": "Imkoniyatlar",
-    "footerCopyright": "© {{year}} Chirchiq Davlat Pedagogika Universiteti",
-    "footerLocation": "Chirchiq, Toshkent viloyati",
-    "heroFallbackDesc": "Talabalar amaliyotini raqamlashtirilgan zamonaviy platforma — geo-fence davomat, QR shartnomalar, sillabus topshiriqlari va yig'ma jild eksporti bilan.",
-    "login": "Tizimga kirish",
-    "myDashboard": "Mening dashboard'im",
-    "roles": {
-      "admin": {
-        "desc": "Talaba/supervizor/tashkilot CRUD, biriktirish, shartnoma, davomat, hisobotlar",
-        "label": "Admin"
-      },
-      "student": {
-        "desc": "Check-in/out, topshiriq submit, kundalik yozuvi, dars tahlili, yig'ma jild yuklab olish"
-      },
-      "superAdmin": {
-        "desc": "Tizim sozlamalari, profilaktika rejimi, adminlar boshqaruvi, davomat override",
-        "label": "Super Admin"
-      },
-      "supervisor": {
-        "desc": "O'z talabalari davomatini tasdiqlash, topshiriqlarni baholash, kundalikni o'qish"
+    "ecosystem": {
+      "index": "04 / EKOTIZIM",
+      "titleLine1": "Har bir rol uchun",
+      "titleLine2": "aniq imkoniyat",
+      "description": "Talabadan boshqaruvgacha yagona, bog'langan akademik ekotizim.",
+      "loginAs": "{{role}} sifatida kirish",
+      "roles": {
+        "student": {
+          "title": "TALABA",
+          "c1": "Profil",
+          "c2": "Topshiriqlar",
+          "c3": "Davomat",
+          "c4": "Amaliyot holati"
+        },
+        "supervisor": {
+          "title": "AMALIYOT RAHBARI",
+          "c1": "Talabalarni kuzatish",
+          "c2": "Topshiriqlarni baholash",
+          "c3": "Davomatni ko'rish",
+          "c4": "Yakuniy hisobot"
+        },
+        "faculty": {
+          "title": "FAKULTET",
+          "c1": "Guruhlar",
+          "c2": "Monitoring",
+          "c3": "Statistika",
+          "c4": "Hisobot"
+        },
+        "department": {
+          "title": "AMALIYOT BO'LIMI",
+          "c1": "Jarayon nazorati",
+          "c2": "Tashkilotlar",
+          "c3": "Tahlil",
+          "c4": "Boshqaruv"
+        }
       }
     },
-    "rolesSubtitle": "Har rol o'ziga xos vazifalarni bajaradi. RBAC orqali himoyalangan, audit yozuvlari saqlanadi.",
-    "rolesTitle": "4 xil foydalanuvchi",
-    "stats": {
-      "activeStudents": "Faol talaba",
-      "practiceTypes": "Amaliyot turi",
-      "syllabusTasks": "Sillabus topshiriqlar",
-      "userRoles": "Foydalanuvchi roli"
+    "campus": {
+      "imageAlt": "Chirchiq davlat pedagogika universiteti binosi",
+      "index": "CHIRCHIQ DAVLAT PEDAGOGIKA UNIVERSITETI",
+      "line1": "TA'LIM.",
+      "line2": "TAJRIBA.",
+      "line3": "AMALIYOT.",
+      "description": "Kelajak pedagoglarini real maktab muhiti, raqamli nazorat va tajribali ustozlar bilan bog'laymiz.",
+      "aboutUniversity": "Universitet haqida"
+    },
+    "ctaBand": {
+      "index": "RAQAMLI AMALIYOT",
+      "line1": "Amaliyot jarayonini",
+      "line2": "bugun boshlang."
     }
   },
   "inquiryThread": {
@@ -1374,14 +1534,16 @@
     "fromYou": "Siz / Talaba",
     "messagePlaceholder": "Xabar yozing...",
     "noMessages": "Xabar yo'q",
-    "sendFailed": "Yuborilmadi"
+    "sendFailed": "Yuborilmadi",
+    "send": "Yuborish"
   },
   "maintenanceScreen": {
     "defaultMessage": "Tizim hozircha vaqtinchalik mavjud emas. Biz uni yangilamoqdamiz va tezda qaytamiz.",
     "loggedInAs": "{{name}} sifatida kirilgan",
     "progressHint": "Yangilash davom etmoqda",
     "title": "Profilaktika rejimi",
-    "universityName": "Chirchiq Davlat Pedagogika Universiteti"
+    "universityName": "Chirchiq Davlat Pedagogika Universiteti",
+    "adminLogin": "Administrator kirishi"
   },
   "notFound": {
     "badge": "Sahifa topilmadi",
@@ -1408,7 +1570,9 @@
     "editTitle": "Hududni tahrirlash",
     "mapLocation": "Xaritadagi joylashuv",
     "namePlaceholder": "Chimyon togʻi",
-    "region": "Viloyat"
+    "region": "Viloyat",
+    "isActive": "Faol",
+    "isActiveHint": "Nofaol hududni yangi biriktirishlarda tanlab bo'lmaydi"
   },
   "objectsAreasList": {
     "active": "Aktiv",
@@ -1421,7 +1585,10 @@
     "regionHeader": "Viloyat",
     "regionPlaceholder": "Viloyat (joylashuv)",
     "searchPlaceholder": "Qidiruv (nomi)",
-    "statusHeader": "Status"
+    "statusHeader": "Status",
+    "deleteTitle": "Hududni o'chirish",
+    "excelDownload": "Excel yuklab olish",
+    "excelDownloaded": "Excel fayl yuklab olindi"
   },
   "objectsOrganizationFormDialog": {
     "address": "Manzil",
@@ -1454,7 +1621,6 @@
     },
     "legalName": "To'liq yuridik nomi",
     "legalNamePlaceholder": "Shartnoma uchun (ixtiyoriy)",
-    "mapHint": "(Phase 7 — davomat geo-fence uchun)",
     "mapLocation": "Xaritadagi joylashuv",
     "mfo": "MFO",
     "namePlaceholder": "48-maktab",
@@ -1471,7 +1637,15 @@
       "emailInvalid": "Email noto'g'ri",
       "nameMin": "Kamida 2 ta belgi"
     },
-    "website": "Veb-sayt"
+    "website": "Veb-sayt",
+    "email": "Email",
+    "geoRadius": "Geo-fence radiusi (metr)",
+    "geoRadiusHint": "Talaba kelishni shu doira ichida belgilay oladi (GPS xatoligi uchun yana 150 m gacha qo'shiladi). Odatda 100–300 m.",
+    "isActive": "Faol",
+    "isActiveHint": "Nofaol tashkilotni yangi biriktirish va shartnomalarda tanlab bo'lmaydi",
+    "mapHintGeofence": "Talabalar davomati shu nuqta va quyidagi radius bo'yicha tekshiriladi.",
+    "workDays": "Ish kunlari",
+    "workDaysHint": "Tashkilotning ish kunlari (ma'lumot uchun)"
   },
   "objectsOrganizationsList": {
     "activeBadge": "Aktiv",
@@ -1498,7 +1672,23 @@
     },
     "newOrganization": "Yangi tashkilot",
     "regionPlaceholder": "Viloyat (joylashuv)",
-    "searchPlaceholder": "Qidiruv (nomi/direktor)"
+    "searchPlaceholder": "Qidiruv (nomi/direktor)",
+    "deleteTitle": "Tashkilotni o'chirish",
+    "excelDownload": "Excel yuklab olish",
+    "excelDownloaded": "Excel fayl yuklab olindi",
+    "innShort": "INN: {{inn}}",
+    "kindsShort": {
+      "school": "Maktab",
+      "mtt": "MTT",
+      "lyceum": "Litsey",
+      "college": "Kollej",
+      "university": "OTM",
+      "state_organization": "Davlat tashk.",
+      "private_organization": "Xususiy tashk.",
+      "company": "Korxona",
+      "other": "Boshqa"
+    },
+    "viewDetails": "Batafsil ko'rish"
   },
   "overdueTasksCard": {
     "daysOverdue": "{{count}} kun",
@@ -1532,7 +1722,8 @@
     "title": "Baholash shkalasi",
     "totalLabel": "Mezonlar yig'indisi",
     "totalMustBe100": "Mezonlar yig'indisi 100 bo'lishi shart, hozir {{total}}",
-    "uniqueKeys": "Mezon kalitlari (key) takrorlanmasligi kerak"
+    "uniqueKeys": "Mezon kalitlari (key) takrorlanmasligi kerak",
+    "emptyKey": "Har bir mezonning kaliti (key) bo'lishi kerak — nomini lotin harflarida yozing"
   },
   "practiceTypesPracticeTypeDetailDialog": {
     "allowedCourses": "Ruxsat etilgan kurslar",
@@ -1616,15 +1807,19 @@
     "phone": "Telefon",
     "profileUpdated": "Profil yangilandi",
     "pwdChanged": "Parol o'zgartirildi",
-    "pwdHint": "Yangi parol kamida 4 belgi bo'lishi kerak. Parolni o'zgartirgandan keyin tizimdan chiqib qaytadan kirish tavsiya etiladi.",
     "pwdMismatch": "Parollar mos kelmaydi",
-    "pwdTooShort": "Yangi parol kamida 4 belgi",
     "repeatPwd": "Parolni takrorlang",
     "tabs": {
       "password": "Parol",
       "profile": "Profil"
     },
-    "title": "Mening profilim"
+    "title": "Mening profilim",
+    "email": "Email",
+    "avatarAlt": "Profil rasmi",
+    "studentNameReadonlyHint": "Familiya, ism va otasining ismini faqat administrator o'zgartira oladi.",
+    "pwdRules": "Yangi parol kamida {{min}} belgidan iborat bo'lsin va joriy paroldan farq qilsin. Parol o'zgargach, boshqa qurilmalardan qaytadan kirish tavsiya etiladi.",
+    "pwdMinLength": "Yangi parol kamida {{min}} belgi bo'lishi kerak",
+    "pwdSameAsCurrent": "Yangi parol joriy paroldan farq qilishi kerak"
   },
   "rescue": {
     "badge": "Maxfiy kirish",
@@ -1637,7 +1832,7 @@
     "submitting": "Kirilmoqda...",
     "subtitle": "Faqat Super Admin loginini qabul qiladi. Profilaktika rejimida ham ishlaydi.",
     "superAdminOnly": "Bu sahifa faqat Super Admin uchun",
-    "title": "Super Admin Rescue",
+    "title": "Super admin hisobini tiklash",
     "usernameLabel": "Login",
     "usernamePlaceholder": "Super Admin login",
     "welcome": "Xush kelibsiz, {{name}}!"
@@ -1645,17 +1840,17 @@
   "rootLayout": {
     "logout": "Chiqish",
     "logoutToast": "Tizimdan chiqildi",
-    "myProfile": "Profilim"
+    "myProfile": "Profilim",
+    "brandFull": "CHDPU Amaliyot Platformasi",
+    "brandShort": "CHDPU Amaliyot"
   },
   "student": {
     "emptyDescription": "Sizga hali hech qanday amaliyot biriktirilmagan",
     "emptyTitle": "Amaliyot yo'q",
     "endDate": "Tugash",
     "noAttendanceDescription": "Birinchi kelishingizdan so'ng bu yerda paydo bo'ladi",
-    "noAttendanceTitle": "Hali davomat yozuvi yo'q",
     "notAssigned": "Amaliyotga biriktirilmagansiz",
     "practicePeriod": "Amaliyot muddati",
-    "recentDays": "Oxirgi kunlar",
     "startDate": "Boshlanish",
     "supervisorLabel": "Rahbar",
     "todayAttendance": "Bugungi davomat",
@@ -1666,29 +1861,37 @@
     "attendanceRate": "Davomat",
     "checkInTime": "Kelish vaqti:",
     "checkOutTime": "Ketish vaqti:",
-    "dayDetailTitle": "kunlik davomati",
     "daysSuffix": "kun",
     "duration": "Amaliyot davomiyligi:",
     "filterAbsent": "Qolib ketganlar",
     "filterAll": "Barchasi",
     "filterPresent": "Faqat kelganlar",
-    "legendGreen": "Yashil (Kelgan / Tasdiqlangan)",
-    "legendPending": "Kutilmoqda / Jarayonda",
-    "legendRed": "Qizil (Kelmagan / Qolib ketgan)",
     "nextMonth": "Keyingi oy",
     "noRecords": "Davomat yozuvlari yo'q",
     "noteLabel": "Izoh / Sabab:",
     "presentDays": "Kelgan kunlar",
     "prevMonth": "Oldingi oy",
-    "statusGreen": "Yashil",
-    "statusPending": "Jarayonda",
-    "statusRed": "Qizil",
     "subtitle": "Kunlik amaliyot davomati, qatnashgan va qolib ketgan kunlar tarixi",
     "tabCalendar": "Taqvim",
     "tabList": "Ro'yxat",
     "title": "Davomat va Taqvim",
     "today": "Bugun",
-    "totalWorkdays": "Jami qaydlar"
+    "expectedDays": "Kutilgan kunlar",
+    "pendingDays": "Kutilmoqda",
+    "filterPending": "Kutilayotganlar",
+    "filterLabel": "Holat bo'yicha filtr",
+    "percentHint": "Foiz: bugungacha kutilgan {{expected}} kundan {{green}} tasi tasdiqlangan (yashil).",
+    "percentNotStarted": "Amaliyot hali boshlanmagan — foiz birinchi ish kunidan hisoblanadi.",
+    "futureGreenHint": "Oldindan tasdiqlangan kelajak kunlar ({{count}}) foizga kiritilmaydi.",
+    "noRecordsFiltered": "Tanlangan holat bo'yicha yozuv topilmadi.",
+    "preSet": "Oldindan belgilangan",
+    "dayDesc": {
+      "green": "Davomat tasdiqlangan (yashil).",
+      "red": "Amaliyot kuniga kelinmagan yoki qayd yakunlanmagan (qizil).",
+      "pending": "Davomat hali yakunlanmagan (kutilmoqda)."
+    },
+    "dayDescPreApproved": "Bu kun oldindan tasdiqlangan — kelishni qayd etsangiz ham holat o'zgarmaydi.",
+    "dayDescPreMarkedRed": "Bu kun oldindan qizil deb belgilangan."
   },
   "studentAcademicPanel": {
     "analysesTab": "Dars tahlillari",
@@ -1707,7 +1910,9 @@
     "rejected": "Rad etilgan",
     "submitted": "Yuborilgan",
     "tasksTab": "Topshiriqlar",
-    "totalPoints": "Jami ball"
+    "totalPoints": "Jami ball",
+    "tasksTabShort": "Topshiriq",
+    "analysesTabShort": "Tahlil"
   },
   "studentAnalysisFormDialog": {
     "choosePdf": "PDF tanlash",
@@ -1730,7 +1935,8 @@
     "subtitle": "Sinf, fan, o'qituvchi va sanani kiriting, tahlil PDF faylini yuklang",
     "teacher": "O'qituvchi",
     "teacherPlaceholder": "Karimova Oygul",
-    "uploadError": "Yuklashda xato"
+    "uploadError": "Yuklashda xato",
+    "dateRequired": "Sanani tanlang"
   },
   "studentApplicationCard": {
     "contractClosed": "Shartnoma yopilgan",
@@ -1738,23 +1944,13 @@
     "contractDetails": "Shartnoma ma'lumotlari",
     "contractType": "Shartnoma turi",
     "dialogDescription": "Shartnoma turini tanlab, amaliyot obyekti ma'lumotlarini kiriting. Super admin tasdiqlaganda QR kodli shartnoma shakllanadi.",
-    "district": "Tuman",
-    "downloadDocx": "Shartnoma (DOCX)",
     "empty": "Hali arizangiz yo'q. Shartnoma turini tanlab, ariza yuboring.",
     "fieldRequired": "«{{label}}» maydoni to'ldirilishi shart",
-    "location": "Joylashuv (manzil)",
-    "locationPlaceholder": "Toshkent viloyati, Chirchiq shahri, ...",
-    "managerName": "Rahbar F.I.SH.",
-    "managerPhone": "Rahbar telefoni",
     "newApplication": "Shartnoma arizasi",
     "noTypes": "Hozircha shartnoma turi yo'q (admin qo'shadi)",
     "noteOptional": "Izoh (ixtiyoriy)",
-    "objectName": "Obyekt nomi",
-    "objectNamePlaceholder": "21-sonli umumiy o'rta ta'lim maktabi",
     "qrToken": "Tasdiq kodi: {{token}}",
     "reason": "Sabab: {{note}}",
-    "region": "Viloyat",
-    "requiredFields": "Obyekt nomi, joylashuv va rahbar telefoni majburiy",
     "resubmitButton": "Tuzatib qayta yuborish",
     "resubmitDescription": "Admin ko'rsatgan kamchiliklarni to'g'irlab, arizani qayta yuboring.",
     "resubmitSubmit": "Qayta yuborish",
@@ -1764,7 +1960,6 @@
     "scanUpdate": "Skan yangilash",
     "scanUpload": "Skan yuklash",
     "scanUploaded": "Skan yuklandi",
-    "selectOptional": "Tanlang (ixtiyoriy)",
     "selectPlaceholder": "Tanlang...",
     "selectTemplatePlaceholder": "Shablonni tanlang...",
     "status": {
@@ -1782,7 +1977,9 @@
     "submit": "Yuborish",
     "submitted": "Ariza yuborildi — super admin tasdiqini kuting",
     "templateRequired": "Shartnoma shablonini tanlang",
-    "title": "Mening shartnomalarim"
+    "title": "Mening shartnomalarim",
+    "scanFile": "Skan fayli",
+    "scanUploadedBadge": "Skan yuklangan"
   },
   "studentCheckInButton": {
     "checkIn": "Kelish (Check-in)",
@@ -1790,14 +1987,10 @@
     "checkInTime": "Kelgan vaqt:",
     "checkOut": "Ketish (Check-out)",
     "checkOutSuccess": "Ketish muvaffaqiyatli qayd etildi (Yashil)",
-    "doneToday": "Bugungi davomat to'liq yakunlandi (Yashil)",
     "durationSpent": "Amaliyot davomiyligi",
-    "gpsFailed": "GPS koordinatalarini olib bo'lmadi",
     "gpsHint": "GPS avtomatik tekshiriladi. Tashkilot hududida bo'lishingiz shart.",
-    "gpsUnavailable": "GPS qurilmangizda yoqilmagan",
     "lockHint": "Ketishni qayd etish uchun kamida 6 soat o'tishi shart",
     "lockedTitle": "Majburiy 6 soatlik amaliyot vaqti ketmoqda",
-    "noActivePractice": "Hozir aktiv amaliyotingiz yo'q",
     "readyForCheckOut": "6 soatlik amaliyot vaqti to'ldi! Endi ketishni qayd etishingiz mumkin.",
     "remainingTime": "Qolgan vaqt",
     "unlocksAt": "Ketish ochiladi",
@@ -1811,7 +2004,14 @@
     "geoFailedTitle": "Joylashuv aniqlanmadi",
     "reaskPermission": "Ruxsatni qayta so'rash",
     "retryLocation": "Qayta aniqlash",
-    "locationReady": "Joylashuv aniqlandi (±{{m}} m). Endi tugmani bosing."
+    "locationReady": "Joylashuv aniqlandi (±{{m}} m). Endi tugmani bosing.",
+    "doneTodayTitle": "Bugungi davomat yakunlandi",
+    "gpsHintOptional": "Hudud amaliyoti: joylashuv imkon bo'lsa qayd bilan birga yuboriladi, lekin majburiy emas.",
+    "locationOptionalNote": "Joylashuv aniqlanmadi. Hudud amaliyotida bu majburiy emas — qayd joylashuvsiz yuboriladi.",
+    "markedRedTitle": "Bugun qizil deb belgilangan",
+    "markedRedHint": "Bu kun uchun kelish qayd etilmaydi. Xato deb hisoblasangiz, adminga murojaat qiling.",
+    "sentWithoutLocation": "Joylashuv aniqlanmagani uchun qayd koordinatasiz yuborildi. GPS'ni yoqib, qayta urinib ko'ring.",
+    "verifyStatusHint": "Qayd serverda saqlangan bo'lishi mumkin — holat avtomatik yangilanadi. Qayta bosishdan oldin uni tekshiring."
   },
   "studentDocumentsCard": {
     "empty": "Hali fayl yuklamagansiz. Topshiriq, kundalik yoki dars tahlilida fayl biriktiring.",
@@ -1875,7 +2075,9 @@
     "removeFile": "Olib tashlash",
     "submit": "Yuborish",
     "submitted": "Yuborildi",
-    "uploadError": "Yuklashda xato"
+    "uploadError": "Yuklashda xato",
+    "dateRequired": "Sanani tanlang",
+    "futureDate": "Kelajakdagi sana uchun kundalik yozib bo'lmaydi"
   },
   "studentTaskSubmitDialog": {
     "approvedTitle": "Tasdiqlangan",
@@ -1915,11 +2117,11 @@
     "optionalColumns": "<0>Ixtiyoriy</0>: Viloyat, Tuman, Jins, Ta'lim tili, O'quv yili, Semestr, Bitiruvchi, Ta'lim shakli.",
     "password": "Parol",
     "requiredColumns": "<0>Majburiy</0>: To'liq ismi, Mutaxassislik, Guruh, Kurs.",
-    "rowN": "Row {{row}}",
     "skipped": "O'tkazildi",
     "studentsAdded": "{{count}} ta talaba qo'shildi",
     "title": "Talabalar Excel import",
-    "xlsxOnly": ".xlsx fayl yuklang"
+    "xlsxOnly": ".xlsx fayl yuklang",
+    "rowLabel": "{{row}}-qator"
   },
   "studentsStudentDetailDialog": {
     "boundAt": "Bog'langan:",
@@ -2027,7 +2229,11 @@
       "graduated": "Bitirgan",
       "studying": "O'qiyapti"
     },
-    "updatedToast": "Talaba ma'lumotlari yangilandi"
+    "updatedToast": "Talaba ma'lumotlari yangilandi",
+    "emailInvalid": "Email noto'g'ri",
+    "notSpecified": "Ko'rsatilmagan",
+    "phoneInvalid": "Telefon raqami noto'g'ri (9–15 ta raqam, masalan +998901234567)",
+    "statusHint": "Amaliyot tarixi bor talabani o'chirish o'rniga statusini o'zgartiring"
   },
   "studentsStudentsFilters": {
     "allCourses": "Barcha kurs",
@@ -2039,42 +2245,48 @@
     "statusAcademicLeave": "Akademik ta'til",
     "statusExpelled": "Haydalgan",
     "statusGraduated": "Bitirgan",
-    "statusStudying": "O'qiyapti"
+    "statusStudying": "O'qiyapti",
+    "assignmentAll": "Barcha talabalar",
+    "assignmentAssigned": "Biriktirilgan",
+    "assignmentLabel": "Amaliyot holati",
+    "assignmentUnassigned": "Biriktirilmagan"
   },
   "studentsStudentsTable": {
     "empty": "Talabalar topilmadi",
     "region": "Viloyat",
     "selectAllOnPage": "Sahifadagi hammasini tanlash",
-    "selectRow": "Tanlash"
+    "selectRowNamed": "Tanlash: {{name}}"
   },
   "supervisor": {
-    "allApprovedDesc": "Yangi davomat yozuvlari paydo bo'lganda bu yerda ko'rinadi",
-    "allApprovedTitle": "Hammasi tasdiqlangan",
-    "approveGreen": "Yashilga tasdiqlash",
-    "approvedGreen": "Yashilga tasdiqlandi",
-    "completedDaysCount": "Yakunlangan kunlar ({{n}})",
-    "markedRed": "Qizilga belgilandi",
     "noStudentsDesc": "Sizga hali hech qanday talaba biriktirilmagan",
     "noStudentsTitle": "Biriktirilgan talabalar yo'q",
     "noAttendanceDesc": "Talabalar check-in / check-out qilganida ularning davomat yozuvlari shu yerda ko'rinadi",
     "noAttendanceTitle": "Davomat yozuvlari topilmadi",
-    "pendingCount": "Kutilmoqda ({{n}})",
-    "pendingHint": "Davomat: {{attendance}} · Topshiriq: {{tasks}}",
     "pendingReviews": "Ko'rib chiqish kutilmoqda",
     "pointsTotal": "Ball (jami)",
-    "rejectReasonLabel": "Rad etish sababi:",
-    "rejectReasonPlaceholder": "Masalan: kech keldi, yoki kelmadi...",
     "reportDownloaded": "Hisobot yuklab olindi",
     "reportPdf": "Hisobot (PDF)",
     "reportTooltip": "Talabalar bo'yicha yakuniy hisobotni PDF yuklab olish",
     "reviewPromptDesc": "Yuqoridan talabani tanlang — uning topshiriqlari, kundaligi va dars tahlillari shu yerda chiqadi va tasdiqlaysiz.",
     "reviewPromptTitle": "Topshiriq, kundalik va tahlilni tasdiqlash",
     "subtitle": "Sizga biriktirilgan talabalar davomati va topshiriqlari",
-    "toRed": "Qizilga",
     "todayCheckin": "Bugungi check-in",
     "todayHint": "Yashil: {{green}} · Kutilmoqda: {{pending}}",
     "welcome": "Xush kelibsiz, {{name}}!",
-    "writeReason": "Sababni yozing"
+    "kicker": "AMALIYOT RAHBARI",
+    "kickerWithType": "{{type}} · AMALIYOT RAHBARI",
+    "assignedStudentsLabel": "BIRIKTIRILGAN TALABA",
+    "pendingReviewsHint": "Topshiriq: {{tasks}} · Kundalik: {{journals}} · Tahlil: {{analyses}}",
+    "readOnly": "Faqat ko'rish",
+    "attendancePendingInfo": "{{count}} ta kun hali tasdiqlanmagan. Davomatni tasdiqlash yoki tuzatish Super Admin vakolatida.",
+    "pageRange": "{{from}}–{{to}} / {{total}}",
+    "picker": {
+      "label": "Talaba",
+      "allStudents": "Barcha talabalar ({{count}})",
+      "searchLabel": "Talabani qidirish",
+      "searchPlaceholder": "F.I.SH., HEMIS ID yoki guruh...",
+      "noResults": "Mos talaba topilmadi"
+    }
   },
   "supervisorDocuments": {
     "downloadError": "Yuklab olishda xato",
@@ -2095,13 +2307,11 @@
     "maxPoints": "Max {{points}} ball",
     "notSubmitted": "Hali yuborilmagan",
     "pendingCount": "{{count}} kutilmoqda",
-    "pointsLabel": "Ball (0–{{max}})",
     "pointsRange": "Ball 0–{{max}} oralig'ida",
     "quantityTimes": "· {{count}} ta",
     "quarterN": "{{n}}-chorak",
     "reasonRequired": "Sababni yozing",
     "rejectReasonLabel": "Rad etish sababi",
-    "rejectReasonOptionalLabel": "Rad etish sababi (agar kerak)",
     "rejectedToast": "Rad etildi",
     "studentAnswer": "Talaba javobi",
     "tabs": {
@@ -2109,7 +2319,15 @@
       "journal": "Kundalik",
       "tasks": "Topshiriqlar"
     },
-    "title": "Ko'rib chiqish"
+    "title": "Ko'rib chiqish",
+    "pointsLabelRequired": "Ball (0–{{max}}) *",
+    "pointsLabelOptional": "Ball (0–{{max}}, ixtiyoriy)",
+    "pointsRequiredHint": "Tasdiqlash uchun ball kiriting — u yakuniy bahoning «O'quv topshiriqlar» mezoniga qo'shiladi.",
+    "pointsOptionalHint": "Ma'naviy topshiriq: ball kiritilmasa, shablon bali ({{max}}) hisoblanadi.",
+    "pointsRequired": "Tasdiqlash uchun ball kiriting",
+    "approveWithPoints": "Tasdiqlash ({{points}} / {{max}})",
+    "reasonHint": "Rad etish uchun majburiy (kamida {{min}} belgi). Sabab talabaga ko'rsatiladi.",
+    "approvedLocked": "Amaliyot rahbari tasdiqlangan topshiriqni o'zgartira olmaydi. Tasdiqni faqat administrator bekor qila oladi."
   },
   "supervisorStudents": {
     "academicYear": "O'quv yili",
@@ -2121,7 +2339,6 @@
     "emptyTitle": "Talaba topilmadi",
     "noGroup": "— guruhsiz —",
     "rowClickHint": "Baholash uchun bosing",
-    "searchPlaceholder": "F.I.SH. yoki guruh bo'yicha qidiring",
     "semesters": {
       "all": "Barcha semestrlar",
       "fall": "1-semestr (Kuzgi)",
@@ -2142,7 +2359,13 @@
       "period": "Muddat"
     },
     "title": "Talabalarim",
-    "totalSummary": "Jami: <0>{{count}}</0> ta talaba · {{groups}} ta guruh"
+    "totalSummary": "Jami: <0>{{count}}</0> ta talaba · {{groups}} ta guruh",
+    "searchPlaceholderWithId": "F.I.SH., HEMIS ID yoki guruh bo'yicha qidiring",
+    "cancelledReadOnly": "Bu amaliyot bekor qilingan — baholab bo'lmaydi, faqat ko'rish mumkin.",
+    "semesterShort": {
+      "fall": "1-sem",
+      "spring": "2-sem"
+    }
   },
   "supervisorSupervisorLayout": {
     "brand": "CHDPU Amaliyot",
@@ -2160,7 +2383,8 @@
       "myStudents": "Talabalarim",
       "programs": "Amaliyot dasturlari",
       "regulations": "Normativ hujjatlar",
-      "tasks": "Topshiriqlar"
+      "tasks": "Topshiriqlar",
+      "reports": "Yakuniy hisobotlar"
     },
     "sections": {
       "practices": "Amaliyotlar"
@@ -2200,7 +2424,14 @@
     "professionalSection": "Kasbiy ma'lumot",
     "specialtyLabel": "Mutaxassislik",
     "updatedToast": "Supervizor yangilandi",
-    "usernameLabel": "Username"
+    "usernameLabel": "Username",
+    "isActive": "Faol",
+    "isActiveHint": "Nofaol supervizor tizimga kira olmaydi va yangi talabalarga biriktirilmaydi; tarixi saqlanadi",
+    "orgMoreResults": "{{total}} tadan {{shown}} tasi ko'rsatildi — qidiruvni aniqlashtiring",
+    "orgResults": "Tashkilotlar ro'yxati",
+    "orgSearchPlaceholder": "Tashkilot qidirish (nomi, hudud)",
+    "removeOrganization": "Olib tashlash: {{name}}",
+    "selectedOrganizations": "Tanlangan tashkilotlar"
   },
   "supervisorsSupervisorImportDialog": {
     "chooseFile": "Fayl tanlash",
@@ -2223,11 +2454,11 @@
     "optionalColumns": "<0>Ixtiyoriy</0>: Fakultet, Kafedra, Lavozim, E-pochta, Telefon, Mutaxassislik, Tashkilot (vergul bilan, max 5), Login.",
     "password": "Parol",
     "requiredColumns": "<0>Majburiy</0>: FISh (yagona ustun) yoki Familiya + Ism.",
-    "rowN": "Row {{row}}",
     "skipped": "O'tkazildi",
     "supervisorsAdded": "{{count}} ta supervizor qo'shildi",
     "title": "Supervizorlar Excel import",
-    "xlsxOnly": ".xlsx fayl yuklang"
+    "xlsxOnly": ".xlsx fayl yuklang",
+    "rowLabel": "{{row}}-qator"
   },
   "taskTemplatesTaskTemplateFormDialog": {
     "category": {
@@ -2313,7 +2544,16 @@
     "linkPlaceholder": "Google Maps link yoki 41.31, 69.28",
     "myLocation": "Joyim",
     "myLocationTitle": "Mening joylashuvim",
-    "parseError": "Koordinata topilmadi. Google Maps linkini yoki '41.31, 69.28' ko'rinishida kiriting"
+    "parseError": "Koordinata topilmadi. Google Maps linkini yoki '41.31, 69.28' ko'rinishida kiriting",
+    "clearLocation": "Joylashuvni olib tashlash",
+    "geoDenied": "Joylashuvga ruxsat berilmagan. Brauzer manzil satridagi qulf belgisi orqali joylashuvga ruxsat bering yoki nuqtani xaritada belgilang.",
+    "geoInsecure": "Joylashuvni aniqlash faqat xavfsiz (https) ulanishda ishlaydi. Nuqtani xaritada belgilang yoki Google Maps linkini kiriting.",
+    "geoLowAccuracy": "Joylashuv aniqligi past (±{{m}} m). Nuqtani xaritada tekshirib, kerak bo'lsa to'g'rilang.",
+    "geoTimeout": "Joylashuvni aniqlash uchun vaqt tugadi. Qayta urinib ko'ring yoki nuqtani xaritada belgilang.",
+    "geoUnavailable": "Joylashuvni aniqlab bo'lmadi. Nuqtani xaritada belgilang yoki Google Maps linkini kiriting.",
+    "geoUnsupported": "Bu brauzer joylashuvni aniqlashni qo'llab-quvvatlamaydi. Nuqtani xaritada belgilang.",
+    "locating": "Aniqlanmoqda…",
+    "radiusLegend": "Radius: {{m}} m"
   },
   "uiPromptDialog": {
     "minLengthError": "Kamida {{n}} belgi kerak",
@@ -2346,7 +2586,13 @@
       "qualifying": "Malakaviy amaliyot"
     },
     "title": "Shartnoma tekshiruvi",
-    "valid": "Yaroqli"
+    "valid": "Yaroqli",
+    "checkFailed": "Hozir tekshirib bo'lmadi — internet aloqasini tekshirib, birozdan so'ng qayta urinib ko'ring.",
+    "downloadPdf": "PDF hujjatni yuklab olish",
+    "openFullscreen": "To'liq ekranda ochish",
+    "officialCopy": "Rasmiy hujjat nusxasi (PDF)",
+    "checkFailedTitle": "Tekshirib bo'lmadi",
+    "retry": "Qayta urinish"
   },
   "inAppBrowser": {
     "title": "Siz {{app}} ichidagi brauzerdan kirmoqdasiz",
@@ -2379,7 +2625,8 @@
     "notePlaceholder": "Talabaga ko'rinadigan izoh (ixtiyoriy)",
     "reason": "Sabab (audit uchun)",
     "reasonRequired": "Sabab (kamida 3 belgi) majburiy",
-    "saved": "{{date}} — {{status}} sifatida saqlandi"
+    "saved": "{{date}} — {{status}} sifatida saqlandi",
+    "timesTimezone": "Vaqtlar Toshkent vaqtida (UTC+5)."
   },
   "attendanceRange": {
     "title": "Oraliqni belgilash",
@@ -2440,5 +2687,487 @@
       "insecure": "Manzilni https:// bilan boshlanadigan ko'rinishda qayta oching.",
       "unsupported": "Chrome yoki Safari'ning yangi versiyasidan foydalaning."
     }
+  },
+  "requestError": {
+    "offline": "Internet aloqasi yo'q. Telefon internetga ulanganini tekshirib, qayta urinib ko'ring.",
+    "network": "Server bilan aloqa o'rnatilmadi — internet uzilgan yoki juda sekin. Qayta urinib ko'ring.",
+    "timeout": "Server javob bermadi (javob kelmadi). Internet sekin bo'lishi mumkin — birozdan so'ng qayta urinib ko'ring.",
+    "server": "Serverda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring."
+  },
+  "studentDashboard": {
+    "kickerDefault": "Amaliyot platformasi",
+    "progressLabel": "Amaliyot muddatidan o'tgan qism",
+    "phase": {
+      "upcoming": "Boshlanmagan",
+      "ongoing": "Jarayonda",
+      "finished": "Yakunlangan"
+    },
+    "statusKicker": "Amaliyot holati",
+    "statusTitle": "Joriy bosqich",
+    "stepState": {
+      "complete": "bajarilgan",
+      "current": "joriy bosqich",
+      "pending": "kutilmoqda"
+    },
+    "steps": {
+      "placement": "Amaliyot joyi",
+      "placementMissing": "Hali biriktirilmagan",
+      "practice": "Amaliyot",
+      "startsOn": "{{date}} kuni boshlanadi",
+      "endsOn": "Jarayonda · {{date}} kuni tugaydi",
+      "endedOn": "{{date}} kuni yakunlangan",
+      "result": "Natija",
+      "resultPending": "Amaliyot tugagach baholanadi",
+      "awaitingGrade": "Baholash kutilmoqda",
+      "gradeWithCredit": "{{grade}} ball · kredit olindi",
+      "gradeNoCredit": "{{grade}} ball · kredit olinmadi"
+    },
+    "checkInNotStarted": "Amaliyot {{date}} kuni boshlanadi — kelishni o'sha kundan qayd etasiz.",
+    "checkInEnded": "Amaliyot muddati {{date}} kuni tugagan — davomat endi qayd etilmaydi.",
+    "retry": "Qayta urinish"
+  },
+  "academicSearchableSelect": {
+    "searchLabel": "Ro'yxatdan qidirish",
+    "searchPlaceholder": "Qidirish...",
+    "noResults": "Hech narsa topilmadi",
+    "moreResults": "Yana {{n}} ta — qidiruvni aniqlashtiring"
+  },
+  "adminStructure": {
+    "facultiesSubtitle": "Universitet fakultetlari — yo'nalishlar va kafedralar shularga bog'lanadi",
+    "departmentsSubtitle": "Fakultet kafedralari — supervizorlar kafedraga biriktiriladi",
+    "directionsSubtitle": "Ta'lim yo'nalishlari (8 raqamli HEMIS kodi bilan)",
+    "groupsSubtitle": "Akademik guruhlar — yo'nalish, kurs va o'quv yili bo'yicha",
+    "academicYearsSubtitle": "O'quv yillari — bir vaqtda faqat bittasi aktiv bo'ladi",
+    "statTotal": "Jami",
+    "statActiveYear": "Aktiv yil",
+    "deleteTitle": "O'chirishni tasdiqlang"
+  },
+  "adminValidation": {
+    "required": "Majburiy maydon",
+    "minChars": "Kamida {{n}} ta belgi",
+    "maxChars": "Ko'pi bilan {{n}} ta belgi",
+    "intRange": "{{min}} dan {{max}} gacha butun son kiriting"
+  },
+  "objectsOrganizationDetailDialog": {
+    "description": "Tashkilot haqida to'liq ma'lumot",
+    "sectionMain": "Asosiy ma'lumotlar va rekvizitlar",
+    "director": "Rahbar",
+    "inn": "INN / STIR",
+    "bankName": "Bank nomi",
+    "bankAccount": "Hisob raqami (H/R)",
+    "mfo": "MFO",
+    "sectionContact": "Aloqa va joylashuv",
+    "phone": "Telefon",
+    "email": "Email",
+    "website": "Veb-sayt",
+    "area": "Hudud",
+    "address": "Manzil",
+    "geolocation": "Geolokatsiya",
+    "openMap": "Xaritada ko'rish",
+    "geoNotSet": "Belgilanmagan — davomatda joylashuv tekshirilmaydi",
+    "geoRadius": "Geo-fence radiusi",
+    "radiusValue": "{{m}} m",
+    "sectionCapacity": "Sig'im va amaliyot sharoitlari",
+    "capacity": "Sig'imi (kvota)",
+    "capacityValue": "{{n}} ta talaba",
+    "assignedNow": "Hozir biriktirilgan: {{n}}",
+    "workDays": "Ish kunlari",
+    "notes": "Qo'shimcha izoh"
+  },
+  "studentsBulkDeleteFailures": {
+    "title": "{{n}} ta yozuv o'chirilmadi",
+    "unknownName": "Noma'lum"
+  },
+  "studentsListPagination": {
+    "label": "Sahifalar",
+    "pageOf": "{{page}} / {{total}}"
+  },
+  "assignmentsAssignmentStatusBadge": {
+    "draft": "Qoralama",
+    "active": "Aktiv",
+    "completed": "Yakunlangan",
+    "cancelled": "Bekor qilingan"
+  },
+  "contractsContractStatusBadge": {
+    "draft": "Yangi",
+    "generated": "PDF tayyor",
+    "active": "Faol",
+    "expired": "Arxiv",
+    "revoked": "Bekor qilingan"
+  },
+  "assignmentsSearchSelect": {
+    "searchStudent": "Qidiruv: F.I.SH. yoki HEMIS ID",
+    "searchSupervisor": "Qidiruv: F.I.SH. yoki lavozim",
+    "searchOrganization": "Qidiruv: nomi yoki tuman",
+    "searchArea": "Qidiruv: hudud yoki tuman",
+    "searchGroup": "Qidiruv: guruh nomi",
+    "noStudentFound": "Talaba topilmadi",
+    "noSupervisorFound": "Supervizor topilmadi",
+    "noOrganizationFound": "Tashkilot topilmadi",
+    "noAreaFound": "Hudud topilmadi",
+    "noGroupFound": "Guruh topilmadi",
+    "notSelected": "Tanlanmagan",
+    "noGroup": "guruhsiz",
+    "unknownStudent": "Noma'lum talaba",
+    "unknownSupervisor": "Noma'lum supervizor",
+    "unknownOrganization": "Noma'lum tashkilot",
+    "unknownArea": "Noma'lum hudud",
+    "unknownGroup": "Noma'lum guruh",
+    "moreResults": "Birinchi {{shown}} tasi ko'rsatildi (jami {{total}}) — aniqroq qidiring"
+  },
+  "adminMonitoring": {
+    "title": "Monitoring markazi",
+    "subtitle": "Amaliyot jarayonlari, davomat dinamikasi, obyektlar sig'imi va joriy ko'rsatkichlar",
+    "pdfReport": "Tahliliy hisobot (PDF)",
+    "pdfPreparing": "Tayyorlanmoqda...",
+    "toAssignments": "Biriktirishlar",
+    "tabs": {
+      "overview": "Umumiy holat",
+      "practices": "Amaliyotlar",
+      "attendance": "Davomat",
+      "tasks": "Topshiriqlar",
+      "supervisors": "Rahbarlar",
+      "objects": "Obyektlar",
+      "issues": "Muammolar",
+      "map": "Xarita",
+      "analytics": "Tahlil"
+    },
+    "unassigned": {
+      "title": "Amaliyotga biriktirilmagan talabalar bor",
+      "count": "{{count}} nafar",
+      "body": "Tizimdagi jami <0>{{total}}</0> nafar talabadan <1>{{count}} nafari</1> hali birorta amaliyot joyiga biriktirilmagan.",
+      "assign": "Talabalarni biriktirish",
+      "viewList": "Ro'yxatni ko'rish"
+    },
+    "kpi": {
+      "totalStudents": "Jami talabalar",
+      "totalStudentsHint": "Tizimda ro'yxatdan o'tgan",
+      "unassigned": "Biriktirilmagan",
+      "unassignedHint": "Amaliyotga biriktirilmagan",
+      "allAssigned": "Barchasi biriktirilgan",
+      "activePractices": "Faol amaliyotlar",
+      "activePracticesHint": "Hozir davom etayotgan",
+      "attendance": "Davomat ko'rsatkichi",
+      "attendanceHint": "Oxirgi 30 kun",
+      "tasks": "Topshiriqlar",
+      "tasksHint": "Tekshiruvga yuborilgan: {{count}}",
+      "issues": "Diqqat talab holatlar",
+      "issuesHint": "Ko'rib chiqish tavsiya etiladi",
+      "noIssues": "Muammo aniqlanmadi"
+    },
+    "practiceTypes": {
+      "title": "Amaliyot turlari bo'yicha ko'rsatkichlar",
+      "description": "Har bir amaliyot turi bo'yicha biriktirishlar ijrosi",
+      "all": "Barchasi",
+      "active": "Faol",
+      "completed": "Yakunlangan",
+      "draft": "Qoralama",
+      "total": "Jami",
+      "empty": "Amaliyot turlari bo'yicha ma'lumot yo'q"
+    },
+    "pending": {
+      "title": "Kutilayotgan tekshiruvlar",
+      "tasks": "Topshiriqlar",
+      "journals": "Kundalik yozuvlari",
+      "analyses": "Dars tahlillari",
+      "total": "Jami tekshiruvda"
+    },
+    "partnership": {
+      "title": "Hamkorlik va shartnomalar",
+      "organizations": "Hamkor tashkilotlar",
+      "supervisors": "Amaliyot rahbarlari",
+      "signed": "Imzolangan shartnomalar",
+      "pendingContracts": "Kutilayotgan / qoralama"
+    },
+    "practices": {
+      "title": "Amaliyotlar holati",
+      "description": "Biriktirishlarning holatlar bo'yicha taqsimoti",
+      "total": "Jami biriktirishlar",
+      "active": "Faol amaliyotda",
+      "draft": "Tayyorgarlikda (qoralama)",
+      "completed": "Yakunlangan",
+      "manage": "Biriktirishlarni boshqarish"
+    },
+    "attendance": {
+      "title": "Davomat monitoringi (oxirgi 30 kun)",
+      "description": "Talabalarning amaliyot joyiga belgilangan kunlarda kelishi",
+      "open": "Davomat jadvaliga o'tish",
+      "green": "Kelgan (tasdiqlangan)",
+      "red": "Kelmagan (sababsiz)",
+      "pending": "Tasdiq kutilmoqda",
+      "rate": "Umumiy davomat ko'rsatkichi"
+    },
+    "tasks": {
+      "title": "Topshiriqlar ijrosi va baholash",
+      "description": "Berilgan topshiriqlar va ularni tekshirish holati",
+      "templates": "Topshiriq shablonlari",
+      "total": "Jami berilgan topshiriqlar",
+      "pending": "Tekshiruvni kutayotgan ishlar",
+      "approved": "Qabul qilingan"
+    },
+    "supervisors": {
+      "title": "Rahbarlar yuklamasi",
+      "description": "Amaliyot rahbarlariga biriktirilgan talabalar soni va sig'im darajasi",
+      "list": "Rahbarlar ro'yxati",
+      "total": "Faol amaliyot rahbarlari: {{count}}",
+      "overloaded": "Yuklamasi 80% dan oshgan rahbarlar:",
+      "usage": "Talabalar: {{used}} / {{capacity}}",
+      "allNormal": "Barcha rahbarlarning yuklamasi me'yorda."
+    },
+    "objects": {
+      "title": "Amaliyot obyektlari sig'imi",
+      "description": "Maktab, MTT va korxonalarning qabul qilish quvvati va bandligi",
+      "catalog": "Obyektlar katalogi",
+      "total": "Hamkor tashkilotlar: {{count}}",
+      "filling": "Sig'imi to'lib borayotgan obyektlar:",
+      "usage": "O'rinlar: {{used}} / {{capacity}}",
+      "allNormal": "Obyektlarda sig'im oshib ketishi kuzatilmadi."
+    },
+    "issues": {
+      "title": "Diqqat talab muammolar",
+      "description": "To'lib ketgan obyektlar, kutilayotgan tekshiruvlar va tasdiqlanmagan shartnomalar",
+      "high": "Yuqori",
+      "medium": "O'rta",
+      "emptyTitle": "Hammasi joyida!",
+      "emptyDescription": "Hozircha kritik muammo aniqlanmadi.",
+      "unassignedTitle": "Amaliyotga biriktirilmagan talabalar",
+      "unassignedDesc": "Hali birorta amaliyot joyiga biriktirilmagan talabalar: {{count}}",
+      "unassignedAction": "Biriktirishga o'tish",
+      "capacityOrgTitle": "Tashkilot: {{name}}",
+      "capacitySupervisorTitle": "Rahbar: {{name}}",
+      "capacityDesc": "Sig'im {{percent}}% to'lgan (band: {{used}} / {{capacity}})",
+      "capacityAction": "Ko'rib chiqish",
+      "pendingTitle": "Tekshiruvni kutayotgan talaba ishlari",
+      "pendingDesc": "Jami: {{total}} (topshiriqlar: {{tasks}}, kundaliklar: {{journals}}, dars tahlillari: {{analyses}}). Tekshiruv biriktirish oynasida bajariladi.",
+      "pendingAction": "Faol biriktirishlarga o'tish",
+      "draftContractsTitle": "Tasdiqlanmagan shartnomalar",
+      "draftContractsDesc": "Qoralama holatdagi, hali imzolanmagan shartnomalar: {{count}}",
+      "draftContractsAction": "Shartnomalarni tekshirish"
+    },
+    "map": {
+      "title": "Amaliyot obyektlari xaritasi",
+      "description": "GPS koordinatasi kiritilgan faol tashkilotlar va hududlar",
+      "organizationsCount": "Tashkilotlar: {{count}}",
+      "areasCount": "Hududlar: {{count}}",
+      "capacity": "Sig'im: {{count}} talaba",
+      "legendOrganization": "Tashkilot",
+      "legendArea": "Hudud (dala amaliyoti)",
+      "noCoordinates": "Hozircha obyektlarning GPS koordinatalari kiritilmagan. Obyektlar bo'limida koordinatalarni qo'shing."
+    },
+    "analytics": {
+      "title": "Tahliliy hisobot",
+      "description": "Platformadagi asosiy ko'rsatkichlar bo'yicha yakuniy statistik ma'lumotnoma",
+      "reportTitle": "Rasmiy tahliliy hisobot (PDF)",
+      "reportDescription": "Joriy ko'rsatkichlar, amaliyot turlari va davomat bo'yicha to'liq statistik ma'lumotnoma",
+      "download": "Statistika hisoboti (PDF)",
+      "preparing": "Hujjat shakllanmoqda..."
+    }
+  },
+  "adminIntegrations": {
+    "title": "Tizim integratsiyalari",
+    "badge": "Integratsiya va servislar",
+    "subtitle": "HEMIS ma'lumotlari, raqamli hujjatlarni tekshirish va tashqi servislar bilan bog'lanish holati",
+    "statusActive": "Faol",
+    "statusPlanned": "Rejalashtirilgan",
+    "soon": "Tez orada",
+    "hemis": {
+      "title": "HEMIS (OTM axborot tizimi)",
+      "subtitle": "Talabalar kontingenti va akademik tuzilma",
+      "status": "Excel import",
+      "description": "Talabalar, guruhlar, yo'nalishlar va fakultetlar HEMIS'dan eksport qilingan Excel fayl orqali import qilinadi. HEMIS API orqali avtomatik sinxronizatsiya hali ulanmagan.",
+      "studentsLabel": "Tizimdagi talabalar",
+      "importLink": "Excel import qilish",
+      "structureLabel": "Akademik tuzilma",
+      "structureValue": "Fakultet / yo'nalish / guruh",
+      "structureLink": "Tuzilmani boshqarish",
+      "method": "Usul: HEMIS eksport fayli (Excel)",
+      "syncButton": "API sinxronizatsiya",
+      "syncUnavailable": "HEMIS API bilan to'g'ridan-to'g'ri sinxronizatsiya hali ulanmagan — ma'lumotlarni Excel import orqali yangilang"
+    },
+    "qr": {
+      "title": "Raqamli hujjatlar va QR tekshiruv",
+      "subtitle": "Shartnomalar haqiqiyligini ochiq tekshirish",
+      "description": "Tasdiqlangan shartnomalarning PDF nusxasiga noyob (taxmin qilib bo'lmaydigan) havolali QR-kod qo'yiladi. Istalgan kishi uni skanerlab, hujjat holatini tizimda tekshira oladi.",
+      "publicUrl": "Ochiq tekshiruv manzili",
+      "qrStandard": "QR kod standarti",
+      "pdfGenerator": "Hujjat yaratish",
+      "pdfGeneratorValue": "Shablon (DOCX / HTML) → PDF",
+      "templatesNote": "Shablonlarni faqat superadministrator boshqaradi",
+      "templatesLink": "Shablonlar"
+    },
+    "eimzo": {
+      "title": "E-IMZO va OneID",
+      "subtitle": "Elektron raqamli imzo va yagona identifikatsiya",
+      "description": "Shartnomalarni tashkilot rahbarlari bilan E-IMZO kaliti orqali masofadan imzolash va OneID orqali tizimga kirish.",
+      "current": "Hozircha: imzolangan skan nusxa yuklanadi"
+    },
+    "telegram": {
+      "title": "Telegram bot va xabarnomalar",
+      "subtitle": "Talaba va rahbarlar uchun tezkor ogohlantirishlar",
+      "description": "Amaliyot boshlanishi, topshiriq muddatlari va davomat bo'yicha bildirishnomalarni Telegram orqali yuborish.",
+      "current": "Hozircha: tizim ichidagi bildirishnomalar"
+    }
+  },
+  "theme": {
+    "light": "Yorug' mavzu",
+    "dark": "Qorong'i mavzu",
+    "system": "Tizim mavzusi",
+    "switchToDark": "Qorong'i mavzuga o'tish",
+    "switchToSystem": "Tizim mavzusiga o'tish",
+    "switchToLight": "Yorug' mavzuga o'tish"
+  },
+  "userRoles": {
+    "super_admin": "Super Admin",
+    "admin": "Administrator",
+    "supervisor": "Amaliyot rahbari",
+    "student": "Talaba"
+  },
+  "apiFiles": {
+    "uploadFailed": "Faylni yuklab bo'lmadi",
+    "reportFailed": "Hisobotni yuklab olib bo'lmadi",
+    "exportFailed": "Eksport faylini yuklab olib bo'lmadi",
+    "templateFailed": "Shablonni yuklab olib bo'lmadi",
+    "credentialsFailed": "Login-parol jadvalini yuklab olib bo'lmadi",
+    "archiveFailed": "Yig'ma jildni yuklab olib bo'lmadi"
+  },
+  "protectedRoute": {
+    "forbiddenTitle": "Ruxsat etilmagan (403)",
+    "forbiddenDescription": "Administrator hisobingizga bu bo'limdan foydalanish huquqi berilmagan. Qo'shimcha ruxsat uchun Super Admin'ga murojaat qiling.",
+    "backToDashboard": "Bosh sahifaga qaytish"
+  },
+  "siteChrome": {
+    "brandTitle": "AMALIYOT",
+    "brandSubtitle": "RAQAMLI PLATFORMA",
+    "drawerBrand": "CHDPU AMALIYOT",
+    "mainNavigation": "Asosiy navigatsiya",
+    "footerNavigation": "Sayt bo'limlari",
+    "openMenu": "Menyuni ochish",
+    "closeMenu": "Menyuni yopish",
+    "sections": "Bo'limlar",
+    "login": "Platformaga kirish",
+    "myDashboard": "Kabinetga o'tish",
+    "nav": {
+      "home": "Bosh sahifa",
+      "practice": "Amaliyot",
+      "guide": "Yo'riqnoma",
+      "faq": "FAQ"
+    },
+    "footerProduct": "RAQAMLI AMALIYOT",
+    "footerUniversity": "Chirchiq davlat pedagogika universiteti",
+    "footerTagline": "Raqamli amaliyot boshqaruv platformasi",
+    "university": "Universitet",
+    "rights": "© {{year}} CHDPU. Barcha huquqlar himoyalangan.",
+    "location": "CHIRCHIQ · O'ZBEKISTON"
+  },
+  "dashboardPreview": {
+    "ariaLabel": "Talaba kabineti namunasi (bezak)",
+    "overview": "UMUMIY KO'RINISH",
+    "greeting": "Xayrli kun, talaba",
+    "subtitle": "Amaliyot jarayoningiz bir joyda.",
+    "practiceName": "4+2 PEDAGOGIK AMALIYOT",
+    "overallProgress": "UMUMIY JARAYON",
+    "inProgress": "Davom etmoqda",
+    "tasks": "TOPSHIRIQLAR",
+    "tasksLeft": "{{n}} ta qoldi",
+    "attendance": "DAVOMAT",
+    "attendanceDays": "{{n}} kun",
+    "recorded": "Qayd etilgan",
+    "practiceActive": "Amaliyot faol",
+    "processOngoing": "Jarayon davom etmoqda",
+    "theoryPractice": "NAZARIYA + AMALIYOT"
+  },
+  "practiceSearch": {
+    "item1": "Biriktirilgan maktab yoki tashkilot va amaliyot rahbari",
+    "item2": "Topshiriqlar, kundalik va davomat",
+    "item3": "Shartnoma, yakuniy hisobot va yig'ma jild"
+  },
+  "privateState": {
+    "loginTitle": "Tizimga kirish talab etiladi",
+    "loginText": "Amaliyot joyi, rahbar, topshiriqlar va davomat shaxsiy ma'lumot hisoblanadi — ochiq qidiruv yo'q. Ularni ko'rish uchun hisobingizga kiring.",
+    "dashboardTitle": "Ma'lumotlaringiz kabinetingizda",
+    "dashboardText": "Amaliyotingiz bo'yicha barcha ma'lumotlar shaxsiy kabinetingizda jamlangan."
+  },
+  "amaliyotPage": {
+    "index": "AMALIYOT MA'LUMOTLARI",
+    "titleLine1": "Amaliyotingiz —",
+    "titleLine2": "kabinetingizda.",
+    "description": "Amaliyot yozuvlari shaxsiy ma'lumot, shuning uchun ochiq qidiruv yo'q. Quyidagilarni tizimga kirib, shaxsiy kabinetingizda ko'rasiz.",
+    "sections": {
+      "placement": {
+        "title": "Biriktirish",
+        "desc": "Amaliyot joyi (maktab, tashkilot yoki hudud), rahbar va amaliyot muddati."
+      },
+      "attendance": {
+        "title": "Davomat",
+        "desc": "Amaliyot kunlaridagi kelish-ketish qaydlari va davomat foizi."
+      },
+      "tasks": {
+        "title": "Topshiriqlar",
+        "desc": "Sillabus topshiriqlari, kundalik va dars tahlillari, ularning baholari."
+      },
+      "documents": {
+        "title": "Hujjatlar",
+        "desc": "Shartnoma, yakuniy hisobot va yig'ma jild."
+      }
+    }
+  },
+  "faqPage": {
+    "index": "YORDAM MARKAZI",
+    "titleLine1": "Savollarga",
+    "titleLine2": "aniq javoblar.",
+    "description": "CHDPU amaliyot platformasi va amaliyot jarayoniga oid ko'p beriladigan savollar.",
+    "items": {
+      "q1": {
+        "question": "4+2 amaliyot tizimi nima?",
+        "answer": "Haftaning to'rt kuni universitetda nazariy ta'lim, ikki kuni esa biriktirilgan maktab va ta'lim muassasalarida amaliy tajriba bilan bog'langan pedagogik o'quv modeli. Platforma boshqa amaliyot turlarini (malakaviy, pedagogik va h.k.) ham qamrab oladi."
+      },
+      "q2": {
+        "question": "Platformaga kimlar kira oladi?",
+        "answer": "CHDPU talabalari, amaliyot rahbarlari, fakultet mas'ullari va amaliyot bo'limi xodimlari o'z roliga mos ruxsatlar bilan kiradi."
+      },
+      "q3": {
+        "question": "Amaliyot ma'lumotim ko'rinmasa nima qilaman?",
+        "answer": "Avval o'z hisobingiz bilan kirganingizni tekshiring. Biriktirish hali qilinmagan bo'lsa, fakultet amaliyot mas'uliga murojaat qiling."
+      },
+      "q4": {
+        "question": "Davomat va topshiriqlar qanday nazorat qilinadi?",
+        "answer": "Talaba amaliyot kunlari joylashuvi (GPS) orqali kelish va ketishni belgilaydi; zarur hollarda davomatni administrator tuzatadi. Topshiriqlar platformaga yuklanadi va amaliyot rahbari baholaydi."
+      },
+      "q5": {
+        "question": "Parolimni unutdim, qanday tiklayman?",
+        "answer": "Parolni o'zingiz tiklay olmaysiz — fakultetingiz administratoriga murojaat qiling, u yangi vaqtinchalik parol beradi. Kirgandan so'ng parolni «Profilim → Parol» bo'limida o'zgartirasiz."
+      }
+    }
+  },
+  "guidePage": {
+    "index": "FOYDALANISH YO'RIQNOMASI",
+    "titleLine1": "Amaliyot —",
+    "titleLine2": "qadam-baqadam.",
+    "description": "Platformadagi asosiy jarayonlar va talabaning amaliyot bosqichlari qisqa hamda aniq ko'rsatilgan.",
+    "steps": {
+      "profile": {
+        "title": "Profilni tekshiring",
+        "desc": "Shaxsiy va akademik ma'lumotlaringiz to'g'riligini platformada tekshiring."
+      },
+      "tasks": {
+        "title": "Topshiriqlarni bajaring",
+        "desc": "Amaliyot rejasidagi vazifalarni belgilangan muddatda yuboring."
+      },
+      "attendance": {
+        "title": "Davomatni qayd eting",
+        "desc": "Amaliyot kunlarida kelish va ketishni platformada belgilang."
+      },
+      "report": {
+        "title": "Hisobotni yakunlang",
+        "desc": "Yakuniy hisobotni yuboring va rahbar bahosini oling."
+      }
+    },
+    "ctaTitle": "Jarayonni boshlashga tayyormisiz?",
+    "ctaText": "Shaxsiy kabinetingizga kirib, amaliyot holatingizni tekshiring."
+  },
+  "supervisorReports": {
+    "subtitle": "Talabalaringiz topshirgan yakuniy hisobotlarni ko'rib chiqing: tasdiqlang yoki sabab bilan qaytaring",
+    "returnForRevision": "Qaytarish",
+    "statusShort": "Hisobot: {{status}}"
   }
 }

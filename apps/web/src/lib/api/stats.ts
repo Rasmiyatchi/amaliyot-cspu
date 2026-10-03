@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import i18n from "@/i18n";
-import { api } from "@/lib/api";
+import { api, downloadFile } from "@/lib/api";
 import type {
   AssignmentStatus,
   AttendanceDayStatus,
@@ -10,7 +10,6 @@ import type {
   TaskStatus,
   UUID,
 } from "@/lib/api/types";
-import { useAuthStore } from "@/stores/auth";
 
 const REFETCH_MS = 30_000; // polling 30s
 
@@ -109,20 +108,49 @@ export type StudentStats = {
   journals_rejected?: number;
 };
 
-export function useAdminStats() {
+type StatsQueryOptions = {
+  /** false — so'rov yuborilmaydi (masalan, rolga mos bo'lmagan endpoint 403 qaytarmasin) */
+  enabled?: boolean;
+};
+
+/** Admin va Super Admin uchun KPI'lar. Super Admin uchun `useSuperAdminStats` (bu + qo'shimchalar). */
+export function useAdminStats({ enabled = true }: StatsQueryOptions = {}) {
   return useQuery({
     queryKey: ["stats", "admin"] as const,
     queryFn: () => api.get("v1/stats/admin").json<AdminStats>(),
     refetchInterval: REFETCH_MS,
+    enabled,
   });
 }
 
-export function useSuperAdminStats() {
+/** Faqat Super Admin — boshqa rollarga server 403 qaytaradi, shuning uchun `enabled` bilan chaqiring. */
+export function useSuperAdminStats({ enabled = true }: StatsQueryOptions = {}) {
   return useQuery({
     queryKey: ["stats", "super-admin"] as const,
     queryFn: () => api.get("v1/stats/super-admin").json<SuperAdminStats>(),
     refetchInterval: REFETCH_MS,
+    enabled,
   });
+}
+
+/**
+ * Rolga mos KPI'lar: Super Admin — `/stats/super-admin` (admin KPI'larini ham o'z ichiga oladi),
+ * Admin — `/stats/admin`. Faqat bitta so'rov yuboriladi (avval ikkalasi so'ralib, admin
+ * uchun har 30 soniyada 403 qaytardi).
+ */
+export function useRoleStats(isSuperAdmin: boolean) {
+  const admin = useAdminStats({ enabled: !isSuperAdmin });
+  const superAdmin = useSuperAdminStats({ enabled: isSuperAdmin });
+  const active = isSuperAdmin ? superAdmin : admin;
+  const stats: AdminStats | undefined = active.data;
+  return {
+    stats,
+    superAdminStats: isSuperAdmin ? superAdmin.data : undefined,
+    isPending: active.isPending,
+    isFetching: active.isFetching,
+    error: active.error,
+    refetch: active.refetch,
+  };
 }
 
 export function useSupervisorStats(filters?: { academic_year_id?: string; semester?: string }) {
@@ -148,28 +176,10 @@ export function useStudentStats() {
 }
 
 /** Dashboard statistika hisobotini PDF sifatida yuklab oladi. */
-export async function downloadStatsPdfReport(): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-
-  const res = await fetch("/api/v1/stats/report.pdf", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Hisobot yuklab bo'lmadi (${res.status})`);
-  }
-
-  const disposition = res.headers.get("content-disposition") ?? "";
-  const match = disposition.match(/filename="?([^";]+)"?/);
-  const filename = match?.[1] ?? "amaliyot_statistikasi.pdf";
-
-  const blob = await res.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = blobUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(blobUrl);
+export function downloadStatsPdfReport(): Promise<void> {
+  return downloadFile(
+    "/api/v1/stats/report.pdf",
+    "amaliyot_statistikasi.pdf",
+    i18n.t("adminIndex.pdfDownloadError"),
+  );
 }

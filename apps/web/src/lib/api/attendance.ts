@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useTashkentToday } from "@/components/attendance/use-tashkent-today";
 import { api } from "@/lib/api";
 import type {
   AssignmentStatus,
@@ -32,6 +33,9 @@ export type AttendanceFilters = {
   group_id?: UUID;
   direction_id?: UUID;
   faculty_id?: UUID;
+  /** Biriktirishning o'quv yili va semestri bo'yicha */
+  academic_year_id?: UUID;
+  semester?: Semester;
   /** Talaba F.I.SH. / hemis_id / login */
   search?: string;
 };
@@ -58,7 +62,9 @@ export const attendanceKeys = {
     [...attendanceKeys.all, "days", f, page, pageSize] as const,
   day: (id: UUID) => [...attendanceKeys.all, "day", id] as const,
   overrides: (dayId: UUID) => [...attendanceKeys.all, "overrides", dayId] as const,
-  today: (assignmentId: UUID) => [...attendanceKeys.all, "today", assignmentId] as const,
+  /** `day` — Toshkent sanasi: yarim tunda kalit almashadi, kechagi yozuv ko'rsatilmaydi. */
+  today: (assignmentId: UUID, day: ISODate) =>
+    [...attendanceKeys.all, "today", assignmentId, day] as const,
   summary: (f: AttendanceSummaryFilters, page: number, pageSize: number) =>
     [...attendanceKeys.all, "summary", f, page, pageSize] as const,
 };
@@ -75,6 +81,8 @@ function qs(filters: AttendanceFilters, page: number, pageSize: number): string 
   if (filters.group_id) p.set("group_id", filters.group_id);
   if (filters.direction_id) p.set("direction_id", filters.direction_id);
   if (filters.faculty_id) p.set("faculty_id", filters.faculty_id);
+  if (filters.academic_year_id) p.set("academic_year_id", filters.academic_year_id);
+  if (filters.semester) p.set("semester", filters.semester);
   if (filters.search?.trim()) p.set("search", filters.search.trim());
   return p.toString();
 }
@@ -235,15 +243,28 @@ export function useBulkSetAttendanceRange() {
   });
 }
 
-// Student-only (keyinroq ishlatish uchun)
+/**
+ * Talaba check-in/out: sekin mobil internetda 10 s yetmaydi (server o'tgan kunlarni ham
+ * sinxronlaydi). Xato bo'lsa ham (timeout — qayd serverda saqlangan bo'lishi mumkin)
+ * davomat qayta yuklanadi, talaba haqiqiy holatni ko'radi.
+ */
+const STUDENT_ATTENDANCE_TIMEOUT_MS = 30_000;
+
 export function useCheckIn() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ assignmentId, data }: { assignmentId: UUID; data: CheckInRequest }) =>
       api
-        .post(`v1/attendance/assignments/${assignmentId}/check-in`, { json: data })
+        .post(`v1/attendance/assignments/${assignmentId}/check-in`, {
+          json: data,
+          timeout: STUDENT_ATTENDANCE_TIMEOUT_MS,
+        })
         .json<AttendanceDayDetail>(),
     onSuccess: () => qc.invalidateQueries({ queryKey: attendanceKeys.all }),
+    // Xato toast'ini kechiktirmaslik uchun kutmaymiz
+    onError: () => {
+      void qc.invalidateQueries({ queryKey: attendanceKeys.all });
+    },
   });
 }
 
@@ -252,18 +273,37 @@ export function useCheckOut() {
   return useMutation({
     mutationFn: ({ assignmentId, data }: { assignmentId: UUID; data: CheckInRequest }) =>
       api
-        .post(`v1/attendance/assignments/${assignmentId}/check-out`, { json: data })
+        .post(`v1/attendance/assignments/${assignmentId}/check-out`, {
+          json: data,
+          timeout: STUDENT_ATTENDANCE_TIMEOUT_MS,
+        })
         .json<AttendanceDayDetail>(),
     onSuccess: () => qc.invalidateQueries({ queryKey: attendanceKeys.all }),
+    // Xato toast'ini kechiktirmaslik uchun kutmaymiz
+    onError: () => {
+      void qc.invalidateQueries({ queryKey: attendanceKeys.all });
+    },
   });
 }
 
+/** Ochiq qolgan sahifada admin o'zgartirishlari ham ko'rinsin (fon rejimida so'rov yo'q). */
+const TODAY_REFRESH_MS = 5 * 60_000;
+
+/**
+ * Talabaning bugungi davomati. Kalitda Toshkent sanasi bor — yarim tundan keyin kechagi
+ * "yakunlangan" yozuv o'rniga yangi kun yuklanadi; oyna fokusga qaytganda ham yangilanadi.
+ */
 export function useTodayStatus(assignmentId: UUID | null) {
+  const day = useTashkentToday();
   return useQuery({
-    queryKey: assignmentId ? attendanceKeys.today(assignmentId) : [],
+    queryKey: assignmentId
+      ? attendanceKeys.today(assignmentId, day)
+      : ([...attendanceKeys.all, "today", "none"] as const),
     enabled: !!assignmentId,
     queryFn: () =>
       api.get(`v1/attendance/assignments/${assignmentId}/today`).json<AttendanceDayDetail | null>(),
+    refetchOnWindowFocus: true,
+    refetchInterval: TODAY_REFRESH_MS,
   });
 }
 

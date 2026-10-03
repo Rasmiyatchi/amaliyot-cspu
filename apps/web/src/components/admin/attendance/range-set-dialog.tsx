@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import { CalendarRange, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,6 +8,7 @@ import {
   previewRange,
   type RangePreview,
 } from "@/components/attendance/attendance-date-utils";
+import { describeRequestError } from "@/components/attendance/request-error";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -142,6 +142,7 @@ function RangeSetForm({
         requiredWeekdays: a.required_weekdays,
         onlyRequiredWeekdays: onlyRequired,
         mode,
+        status,
         daysByDate: target.kind === "single" ? target.daysByDate : undefined,
       });
       if (p.candidates > 0) touched += 1;
@@ -155,7 +156,7 @@ function RangeSetForm({
       };
     }
     return { ...acc, perAssignment: touched };
-  }, [assignments, dateFrom, dateTo, onlyRequired, mode, target]);
+  }, [assignments, dateFrom, dateTo, onlyRequired, mode, status, target]);
 
   const hasDetail = target.kind === "single" && !!target.daysByDate;
   const invalidRange = !dateFrom || !dateTo || dateFrom > dateTo;
@@ -165,13 +166,11 @@ function RangeSetForm({
 
   const handleSubmit = async () => {
     if (invalidRange) {
-      toast.error(t("attendanceRange.invalidRange", { defaultValue: "Sana oralig'i noto'g'ri" }));
+      toast.error(t("attendanceRange.invalidRange"));
       return;
     }
     if (reasonTooShort) {
-      toast.error(
-        t("attendanceDayEdit.reasonRequired", { defaultValue: "Sabab (kamida 3 belgi) majburiy" }),
-      );
+      toast.error(t("attendanceDayEdit.reasonRequired"));
       return;
     }
     const body: AttendanceRangeSetRequest = {
@@ -190,8 +189,6 @@ function RangeSetForm({
         });
         toast.success(
           t("attendanceRange.resultToast", {
-            defaultValue:
-              "Yaratildi: {{created}}, yangilandi: {{updated}}, o'tkazib yuborildi: {{skipped}}",
             created: res.created,
             updated: res.updated,
             skipped: res.skipped,
@@ -204,8 +201,6 @@ function RangeSetForm({
         });
         toast.success(
           t("attendanceRange.bulkResultToast", {
-            defaultValue:
-              "{{assignments}} ta talaba · yaratildi: {{created}}, yangilandi: {{updated}}, o'tkazib yuborildi: {{skipped}}",
             assignments: res.assignments,
             created: res.created,
             updated: res.updated,
@@ -215,7 +210,6 @@ function RangeSetForm({
         if (res.failed.length > 0) {
           toast.warning(
             t("attendanceRange.bulkFailedToast", {
-              defaultValue: "{{count}} ta biriktirishda xatolik: {{first}}",
               count: res.failed.length,
               first: res.failed[0]?.error ?? "",
             }),
@@ -225,7 +219,7 @@ function RangeSetForm({
       onDone?.();
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(describeRequestError(e, t));
     }
   };
 
@@ -234,13 +228,12 @@ function RangeSetForm({
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <CalendarRange className="h-5 w-5 text-primary" />
-          {t("attendanceRange.title", { defaultValue: "Oraliqni belgilash" })}
+          {t("attendanceRange.title")}
         </DialogTitle>
         <DialogDescription>
           {target.kind === "single"
             ? target.assignment.label
             : t("attendanceRange.multiDescription", {
-                defaultValue: "{{count}} ta talaba tanlangan",
                 count: target.assignments.length,
               })}
           {" · "}
@@ -302,27 +295,21 @@ function RangeSetForm({
         </fieldset>
 
         <fieldset>
-          <legend className="text-sm font-medium">
-            {t("attendanceRange.mode", { defaultValue: "Rejim" })}
-          </legend>
+          <legend className="text-sm font-medium">{t("attendanceRange.mode")}</legend>
           <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <ChoiceCard
               name="range-mode"
               checked={mode === "fill"}
               onSelect={() => setMode("fill")}
-              title={t("attendanceRange.modeFill", { defaultValue: "To'ldirish" })}
-              description={t("attendanceRange.modeFillHint", {
-                defaultValue: "Faqat yozuvsiz yoki kutilayotgan kunlar o'zgaradi",
-              })}
+              title={t("attendanceRange.modeFill")}
+              description={t("attendanceRange.modeFillHint")}
             />
             <ChoiceCard
               name="range-mode"
               checked={mode === "overwrite"}
               onSelect={() => setMode("overwrite")}
-              title={t("attendanceRange.modeOverwrite", { defaultValue: "Qayta yozish" })}
-              description={t("attendanceRange.modeOverwriteHint", {
-                defaultValue: "Oraliqdagi har bir kun shu statusni oladi (yashil/qizil ham)",
-              })}
+              title={t("attendanceRange.modeOverwrite")}
+              description={t("attendanceRange.modeOverwriteHint")}
             />
           </div>
         </fieldset>
@@ -335,13 +322,9 @@ function RangeSetForm({
             className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
           />
           <span>
-            {t("attendanceRange.onlyRequired", {
-              defaultValue: "Faqat talab qilingan hafta kunlari",
-            })}
+            {t("attendanceRange.onlyRequired")}
             <span className="block text-xs text-muted-foreground">
-              {t("attendanceRange.onlyRequiredHint", {
-                defaultValue: "Yakshanba va jadvalga kirmagan kunlar o'tkazib yuboriladi",
-              })}
+              {t("attendanceRange.onlyRequiredHint")}
             </span>
           </span>
         </label>
@@ -349,15 +332,11 @@ function RangeSetForm({
         <Alert variant={nothingToDo ? "warning" : status === "green" ? "success" : "destructive"}>
           <AlertDescription>
             {invalidRange
-              ? t("attendanceRange.invalidRange", { defaultValue: "Sana oralig'i noto'g'ri" })
+              ? t("attendanceRange.invalidRange")
               : preview.candidates === 0
-                ? t("attendanceRange.previewNone", {
-                    defaultValue: "Bu oraliqda belgilanadigan kun yo'q",
-                  })
+                ? t("attendanceRange.previewNone")
                 : hasDetail
                   ? t("attendanceRange.previewDetail", {
-                      defaultValue:
-                        "{{from}} — {{to}}: {{create}} ta yangi, {{update}} ta yangilanadi, {{skip}} ta o'tkazib yuboriladi",
                       from: preview.from,
                       to: preview.to,
                       create: preview.create,
@@ -365,8 +344,6 @@ function RangeSetForm({
                       skip: preview.skip,
                     })
                   : t("attendanceRange.previewApprox", {
-                      defaultValue:
-                        "{{from}} — {{to}}: ko'pi bilan {{count}} ta kun ({{assignments}} ta talaba)",
                       from: preview.from,
                       to: preview.to,
                       count: preview.candidates,
@@ -377,8 +354,7 @@ function RangeSetForm({
 
         <div>
           <Label htmlFor="range-reason">
-            {t("attendanceDayEdit.reason", { defaultValue: "Sabab (audit uchun)" })}{" "}
-            <span className="text-destructive">*</span>
+            {t("attendanceDayEdit.reason")} <span className="text-destructive">*</span>
           </Label>
           <Textarea
             id="range-reason"
@@ -387,9 +363,7 @@ function RangeSetForm({
             rows={3}
             maxLength={2000}
             className="mt-1"
-            placeholder={t("attendanceRange.reasonPlaceholder", {
-              defaultValue: "Masalan: rektor buyrug'i №12 — bayram kunlari",
-            })}
+            placeholder={t("attendanceRange.reasonPlaceholder")}
             aria-invalid={reason.length > 0 && reasonTooShort}
           />
         </div>
@@ -406,7 +380,7 @@ function RangeSetForm({
           disabled={isPending || invalidRange || reasonTooShort || nothingToDo}
         >
           {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-          {t("attendanceRange.submit", { defaultValue: "Belgilash" })}
+          {t("attendanceRange.submit")}
         </Button>
       </DialogFooter>
     </>

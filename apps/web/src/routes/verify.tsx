@@ -5,6 +5,7 @@ import {
   FileCheck2,
   FileDown,
   Loader2,
+  RotateCw,
   XCircle,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -15,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { dateLocale } from "@/i18n";
-import { useVerifyContract } from "@/lib/api/contracts";
+import { useVerifyContract, VerifyContractError } from "@/lib/api/contracts";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "verify.status.draft",
@@ -36,13 +37,16 @@ const TEMPLATE_LABEL: Record<string, string> = {
 export function VerifyPage() {
   const { t } = useTranslation();
   const { token } = useParams<{ token: string }>();
-  const { data, isPending, error } = useVerifyContract(token ?? null);
+  const { data, isPending, error, refetch, isFetching } = useVerifyContract(token ?? null);
+  // Faqat 404 "shartnoma topilmadi"; tarmoq/server xatosida tashqi tekshiruvchiga
+  // "yaroqsiz" degan noto'g'ri xulosa emas, "qayta urinib ko'ring" ko'rsatiladi.
+  const notFound = error instanceof VerifyContractError ? error.notFound : !!error;
 
   const statusKey = data ? STATUS_LABEL[data.status] : undefined;
   const templateKey = data ? TEMPLATE_LABEL[data.template_ref] : undefined;
 
   return (
-    <div className="min-h-screen bg-muted/30 py-10">
+    <div className="min-h-screen bg-muted/30 py-6 sm:py-10">
       <div className="container max-w-2xl">
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -62,12 +66,36 @@ export function VerifyPage() {
           </Card>
         )}
 
-        {error && (
+        {error && notFound && (
           <Alert variant="destructive">
             <XCircle className="h-4 w-4" />
             <AlertTitle>{t("verify.notFoundTitle")}</AlertTitle>
             <AlertDescription>
               {t("verify.notFoundDesc")}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {error && !notFound && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{t("verify.checkFailedTitle")}</AlertTitle>
+            <AlertDescription className="space-y-3">
+              <p>{t("verify.checkFailed")}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                onClick={() => void refetch()}
+                disabled={isFetching}
+              >
+                {isFetching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RotateCw className="h-4 w-4" />
+                )}
+                {t("verify.retry")}
+              </Button>
             </AlertDescription>
           </Alert>
         )}
@@ -97,7 +125,7 @@ export function VerifyPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
-                <div className="grid grid-cols-[140px_1fr] gap-y-1.5">
+                <dl className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)] gap-x-3 gap-y-1.5 break-words">
                   <dt className="text-muted-foreground">{t("common.status")}</dt>
                   <dd className="font-medium">
                     {statusKey ? t(statusKey) : data.status}
@@ -128,7 +156,7 @@ export function VerifyPage() {
                       </dd>
                     </>
                   )}
-                </div>
+                </dl>
 
                 {data.revoked_reason && (
                   <Alert variant="destructive">
@@ -141,15 +169,15 @@ export function VerifyPage() {
                 {data.pdf_url && (
                   <div className="pt-3 border-t flex flex-col sm:flex-row gap-2">
                     <Button asChild className="w-full gap-2" variant="default">
-                      <a href={data.pdf_url} target="_blank" rel="noreferrer">
+                      <a href={data.pdf_url} download>
                         <FileDown className="h-4 w-4" />
-                        PDF Hujjatni yuklab olish
+                        {t("verify.downloadPdf")}
                       </a>
                     </Button>
                     <Button asChild className="w-full gap-2" variant="outline">
                       <a href={data.pdf_url} target="_blank" rel="noreferrer">
                         <ExternalLink className="h-4 w-4" />
-                        To'liq ekranda ochish
+                        {t("verify.openFullscreen")}
                       </a>
                     </Button>
                   </div>
@@ -161,14 +189,14 @@ export function VerifyPage() {
               <Card className="overflow-hidden">
                 <CardHeader className="py-3 px-4 bg-muted/40 border-b">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Rasmiy hujjat nusxasi (PDF ko'rinishi)
+                    {t("verify.officialCopy")}
                   </p>
                 </CardHeader>
-                <div className="w-full h-[600px] bg-muted/10">
+                <div className="w-full h-[70dvh] max-h-[600px] min-h-[320px] bg-muted/10">
                   <iframe
                     src={data.pdf_url}
                     className="w-full h-full border-0"
-                    title="PDF Preview"
+                    title={t("verify.officialCopy")}
                   />
                 </div>
               </Card>

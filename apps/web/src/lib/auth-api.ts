@@ -31,9 +31,15 @@ export async function login(username: string, password: string): Promise<User> {
   return user;
 }
 
+/**
+ * Chiqish. Server javob bermasa ham (internet yo'q, sessiya allaqachon tugagan) lokal sessiya
+ * tozalanadi va xato tashlanmaydi — chaqiruvchi login sahifasiga o'tishi kafolatlanadi.
+ */
 export async function logout(): Promise<void> {
   try {
     await api.post("v1/auth/logout");
+  } catch {
+    /* refresh cookie serverda muddati bilan tugaydi; lokal holat baribir tozalanadi */
   } finally {
     useAuthStore.getState().clear();
   }

@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import i18n from "@/i18n";
 
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth";
+import i18n from "@/i18n";
+import { api, authFetch, readErrorDetail } from "@/lib/api";
 import type { Attachment } from "@/lib/api/uploads";
 import type { UUID } from "@/lib/api/types";
 
@@ -85,26 +84,15 @@ export function useDeleteDocument() {
   });
 }
 
+/** Biriktirilmagan (mustaqil) faylni yuklaydi — token muddati o'tsa avtomatik yangilanadi. */
 export async function uploadStandaloneFile(file: File): Promise<Attachment> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
   const fd = new FormData();
   fd.append("file", file);
-  const res = await fetch("/api/v1/uploads/standalone", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: fd,
-  });
+  const res = await authFetch("/api/v1/uploads/standalone", { method: "POST", body: fd });
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    let msg = `Yuklashda xato (${res.status})`;
-    try {
-      const j = JSON.parse(text);
-      if (j.detail) msg = j.detail;
-    } catch {
-      if (text) msg = text;
-    }
-    throw new Error(msg);
+    throw new Error(
+      await readErrorDetail(res, i18n.t("documentsDocumentFormDialog.errors.uploadError")),
+    );
   }
   const data = (await res.json()) as { attachment: Attachment };
   return data.attachment;

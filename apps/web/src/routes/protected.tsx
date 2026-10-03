@@ -1,8 +1,10 @@
 import { ArrowLeft, Loader2, ShieldAlert } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { useBootstrap } from "@/hooks/use-bootstrap";
+import { landingPathFor } from "@/lib/routing";
 import { useAuthStore, type UserRole } from "@/stores/auth";
 
 type Props = {
@@ -17,6 +19,7 @@ type Props = {
  * `permission` / `allowedPermissions`: Admin uchun modul ruxsati (RBAC)
  */
 export function Protected({ allowed, permission, allowedPermissions }: Props) {
+  const { t } = useTranslation();
   const { isReady } = useBootstrap();
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
@@ -24,7 +27,10 @@ export function Protected({ allowed, permission, allowedPermissions }: Props) {
   if (!isReady) {
     return (
       <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2
+          className="h-6 w-6 animate-spin text-muted-foreground"
+          aria-label={t("common.loading")}
+        />
       </div>
     );
   }
@@ -38,8 +44,9 @@ export function Protected({ allowed, permission, allowedPermissions }: Props) {
     return <Navigate to="/change-password" replace />;
   }
 
+  // Boshqa rol bo'limi — foydalanuvchini o'z kabinetiga qaytaramiz
   if (allowed && !allowed.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={landingPathFor(user.role)} replace />;
   }
 
   // Modul darajasidagi ruxsatlarni tekshirish (Admin roli uchun)
@@ -61,17 +68,16 @@ export function Protected({ allowed, permission, allowedPermissions }: Props) {
               <ShieldAlert className="h-8 w-8" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Ruxsat etilmagan (403 Forbidden)
+              {t("protectedRoute.forbiddenTitle")}
             </h1>
             <p className="mt-2.5 max-w-md text-sm text-muted-foreground leading-relaxed">
-              Sizning administrator akkauntingizga ushbu moduldan foydalanish huquqi biriktirilmagan. 
-              Qo'shimcha ruxsat olish uchun tizim bosh administratori (Super Admin) ga murojaat qiling.
+              {t("protectedRoute.forbiddenDescription")}
             </p>
             <div className="mt-6 flex items-center gap-3">
               <Button asChild variant="default">
                 <Link to="/admin">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Bosh sahifaga qaytish
+                  <ArrowLeft className="h-4 w-4" />
+                  {t("protectedRoute.backToDashboard")}
                 </Link>
               </Button>
             </div>

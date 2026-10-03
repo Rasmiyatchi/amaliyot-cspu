@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import i18n from "@/i18n";
 
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth";
+import i18n from "@/i18n";
+import { api, authFetch, downloadFile, readErrorDetail } from "@/lib/api";
 import type { UUID } from "@/lib/api/types";
 
 export type ApplicationStatus =
@@ -131,87 +130,42 @@ export function useTemplateFormFields(templateId: UUID | null | undefined) {
   });
 }
 
-/** Admin uchun: tasdiqlashdan oldin shartnoma PDF ko'rish (preview). */
+/**
+ * Admin uchun: tasdiqlashdan oldin shartnoma PDF ko'rish (preview).
+ * Qaytgan object URL'ni chaqiruvchi `URL.revokeObjectURL` bilan bo'shatishi kerak.
+ */
 export async function previewContractPdf(id: UUID): Promise<string> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-  const res = await fetch(`/api/v1/practice-applications/${id}/preview-pdf`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(i18n.t("adminApplications.previewLoadFailed", { status: res.status }));
-  const blob = await res.blob();
-  return URL.createObjectURL(blob);
+  const res = await authFetch(`/api/v1/practice-applications/${id}/preview-pdf`);
+  if (!res.ok) {
+    throw new Error(
+      await readErrorDetail(
+        res,
+        i18n.t("adminApplications.previewLoadFailed", { status: res.status }),
+      ),
+    );
+  }
+  return URL.createObjectURL(await res.blob());
 }
 
-/** Tasdiqlangan shartnoma PDF/DOCX faylini yuklab oladi. */
-export async function downloadContract(id: UUID, number: string | null): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-  const res = await fetch(`/api/v1/practice-applications/${id}/contract.pdf`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    // try fallback docx if pdf not found
-    const res2 = await fetch(`/api/v1/practice-applications/${id}/contract.docx`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res2.ok) {
-      let msg = `Yuklab bo'lmadi (${res2.status})`;
-      try {
-        const errJson = await res2.json();
-        if (errJson.detail) {
-          msg = typeof errJson.detail === "string" ? errJson.detail : JSON.stringify(errJson.detail);
-        }
-      } catch {}
-      throw new Error(msg);
-    }
-    const blob = await res2.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${number ?? "shartnoma"}.docx`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    return;
-  }
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${number ?? "shartnoma"}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+/**
+ * Tasdiqlangan shartnoma faylini yuklab oladi. Server fayl qaysi formatda saqlangan
+ * bo'lsa (PDF yoki DOCX) shunday qaytaradi — nomi Content-Disposition'dan olinadi.
+ */
+export function downloadContract(id: UUID, number: string | null): Promise<void> {
+  return downloadFile(
+    `/api/v1/practice-applications/${id}/contract.pdf`,
+    `${number ?? "shartnoma"}.pdf`,
+    i18n.t("common.downloadFailed"),
+  );
 }
 
-export async function downloadApplicationScan(id: UUID, fileName?: string): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-  const res = await fetch(`/api/v1/practice-applications/${id}/scan`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    let msg = `Yuklab bo'lmadi (${res.status})`;
-    try {
-      const errJson = await res.json();
-      if (errJson.detail) {
-        msg = typeof errJson.detail === "string" ? errJson.detail : JSON.stringify(errJson.detail);
-      }
-    } catch {}
-    throw new Error(msg);
-  }
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName || `shartnoma_skan_${id}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+/** Ariza bo'yicha yuklangan imzolangan skan nusxani yuklab oladi. */
+export function downloadApplicationScan(id: UUID, fileName?: string): Promise<void> {
+  return downloadFile(
+    `/api/v1/practice-applications/${id}/scan`,
+    fileName || `shartnoma_skan_${id}.pdf`,
+    i18n.t("common.downloadFailed"),
+  );
 }
 
 /** Talaba: tuzatishga qaytarilgan arizani to'g'irlab qayta yuborish. */

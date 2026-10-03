@@ -17,43 +17,37 @@ type ThemeToggleProps = {
   size?: "default" | "sm" | "lg" | "icon";
 };
 
+const NEXT_THEME = { light: "dark", dark: "system", system: "light" } as const;
+
+const VIEW = {
+  light: {
+    icon: Sun,
+    labelKey: "theme.light",
+    nextKey: "theme.switchToDark",
+    color: "text-amber-500 hover:text-amber-600 dark:text-amber-400",
+  },
+  dark: {
+    icon: Moon,
+    labelKey: "theme.dark",
+    nextKey: "theme.switchToSystem",
+    color: "text-indigo-500 hover:text-indigo-600 dark:text-indigo-400",
+  },
+  system: {
+    icon: Monitor,
+    labelKey: "theme.system",
+    nextKey: "theme.switchToLight",
+    color: "text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200",
+  },
+} as const;
+
 export function ThemeToggle({ className, size = "icon" }: ThemeToggleProps): JSX.Element {
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
 
-  const cycleTheme = () => {
-    if (theme === "light") {
-      setTheme("dark");
-    } else if (theme === "dark") {
-      setTheme("system");
-    } else {
-      setTheme("light");
-    }
-  };
-
-  const current = {
-    light: {
-      icon: Sun,
-      label: t("theme.light", "Yorug' mavzu (Light)"),
-      next: t("theme.switchToDark", "Qorong'i rejimga o'tish"),
-      color: "text-amber-500 hover:text-amber-600 dark:text-amber-400",
-    },
-    dark: {
-      icon: Moon,
-      label: t("theme.dark", "Qorong'i mavzu (Dark)"),
-      next: t("theme.switchToSystem", "Tizim rejimiga o'tish"),
-      color: "text-indigo-500 hover:text-indigo-600 dark:text-indigo-400",
-    },
-    system: {
-      icon: Monitor,
-      label: t("theme.system", "Tizim mavzusi (System)"),
-      next: t("theme.switchToLight", "Yorug' rejimga o'tish"),
-      color: "text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200",
-    },
-  }[theme];
-
+  const current = VIEW[theme];
   const Icon = current.icon;
-  const fullTooltip = `${current.label} • ${current.next}`;
+  const label = t(current.labelKey);
+  const next = t(current.nextKey);
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -63,21 +57,21 @@ export function ThemeToggle({ className, size = "icon" }: ThemeToggleProps): JSX
             type="button"
             variant="ghost"
             size={size}
-            onClick={cycleTheme}
-            title={fullTooltip}
-            aria-label={fullTooltip}
+            onClick={() => setTheme(NEXT_THEME[theme])}
+            aria-label={`${label}. ${next}`}
             className={cn(
               "h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-200/70 active:scale-95 transition-all dark:text-slate-300 dark:hover:bg-slate-800",
               className,
             )}
           >
-            <Icon className={cn("h-4 w-4 transition-transform duration-300 hover:rotate-12", current.color)} />
-            <span className="sr-only">{fullTooltip}</span>
+            <Icon
+              className={cn("h-4 w-4 transition-transform duration-300 hover:rotate-12", current.color)}
+            />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
-          <span className="font-semibold">{current.label}</span>
-          <span className="block text-[10px] text-muted-foreground mt-0.5">{current.next}</span>
+          <span className="font-semibold">{label}</span>
+          <span className="block text-[10px] text-muted-foreground mt-0.5">{next}</span>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

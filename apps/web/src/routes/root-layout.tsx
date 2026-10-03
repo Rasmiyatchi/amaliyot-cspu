@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { InAppBrowserWarning } from "@/components/in-app-browser-warning";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { ProfileDialog } from "@/components/profile-dialog";
+import { NavigationProgress } from "@/components/route-loading";
 import { RouteTransition } from "@/components/route-transition";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -39,6 +40,7 @@ export function RootLayout() {
   return (
     <MaintenanceGuard>
       <div className="min-h-screen bg-background">
+        <NavigationProgress />
         {/* Telegram/Instagram ichidagi brauzer — GPS va qurilma bog'lash ishlamaydi */}
         <InAppBrowserWarning />
         {!isEvolvePublicPage && (
@@ -49,10 +51,10 @@ export function RootLayout() {
                 className="font-bold tracking-tight hover:text-primary whitespace-nowrap shrink-0 mr-1 sm:mr-2"
               >
                 <span className="hidden md:inline text-base lg:text-lg">
-                  CHDPU Amaliyot Platformasi
+                  {t("rootLayout.brandFull")}
                 </span>
                 <span className="hidden min-[380px]:inline md:hidden text-sm sm:text-base">
-                  CHDPU Amaliyot
+                  {t("rootLayout.brandShort")}
                 </span>
                 <span className="inline min-[380px]:hidden text-sm">CHDPU</span>
               </Link>
@@ -61,16 +63,18 @@ export function RootLayout() {
                 {user && (
                   <>
                     <button
+                      type="button"
                       onClick={() => setProfileOpen(true)}
                       className="flex items-center gap-2 rounded-md px-1.5 sm:px-2 py-1 transition-colors hover:bg-muted"
                       title={t("rootLayout.myProfile")}
+                      aria-label={t("rootLayout.myProfile")}
                     >
                       <div className="hidden md:block text-right">
                         <div className="text-sm font-medium leading-tight">
                           {user.full_name}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {user.role}
+                          {t(`userRoles.${user.role}`)}
                         </div>
                       </div>
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
@@ -81,7 +85,7 @@ export function RootLayout() {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          user.first_name[0]
+                          (user.first_name[0] ?? "?").toUpperCase()
                         )}
                       </div>
                     </button>

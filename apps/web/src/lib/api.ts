@@ -3,7 +3,14 @@ import ky, { HTTPError } from "ky";
 import i18n from "@/i18n";
 import { useAuthStore } from "@/stores/auth";
 
-const AUTH_PATH_PREFIX = "auth/"; // login/refresh/logout — retry cyclini oldini olish uchun
+// 401 bo'lsa refresh qilinmaydigan endpointlar: login (noto'g'ri parol), refresh va
+// logout (aylanma chaqiruv). /auth/me, parol almashtirish, avatar — oddiy endpointlar:
+// access token muddati tugaganda ular ham refresh qilib qayta yuborilishi kerak.
+const NO_REFRESH_PATHS = ["/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout"];
+
+function skipsRefresh(pathname: string): boolean {
+  return NO_REFRESH_PATHS.includes(pathname.replace(/\/+$/, ""));
+}
 
 /**
  * HTTP klient — Authorization header va 401 da avto-refresh bilan.
@@ -60,11 +67,10 @@ export const api = ky.create({
       },
     ],
     afterResponse: [
-      async (request, _options, response) => {
+      async (request, options, response) => {
         if (response.status !== 401) return;
-        // Auth endpoint'laridan 401 kelsa — retry qilmaymiz (cycle oldini olish)
-        const url = new URL(request.url);
-        if (url.pathname.includes(`/api/v1/${AUTH_PATH_PREFIX}`)) return;
+        // login/refresh/logout'dan 401 kelsa — retry qilmaymiz (cycle oldini olish)
+        if (skipsRefresh(new URL(request.url).pathname)) return;
 
         const outcome = await refreshAccessToken();
         if (!outcome.token) {
@@ -73,10 +79,14 @@ export const api = ky.create({
           return;
         }
 
-        // Yangi token bilan qayta urinish
+        // Yangi token bilan qayta urinish. Chaqiruvchining timeout'i saqlanadi (masalan, davomat
+        // 30 s, skan yuklash 120 s). Xato javob bu yerda tashlanmaydi: tashqi so'rov uni HTTPError
+        // qiladi va `beforeError` server matnini (masalan, "masofa 350 m") xabarga yozadi.
         const retryRequest = request.clone();
         retryRequest.headers.set("Authorization", `Bearer ${outcome.token}`);
-        return ky(retryRequest);
+        // `timeout` normallashtirilgan opsiyalarda bor, lekin ky tiplarida e'lon qilinmagan
+        const callerTimeout = (options as { timeout?: number | false }).timeout ?? 10_000;
+        return ky(retryRequest, { timeout: callerTimeout, retry: 0, throwHttpErrors: false });
       },
     ],
   },
@@ -122,7 +132,9 @@ export async function authFetch(input: string, init: RequestInit = {}): Promise<
   const doFetch = () =>
     fetch(input, { credentials: "include", ...init, headers: authHeaders(init.headers) });
   const res = await doFetch();
-  if (res.status !== 401 || input.includes(`/api/v1/${AUTH_PATH_PREFIX}`)) return res;
+  if (res.status !== 401 || skipsRefresh(new URL(input, window.location.origin).pathname)) {
+    return res;
+  }
 
   const outcome = await refreshAccessToken();
   if (!outcome.token) {

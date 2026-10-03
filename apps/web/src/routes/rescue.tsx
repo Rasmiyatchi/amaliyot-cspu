@@ -35,9 +35,10 @@ export function RescuePage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     try {
-      const u = await login(username, password);
+      const u = await login(username.trim(), password);
       if (u.role !== "super_admin") {
         await logout();
         toast.error(t("rescue.superAdminOnly"));
@@ -46,7 +47,7 @@ export function RescuePage() {
       toast.success(t("rescue.welcome", { name: u.full_name }));
       navigate("/admin", { replace: true });
     } catch (err) {
-      const msg = err instanceof HTTPError ? err.message : t("common.unexpectedError");
+      const msg = err instanceof HTTPError ? err.message : t("auth.login.networkError");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -69,9 +70,9 @@ export function RescuePage() {
         style={{ animationDelay: "7s" }}
       />
 
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-4 flex items-center gap-2">
         <LanguageSwitcher />
-            <ThemeToggle />
+        <ThemeToggle />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
@@ -150,6 +151,7 @@ export function RescuePage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
                   aria-label={showPassword ? t("rescue.hide") : t("rescue.show")}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />

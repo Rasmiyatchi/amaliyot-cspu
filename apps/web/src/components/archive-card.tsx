@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import {
   Archive,
   Download,
@@ -42,9 +41,7 @@ export function ArchiveCard({ assignmentId, compact }: Props) {
       await downloadArchive(assignmentId, variant);
       toast.success(t("archiveCard.downloaded"));
     } catch (e) {
-      const msg =
-        e instanceof HTTPError ? e.message : e instanceof Error ? e.message : t("common.error");
-      toast.error(msg);
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     } finally {
       setBusy(null);
     }

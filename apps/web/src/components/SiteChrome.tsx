@@ -12,6 +12,13 @@ import { logout } from "@/lib/auth-api";
 import { landingPathFor } from "@/lib/routing";
 import { useAuthStore } from "@/stores/auth";
 
+const NAV_LINKS = [
+  { to: "/", labelKey: "siteChrome.nav.home" },
+  { to: "/amaliyot", labelKey: "siteChrome.nav.practice" },
+  { to: "/yoriqnoma", labelKey: "siteChrome.nav.guide" },
+  { to: "/faq", labelKey: "siteChrome.nav.faq" },
+] as const;
+
 export function SiteHeader() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -19,29 +26,11 @@ export function SiteHeader() {
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
 
-  // Mobil menyu ochilganda body scrollni bloklash (orqa sahifa aylanmasligi uchun)
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
-  // Sahifa o'zgarganda menyuni avtomatik yopish
+  // Sahifa o'zgarganda menyuni avtomatik yopish. Body scroll'ini Radix Dialog o'zi bloklaydi —
+  // qo'lda `overflow` yozish uning tiklash tartibi bilan to'qnashib, sahifani qotirib qo'yardi.
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
-
-  const navLinks = [
-    { to: "/", label: t("common.home", "Bosh sahifa") },
-    { to: "/amaliyot", label: t("common.practiceSearch", "Amaliyot") },
-    { to: "/yoriqnoma", label: t("common.guide", "Yo‘riqnoma") },
-    { to: "/faq", label: t("common.faq", "FAQ") },
-  ];
 
   async function handleLogout() {
     await logout();
@@ -50,27 +39,29 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="site-header relative z-[999]">
+      {/* `.site-header` — sticky, z-40: mobil drawer overlay'i (z-50) uni ham qoplaydi */}
+      <header className="site-header">
         <div className="site-header-inner">
           {/* Logo / Brand */}
-          <Link to="/" className="brand shrink-0" onClick={() => setOpen(false)}>
+          <Link to="/" className="brand shrink-0">
             <img src="/chdpu-logo.png" alt="CHDPU" className="brand-img" />
             <span className="brand-divider" />
             <span className="brand-label">
-              AMALIYOT
-              <span>RAQAMLI PLATFORMA</span>
+              {t("siteChrome.brandTitle")}
+              <span>{t("siteChrome.brandSubtitle")}</span>
             </span>
           </Link>
 
           {/* Desktop Nav Links */}
-          <nav className="nav-links hidden md:flex" aria-label="Asosiy navigatsiya">
-            {navLinks.map((item) => (
+          <nav className="nav-links hidden md:flex" aria-label={t("siteChrome.mainNavigation")}>
+            {NAV_LINKS.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
                 className={location.pathname === item.to ? "active" : ""}
+                aria-current={location.pathname === item.to ? "page" : undefined}
               >
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             ))}
           </nav>
@@ -87,14 +78,14 @@ export function SiteHeader() {
                   size="sm"
                   className="gap-2 font-semibold"
                   onClick={() => setProfileOpen(true)}
-                  title={t("rootLayout.myProfile", "Profil")}
+                  title={t("rootLayout.myProfile")}
                 >
                   <User className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                   <span>{user.first_name}</span>
                 </Button>
                 <Button asChild size="sm" className="header-login">
                   <Link to={landingPathFor(user.role)}>
-                    {t("common.myDashboard", "Kabinetime o'tish")} <ArrowUpRight className="h-4 w-4 ml-1" />
+                    {t("siteChrome.myDashboard")} <ArrowUpRight className="h-4 w-4 ml-1" />
                   </Link>
                 </Button>
                 <Button
@@ -102,7 +93,8 @@ export function SiteHeader() {
                   size="icon"
                   className="h-9 w-9 text-slate-500 hover:text-red-600"
                   onClick={handleLogout}
-                  title={t("rootLayout.logout", "Chiqish")}
+                  title={t("rootLayout.logout")}
+                  aria-label={t("rootLayout.logout")}
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -110,7 +102,7 @@ export function SiteHeader() {
             ) : (
               <Button asChild className="header-login" size="sm">
                 <Link to="/login">
-                  {t("common.login", "Platformaga kirish")} <ArrowUpRight className="h-4 w-4 ml-1" />
+                  {t("siteChrome.login")} <ArrowUpRight className="h-4 w-4 ml-1" />
                 </Link>
               </Button>
             )}
@@ -125,37 +117,47 @@ export function SiteHeader() {
                   variant="ghost"
                   size="icon"
                   className="h-9 w-9 text-foreground hover:bg-muted"
-                  aria-label={open ? "Menyuni yopish" : "Menyuni ochish"}
+                  aria-label={open ? t("siteChrome.closeMenu") : t("siteChrome.openMenu")}
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[85vw] max-w-[360px] p-0 flex flex-col justify-between z-[9999] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800">
+              <SheetContent
+                side="right"
+                aria-describedby={undefined}
+                className="w-[85vw] max-w-[360px] p-0 flex flex-col justify-between bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800"
+              >
                 <div className="p-6 flex flex-col gap-5 overflow-y-auto">
                   {/* Sarlavha & Logo */}
-                  <SheetTitle className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800 text-left">
-                    <img src="/chdpu-logo.png" alt="CHDPU" className="h-8 w-auto object-contain" />
-                    <div className="flex flex-col">
-                      <span className="font-extrabold text-sm text-slate-900 dark:text-white leading-tight">CHDPU AMALIYOT</span>
-                      <span className="text-[10px] text-slate-500 font-semibold tracking-wider">RAQAMLI PLATFORMA</span>
-                    </div>
+                  <SheetTitle className="flex items-center gap-3 pb-3 pr-6 border-b border-slate-100 dark:border-slate-800 text-left">
+                    <img src="/chdpu-logo.png" alt="" className="h-8 w-auto object-contain" />
+                    <span className="flex flex-col">
+                      <span className="font-extrabold text-sm text-slate-900 dark:text-white leading-tight">
+                        {t("siteChrome.drawerBrand")}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-semibold tracking-wider">
+                        {t("siteChrome.brandSubtitle")}
+                      </span>
+                    </span>
                   </SheetTitle>
 
                   {/* Foydalanuvchi statusi / Kirish bloki */}
                   {user ? (
                     <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/70 p-3.5 space-y-3 shadow-xs">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white font-bold text-sm shadow-xs">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-600 text-white font-bold text-sm shadow-xs">
                             {user.avatar_url ? (
                               <img src={user.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
                             ) : (
-                              user.first_name[0]
+                              (user.first_name[0] ?? "?").toUpperCase()
                             )}
                           </div>
                           <div className="min-w-0">
                             <div className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">{user.full_name}</div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user.role}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                              {t(`userRoles.${user.role}`)}
+                            </div>
                           </div>
                         </div>
                         <Button
@@ -167,12 +169,12 @@ export function SiteHeader() {
                             setProfileOpen(true);
                           }}
                         >
-                          Profil
+                          {t("rootLayout.myProfile")}
                         </Button>
                       </div>
                       <Button asChild className="w-full justify-center gap-2 font-bold h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm" size="sm">
                         <Link to={landingPathFor(user.role)} onClick={() => setOpen(false)}>
-                          {t("common.myDashboard", "Kabinetime o'tish")} <ArrowUpRight className="h-4 w-4" />
+                          {t("siteChrome.myDashboard")} <ArrowUpRight className="h-4 w-4" />
                         </Link>
                       </Button>
                     </div>
@@ -180,21 +182,22 @@ export function SiteHeader() {
                     <div>
                       <Button asChild className="w-full justify-center gap-2 font-bold h-11 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md" size="default">
                         <Link to="/login" onClick={() => setOpen(false)}>
-                          {t("common.login", "Platformaga kirish")} <ArrowUpRight className="h-4 w-4" />
+                          {t("siteChrome.login")} <ArrowUpRight className="h-4 w-4" />
                         </Link>
                       </Button>
                     </div>
                   )}
 
                   {/* Navigatsiya havolalari */}
-                  <div className="space-y-1.5 pt-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3">
-                      Bo'limlar
+                  <nav className="space-y-1.5 pt-1" aria-label={t("siteChrome.mainNavigation")}>
+                    <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3">
+                      {t("siteChrome.sections")}
                     </span>
-                    {navLinks.map((item) => (
+                    {NAV_LINKS.map((item) => (
                       <Link
                         key={item.to}
                         to={item.to}
+                        aria-current={location.pathname === item.to ? "page" : undefined}
                         className={`flex items-center h-11 px-4 rounded-xl text-base font-semibold transition-all ${
                           location.pathname === item.to
                             ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/80 dark:border-indigo-900/60 shadow-xs"
@@ -202,16 +205,18 @@ export function SiteHeader() {
                         }`}
                         onClick={() => setOpen(false)}
                       >
-                        {item.label}
+                        {t(item.labelKey)}
                       </Link>
                     ))}
-                  </div>
+                  </nav>
                 </div>
 
                 {/* Pastki sozlamalar: Til va Chiqish */}
                 <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/80">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Til:</span>
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      {t("common.language")}:
+                    </span>
                     <LanguageSwitcher />
                   </div>
 
@@ -222,11 +227,11 @@ export function SiteHeader() {
                       className="text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-700 gap-1.5 h-9 px-3 rounded-lg font-semibold"
                       onClick={() => {
                         setOpen(false);
-                        handleLogout();
+                        void handleLogout();
                       }}
                     >
                       <LogOut className="h-4 w-4" />
-                      <span>{t("rootLayout.logout", "Chiqish")}</span>
+                      <span>{t("rootLayout.logout")}</span>
                     </Button>
                   )}
                 </div>
@@ -254,32 +259,34 @@ export function SiteFooter() {
       <div className="container mx-auto px-4 footer-inner">
         <div>
           <div className="footer-name">
-            CHDPU<span> / </span>4+2 AMALIYOT
+            CHDPU<span> / </span>
+            {t("siteChrome.footerProduct")}
           </div>
           <p>
-            Chirchiq davlat pedagogika universiteti
+            {t("siteChrome.footerUniversity")}
             <br />
-            Raqamli amaliyot boshqaruv platformasi
+            {t("siteChrome.footerTagline")}
           </p>
         </div>
-        <div className="footer-links">
-          <Link to="/">{t("common.home", "Bosh sahifa")}</Link>
-          <Link to="/amaliyot">{t("common.practiceSearch", "Amaliyot")}</Link>
-          <Link to="/yoriqnoma">{t("common.guide", "Yo‘riqnoma")}</Link>
-          <Link to="/faq">FAQ</Link>
+        <nav className="footer-links" aria-label={t("siteChrome.footerNavigation")}>
+          {NAV_LINKS.map((item) => (
+            <Link key={item.to} to={item.to}>
+              {t(item.labelKey)}
+            </Link>
+          ))}
           <a
             href="https://cspu.uz/"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1"
           >
-            Universitet <ArrowUpRight size={14} />
+            {t("siteChrome.university")} <ArrowUpRight size={14} aria-hidden="true" />
           </a>
-        </div>
+        </nav>
       </div>
       <div className="container mx-auto px-4 footer-bottom">
-        <span>© {new Date().getFullYear()} CHDPU. Barcha huquqlar himoyalangan.</span>
-        <span>CHIRCHIQ · O‘ZBEKISTON</span>
+        <span>{t("siteChrome.rights", { year: new Date().getFullYear() })}</span>
+        <span>{t("siteChrome.location")}</span>
       </div>
     </footer>
   );

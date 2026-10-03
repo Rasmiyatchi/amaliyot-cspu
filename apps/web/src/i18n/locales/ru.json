@@ -10,7 +10,8 @@
     "isActive": "Активный (деактивирует остальные)",
     "nameFormat": "Например 2025-2026",
     "startDate": "Начало",
-    "updatedToast": "Учебный год обновлён"
+    "updatedToast": "Учебный год обновлён",
+    "endBeforeStart": "Дата окончания должна быть позже даты начала"
   },
   "academicAcademicYearList": {
     "active": "Активный",
@@ -113,7 +114,6 @@
     "searchPlaceholder": "Поиск (название группы)"
   },
   "adminAcademic": {
-    "subtitle": "Факультеты, направления, группы и учебные годы",
     "tabs": {
       "academicYears": "Учебные годы",
       "departments": "Кафедры",
@@ -121,12 +121,12 @@
       "faculties": "Факультеты",
       "groups": "Группы",
       "students": "Студенты"
-    },
-    "title": "Академическая структура"
+    }
   },
   "adminAdminLayout": {
     "menuLabel": "Меню",
-    "navTitle": "Навигация"
+    "navTitle": "Навигация",
+    "brand": "CHDPU Практика"
   },
   "adminAdminSidebar": {
     "collapse": "Свернуть",
@@ -134,7 +134,6 @@
     "logout": "Выйти",
     "myProfile": "Мой профиль",
     "nav": {
-      "academic": "Факультет/группа",
       "academicYears": "Учебные годы",
       "admins": "Администраторы",
       "applications": "Заявки",
@@ -162,7 +161,6 @@
       "monitoringPractices": "Практики",
       "monitoringSupervisors": "Руководители",
       "monitoringTasks": "Задания",
-      "objects": "Объекты практики",
       "organizations": "Организации",
       "partners": "Партнёры",
       "practice": "Практика",
@@ -177,16 +175,15 @@
       "taskTemplates": "Задания"
     },
     "searchHint": "Поиск...",
-    "sections": {
-      "academic": "Академический раздел",
-      "practices": "Практика",
-      "studyProcess": "Процесс",
-      "system": "Система"
+    "brandTitle": "CHDPU ПРАКТИКА",
+    "brandSubtitle": "Панель управления",
+    "roles": {
+      "superAdmin": "Суперадминистратор",
+      "admin": "Администратор"
     }
   },
   "adminAdmins": {
     "allStatuses": "Все статусы",
-    "colEmail": "Email",
     "colRole": "Роль",
     "colUsername": "Логин",
     "deleteConfirm": "Удалить {{name}} ({{username}})? Это действие нельзя отменить.",
@@ -201,7 +198,13 @@
     "statusBlocked": "Заблокирован",
     "subtitle": "Управление администраторами и супер администраторами",
     "superAdminOnly": "Доступ к этой странице имеет только Супер Админ",
-    "title": "Администраторы"
+    "title": "Администраторы",
+    "allFaculties": "Все факультеты",
+    "colFaculty": "Факультет (ограничение)",
+    "colPermissions": "Доступ к модулям",
+    "fullAccess": "Полный доступ (все модули)",
+    "modulesCount": "Модулей: {{n}}",
+    "noAccess": "Нет доступа"
   },
   "adminApplications": {
     "appendixEmptyDescription": "Приложение формируется, когда на одну территорию приходится 2+ одобренных студента",
@@ -209,8 +212,6 @@
     "approveWithQr": "Одобрить с QR",
     "colAction": "Действие",
     "colDirectionCourse": "Специальность / Курс",
-    "colManagerPhone": "Тел. руководителя",
-    "colObject": "Объект",
     "colStudentResidence": "Место жительства студента",
     "confirmScan": "Подтвердить скан",
     "confirmScanPrompt": "Подтвердить скан? Договор будет закрыт, и студент не сможет повторно загрузить скан.",
@@ -227,12 +228,10 @@
     "pdfPreview": "Предпросмотр PDF договора",
     "previewLoadFailed": "Не удалось загрузить предпросмотр PDF ({{status}})",
     "reason": "Причина: {{reason}}",
-    "rejectReasonPrompt": "Причина отклонения (необязательно):",
     "returnDialogDescription": "Напишите студенту, почему заявка возвращается и что нужно исправить.",
     "returnDialogTitle": "Вернуть заявку на доработку",
     "returnForRevision": "Вернуть из-за недочётов",
     "returnReasonPlaceholder": "Например: неверно указано название организации...",
-    "returnReasonRequired": "Укажите причину возврата",
     "returnSubmit": "Вернуть",
     "scanBadge": "СКАН",
     "scanCopy": "Отсканированная копия",
@@ -243,7 +242,6 @@
       "draft": "Черновик",
       "expired": "Истёк срок",
       "new": "Новая",
-      "pending": "В ожидании",
       "rejected": "Отклонена",
       "resubmitted": "Отправлена повторно",
       "revisionRequired": "Требует исправления",
@@ -260,7 +258,14 @@
     "toastScanConfirmed": "Скан подтверждён — договор закрыт",
     "viewAppendix": "Приложение (территория)",
     "viewList": "Заявки",
-    "viewScan": "Просмотр скана"
+    "viewScan": "Просмотр скана",
+    "searchPlaceholder": "Поиск по студенту, организации или направлению...",
+    "colSubmittedAt": "Дата заявки",
+    "emptySearch": "По запросу заявки не найдены",
+    "perPage": "Показывать:",
+    "range": "{{from}}–{{to}} / {{total}}",
+    "rejectDialogTitle": "Отклонение заявки",
+    "rejectDialogDescription": "Причина отклонения будет показана студенту."
   },
   "adminAssignments": {
     "allCourses": "Все курсы",
@@ -291,12 +296,10 @@
     "title": "Мониторинг практик"
   },
   "adminAttendance": {
-    "allAssignments": "Все прикрепления",
     "allDirections": "Все направления",
     "allFaculties": "Все факультеты",
     "allGroups": "Все группы",
     "assignment": "Прикрепление",
-    "assignmentPlaceholder": "Выберите прикрепление",
     "checkIn": "Приход",
     "checkOut": "Уход",
     "csvExport": "Экспорт CSV",
@@ -305,8 +308,6 @@
     "emptyAssignment": "В этом прикреплении ещё никто не отметился",
     "emptyDefault": "Записи появятся здесь после отметки студента или отметки красным",
     "emptyTitle": "Записей посещаемости нет",
-    "markRed": "Отметить красным",
-    "noActiveAssignments": "Нет активных прикреплений",
     "object": "Объект",
     "status": {
       "green": "Зелёный",
@@ -365,9 +366,13 @@
       "export": "Экспортировал",
       "import": "Импортировал",
       "loginReset": "Сброс пароля",
-      "override": "Override",
+      "override": "Изменил статус",
       "reject": "Отклонил",
-      "update": "Изменил"
+      "update": "Изменил",
+      "bulkUpdate": "Массово изменил",
+      "revert": "Откатил",
+      "grade": "Оценил",
+      "finalize": "Завершил"
     },
     "actionColumn": "Действие",
     "actionFilter": "Тип действия",
@@ -385,7 +390,8 @@
       "practiceAssignment": "Прикрепление",
       "studentCredentials": "Логин/пароль",
       "systemSettings": "Настройка",
-      "taskTemplate": "Шаблон задания"
+      "taskTemplate": "Шаблон задания",
+      "database": "База данных"
     },
     "entityColumn": "Сущность",
     "entityFilter": "Тип сущности",
@@ -403,14 +409,12 @@
     },
     "noResults": "Ничего не найдено",
     "pages": {
-      "academic": "Академическая структура",
       "admins": "Администраторы",
       "assignments": "Прикрепление",
       "attendance": "Посещаемость",
       "contracts": "Договоры",
       "documents": "Документы",
       "home": "Главная",
-      "objects": "Объекты",
       "practiceTypes": "Виды практики",
       "reports": "Итоговые отчёты",
       "settings": "Настройки",
@@ -440,8 +444,6 @@
     "docOnly": "Загрузите только файл .doc или .docx",
     "editorPlaceholder": "Введите текст договора…",
     "emptyContent": "Текст договора пуст",
-    "font": "Шрифт",
-    "fontDefault": "Стандартный",
     "heading1": "Заголовок 1",
     "heading2": "Заголовок 2",
     "heading3": "Заголовок 3",
@@ -469,7 +471,10 @@
     "uploadWord": "Загрузить Word",
     "variables": "Переменные",
     "wordLoaded": "Файл Word загружен и готов к редактированию",
-    "wordReadError": "Ошибка при чтении файла Word"
+    "wordReadError": "Ошибка при чтении файла Word",
+    "indent": "Красная строка (абзацный отступ)",
+    "table": "Таблица",
+    "invalidUrl": "Адрес должен начинаться с http:// или https://"
   },
   "adminContractTemplates": {
     "activate": "Активировать",
@@ -481,7 +486,6 @@
     "docxOnly": "Загрузите файл .docx",
     "emptyDescription": "Начните с загрузки DOCX-шаблона",
     "emptyTitle": "Нет шаблонов",
-    "fields": "Поля:",
     "generalOption": "Общий (независимо от типа)",
     "inactive": "Неактивен",
     "nameLabel": "Название",
@@ -494,10 +498,8 @@
     "statusActive": "Активный",
     "statusArchived": "В архиве",
     "statusDraft": "Черновик",
-    "subtitle": "Загрузите DOCX-шаблон — поля <0>{{placeholder}}</0> будут определены автоматически",
     "subtitleEditor": "Создавайте и редактируйте шаблоны договоров",
     "title": "Шаблоны договоров",
-    "uploadButton": "Загрузить шаблон",
     "uploadDescription": "Заполняемые поля в DOCX-файле обозначаются в виде <0>{{p1}}</0>, <1>{{p2}}</1>. Для QR используйте <2>{{p3}}</2>.",
     "uploadDocx": "Загрузить DOCX",
     "uploadTitle": "Загрузка шаблона договора",
@@ -519,7 +521,6 @@
     "newContract": "Новый договор",
     "pdfButton": "Договор PDF",
     "pdfDownloadFailed": "Не удалось скачать PDF",
-    "pdfReady": "PDF готов",
     "searchPlaceholder": "Поиск по номеру договора или названию компании",
     "sourceApplications": "Договоры по заявкам",
     "sourceOfficial": "Официальные договоры",
@@ -552,11 +553,12 @@
     "newUsername": "Новое имя пользователя",
     "noChanges": "Нет изменений",
     "passwordLabel": "Пароль",
-    "passwordMinLength": "Пароль должен содержать не менее 4 символов",
     "passwordPlaceholder": "Оставьте пустым, чтобы сохранить прежний пароль",
     "show": "Показать",
     "title": "Логин и пароль",
-    "usernameLabel": "Имя пользователя"
+    "usernameLabel": "Имя пользователя",
+    "passwordMinLengthN": "Пароль должен содержать не менее {{n}} символов",
+    "usernameMinLength": "Логин должен содержать не менее {{n}} символов"
   },
   "adminDocuments": {
     "deleteConfirmBtn": "Да, удалить",
@@ -618,7 +620,16 @@
     "totalStudents": "Всего студентов",
     "users": "Пользователи",
     "weeks": "нед.",
-    "welcome": "Добро пожаловать, {{name}}"
+    "welcome": "Добро пожаловать, {{name}}",
+    "downloadedPdfToast": "Статистический отчёт (PDF) скачан",
+    "kickerSuper": "CHDPU · СУПЕРАДМИНИСТРАТОР",
+    "kickerAdmin": "CHDPU · АДМИНИСТРАТОР",
+    "totalStudentsCounter": "ВСЕГО СТУДЕНТОВ",
+    "practiceTypeCount": "Видов практики: {{count}}",
+    "noPracticeTypesDesc": "Виды практики ещё не добавлены в систему",
+    "activityPct": "Доля активных",
+    "pdfBannerTitle": "Скачать статистический отчёт (PDF)",
+    "pdfBannerDesc": "Полный статистический отчёт по текущим показателям и видам практики в формате PDF"
   },
   "adminInquiries": {
     "closedToast": "Закрыто",
@@ -632,7 +643,8 @@
       "open": "Открытые",
       "resolved": "Закрытые"
     },
-    "title": "Обращения студентов"
+    "title": "Обращения студентов",
+    "resolveBtn": "Решено"
   },
   "adminObjects": {
     "subtitle": "Организации практики (с договором) и территории",
@@ -663,7 +675,8 @@
     "title": "Типы практики",
     "weeksCol": "Недели",
     "weeksRange": "{{min}}–{{max}} нед.",
-    "weeksSingle": "{{n}} нед."
+    "weeksSingle": "{{n}} нед.",
+    "inactiveBadge": "Неактивен"
   },
   "adminRecords": {
     "allCourses": "Все курсы",
@@ -700,7 +713,6 @@
     "searchPlaceholder": "Поиск по имени или фамилии...",
     "specialty": "Специальность",
     "subtitle": "Список студентов на практике и их оценки",
-    "supervisorFilter": "Руководитель",
     "title": "Ведомости",
     "actions": "Действия",
     "archive": "Архивировать",
@@ -709,12 +721,23 @@
     "unarchiveSuccess": "Ведомость восстановлена",
     "delete": "Удалить",
     "deleteConfirmTitle": "Удаление ведомости",
-    "deleteConfirmDesc": "Вы действительно хотите удалить эту ведомость?",
     "deleteSuccess": "Ведомость удалена",
     "tabs": {
       "active": "Активные",
       "archived": "Архив"
-    }
+    },
+    "startFromLabel": "Дата начала (с)",
+    "endToLabel": "Дата окончания (по)",
+    "deleteTarget": "{{student}} — {{practice}}",
+    "deleteRemovesTitle": "Будет удалено безвозвратно:",
+    "deleteRemovesAssignment": "прикрепление студента к этой практике",
+    "deleteRemovesAttendance": "все записи посещаемости",
+    "deleteRemovesWork": "задания, дневник, анализы уроков и итоговый отчёт",
+    "deleteRemovesGrade": "оценки и итоговый балл в ведомости",
+    "deleteOnlyDraft": "Удалить можно только черновик или отменённую практику. Активные и завершённые отправьте в архив.",
+    "deletePermanently": "Удалить безвозвратно",
+    "archiveInstead": "В архив",
+    "archiveInsteadHint": "Вместо удаления ведомость можно отправить в архив — данные сохранятся и их можно восстановить в любой момент."
   },
   "adminReports": {
     "allCourses": "Все курсы",
@@ -760,7 +783,8 @@
     "excelImport": "Импорт Excel",
     "newStudent": "Новый студент",
     "selectedCount": "Выбрано студентов: <0>{{n}}</0>",
-    "subtitle": "Импорт из Excel, список и подробности"
+    "subtitle": "Импорт из Excel, список и подробности",
+    "bulkDeleteTitle": "Удаление студентов"
   },
   "adminSupervisors": {
     "active": "Активен",
@@ -786,7 +810,12 @@
     "searchPlaceholder": "Поиск (Ф.И.О. или логин)",
     "selectedCount": "Выбрано <0>{{n}}</0> руководителей",
     "subtitle": "Руководители практики в организациях",
-    "title": "Руководители (супервизоры)"
+    "title": "Руководители (супервизоры)",
+    "bulkDeleteHint": "Руководители с прикреплёнными студентами не удаляются — деактивируйте их.",
+    "bulkDeleteTitle": "Удаление руководителей",
+    "deleteTitle": "Удаление руководителя",
+    "selectAllOnPage": "Выбрать всех на странице",
+    "selectRow": "Выбрать: {{name}}"
   },
   "adminSystemSettings": {
     "allowedTypesLabel": "Разрешённые типы (через запятую)",
@@ -818,7 +847,9 @@
     "siteNameLabel": "Название сайта *",
     "subtitle": "Глобальная конфигурация платформы",
     "superAdminOnly": "Доступ к этой странице имеет только супер-администратор",
-    "title": "Настройки системы"
+    "title": "Настройки системы",
+    "siteNameRequired": "Укажите название сайта",
+    "maxSizeRange": "Размер файла — целое число от {{min}} до {{max}} МБ"
   },
   "adminTaskTemplates": {
     "deleteConfirm": "Да, удалить",
@@ -841,21 +872,72 @@
     "create": "Создать",
     "createDescription": "Создание пользователя-админа или супер-админа",
     "createTitle": "Новый администратор",
-    "credentialsRequired": "Username (≥3) и пароль (≥4) обязательны",
     "editDescription": "Изменение данных профиля и роли",
     "editTitle": "Редактировать администратора",
     "email": "Email",
     "firstName": "Имя",
     "lastName": "Фамилия",
     "middleName": "Отчество",
-    "nameRequired": "Имя и фамилия обязательны",
     "password": "Пароль",
     "phone": "Телефон",
     "role": "Роль",
     "roleAdmin": "Админ",
     "roleSuperAdmin": "Супер-админ",
     "superAdminWarning": "<0>Внимание:</0> Супер-админ получает полный контроль над системой (override, настройки, управление другими админами).",
-    "username": "Username"
+    "username": "Логин",
+    "allFacultiesOption": "Все факультеты (общий администратор)",
+    "clearAll": "Очистить",
+    "emailInvalid": "Некорректный email",
+    "facultyPlaceholder": "Выберите факультет",
+    "facultyScopeLabel": "Ограничение по факультету",
+    "firstNameRequired": "Имя обязательно",
+    "lastNameRequired": "Фамилия обязательна",
+    "modules": {
+      "structure": {
+        "name": "Академическая структура",
+        "desc": "Управление факультетами, кафедрами, направлениями, группами и студентами"
+      },
+      "practice": {
+        "name": "Процессы практики",
+        "desc": "Виды практики, прикрепление студентов, посещаемость и итоговые оценки"
+      },
+      "contracts": {
+        "name": "Договоры и заявки",
+        "desc": "Утверждение заявок студентов на практику и трёхсторонних договоров"
+      },
+      "supervisors": {
+        "name": "Руководители (супервизоры)",
+        "desc": "Назначение и управление руководителями от университета и организаций"
+      },
+      "partners": {
+        "name": "Партнёры и организации",
+        "desc": "База школ, ДОО, колледжей и предприятий"
+      },
+      "monitoring": {
+        "name": "Центр мониторинга",
+        "desc": "Наблюдение за практикой, карты и статистические показатели"
+      },
+      "inquiries": {
+        "name": "Обращения",
+        "desc": "Работа с обращениями студентов и руководителей"
+      },
+      "system": {
+        "name": "Системные настройки",
+        "desc": "Конфигурация системы, интеграции и просмотр журнала аудита"
+      }
+    },
+    "noPermissionsConfirmTitle": "Администратор не получит доступ ни к одному модулю",
+    "noPermissionsConfirmBody": "Не выбран ни один модуль. Этот администратор увидит только главную страницу — все разделы будут для него закрыты. Сохранить так?",
+    "noPermissionsConfirmAction": "Да, сохранить без доступа",
+    "noPermissionsWarning": "Не выбран ни один модуль — администратор увидит только главную страницу.",
+    "passwordMin": "Пароль должен содержать не менее {{n}} символов",
+    "permissionsLabel": "Доступ к модулям",
+    "scopeAllHint": "Этот администратор видит студентов и группы всех факультетов.",
+    "scopeFacultyHint": "Внимание: этот администратор видит и управляет только студентами, группами и данными выбранного факультета.",
+    "selectAll": "Выбрать все",
+    "selfRoleLocked": "Нельзя изменить собственную роль и статус.",
+    "superAdminFullAccess": "Суперадминистратор имеет полный доступ ко всем факультетам и модулям без ограничений.",
+    "usernameMin": "Логин — не менее 3 символов"
   },
   "archiveCard": {
     "description": "Результаты практики: общий отчёт, дневник, анализы уроков и задания. Договор (при наличии) автоматически добавляется в ZIP.",
@@ -881,12 +963,9 @@
     "cancelPromptDesc": "Укажите причину отмены — она будет показана студенту",
     "cancelPromptPlaceholder": "Например: организация отказала, или...",
     "cancelPromptTitle": "Отменить практику",
-    "cancelledDefault": "Отменено",
     "deleteTaskDesc": "<0>{{title}}</0> — это действие нельзя отменить.",
     "deleteTaskTitle": "Удалить задание",
     "finish": "Завершить",
-    "finishConfirmDesc": "Статус перейдёт из ACTIVE в COMPLETED. Ожидается итоговое оценивание.",
-    "finishConfirmTitle": "Завершить практику?",
     "journalApproved": "Дневник утверждён",
     "noAnalyses": "Анализов уроков нет",
     "noJournal": "Записей в дневнике нет",
@@ -905,7 +984,6 @@
     "rejectedLabel": "Отклонено",
     "rejectedToast": "Отклонено",
     "start": "Начать",
-    "startConfirmDesc": "Статус перейдёт из DRAFT в ACTIVE. Студент сможет начать отмечаться (check-in).",
     "startConfirmTitle": "Начать практику?",
     "startPractice": "Начать практику",
     "submittedLabel": "Отправлено",
@@ -918,8 +996,8 @@
     },
     "tasksCreated": "Создано заданий: {{n}}",
     "toastCancelled": "Практика отменена",
-    "toastCompleted": "Практика завершена",
-    "toastStarted": "Практика начата"
+    "toastStarted": "Практика начата",
+    "startConfirmDescription": "Практика станет активной — студент сможет отмечать приход и уход."
   },
   "assignmentsAssignmentWizard": {
     "areaPlaceholder": "Территория...",
@@ -940,13 +1018,7 @@
     "groupSelected": "В группе {{n}} студентов · выбрано:",
     "modeGroup": "Вся группа",
     "modeSingle": "Один студент",
-    "noActiveSupervisors": "Активных руководителей не найдено",
-    "noAreas": "Территорий нет — сначала добавьте",
     "noCourseGroups": "Нет групп {{courses}}-го курса",
-    "noCourseStudents": "Нет студентов {{courses}}-го курса",
-    "noGroups": "Групп нет",
-    "noOrganizations": "Организаций нет — сначала добавьте",
-    "noStudents": "Студентов нет",
     "notesPlaceholder": "Необязательные примечания",
     "objectKindArea": "территория",
     "objectKindBoth": "оба",
@@ -968,7 +1040,13 @@
     "weekdaysLabel": "Дни практики",
     "weekdaysMismatch": "Внимание: выбрано {{selected}} дн., а в типе практики указано {{expected}} дн./нед.",
     "weekdaysRecommend": "Рекомендация для «{{name}}»: {{days}} дн./нед.",
-    "whoLabel": "Кого прикрепить?"
+    "whoLabel": "Кого прикрепить?",
+    "endBeforeStart": "Дата окончания не может быть раньше даты начала.",
+    "durationTooShort": "Слишком короткий срок: {{weeks}} нед. — для этого вида практики нужно не менее {{min}} нед.",
+    "durationTooLong": "Слишком длинный срок: {{weeks}} нед. — максимум {{max}} нед. (с учётом каникул {{allowed}} нед.).",
+    "durationOverMax": "Срок {{weeks}} нед. превышает норму {{max}} нед. Допускается с учётом каникул — проверьте даты.",
+    "endSuggested": "Дата окончания предложена по минимальному сроку вида практики ({{weeks}} нед.) — при необходимости измените.",
+    "deselectAll": "Снять выбор"
   },
   "assignmentsGradePanel": {
     "autoBadge": "Автоматически",
@@ -976,7 +1054,6 @@
     "creditNotEarned": "не получен",
     "enough": "достаточно",
     "finalizeButton": "Завершить практику",
-    "finalizeConfirm": "Завершить практику? Будет выведен общий балл.",
     "finalizeError": "Не удалось завершить",
     "finalizedInfo": "Практика завершена — итоговый балл {{grade}}/{{max}}, кредит {{credit}}.",
     "finalizedToast": "Завершено — {{grade}}/{{max}} баллов, кредит {{credit}}",
@@ -985,7 +1062,25 @@
     "minPointsInfo": "Для кредита нужно не менее {{min}} баллов —",
     "notEnough": "недостаточно",
     "saveError": "Не удалось сохранить",
-    "scoreRangeError": "Балл должен быть целым числом от 0 до {{max}}"
+    "scoreRangeError": "Балл должен быть целым числом от 0 до {{max}}",
+    "finalizeTitle": "Завершение практики",
+    "finalizeDescription": "Итоговый балл и кредит будут записаны в ведомость, статус практики станет «Завершена».",
+    "computedGrade": "Рассчитанный итоговый балл",
+    "creditThreshold": "Для кредита нужно не менее {{min}} баллов",
+    "creditWillBeEarned": "кредит будет получен",
+    "creditWillNotBeEarned": "кредит не будет получен",
+    "noCriteria": "Для этого вида практики не настроены критерии оценивания — итоговый балл будет 0.",
+    "missingTitle": "Есть неоценённые критерии",
+    "missingList": "Перед завершением оцените: {{names}}",
+    "finalizeIrreversible": "После завершения баллы по критериям изменить нельзя.",
+    "goToGrading": "Перейти к оцениванию",
+    "incomplete": "оценивание не завершено",
+    "finalReportTitle": "Итоговый отчёт",
+    "reportApprovedToast": "Итоговый отчёт утверждён",
+    "reportRejectedToast": "Итоговый отчёт отклонён",
+    "reportRejectTitle": "Отклонение итогового отчёта",
+    "reportRejectDescription": "Причина будет показана студенту — он исправит отчёт и отправит повторно.",
+    "scoreFor": "Балл за «{{name}}» (0–{{max}})"
   },
   "assignmentsTaskGradeDialog": {
     "approvedTitle": "Утверждено",
@@ -994,7 +1089,6 @@
     "maxPoints": "макс. {{points}} балл.",
     "notSubmitted": "Студент ещё не отправил",
     "pointsEarned": "({{earned}}/{{max}} балл.)",
-    "pointsLabel": "Балл (0–{{max}})",
     "pointsRange": "Балл должен быть в диапазоне 0–{{max}}",
     "quantityTimes": " · {{count}} шт.",
     "reasonRequired": "Укажите причину",
@@ -1003,7 +1097,14 @@
     "rejectedTitle": "Отклонено",
     "rejectedToast": "Отклонено",
     "studentAnswer": "Ответ студента",
-    "submittedAt": "Отправлено: {{date}}"
+    "submittedAt": "Отправлено: {{date}}",
+    "pointsLabelRequired": "Баллы (0–{{max}}) *",
+    "pointsLabelOptional": "Баллы (0–{{max}}, необязательно)",
+    "pointsRequiredHint": "Для утверждения укажите баллы — они войдут в критерий «Учебные задания» итоговой оценки.",
+    "pointsOptionalHint": "Духовно-просветительское задание: если баллы не указаны, засчитываются баллы шаблона.",
+    "approveWithPoints": "Утвердить ({{points}} / {{max}})",
+    "revert": "Отменить утверждение",
+    "revertedToast": "Утверждение отменено, задание возвращено на доработку"
   },
   "assignmentsTasksAddDialog": {
     "allAlreadyAdded": "Все подходящие задания уже добавлены.",
@@ -1081,7 +1182,10 @@
     "rejectPlaceholder": "Почему красный?",
     "rejectReason": "Причина отклонения",
     "toRed": "В красный",
-    "withinFence": "✓ в пределах территории"
+    "withinFence": "✓ в пределах территории",
+    "overrideButton": "Изменить статус",
+    "coordinates": "Координаты",
+    "device": "Устройство"
   },
   "attendanceOverrideDialog": {
     "description": "Текущий статус: <0>{{status}}</0>. Это действие будет записано в журнал аудита.",
@@ -1091,7 +1195,6 @@
     "reasonPlaceholder": "Например: предоставил медицинскую справку (№123, 2026-04-20)",
     "reasonRequired": "Причина (не менее 3 символов) обязательна",
     "statusGreen": "Зелёный",
-    "statusPending": "Ожидается",
     "statusRed": "Красный",
     "submit": "Подтвердить override",
     "title": "Override супер-админа"
@@ -1099,13 +1202,9 @@
   "auth": {
     "login": {
       "backHome": "На главную",
-      "backShort": "Главная",
-      "copyright": "© {{year}} Чирчикский государственный педагогический университет",
-      "heroText": "Современная система управления практикой студентов. Геопосещаемость, QR-договоры и задания по силлабусу — в одном месте.",
       "hide": "Скрыть",
       "password": "Пароль",
       "show": "Показать",
-      "studentHint": "<0>Студент</0>: войдите с логином и паролем, выданными при импорте. При первом входе пароль нужно сменить.",
       "submit": "Войти",
       "submitting": "Вход...",
       "subtitle": "Введите логин и пароль",
@@ -1182,7 +1281,6 @@
     "downloadFailed": "Не удалось скачать",
     "edit": "Редактировать",
     "error": "Ошибка",
-    "exportFailed": "Экспорт не выполнен ({{status}})",
     "faculty": "Факультет",
     "fullName": "Ф.И.О.",
     "group": "Группа",
@@ -1192,27 +1290,20 @@
     "name": "Название",
     "next": "Далее",
     "no": "Нет",
-    "noAccessToken": "Нет токена доступа",
-    "notFound": "Не найдено",
     "note": "Примечание",
     "organization": "Организация",
-    "page": "Страница",
     "practiceType": "Тип практики",
     "previous": "Предыдущая",
     "reject": "Отклонить",
     "save": "Сохранить",
-    "saved": "Сохранено",
     "search": "Поиск",
     "seconds": "сек.",
     "semester": "Семестр",
     "semesterFall": "Осенний",
     "semesterSpring": "Весенний",
-    "sessionExpired": "Сессия истекла",
     "status": "Статус",
     "student": "Студент",
-    "studentResidence": "Место жительства студента",
     "students": "Студенты",
-    "success": "Успешно",
     "supervisor": "Руководитель",
     "total": "Всего",
     "unexpectedError": "Непредвиденная ошибка",
@@ -1221,7 +1312,8 @@
     "viewInBrowser": "Смотреть на сайте",
     "yes": "Да",
     "quickSelect": "Быстрый выбор:",
-    "selectAll": "Все на странице"
+    "selectAll": "Все на странице",
+    "formInvalid": "В форме есть ошибки — проверьте отмеченные поля"
   },
   "contractsContractDetailDialog": {
     "downloadPdf": "Скачать PDF",
@@ -1239,19 +1331,17 @@
     "revokedToast": "Договор аннулирован",
     "scanUploaded": "Скан загружен",
     "scanUploadedAt": "Скан загружен",
-    "sessionExpired": "Сессия истекла, войдите заново",
     "studentsCount": "{{count}} студ.",
     "template": "Шаблон",
-    "uploadScan": "Загрузить скан"
+    "uploadScan": "Загрузить скан",
+    "view": "Открыть"
   },
   "contractsContractFormDialog": {
-    "assignmentsLabel": "Прикрепления",
     "create": "Создать",
     "createdToast": "Договор создан — готов к генерации PDF",
     "endDateLabel": "Окончание",
     "noAcademicYears": "Учебных лет нет",
     "noAssignmentsForFilter": "Для выбранной организации и типа практики прикреплений нет",
-    "noOrganizations": "Организаций нет",
     "optionalPlaceholder": "Необязательно",
     "selectAllWithCount": "Все ({{n}})",
     "selectFiltersFirst": "Сначала выберите организацию, тип практики и учебный год",
@@ -1267,7 +1357,27 @@
       "production": "Производственная",
       "qualifying": "Квалификационная практика"
     },
-    "title": "Новый договор"
+    "title": "Новый договор",
+    "activeTemplatesCount": "Активных шаблонов: {{count}}",
+    "templatePlaceholder": "Выберите шаблон...",
+    "templateParamsTitle": "Заполнение параметров шаблона",
+    "bindingTitle": "К кому относится договор (необязательно)",
+    "bindingAssignments": "Прикрепления",
+    "bindingStudents": "Студенты",
+    "bindingGroups": "Группы",
+    "bindingGeneral": "Общий",
+    "existingAssignments": "Существующие прикрепления к практике:",
+    "canCreateAnyway": "Договор можно создать и без прикреплений.",
+    "studentsHint": "Найдите и выберите студентов:",
+    "studentsSearchPlaceholder": "Поиск по Ф.И.О. или HEMIS ID...",
+    "selectedStudents": "Выбрано студентов: {{count}}",
+    "removeStudent": "Убрать: {{name}}",
+    "studentsEmpty": "Список студентов пуст",
+    "groupsHint": "Прикрепить договор напрямую к группам (для студентов, ещё не прикреплённых к практике):",
+    "groupsCount": "Групп: {{count}}",
+    "studentsCount": "Студентов: {{count}}",
+    "generalTitle": "Общий договор с организацией",
+    "generalDescription": "Договор заключается на уровне организации без отдельных студентов. Студентов можно прикрепить позже."
   },
   "documentsDocumentFormDialog": {
     "chooseFile": "Выбрать файл (PDF, DOC, XLS, PPT)",
@@ -1296,7 +1406,8 @@
       "created": "Документ добавлен",
       "fileUploaded": "Файл загружен",
       "updated": "Документ обновлён"
-    }
+    },
+    "anyOption": "Для всех (не указано)"
   },
   "errorBoundary": {
     "description": "В приложении произошла непредвиденная ошибка. Попробуйте ещё раз или вернитесь на главную страницу.",
@@ -1314,59 +1425,108 @@
     "unsupportedTitle": "Этот тип файла нельзя просмотреть напрямую"
   },
   "home": {
-    "badge": "Чирчикский государственный педагогический университет",
-    "ctaGoDashboard": "Перейти в дашборд",
-    "ctaSubtitle": "Войдите в систему — откроется дашборд, соответствующий вашей роли.",
-    "ctaTitle": "Готовы начать практику?",
-    "features": {
-      "archiveZip": {
-        "desc": "Отчёт, дневник, анализы уроков и договор — скачивание набором PDF в один клик.",
-        "title": "Портфолио ZIP"
-      },
-      "geoAttendance": {
-        "desc": "Студент делает check-in через GPS телефона. Вне территории организации отметка автоматически отклоняется.",
-        "title": "Geo-fence посещаемость"
-      },
-      "qrContract": {
-        "desc": "Генерация PDF + QR-кода в один клик. Принимающая организация проверяет сканированием — работает публичная верификация.",
-        "title": "QR-договор"
-      },
-      "syllabusTasks": {
-        "desc": "43 готовых задания из силлабуса практики 4+2. Студент отправляет, руководитель выставляет баллы.",
-        "title": "Задания по силлабусу"
+    "hero": {
+      "eyebrow": "ЧГПУ · СИСТЕМА ПРАКТИКИ 4+2",
+      "titleLine1": "ЦИФРОВАЯ",
+      "titleLine2": "ПРАКТИКА",
+      "description": "Единая цифровая платформа Чирчикского государственного педагогического университета для управления практикой студентов, контроля заданий и результатов.",
+      "practiceInfo": "Сведения о практике",
+      "noteSecure": "Безопасный вход",
+      "noteRealtime": "Мониторинг в реальном времени"
+    },
+    "search": {
+      "index": "01 / ВАША ПРАКТИКА",
+      "title": "Найдите свою практику",
+      "description": "Сведения о практике — личные данные: они видны только в вашем личном кабинете."
+    },
+    "statsBand": {
+      "index": "02 / ВОЗМОЖНОСТИ ПЛАТФОРМЫ",
+      "titleLine1": "ПЛАТФОРМА",
+      "titleLine2": "ПРАКТИКИ",
+      "description": "Объединяем теорию и реальный педагогический опыт в единой цифровой среде.",
+      "practiceTypes": "ВИДОВ ПРАКТИКИ",
+      "syllabusTasks": "ЗАДАНИЙ ПО СИЛЛАБУСУ",
+      "gradingScale": "БАЛЛЬНАЯ ОЦЕНКА",
+      "userRoles": "РОЛИ ПОЛЬЗОВАТЕЛЕЙ"
+    },
+    "journey": {
+      "index": "03 / ПРОЦЕСС",
+      "titleLine1": "Как устроена",
+      "titleLine2": "практика?",
+      "description": "От прикрепления до итогового результата — каждый этап понятен, прозрачен и под контролем.",
+      "steps": {
+        "s1": {
+          "title": "Профиль",
+          "desc": "Данные студента подтверждаются."
+        },
+        "s2": {
+          "title": "Место практики",
+          "desc": "Студент прикрепляется к школе или организации-партнёру."
+        },
+        "s3": {
+          "title": "Задания",
+          "desc": "Задания выполняются по плану."
+        },
+        "s4": {
+          "title": "Посещаемость",
+          "desc": "Дни практики фиксируются."
+        },
+        "s5": {
+          "title": "Результат",
+          "desc": "Итоговый отчёт и оценка."
+        }
       }
     },
-    "featuresLink": "Возможности",
-    "featuresSubtitle": "Единая платформа, охватывающая весь цикл практики — от прикрепления студента до портфолио.",
-    "featuresTitle": "Возможности",
-    "footerCopyright": "© {{year}} Чирчикский государственный педагогический университет",
-    "footerLocation": "Чирчик, Ташкентская область",
-    "heroFallbackDesc": "Современная платформа цифровизации студенческой практики — geo-fence посещаемость, QR-договоры, задания по силлабусу и экспорт портфолио.",
-    "login": "Войти в систему",
-    "myDashboard": "Мой дашборд",
-    "roles": {
-      "admin": {
-        "desc": "CRUD студентов/руководителей/организаций, прикрепление, договоры, посещаемость, отчёты",
-        "label": "Админ"
-      },
-      "student": {
-        "desc": "Check-in/out, отправка заданий, запись в дневнике, анализ урока, скачивание портфолио"
-      },
-      "superAdmin": {
-        "desc": "Настройки системы, режим профилактики, управление админами, override посещаемости",
-        "label": "Супер-админ"
-      },
-      "supervisor": {
-        "desc": "Подтверждение посещаемости своих студентов, оценка заданий, чтение дневника"
+    "ecosystem": {
+      "index": "04 / ЭКОСИСТЕМА",
+      "titleLine1": "Для каждой роли —",
+      "titleLine2": "чёткие возможности",
+      "description": "Единая связанная академическая экосистема — от студента до руководства.",
+      "loginAs": "Войти как: {{role}}",
+      "roles": {
+        "student": {
+          "title": "СТУДЕНТ",
+          "c1": "Профиль",
+          "c2": "Задания",
+          "c3": "Посещаемость",
+          "c4": "Статус практики"
+        },
+        "supervisor": {
+          "title": "РУКОВОДИТЕЛЬ ПРАКТИКИ",
+          "c1": "Наблюдение за студентами",
+          "c2": "Оценка заданий",
+          "c3": "Просмотр посещаемости",
+          "c4": "Итоговый отчёт"
+        },
+        "faculty": {
+          "title": "ФАКУЛЬТЕТ",
+          "c1": "Группы",
+          "c2": "Мониторинг",
+          "c3": "Статистика",
+          "c4": "Отчёты"
+        },
+        "department": {
+          "title": "ОТДЕЛ ПРАКТИКИ",
+          "c1": "Контроль процесса",
+          "c2": "Организации",
+          "c3": "Аналитика",
+          "c4": "Управление"
+        }
       }
     },
-    "rolesSubtitle": "Каждая роль выполняет свои задачи. Защищено через RBAC, ведутся записи аудита.",
-    "rolesTitle": "4 типа пользователей",
-    "stats": {
-      "activeStudents": "Активных студентов",
-      "practiceTypes": "Типов практики",
-      "syllabusTasks": "Заданий по силлабусу",
-      "userRoles": "Ролей пользователей"
+    "campus": {
+      "imageAlt": "Здание Чирчикского государственного педагогического университета",
+      "index": "ЧИРЧИКСКИЙ ГОСУДАРСТВЕННЫЙ ПЕДАГОГИЧЕСКИЙ УНИВЕРСИТЕТ",
+      "line1": "ОБРАЗОВАНИЕ.",
+      "line2": "ОПЫТ.",
+      "line3": "ПРАКТИКА.",
+      "description": "Соединяем будущих педагогов с реальной школьной средой, цифровым контролем и опытными наставниками.",
+      "aboutUniversity": "Об университете"
+    },
+    "ctaBand": {
+      "index": "ЦИФРОВАЯ ПРАКТИКА",
+      "line1": "Начните процесс практики",
+      "line2": "уже сегодня."
     }
   },
   "inquiryThread": {
@@ -1374,14 +1534,16 @@
     "fromYou": "Вы / Студент",
     "messagePlaceholder": "Напишите сообщение...",
     "noMessages": "Сообщений нет",
-    "sendFailed": "Не отправлено"
+    "sendFailed": "Не отправлено",
+    "send": "Отправить"
   },
   "maintenanceScreen": {
     "defaultMessage": "Система временно недоступна. Мы обновляем её и скоро вернёмся.",
     "loggedInAs": "Вы вошли как {{name}}",
     "progressHint": "Обновление продолжается",
     "title": "Режим профилактики",
-    "universityName": "Чирчикский государственный педагогический университет"
+    "universityName": "Чирчикский государственный педагогический университет",
+    "adminLogin": "Вход для администратора"
   },
   "notFound": {
     "badge": "Страница не найдена",
@@ -1408,7 +1570,9 @@
     "editTitle": "Редактировать территорию",
     "mapLocation": "Расположение на карте",
     "namePlaceholder": "Гора Чимган",
-    "region": "Область"
+    "region": "Область",
+    "isActive": "Активна",
+    "isActiveHint": "Неактивную территорию нельзя выбрать при новых прикреплениях"
   },
   "objectsAreasList": {
     "active": "Активна",
@@ -1421,7 +1585,10 @@
     "regionHeader": "Область",
     "regionPlaceholder": "Область (расположение)",
     "searchPlaceholder": "Поиск (название)",
-    "statusHeader": "Статус"
+    "statusHeader": "Статус",
+    "deleteTitle": "Удаление территории",
+    "excelDownload": "Скачать Excel",
+    "excelDownloaded": "Файл Excel скачан"
   },
   "objectsOrganizationFormDialog": {
     "address": "Адрес",
@@ -1454,7 +1621,6 @@
     },
     "legalName": "Полное юридическое название",
     "legalNamePlaceholder": "Для договора (необязательно)",
-    "mapHint": "(Phase 7 — для геозоны посещаемости)",
     "mapLocation": "Расположение на карте",
     "mfo": "МФО",
     "namePlaceholder": "Школа №48",
@@ -1471,7 +1637,15 @@
       "emailInvalid": "Неверный email",
       "nameMin": "Минимум 2 символа"
     },
-    "website": "Веб-сайт"
+    "website": "Веб-сайт",
+    "email": "Email",
+    "geoRadius": "Радиус геозоны (метры)",
+    "geoRadiusHint": "Студент может отметить приход только внутри этого круга (на погрешность GPS добавляется до 150 м). Обычно 100–300 м.",
+    "isActive": "Активна",
+    "isActiveHint": "Неактивную организацию нельзя выбрать для новых прикреплений и договоров",
+    "mapHintGeofence": "Посещаемость студентов проверяется по этой точке и радиусу ниже.",
+    "workDays": "Рабочие дни",
+    "workDaysHint": "Рабочие дни организации (для справки)"
   },
   "objectsOrganizationsList": {
     "activeBadge": "Активна",
@@ -1498,7 +1672,23 @@
     },
     "newOrganization": "Новая организация",
     "regionPlaceholder": "Область (местоположение)",
-    "searchPlaceholder": "Поиск (название/директор)"
+    "searchPlaceholder": "Поиск (название/директор)",
+    "deleteTitle": "Удаление организации",
+    "excelDownload": "Скачать Excel",
+    "excelDownloaded": "Файл Excel скачан",
+    "innShort": "ИНН: {{inn}}",
+    "kindsShort": {
+      "school": "Школа",
+      "mtt": "ДОО",
+      "lyceum": "Лицей",
+      "college": "Колледж",
+      "university": "ВУЗ",
+      "state_organization": "Гос. орг.",
+      "private_organization": "Частная орг.",
+      "company": "Предприятие",
+      "other": "Другое"
+    },
+    "viewDetails": "Подробнее"
   },
   "overdueTasksCard": {
     "daysOverdue": "{{count}} дн.",
@@ -1532,7 +1722,8 @@
     "title": "Шкала оценивания",
     "totalLabel": "Сумма критериев",
     "totalMustBe100": "Сумма критериев должна быть 100, сейчас {{total}}",
-    "uniqueKeys": "Ключи критериев (key) не должны повторяться"
+    "uniqueKeys": "Ключи критериев (key) не должны повторяться",
+    "emptyKey": "У каждого критерия должен быть ключ (key) — укажите название латиницей"
   },
   "practiceTypesPracticeTypeDetailDialog": {
     "allowedCourses": "Разрешённые курсы",
@@ -1616,15 +1807,19 @@
     "phone": "Телефон",
     "profileUpdated": "Профиль обновлён",
     "pwdChanged": "Пароль изменён",
-    "pwdHint": "Новый пароль должен содержать не менее 4 символов. После смены пароля рекомендуется выйти из системы и войти заново.",
     "pwdMismatch": "Пароли не совпадают",
-    "pwdTooShort": "Новый пароль — не менее 4 символов",
     "repeatPwd": "Повторите пароль",
     "tabs": {
       "password": "Пароль",
       "profile": "Профиль"
     },
-    "title": "Мой профиль"
+    "title": "Мой профиль",
+    "email": "Email",
+    "avatarAlt": "Фото профиля",
+    "studentNameReadonlyHint": "Фамилию, имя и отчество может изменить только администратор.",
+    "pwdRules": "Новый пароль должен содержать не менее {{min}} символов и отличаться от текущего. После смены пароля рекомендуется заново войти на других устройствах.",
+    "pwdMinLength": "Новый пароль должен содержать не менее {{min}} символов",
+    "pwdSameAsCurrent": "Новый пароль должен отличаться от текущего"
   },
   "rescue": {
     "badge": "Служебный вход",
@@ -1637,7 +1832,7 @@
     "submitting": "Вход...",
     "subtitle": "Принимает только логин супер-администратора. Работает и в режиме профилактики.",
     "superAdminOnly": "Эта страница только для супер-администратора",
-    "title": "Super Admin Rescue",
+    "title": "Восстановление супер-админа",
     "usernameLabel": "Логин",
     "usernamePlaceholder": "Логин супер-администратора",
     "welcome": "Добро пожаловать, {{name}}!"
@@ -1645,17 +1840,17 @@
   "rootLayout": {
     "logout": "Выйти",
     "logoutToast": "Вы вышли из системы",
-    "myProfile": "Мой профиль"
+    "myProfile": "Мой профиль",
+    "brandFull": "Платформа практики ЧГПУ",
+    "brandShort": "Практика ЧГПУ"
   },
   "student": {
     "emptyDescription": "Вам пока не назначена ни одна практика",
     "emptyTitle": "Нет практики",
     "endDate": "Окончание",
     "noAttendanceDescription": "Они появятся здесь после вашего первого прихода",
-    "noAttendanceTitle": "Записей посещаемости пока нет",
     "notAssigned": "Вы не прикреплены к практике",
     "practicePeriod": "Срок практики",
-    "recentDays": "Последние дни",
     "startDate": "Начало",
     "supervisorLabel": "Руководитель",
     "todayAttendance": "Посещаемость сегодня",
@@ -1666,29 +1861,37 @@
     "attendanceRate": "Посещаемость",
     "checkInTime": "Время прихода:",
     "checkOutTime": "Время ухода:",
-    "dayDetailTitle": "посещаемость за день",
     "daysSuffix": "дн.",
     "duration": "Длительность практики:",
     "filterAbsent": "Пропущенные",
     "filterAll": "Все",
     "filterPresent": "Только присутствовал",
-    "legendGreen": "Зелёный (Присутствовал / Подтверждено)",
-    "legendPending": "Ожидается / В процессе",
-    "legendRed": "Красный (Отсутствовал / Пропущено)",
     "nextMonth": "Следующий месяц",
     "noRecords": "Записей посещаемости нет",
     "noteLabel": "Примечание / Причина:",
     "presentDays": "Присутствовал",
     "prevMonth": "Предыдущий месяц",
-    "statusGreen": "Зелёный",
-    "statusPending": "В процессе",
-    "statusRed": "Красный",
     "subtitle": "История ежедневной посещаемости, присутствия и пропущенных дней практики",
     "tabCalendar": "Календарь",
     "tabList": "Список",
     "title": "Посещаемость и календарь",
     "today": "Сегодня",
-    "totalWorkdays": "Всего записей"
+    "expectedDays": "Ожидаемые дни",
+    "pendingDays": "Ожидается",
+    "filterPending": "Ожидающие",
+    "filterLabel": "Фильтр по статусу",
+    "percentHint": "Процент: подтверждено (зелёных) {{green}} из {{expected}} ожидаемых на сегодня дней.",
+    "percentNotStarted": "Практика ещё не началась — процент считается с первого рабочего дня.",
+    "futureGreenHint": "Заранее подтверждённые будущие дни ({{count}}) в процент не входят.",
+    "noRecordsFiltered": "Записей с выбранным статусом не найдено.",
+    "preSet": "Отмечено заранее",
+    "dayDesc": {
+      "green": "Посещаемость подтверждена (зелёный).",
+      "red": "В этот день практики не было прихода или отметка не завершена (красный).",
+      "pending": "Посещаемость ещё не завершена (ожидается)."
+    },
+    "dayDescPreApproved": "Этот день подтверждён заранее — статус не изменится, даже если вы отметите приход.",
+    "dayDescPreMarkedRed": "Этот день заранее отмечен красным."
   },
   "studentAcademicPanel": {
     "analysesTab": "Анализы уроков",
@@ -1707,7 +1910,9 @@
     "rejected": "Отклонено",
     "submitted": "Отправлено",
     "tasksTab": "Задания",
-    "totalPoints": "Всего баллов"
+    "totalPoints": "Всего баллов",
+    "tasksTabShort": "Задания",
+    "analysesTabShort": "Анализы"
   },
   "studentAnalysisFormDialog": {
     "choosePdf": "Выбрать PDF",
@@ -1730,7 +1935,8 @@
     "subtitle": "Укажите класс, предмет, учителя и дату, загрузите PDF-файл анализа",
     "teacher": "Учитель",
     "teacherPlaceholder": "Каримова Ойгуль",
-    "uploadError": "Ошибка при загрузке"
+    "uploadError": "Ошибка при загрузке",
+    "dateRequired": "Выберите дату"
   },
   "studentApplicationCard": {
     "contractClosed": "Договор закрыт",
@@ -1738,23 +1944,13 @@
     "contractDetails": "Данные договора",
     "contractType": "Тип договора",
     "dialogDescription": "Выберите тип договора и введите данные объекта практики. После подтверждения супер-админом будет сформирован договор с QR-кодом.",
-    "district": "Район",
-    "downloadDocx": "Договор (DOCX)",
     "empty": "У вас пока нет заявок. Выберите тип договора и отправьте заявку.",
     "fieldRequired": "Поле «{{label}}» обязательно для заполнения",
-    "location": "Местоположение (адрес)",
-    "locationPlaceholder": "Ташкентская область, г. Чирчик, ...",
-    "managerName": "Ф.И.О. руководителя",
-    "managerPhone": "Телефон руководителя",
     "newApplication": "Заявка на договор",
     "noTypes": "Пока нет типов договоров (добавит администратор)",
     "noteOptional": "Примечание (необязательно)",
-    "objectName": "Название объекта",
-    "objectNamePlaceholder": "Общеобразовательная школа № 21",
     "qrToken": "Код подтверждения: {{token}}",
     "reason": "Причина: {{note}}",
-    "region": "Область",
-    "requiredFields": "Название объекта, местоположение и телефон руководителя обязательны",
     "resubmitButton": "Исправить и отправить снова",
     "resubmitDescription": "Исправьте недочёты, указанные администратором, и отправьте заявку повторно.",
     "resubmitSubmit": "Отправить повторно",
@@ -1764,7 +1960,6 @@
     "scanUpdate": "Обновить скан",
     "scanUpload": "Загрузить скан",
     "scanUploaded": "Скан загружен",
-    "selectOptional": "Выберите (необязательно)",
     "selectPlaceholder": "Выберите...",
     "selectTemplatePlaceholder": "Выберите шаблон...",
     "status": {
@@ -1782,7 +1977,9 @@
     "submit": "Отправить",
     "submitted": "Заявка отправлена — ожидайте подтверждения супер-админа",
     "templateRequired": "Выберите шаблон договора",
-    "title": "Мои договоры"
+    "title": "Мои договоры",
+    "scanFile": "Файл скана",
+    "scanUploadedBadge": "Скан загружен"
   },
   "studentCheckInButton": {
     "checkIn": "Приход (Check-in)",
@@ -1790,14 +1987,10 @@
     "checkInTime": "Время прихода:",
     "checkOut": "Уход (Check-out)",
     "checkOutSuccess": "Уход успешно зафиксирован (Зеленый)",
-    "doneToday": "Посещаемость за сегодня полностью завершена (Зеленый)",
     "durationSpent": "Длительность практики",
-    "gpsFailed": "Не удалось получить GPS координаты",
     "gpsHint": "GPS проверяется автоматически. Вы должны находиться на территории организации.",
-    "gpsUnavailable": "GPS не включён на вашем устройстве",
     "lockHint": "Для отметки ухода должно пройти не менее 6 часов",
     "lockedTitle": "Идёт обязательное 6-часовое время практики",
-    "noActivePractice": "У вас сейчас нет активной практики",
     "readyForCheckOut": "6 часов практики завершены! Теперь вы можете зафиксировать уход.",
     "remainingTime": "Оставшееся время",
     "unlocksAt": "Уход разблокируется",
@@ -1811,7 +2004,14 @@
     "geoFailedTitle": "Местоположение не определено",
     "reaskPermission": "Запросить разрешение снова",
     "retryLocation": "Определить снова",
-    "locationReady": "Местоположение определено (±{{m}} м). Теперь нажмите кнопку."
+    "locationReady": "Местоположение определено (±{{m}} м). Теперь нажмите кнопку.",
+    "doneTodayTitle": "Посещаемость за сегодня завершена",
+    "gpsHintOptional": "Практика на территории: местоположение отправляется вместе с отметкой, если его удалось определить, но оно не обязательно.",
+    "locationOptionalNote": "Местоположение не определено. Для практики на территории это не обязательно — отметка будет отправлена без координат.",
+    "markedRedTitle": "Сегодня отмечено красным",
+    "markedRedHint": "Приход за этот день не отмечается. Если это ошибка, обратитесь к администратору.",
+    "sentWithoutLocation": "Местоположение не определено, поэтому отметка отправлена без координат. Включите GPS и повторите попытку.",
+    "verifyStatusHint": "Отметка могла сохраниться на сервере — статус обновится автоматически. Проверьте его перед повторным нажатием."
   },
   "studentDocumentsCard": {
     "empty": "Вы ещё не загружали файлы. Прикрепите файл в задании, дневнике или анализе урока.",
@@ -1875,7 +2075,9 @@
     "removeFile": "Убрать",
     "submit": "Отправить",
     "submitted": "Отправлено",
-    "uploadError": "Ошибка при загрузке"
+    "uploadError": "Ошибка при загрузке",
+    "dateRequired": "Выберите дату",
+    "futureDate": "Нельзя добавить запись дневника на будущую дату"
   },
   "studentTaskSubmitDialog": {
     "approvedTitle": "Подтверждено",
@@ -1915,11 +2117,11 @@
     "optionalColumns": "<0>Необязательные</0>: Область, Район, Пол, Язык обучения, Учебный год, Семестр, Выпускник, Форма обучения.",
     "password": "Пароль",
     "requiredColumns": "<0>Обязательные</0>: ФИО, Специальность, Группа, Курс.",
-    "rowN": "Строка {{row}}",
     "skipped": "Пропущено",
     "studentsAdded": "Добавлено студентов: {{count}}",
     "title": "Excel-импорт студентов",
-    "xlsxOnly": "Загрузите файл .xlsx"
+    "xlsxOnly": "Загрузите файл .xlsx",
+    "rowLabel": "Строка {{row}}"
   },
   "studentsStudentDetailDialog": {
     "boundAt": "Привязано:",
@@ -2027,7 +2229,11 @@
       "graduated": "Окончил",
       "studying": "Учится"
     },
-    "updatedToast": "Данные студента обновлены"
+    "updatedToast": "Данные студента обновлены",
+    "emailInvalid": "Некорректный email",
+    "notSpecified": "Не указано",
+    "phoneInvalid": "Неверный номер телефона (9–15 цифр, например +998901234567)",
+    "statusHint": "Студента с историей практики не удаляйте — измените его статус"
   },
   "studentsStudentsFilters": {
     "allCourses": "Все курсы",
@@ -2039,42 +2245,48 @@
     "statusAcademicLeave": "Академический отпуск",
     "statusExpelled": "Отчислен",
     "statusGraduated": "Выпускник",
-    "statusStudying": "Обучается"
+    "statusStudying": "Обучается",
+    "assignmentAll": "Все студенты",
+    "assignmentAssigned": "Прикреплённые",
+    "assignmentLabel": "Статус практики",
+    "assignmentUnassigned": "Не прикреплённые"
   },
   "studentsStudentsTable": {
     "empty": "Студенты не найдены",
     "region": "Область",
     "selectAllOnPage": "Выбрать все на странице",
-    "selectRow": "Выбрать"
+    "selectRowNamed": "Выбрать: {{name}}"
   },
   "supervisor": {
-    "allApprovedDesc": "Новые записи посещаемости будут отображаться здесь",
-    "allApprovedTitle": "Всё подтверждено",
-    "approveGreen": "Подтвердить как зелёное",
-    "approvedGreen": "Подтверждено как зелёное",
-    "completedDaysCount": "Завершённые дни ({{n}})",
-    "markedRed": "Отмечено как красное",
     "noStudentsDesc": "К вам пока не прикреплён ни один студент",
     "noStudentsTitle": "Нет прикреплённых студентов",
     "noAttendanceDesc": "Когда студенты выполняют check-in / check-out, их записи посещаемости отображаются здесь",
     "noAttendanceTitle": "Записи посещаемости не найдены",
-    "pendingCount": "Ожидают ({{n}})",
-    "pendingHint": "Посещаемость: {{attendance}} · Задания: {{tasks}}",
     "pendingReviews": "Ожидают рассмотрения",
     "pointsTotal": "Баллы (всего)",
-    "rejectReasonLabel": "Причина отклонения:",
-    "rejectReasonPlaceholder": "Например: опоздал или не пришёл...",
     "reportDownloaded": "Отчёт скачан",
     "reportPdf": "Отчёт (PDF)",
     "reportTooltip": "Скачать итоговый отчёт по студентам в PDF",
     "reviewPromptDesc": "Выберите студента выше — его задания, дневник и анализы уроков появятся здесь для подтверждения.",
     "reviewPromptTitle": "Подтверждение заданий, дневника и анализа",
     "subtitle": "Посещаемость и задания прикреплённых к вам студентов",
-    "toRed": "В красное",
     "todayCheckin": "Check-in за сегодня",
     "todayHint": "Зелёные: {{green}} · Ожидают: {{pending}}",
     "welcome": "Добро пожаловать, {{name}}!",
-    "writeReason": "Укажите причину"
+    "kicker": "РУКОВОДИТЕЛЬ ПРАКТИКИ",
+    "kickerWithType": "{{type}} · РУКОВОДИТЕЛЬ ПРАКТИКИ",
+    "assignedStudentsLabel": "ПРИКРЕПЛЕНО СТУДЕНТОВ",
+    "pendingReviewsHint": "Задания: {{tasks}} · Дневник: {{journals}} · Анализы: {{analyses}}",
+    "readOnly": "Только просмотр",
+    "attendancePendingInfo": "Не подтверждено дней: {{count}}. Подтверждение и исправление посещаемости — в компетенции супер-админа.",
+    "pageRange": "{{from}}–{{to}} из {{total}}",
+    "picker": {
+      "label": "Студент",
+      "allStudents": "Все студенты ({{count}})",
+      "searchLabel": "Поиск студента",
+      "searchPlaceholder": "Ф.И.О., HEMIS ID или группа...",
+      "noResults": "Подходящих студентов не найдено"
+    }
   },
   "supervisorDocuments": {
     "downloadError": "Ошибка при скачивании",
@@ -2095,13 +2307,11 @@
     "maxPoints": "Макс. {{points}} балл.",
     "notSubmitted": "Ещё не отправлено",
     "pendingCount": "{{count}} в ожидании",
-    "pointsLabel": "Балл (0–{{max}})",
     "pointsRange": "Балл в диапазоне 0–{{max}}",
     "quantityTimes": "· {{count}} шт.",
     "quarterN": "{{n}}-я четверть",
     "reasonRequired": "Укажите причину",
     "rejectReasonLabel": "Причина отклонения",
-    "rejectReasonOptionalLabel": "Причина отклонения (при необходимости)",
     "rejectedToast": "Отклонено",
     "studentAnswer": "Ответ студента",
     "tabs": {
@@ -2109,7 +2319,15 @@
       "journal": "Дневник",
       "tasks": "Задания"
     },
-    "title": "Проверка"
+    "title": "Проверка",
+    "pointsLabelRequired": "Балл (0–{{max}}) *",
+    "pointsLabelOptional": "Балл (0–{{max}}, необязательно)",
+    "pointsRequiredHint": "Для утверждения укажите балл — он войдёт в критерий «Учебные задания» итоговой оценки.",
+    "pointsOptionalHint": "Духовно-нравственное задание: если балл не указан, засчитывается балл шаблона ({{max}}).",
+    "pointsRequired": "Для утверждения укажите балл",
+    "approveWithPoints": "Утвердить ({{points}} / {{max}})",
+    "reasonHint": "Обязательно для отклонения (не менее {{min}} символов). Причина будет показана студенту.",
+    "approvedLocked": "Руководитель практики не может изменить утверждённое задание. Отменить утверждение может только администратор."
   },
   "supervisorStudents": {
     "academicYear": "Учебный год",
@@ -2121,7 +2339,6 @@
     "emptyTitle": "Студенты не найдены",
     "noGroup": "— без группы —",
     "rowClickHint": "Нажмите для оценивания",
-    "searchPlaceholder": "Поиск по Ф.И.О. или группе",
     "semesters": {
       "all": "Все семестры",
       "fall": "1-семестр (Осенний)",
@@ -2142,7 +2359,13 @@
       "period": "Срок"
     },
     "title": "Мои студенты",
-    "totalSummary": "Всего: <0>{{count}}</0> студентов · {{groups}} групп"
+    "totalSummary": "Всего: <0>{{count}}</0> студентов · {{groups}} групп",
+    "searchPlaceholderWithId": "Поиск по Ф.И.О., HEMIS ID или группе",
+    "cancelledReadOnly": "Эта практика отменена — оценивание недоступно, только просмотр.",
+    "semesterShort": {
+      "fall": "1-й сем.",
+      "spring": "2-й сем."
+    }
   },
   "supervisorSupervisorLayout": {
     "brand": "Практика ЧГПУ",
@@ -2160,7 +2383,8 @@
       "myStudents": "Мои студенты",
       "programs": "Программы практики",
       "regulations": "Нормативные документы",
-      "tasks": "Задания"
+      "tasks": "Задания",
+      "reports": "Итоговые отчёты"
     },
     "sections": {
       "practices": "Практики"
@@ -2200,7 +2424,14 @@
     "professionalSection": "Профессиональные данные",
     "specialtyLabel": "Специальность",
     "updatedToast": "Руководитель обновлён",
-    "usernameLabel": "Логин"
+    "usernameLabel": "Логин",
+    "isActive": "Активен",
+    "isActiveHint": "Неактивный руководитель не может войти в систему и не назначается новым студентам; история сохраняется",
+    "orgMoreResults": "Показано {{shown}} из {{total}} — уточните поиск",
+    "orgResults": "Список организаций",
+    "orgSearchPlaceholder": "Поиск организации (название, регион)",
+    "removeOrganization": "Убрать: {{name}}",
+    "selectedOrganizations": "Выбранные организации"
   },
   "supervisorsSupervisorImportDialog": {
     "chooseFile": "Выбрать файл",
@@ -2223,11 +2454,11 @@
     "optionalColumns": "<0>Необязательные</0>: Факультет, Кафедра, Должность, E-mail, Телефон, Специальность, Организация (через запятую, макс. 5), Логин.",
     "password": "Пароль",
     "requiredColumns": "<0>Обязательные</0>: ФИО (одним столбцом) или Фамилия + Имя.",
-    "rowN": "Строка {{row}}",
     "skipped": "Пропущено",
     "supervisorsAdded": "Добавлено руководителей: {{count}}",
     "title": "Excel-импорт руководителей",
-    "xlsxOnly": "Загрузите файл .xlsx"
+    "xlsxOnly": "Загрузите файл .xlsx",
+    "rowLabel": "Строка {{row}}"
   },
   "taskTemplatesTaskTemplateFormDialog": {
     "category": {
@@ -2313,7 +2544,16 @@
     "linkPlaceholder": "Ссылка Google Maps или 41.31, 69.28",
     "myLocation": "Моё место",
     "myLocationTitle": "Моё местоположение",
-    "parseError": "Координаты не найдены. Введите ссылку Google Maps или в виде '41.31, 69.28'"
+    "parseError": "Координаты не найдены. Введите ссылку Google Maps или в виде '41.31, 69.28'",
+    "clearLocation": "Убрать местоположение",
+    "geoDenied": "Доступ к геолокации запрещён. Разрешите его через значок замка в адресной строке браузера или отметьте точку на карте.",
+    "geoInsecure": "Определение местоположения работает только по защищённому (https) соединению. Отметьте точку на карте или вставьте ссылку Google Maps.",
+    "geoLowAccuracy": "Низкая точность местоположения (±{{m}} м). Проверьте точку на карте и при необходимости исправьте.",
+    "geoTimeout": "Время ожидания геолокации истекло. Попробуйте ещё раз или отметьте точку на карте.",
+    "geoUnavailable": "Не удалось определить местоположение. Отметьте точку на карте или вставьте ссылку Google Maps.",
+    "geoUnsupported": "Этот браузер не поддерживает определение местоположения. Отметьте точку на карте.",
+    "locating": "Определяется…",
+    "radiusLegend": "Радиус: {{m}} м"
   },
   "uiPromptDialog": {
     "minLengthError": "Требуется не менее {{n}} символов",
@@ -2346,7 +2586,13 @@
       "qualifying": "Квалификационная практика"
     },
     "title": "Проверка договора",
-    "valid": "Действителен"
+    "valid": "Действителен",
+    "checkFailed": "Сейчас проверить не удалось — проверьте подключение к интернету и повторите попытку чуть позже.",
+    "downloadPdf": "Скачать PDF-документ",
+    "openFullscreen": "Открыть на весь экран",
+    "officialCopy": "Официальная копия документа (PDF)",
+    "checkFailedTitle": "Не удалось проверить",
+    "retry": "Повторить"
   },
   "inAppBrowser": {
     "title": "Вы открыли сайт во встроенном браузере {{app}}",
@@ -2379,7 +2625,8 @@
     "notePlaceholder": "Примечание, видимое студенту (необязательно)",
     "reason": "Причина (для аудита)",
     "reasonRequired": "Причина (минимум 3 символа) обязательна",
-    "saved": "{{date}} — сохранено как {{status}}"
+    "saved": "{{date}} — сохранено как {{status}}",
+    "timesTimezone": "Время указывается по Ташкенту (UTC+5)."
   },
   "attendanceRange": {
     "title": "Отметить период",
@@ -2440,5 +2687,487 @@
       "insecure": "Откройте адрес заново, начиная с https://.",
       "unsupported": "Используйте свежую версию Chrome или Safari."
     }
+  },
+  "requestError": {
+    "offline": "Нет подключения к интернету. Проверьте соединение и повторите попытку.",
+    "network": "Не удалось связаться с сервером — интернет отключён или очень медленный. Повторите попытку.",
+    "timeout": "Сервер не ответил (ответ не получен). Возможно, медленный интернет — повторите попытку чуть позже.",
+    "server": "На сервере произошла ошибка. Повторите попытку чуть позже."
+  },
+  "studentDashboard": {
+    "kickerDefault": "Платформа практики",
+    "progressLabel": "Пройденная часть срока практики",
+    "phase": {
+      "upcoming": "Не начата",
+      "ongoing": "В процессе",
+      "finished": "Завершена"
+    },
+    "statusKicker": "Статус практики",
+    "statusTitle": "Текущий этап",
+    "stepState": {
+      "complete": "выполнено",
+      "current": "текущий этап",
+      "pending": "ожидается"
+    },
+    "steps": {
+      "placement": "Место практики",
+      "placementMissing": "Ещё не назначено",
+      "practice": "Практика",
+      "startsOn": "Начнётся {{date}}",
+      "endsOn": "Идёт · завершится {{date}}",
+      "endedOn": "Завершена {{date}}",
+      "result": "Результат",
+      "resultPending": "Оценка — после завершения практики",
+      "awaitingGrade": "Ожидается оценка",
+      "gradeWithCredit": "Баллы: {{grade}} · кредит получен",
+      "gradeNoCredit": "Баллы: {{grade}} · кредит не получен"
+    },
+    "checkInNotStarted": "Практика начнётся {{date}} — отмечать приход можно с этого дня.",
+    "checkInEnded": "Срок практики истёк {{date}} — посещаемость больше не отмечается.",
+    "retry": "Повторить"
+  },
+  "academicSearchableSelect": {
+    "searchLabel": "Поиск по списку",
+    "searchPlaceholder": "Поиск...",
+    "noResults": "Ничего не найдено",
+    "moreResults": "Ещё {{n}} — уточните запрос"
+  },
+  "adminStructure": {
+    "facultiesSubtitle": "Факультеты университета — к ним привязаны направления и кафедры",
+    "departmentsSubtitle": "Кафедры факультетов — руководители привязываются к кафедре",
+    "directionsSubtitle": "Направления обучения (с 8-значным кодом HEMIS)",
+    "groupsSubtitle": "Академические группы — по направлению, курсу и учебному году",
+    "academicYearsSubtitle": "Учебные годы — одновременно активен только один",
+    "statTotal": "Всего",
+    "statActiveYear": "Активный год",
+    "deleteTitle": "Подтвердите удаление"
+  },
+  "adminValidation": {
+    "required": "Обязательное поле",
+    "minChars": "Не менее {{n}} символов",
+    "maxChars": "Не более {{n}} символов",
+    "intRange": "Введите целое число от {{min}} до {{max}}"
+  },
+  "objectsOrganizationDetailDialog": {
+    "description": "Полная информация об организации",
+    "sectionMain": "Основные сведения и реквизиты",
+    "director": "Руководитель",
+    "inn": "ИНН",
+    "bankName": "Название банка",
+    "bankAccount": "Расчётный счёт (Р/с)",
+    "mfo": "МФО",
+    "sectionContact": "Контакты и местоположение",
+    "phone": "Телефон",
+    "email": "Email",
+    "website": "Веб-сайт",
+    "area": "Регион",
+    "address": "Адрес",
+    "geolocation": "Геолокация",
+    "openMap": "Открыть на карте",
+    "geoNotSet": "Не указана — местоположение при посещаемости не проверяется",
+    "geoRadius": "Радиус геозоны",
+    "radiusValue": "{{m}} м",
+    "sectionCapacity": "Вместимость и условия практики",
+    "capacity": "Вместимость (квота)",
+    "capacityValue": "Студентов: {{n}}",
+    "assignedNow": "Сейчас прикреплено: {{n}}",
+    "workDays": "Рабочие дни",
+    "notes": "Дополнительно"
+  },
+  "studentsBulkDeleteFailures": {
+    "title": "Не удалено записей: {{n}}",
+    "unknownName": "Без имени"
+  },
+  "studentsListPagination": {
+    "label": "Страницы",
+    "pageOf": "{{page}} / {{total}}"
+  },
+  "assignmentsAssignmentStatusBadge": {
+    "draft": "Черновик",
+    "active": "Активна",
+    "completed": "Завершена",
+    "cancelled": "Отменена"
+  },
+  "contractsContractStatusBadge": {
+    "draft": "Новый",
+    "generated": "PDF готов",
+    "active": "Действует",
+    "expired": "Архив",
+    "revoked": "Аннулирован"
+  },
+  "assignmentsSearchSelect": {
+    "searchStudent": "Поиск: Ф.И.О. или HEMIS ID",
+    "searchSupervisor": "Поиск: Ф.И.О. или должность",
+    "searchOrganization": "Поиск: название или район",
+    "searchArea": "Поиск: территория или район",
+    "searchGroup": "Поиск: название группы",
+    "noStudentFound": "Студент не найден",
+    "noSupervisorFound": "Руководитель не найден",
+    "noOrganizationFound": "Организация не найдена",
+    "noAreaFound": "Территория не найдена",
+    "noGroupFound": "Группа не найдена",
+    "notSelected": "Не выбрано",
+    "noGroup": "без группы",
+    "unknownStudent": "Неизвестный студент",
+    "unknownSupervisor": "Неизвестный руководитель",
+    "unknownOrganization": "Неизвестная организация",
+    "unknownArea": "Неизвестная территория",
+    "unknownGroup": "Неизвестная группа",
+    "moreResults": "Показаны первые {{shown}} из {{total}} — уточните поиск"
+  },
+  "adminMonitoring": {
+    "title": "Центр мониторинга",
+    "subtitle": "Ход практик, динамика посещаемости, загрузка объектов и текущие показатели",
+    "pdfReport": "Аналитический отчёт (PDF)",
+    "pdfPreparing": "Подготовка...",
+    "toAssignments": "Прикрепления",
+    "tabs": {
+      "overview": "Общее состояние",
+      "practices": "Практики",
+      "attendance": "Посещаемость",
+      "tasks": "Задания",
+      "supervisors": "Руководители",
+      "objects": "Объекты",
+      "issues": "Проблемы",
+      "map": "Карта",
+      "analytics": "Аналитика"
+    },
+    "unassigned": {
+      "title": "Есть студенты без прикрепления к практике",
+      "count": "Студентов: {{count}}",
+      "body": "Из <0>{{total}}</0> студентов в системе ещё не прикреплены ни к одному месту практики: <1>{{count}}</1>.",
+      "assign": "Прикрепить студентов",
+      "viewList": "Открыть список"
+    },
+    "kpi": {
+      "totalStudents": "Всего студентов",
+      "totalStudentsHint": "Зарегистрированы в системе",
+      "unassigned": "Без прикрепления",
+      "unassignedHint": "Не прикреплены к практике",
+      "allAssigned": "Все прикреплены",
+      "activePractices": "Активные практики",
+      "activePracticesHint": "Проходят сейчас",
+      "attendance": "Посещаемость",
+      "attendanceHint": "Последние 30 дней",
+      "tasks": "Задания",
+      "tasksHint": "Отправлено на проверку: {{count}}",
+      "issues": "Требуют внимания",
+      "issuesHint": "Рекомендуется проверить",
+      "noIssues": "Проблем не обнаружено"
+    },
+    "practiceTypes": {
+      "title": "Показатели по видам практики",
+      "description": "Выполнение прикреплений по каждому виду практики",
+      "all": "Все",
+      "active": "Активные",
+      "completed": "Завершённые",
+      "draft": "Черновики",
+      "total": "Всего",
+      "empty": "Нет данных по видам практики"
+    },
+    "pending": {
+      "title": "Ожидают проверки",
+      "tasks": "Задания",
+      "journals": "Записи дневника",
+      "analyses": "Анализы уроков",
+      "total": "Всего на проверке"
+    },
+    "partnership": {
+      "title": "Партнёрство и договоры",
+      "organizations": "Организации-партнёры",
+      "supervisors": "Руководители практики",
+      "signed": "Подписанные договоры",
+      "pendingContracts": "Ожидают / черновики"
+    },
+    "practices": {
+      "title": "Состояние практик",
+      "description": "Распределение прикреплений по статусам",
+      "total": "Всего прикреплений",
+      "active": "На практике сейчас",
+      "draft": "В подготовке (черновик)",
+      "completed": "Завершено",
+      "manage": "Управление прикреплениями"
+    },
+    "attendance": {
+      "title": "Мониторинг посещаемости (последние 30 дней)",
+      "description": "Явка студентов на место практики в установленные дни",
+      "open": "Перейти к таблице посещаемости",
+      "green": "Пришли (подтверждено)",
+      "red": "Не пришли (без причины)",
+      "pending": "Ожидают подтверждения",
+      "rate": "Общий показатель посещаемости"
+    },
+    "tasks": {
+      "title": "Выполнение и оценивание заданий",
+      "description": "Выданные задания и состояние их проверки",
+      "templates": "Шаблоны заданий",
+      "total": "Всего выдано заданий",
+      "pending": "Работы, ожидающие проверки",
+      "approved": "Принято"
+    },
+    "supervisors": {
+      "title": "Нагрузка руководителей",
+      "description": "Число прикреплённых студентов и заполненность у руководителей практики",
+      "list": "Список руководителей",
+      "total": "Активных руководителей практики: {{count}}",
+      "overloaded": "Руководители с нагрузкой более 80%:",
+      "usage": "Студенты: {{used}} / {{capacity}}",
+      "allNormal": "Нагрузка всех руководителей в норме."
+    },
+    "objects": {
+      "title": "Вместимость объектов практики",
+      "description": "Пропускная способность и заполненность школ, ДОУ и предприятий",
+      "catalog": "Каталог объектов",
+      "total": "Организаций-партнёров: {{count}}",
+      "filling": "Объекты, близкие к заполнению:",
+      "usage": "Места: {{used}} / {{capacity}}",
+      "allNormal": "Превышения вместимости объектов не выявлено."
+    },
+    "issues": {
+      "title": "Проблемы, требующие внимания",
+      "description": "Переполненные объекты, ожидающие проверки работы и неутверждённые договоры",
+      "high": "Высокий",
+      "medium": "Средний",
+      "emptyTitle": "Всё в порядке!",
+      "emptyDescription": "Критических проблем пока не выявлено.",
+      "unassignedTitle": "Студенты без прикрепления к практике",
+      "unassignedDesc": "Ещё не прикреплены ни к одному месту практики: {{count}}",
+      "unassignedAction": "Перейти к прикреплению",
+      "capacityOrgTitle": "Организация: {{name}}",
+      "capacitySupervisorTitle": "Руководитель: {{name}}",
+      "capacityDesc": "Заполнено на {{percent}}% (занято: {{used}} / {{capacity}})",
+      "capacityAction": "Посмотреть",
+      "pendingTitle": "Работы студентов, ожидающие проверки",
+      "pendingDesc": "Всего: {{total}} (задания: {{tasks}}, дневники: {{journals}}, анализы уроков: {{analyses}}). Проверка выполняется в окне прикрепления.",
+      "pendingAction": "К активным прикреплениям",
+      "draftContractsTitle": "Неутверждённые договоры",
+      "draftContractsDesc": "Договоры в статусе черновика, ещё не подписанные: {{count}}",
+      "draftContractsAction": "Проверить договоры"
+    },
+    "map": {
+      "title": "Карта объектов практики",
+      "description": "Активные организации и территории с указанными GPS-координатами",
+      "organizationsCount": "Организации: {{count}}",
+      "areasCount": "Территории: {{count}}",
+      "capacity": "Вместимость: {{count}} студ.",
+      "legendOrganization": "Организация",
+      "legendArea": "Территория (полевая практика)",
+      "noCoordinates": "GPS-координаты объектов пока не указаны. Добавьте их в разделе «Объекты»."
+    },
+    "analytics": {
+      "title": "Аналитический отчёт",
+      "description": "Итоговая статистическая справка по основным показателям платформы",
+      "reportTitle": "Официальный аналитический отчёт (PDF)",
+      "reportDescription": "Полная статистическая справка по текущим показателям, видам практики и посещаемости",
+      "download": "Статистический отчёт (PDF)",
+      "preparing": "Формирование документа..."
+    }
+  },
+  "adminIntegrations": {
+    "title": "Интеграции системы",
+    "badge": "Интеграции и сервисы",
+    "subtitle": "Состояние подключения данных HEMIS, проверки цифровых документов и внешних сервисов",
+    "statusActive": "Работает",
+    "statusPlanned": "Запланировано",
+    "soon": "Скоро",
+    "hemis": {
+      "title": "HEMIS (информационная система вуза)",
+      "subtitle": "Контингент студентов и академическая структура",
+      "status": "Импорт из Excel",
+      "description": "Студенты, группы, направления и факультеты импортируются из Excel-файла, выгруженного из HEMIS. Автоматическая синхронизация через API HEMIS пока не подключена.",
+      "studentsLabel": "Студентов в системе",
+      "importLink": "Импорт из Excel",
+      "structureLabel": "Академическая структура",
+      "structureValue": "Факультет / направление / группа",
+      "structureLink": "Управление структурой",
+      "method": "Способ: файл выгрузки HEMIS (Excel)",
+      "syncButton": "Синхронизация по API",
+      "syncUnavailable": "Прямая синхронизация с API HEMIS пока не подключена — обновляйте данные через импорт из Excel"
+    },
+    "qr": {
+      "title": "Цифровые документы и проверка по QR",
+      "subtitle": "Открытая проверка подлинности договоров",
+      "description": "На PDF утверждённого договора ставится QR-код с уникальной (неугадываемой) ссылкой. Любой может отсканировать его и проверить статус документа в системе.",
+      "publicUrl": "Адрес открытой проверки",
+      "qrStandard": "Стандарт QR-кода",
+      "pdfGenerator": "Формирование документа",
+      "pdfGeneratorValue": "Шаблон (DOCX / HTML) → PDF",
+      "templatesNote": "Шаблонами управляет только суперадминистратор",
+      "templatesLink": "Шаблоны"
+    },
+    "eimzo": {
+      "title": "E-IMZO и OneID",
+      "subtitle": "Электронная цифровая подпись и единая идентификация",
+      "description": "Дистанционное подписание договоров с руководителями организаций ключом E-IMZO и вход в систему через OneID.",
+      "current": "Сейчас: загружается скан подписанного договора"
+    },
+    "telegram": {
+      "title": "Telegram-бот и уведомления",
+      "subtitle": "Оперативные оповещения для студентов и руководителей",
+      "description": "Отправка уведомлений о начале практики, сроках заданий и посещаемости через Telegram.",
+      "current": "Сейчас: уведомления внутри системы"
+    }
+  },
+  "theme": {
+    "light": "Светлая тема",
+    "dark": "Тёмная тема",
+    "system": "Системная тема",
+    "switchToDark": "Переключить на тёмную тему",
+    "switchToSystem": "Переключить на системную тему",
+    "switchToLight": "Переключить на светлую тему"
+  },
+  "userRoles": {
+    "super_admin": "Супер-админ",
+    "admin": "Администратор",
+    "supervisor": "Руководитель практики",
+    "student": "Студент"
+  },
+  "apiFiles": {
+    "uploadFailed": "Не удалось загрузить файл",
+    "reportFailed": "Не удалось скачать отчёт",
+    "exportFailed": "Не удалось скачать файл экспорта",
+    "templateFailed": "Не удалось скачать шаблон",
+    "credentialsFailed": "Не удалось скачать таблицу логинов и паролей",
+    "archiveFailed": "Не удалось скачать портфолио"
+  },
+  "protectedRoute": {
+    "forbiddenTitle": "Доступ запрещён (403)",
+    "forbiddenDescription": "Вашей учётной записи администратора не выдано право на этот раздел. Для получения доступа обратитесь к супер-админу.",
+    "backToDashboard": "Вернуться на главную"
+  },
+  "siteChrome": {
+    "brandTitle": "ПРАКТИКА",
+    "brandSubtitle": "ЦИФРОВАЯ ПЛАТФОРМА",
+    "drawerBrand": "ПРАКТИКА ЧГПУ",
+    "mainNavigation": "Основная навигация",
+    "footerNavigation": "Разделы сайта",
+    "openMenu": "Открыть меню",
+    "closeMenu": "Закрыть меню",
+    "sections": "Разделы",
+    "login": "Войти на платформу",
+    "myDashboard": "Перейти в кабинет",
+    "nav": {
+      "home": "Главная",
+      "practice": "Практика",
+      "guide": "Инструкция",
+      "faq": "Вопросы и ответы"
+    },
+    "footerProduct": "ЦИФРОВАЯ ПРАКТИКА",
+    "footerUniversity": "Чирчикский государственный педагогический университет",
+    "footerTagline": "Цифровая платформа управления практикой",
+    "university": "Университет",
+    "rights": "© {{year}} ЧГПУ. Все права защищены.",
+    "location": "ЧИРЧИК · УЗБЕКИСТАН"
+  },
+  "dashboardPreview": {
+    "ariaLabel": "Пример кабинета студента (иллюстрация)",
+    "overview": "ОБЩИЙ ВИД",
+    "greeting": "Добрый день, студент",
+    "subtitle": "Весь процесс практики в одном месте.",
+    "practiceName": "ПЕДАГОГИЧЕСКАЯ ПРАКТИКА 4+2",
+    "overallProgress": "ОБЩИЙ ПРОГРЕСС",
+    "inProgress": "В процессе",
+    "tasks": "ЗАДАНИЯ",
+    "tasksLeft": "Осталось: {{n}}",
+    "attendance": "ПОСЕЩАЕМОСТЬ",
+    "attendanceDays": "{{n}} дн.",
+    "recorded": "Зафиксировано",
+    "practiceActive": "Практика активна",
+    "processOngoing": "Процесс продолжается",
+    "theoryPractice": "ТЕОРИЯ + ПРАКТИКА"
+  },
+  "practiceSearch": {
+    "item1": "Школа или организация прикрепления и руководитель практики",
+    "item2": "Задания, дневник и посещаемость",
+    "item3": "Договор, итоговый отчёт и портфолио"
+  },
+  "privateState": {
+    "loginTitle": "Требуется вход в систему",
+    "loginText": "Место практики, руководитель, задания и посещаемость — личные данные, открытого поиска нет. Чтобы их увидеть, войдите в свою учётную запись.",
+    "dashboardTitle": "Ваши данные — в личном кабинете",
+    "dashboardText": "Все сведения о вашей практике собраны в личном кабинете."
+  },
+  "amaliyotPage": {
+    "index": "СВЕДЕНИЯ О ПРАКТИКЕ",
+    "titleLine1": "Ваша практика —",
+    "titleLine2": "в личном кабинете.",
+    "description": "Записи о практике — личные данные, поэтому открытого поиска нет. Всё перечисленное ниже доступно в личном кабинете после входа в систему.",
+    "sections": {
+      "placement": {
+        "title": "Прикрепление",
+        "desc": "Место практики (школа, организация или территория), руководитель и сроки практики."
+      },
+      "attendance": {
+        "title": "Посещаемость",
+        "desc": "Отметки прихода и ухода в дни практики и процент посещаемости."
+      },
+      "tasks": {
+        "title": "Задания",
+        "desc": "Задания по силлабусу, дневник и анализы уроков с оценками."
+      },
+      "documents": {
+        "title": "Документы",
+        "desc": "Договор, итоговый отчёт и портфолио."
+      }
+    }
+  },
+  "faqPage": {
+    "index": "ЦЕНТР ПОМОЩИ",
+    "titleLine1": "Чёткие ответы",
+    "titleLine2": "на ваши вопросы.",
+    "description": "Часто задаваемые вопросы о платформе практики ЧГПУ и процессе практики.",
+    "items": {
+      "q1": {
+        "question": "Что такое система практики 4+2?",
+        "answer": "Педагогическая модель обучения: четыре дня в неделю — теория в университете, два дня — практика в прикреплённой школе или образовательном учреждении. Платформа охватывает и другие виды практики (квалификационная, педагогическая и т. д.)."
+      },
+      "q2": {
+        "question": "Кто может войти на платформу?",
+        "answer": "Студенты ЧГПУ, руководители практики, ответственные факультетов и сотрудники отдела практики — каждый с правами, соответствующими его роли."
+      },
+      "q3": {
+        "question": "Что делать, если не видно данных о моей практике?",
+        "answer": "Сначала проверьте, что вы вошли под своей учётной записью. Если прикрепление ещё не выполнено, обратитесь к ответственному за практику на факультете."
+      },
+      "q4": {
+        "question": "Как контролируются посещаемость и задания?",
+        "answer": "В дни практики студент отмечает приход и уход по местоположению (GPS); при необходимости посещаемость исправляет администратор. Задания загружаются на платформу и оцениваются руководителем практики."
+      },
+      "q5": {
+        "question": "Я забыл пароль. Как его восстановить?",
+        "answer": "Самостоятельно восстановить пароль нельзя — обратитесь к администратору своего факультета, он выдаст новый временный пароль. После входа смените его в разделе «Мой профиль → Пароль»."
+      }
+    }
+  },
+  "guidePage": {
+    "index": "ИНСТРУКЦИЯ ПО ИСПОЛЬЗОВАНИЮ",
+    "titleLine1": "Практика —",
+    "titleLine2": "шаг за шагом.",
+    "description": "Кратко и понятно об основных процессах платформы и этапах практики студента.",
+    "steps": {
+      "profile": {
+        "title": "Проверьте профиль",
+        "desc": "Убедитесь, что ваши личные и академические данные на платформе указаны верно."
+      },
+      "tasks": {
+        "title": "Выполняйте задания",
+        "desc": "Отправляйте задания из плана практики в установленные сроки."
+      },
+      "attendance": {
+        "title": "Отмечайте посещаемость",
+        "desc": "В дни практики отмечайте на платформе приход и уход."
+      },
+      "report": {
+        "title": "Завершите отчёт",
+        "desc": "Отправьте итоговый отчёт и получите оценку руководителя."
+      }
+    },
+    "ctaTitle": "Готовы начать?",
+    "ctaText": "Войдите в личный кабинет и проверьте статус своей практики."
+  },
+  "supervisorReports": {
+    "subtitle": "Просматривайте итоговые отчёты своих студентов: утверждайте или возвращайте с указанием причины",
+    "returnForRevision": "Вернуть",
+    "statusShort": "Отчёт: {{status}}"
   }
 }

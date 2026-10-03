@@ -73,12 +73,19 @@ export function InquiryThread({ inquiryId }: { inquiryId: UUID }) {
           onChange={(e) => setText(e.target.value)}
           placeholder={t("inquiryThread.messagePlaceholder")}
           rows={2}
+          maxLength={2000}
+          aria-label={t("inquiryThread.messagePlaceholder")}
           className="flex-1"
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void handleSend();
           }}
         />
-        <Button onClick={handleSend} disabled={send.isPending || !text.trim()}>
+        <Button
+          onClick={handleSend}
+          disabled={send.isPending || !text.trim()}
+          aria-label={t("inquiryThread.send")}
+          title={t("inquiryThread.send")}
+        >
           {send.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

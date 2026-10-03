@@ -1,55 +1,35 @@
-import type { HemisCredentials } from "@/lib/api/types";
 import i18n from "@/i18n";
-import { useAuthStore } from "@/stores/auth";
+import {
+  authFetch,
+  downloadFile,
+  filenameFromDisposition,
+  readErrorDetail,
+  saveBlob,
+} from "@/lib/api";
+import type { HemisCredentials } from "@/lib/api/types";
 
-/** Blob javobini fayl sifatida saqlaydi (Content-Disposition'dan nom oladi). */
-function saveBlob(res: Response, blob: Blob, fallbackName: string): void {
-  const disposition = res.headers.get("content-disposition") ?? "";
-  const match = disposition.match(/filename="?([^";]+)"?/);
-  const filename = match?.[1] ?? fallbackName;
-  const blobUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = blobUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(blobUrl);
-}
-
-/** Serverdan namuna import shablonini (.xlsx) yuklab oladi. */
-async function downloadTemplate(path: string, fallbackName: string): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-
-  const res = await fetch(path, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Shablonni yuklab bo'lmadi (${res.status})`);
-  }
-  saveBlob(res, await res.blob(), fallbackName);
+/** Serverdan namuna import shablonini (.xlsx) yuklab oladi (token + 401→refresh bilan). */
+function downloadTemplate(path: string, fallbackName: string): Promise<void> {
+  return downloadFile(path, fallbackName, i18n.t("apiFiles.templateFailed"));
 }
 
 /** Import qilingan talabalar login/parolini to'liq ma'lumot bilan Excel'ga yuklab oladi. */
 export async function downloadStudentsCredentials(
   credentials: HemisCredentials[],
 ): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-
-  const res = await fetch("/api/v1/hemis/credentials.xlsx", {
+  const res = await authFetch("/api/v1/hemis/credentials.xlsx", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ credentials }),
   });
   if (!res.ok) {
-    throw new Error(`Excel yuklab bo'lmadi (${res.status})`);
+    throw new Error(await readErrorDetail(res, i18n.t("apiFiles.credentialsFailed")));
   }
-  saveBlob(res, await res.blob(), "talabalar_login_parol.xlsx");
+  const filename = filenameFromDisposition(
+    res.headers.get("content-disposition"),
+    "talabalar_login_parol.xlsx",
+  );
+  saveBlob(await res.blob(), filename);
 }
 
 export function downloadStudentsTemplate(): Promise<void> {

@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import i18n from "@/i18n";
 
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth";
+import i18n from "@/i18n";
+import { api, downloadFile } from "@/lib/api";
 import type { UUID } from "@/lib/api/types";
 
 export type ContractTemplateStatus = "draft" | "active" | "inactive" | "archived";
@@ -68,20 +67,10 @@ export function useDeleteContractTemplate() {
   });
 }
 
-export async function downloadContractTemplate(id: UUID, name: string): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-  const res = await fetch(`/api/v1/contract-templates/${id}/download`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`Yuklab bo'lmadi (${res.status})`);
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name.endsWith(".docx") ? name : `${name}.docx`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+export function downloadContractTemplate(id: UUID, name: string): Promise<void> {
+  return downloadFile(
+    `/api/v1/contract-templates/${id}/download`,
+    name.endsWith(".docx") ? name : `${name}.docx`,
+    i18n.t("common.downloadFailed"),
+  );
 }

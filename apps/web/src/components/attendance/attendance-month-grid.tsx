@@ -1,7 +1,14 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { buildMonthCells, todayStr } from "@/components/attendance/attendance-date-utils";
+import {
+  buildMonthCells,
+  effectiveWeekdays,
+  formatMonthLabel,
+  formatTashkentDate,
+  todayStr,
+} from "@/components/attendance/attendance-date-utils";
+import { dateLocale } from "@/i18n";
 import type { AttendanceDay, AttendanceDayStatus, ISODate } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +21,7 @@ type Props = {
   rangeEnd: ISODate;
   /** ISO 1..7; null → Dush–Shan */
   requiredWeekdays: readonly number[] | null;
-  /** Test/SSR uchun; default — bugun (lokal) */
+  /** Test/SSR uchun; default — bugun (Toshkent) */
   today?: ISODate;
   /** readOnly=true bo'lsa faqat yozuvli kunlar bosiladi; aks holda oraliqdagi barcha kunlar */
   readOnly?: boolean;
@@ -25,7 +32,6 @@ type Props = {
 };
 
 const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-const WEEKDAY_DEFAULTS = ["Dush", "Sesh", "Chor", "Pay", "Jum", "Shan", "Yak"];
 
 const STATUS_CELL: Record<AttendanceDayStatus, string> = {
   green:
@@ -41,10 +47,13 @@ const STATUS_DOT: Record<AttendanceDayStatus, string> = {
   pending: "bg-amber-500 animate-pulse",
 };
 
+const LONG_DATE: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long" };
+
 /**
  * Qayta ishlatiladigan oy taqvimi (prezentatsion).
- * Dushanbadan boshlanadi, 7 ustun. Rang — status bo'yicha; talab qilinmagan kunlar xira;
- * kelajak kunlar yengilroq; bugun — ring.
+ * Dushanbadan boshlanadi, 7 ustun. Rang — status bo'yicha (yozuv har doim ustun turadi);
+ * talab qilinmagan kunlar xira; kelajak kunlar yengilroq; bugun — ring.
+ * Har bir katak to'liq nomli tugma (sana · status), sarlavha qatori faqat vizual.
  */
 export function AttendanceMonthGrid({
   year,
@@ -62,6 +71,7 @@ export function AttendanceMonthGrid({
 }: Props) {
   const { t } = useTranslation();
   const todayValue = today ?? todayStr();
+  const locale = dateLocale();
 
   const cells = useMemo(
     () =>
@@ -77,8 +87,12 @@ export function AttendanceMonthGrid({
     [year, month, daysByDate, rangeStart, rangeEnd, requiredWeekdays, todayValue],
   );
 
-  const statusLabel = (s: AttendanceDayStatus) =>
-    t(`adminAttendance.status.${s}`, { defaultValue: s });
+  const required = useMemo(() => new Set(effectiveWeekdays(requiredWeekdays)), [requiredWeekdays]);
+
+  const monthLabel = formatMonthLabel(year, month, locale);
+
+  const statusLabel = (s: AttendanceDayStatus) => t(`adminAttendance.status.${s}`);
+  const notRequiredLabel = t("attendanceMonthGrid.notRequired");
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -87,13 +101,16 @@ export function AttendanceMonthGrid({
         aria-hidden="true"
       >
         {WEEKDAY_KEYS.map((k, idx) => (
-          <div key={k} className={idx === 6 ? "text-rose-500/80 dark:text-rose-400" : undefined}>
-            {t(`attendanceMonthGrid.weekdays.${k}`, { defaultValue: WEEKDAY_DEFAULTS[idx] })}
+          <div
+            key={k}
+            className={required.has(idx + 1) ? undefined : "text-rose-500/80 dark:text-rose-400"}
+          >
+            {t(`attendanceMonthGrid.weekdays.${k}`)}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1 sm:gap-1.5" role="grid">
+      <div role="group" aria-label={monthLabel} className="grid grid-cols-7 gap-1 sm:gap-1.5">
         {cells.map((cell) => {
           const status = cell.record?.status ?? null;
           const clickable =
@@ -113,12 +130,10 @@ export function AttendanceMonthGrid({
             look = "border-border/60 bg-muted/40 text-muted-foreground";
           }
 
-          const title = [
-            cell.date,
+          const label = [
+            formatTashkentDate(cell.date, locale, LONG_DATE),
             status ? statusLabel(status) : null,
-            cell.inMonth && cell.inRange && !cell.isRequired
-              ? t("attendanceMonthGrid.notRequired", { defaultValue: "Talab qilinmaydi" })
-              : null,
+            cell.inMonth && cell.inRange && !cell.isRequired ? notRequiredLabel : null,
           ]
             .filter(Boolean)
             .join(" · ");
@@ -127,10 +142,9 @@ export function AttendanceMonthGrid({
             <button
               key={cell.date}
               type="button"
-              role="gridcell"
-              aria-label={title}
-              aria-selected={selectedDate === cell.date}
-              title={title}
+              aria-label={label}
+              aria-current={cell.isToday ? "date" : undefined}
+              title={label}
               disabled={!clickable}
               onClick={() => clickable && onDayClick?.(cell.date, cell.record)}
               className={cn(
@@ -138,10 +152,10 @@ export function AttendanceMonthGrid({
                 look,
                 cell.isFuture && cell.inMonth && cell.inRange && "opacity-80",
                 cell.isToday &&
-                  "ring-2 ring-primary ring-offset-1 ring-offset-background font-bold",
+                  "font-bold ring-2 ring-primary ring-offset-1 ring-offset-background",
                 selectedDate === cell.date && "ring-2 ring-primary/70",
                 clickable
-                  ? "cursor-pointer hover:border-primary/50 active:scale-95"
+                  ? "cursor-pointer hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
                   : "cursor-default",
               )}
             >
@@ -168,13 +182,10 @@ export function AttendanceMonthGrid({
           <LegendItem dot="bg-emerald-500" label={statusLabel("green")} />
           <LegendItem dot="bg-rose-500" label={statusLabel("red")} />
           <LegendItem dot="bg-amber-500" label={statusLabel("pending")} />
-          <LegendItem
-            dot="bg-muted-foreground/30"
-            label={t("attendanceMonthGrid.notRequired", { defaultValue: "Talab qilinmaydi" })}
-          />
+          <LegendItem dot="bg-muted-foreground/30" label={notRequiredLabel} />
           <LegendItem
             dot="ring-2 ring-primary bg-transparent"
-            label={t("attendanceMonthGrid.today", { defaultValue: "Bugun" })}
+            label={t("attendanceMonthGrid.today")}
           />
         </div>
       )}
@@ -185,7 +196,7 @@ export function AttendanceMonthGrid({
 function LegendItem({ dot, label }: { dot: string; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={cn("h-2.5 w-2.5 rounded-full", dot)} />
+      <span aria-hidden="true" className={cn("h-2.5 w-2.5 rounded-full", dot)} />
       <span>{label}</span>
     </span>
   );

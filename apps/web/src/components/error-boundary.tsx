@@ -1,22 +1,22 @@
 import { AlertTriangle, ArrowLeft, Home, RotateCw } from "lucide-react";
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 
 type Props = { children: ReactNode };
 type State = { error: Error | null };
 
+/**
+ * Ilova darajasidagi oxirgi himoya (Router'dan tashqarida — Toaster, devtools va h.k.).
+ * Fallback Router kontekstiga bog'liq emas: oddiy `<a href>` va `window.location`.
+ */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
     return { error };
-  }
-
-  componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error("ErrorBoundary:", error, info);
   }
 
   reset = () => this.setState({ error: null });
@@ -29,6 +29,18 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
+/** Router `errorElement` — sahifa render/yuklash xatosida o'zbek/rus tilidagi xabar. */
+export function RouteErrorScreen() {
+  const routeError = useRouteError();
+  const error =
+    routeError instanceof Error
+      ? routeError
+      : isRouteErrorResponse(routeError)
+        ? new Error(`${routeError.status} ${routeError.statusText}`.trim())
+        : new Error(typeof routeError === "string" ? routeError : "");
+  return <ErrorScreen error={error} onReset={() => window.location.reload()} />;
+}
+
 export function ErrorScreen({
   error,
   onReset,
@@ -38,7 +50,10 @@ export function ErrorScreen({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="landing-bg relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden px-4 py-16">
+    <div
+      role="alert"
+      className="landing-bg relative flex min-h-[calc(100vh-3.5rem)] items-center justify-center overflow-hidden px-4 py-16"
+    >
       <div className="blob pointer-events-none absolute -left-20 top-20 h-72 w-72 rounded-full bg-destructive/10 blur-3xl" />
       <div
         className="blob pointer-events-none absolute -right-10 bottom-20 h-96 w-96 rounded-full bg-amber-500/10 blur-3xl"
@@ -109,11 +124,12 @@ export function ErrorScreen({
             <ArrowLeft className="h-4 w-4" />
             {t("common.back")}
           </Button>
+          {/* Router kontekstisiz ham ishlaydi; xatodan keyin to'liq qayta yuklash ham to'g'ri */}
           <Button asChild>
-            <Link to="/">
+            <a href="/">
               <Home className="h-4 w-4" />
               {t("errorBoundary.home")}
-            </Link>
+            </a>
           </Button>
         </div>
       </div>

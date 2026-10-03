@@ -11,17 +11,15 @@ import {
 import type { TFunction } from "i18next";
 import { useState, type FormEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { MaintenanceScreen } from "@/components/maintenance-screen";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { usePublicSettings } from "@/lib/api/system-settings";
 import { login } from "@/lib/auth-api";
-import { landingPathFor } from "@/lib/routing";
+import { postLoginPath } from "@/lib/routing";
 import { useAuthStore } from "@/stores/auth";
 
 type LoginErrorKind = "inline" | "blocked";
@@ -42,13 +40,7 @@ function serverDetail(err: HTTPError): string | null {
 
 function mapLoginError(err: unknown, t: TFunction): LoginError {
   if (!(err instanceof HTTPError)) {
-    return {
-      kind: "inline",
-      message: t("auth.login.networkError", {
-        defaultValue:
-          "Server bilan aloqa yo'q. Internet ulanishini tekshirib, qayta urinib ko'ring.",
-      }),
-    };
+    return { kind: "inline", message: t("auth.login.networkError") };
   }
 
   const status = err.response.status;
@@ -57,9 +49,7 @@ function mapLoginError(err: unknown, t: TFunction): LoginError {
   if (status === 401) {
     return {
       kind: "inline",
-      message:
-        detail ??
-        t("auth.login.invalidCredentials", { defaultValue: "Login yoki parol noto'g'ri." }),
+      message: detail ?? t("auth.login.invalidCredentials"),
     };
   }
 
@@ -67,50 +57,29 @@ function mapLoginError(err: unknown, t: TFunction): LoginError {
     const isDeviceIssue = detail ? /qurilma|устройств|device/i.test(detail) : true;
     return {
       kind: "blocked",
-      message:
-        detail ??
-        t("auth.login.forbidden", {
-          defaultValue: "Kirish taqiqlangan. Administratorga murojaat qiling.",
-        }),
-      help: isDeviceIssue
-        ? t("auth.login.deviceHelp", {
-            defaultValue:
-              "Administratorga murojaat qiling — eski qurilma o'chirilgach qayta kirasiz.",
-          })
-        : t("auth.login.blockedHelp", {
-            defaultValue: "Hisobingiz holati bo'yicha fakultet administratoriga murojaat qiling.",
-          }),
+      message: detail ?? t("auth.login.forbidden"),
+      help: isDeviceIssue ? t("auth.login.deviceHelp") : t("auth.login.blockedHelp"),
     };
   }
 
   if (status === 422) {
     return {
       kind: "inline",
-      message: `${t("auth.login.validation", {
-        defaultValue: "Ma'lumotlar noto'g'ri formatda.",
-      })} ${t("auth.login.validationHints", {
-        defaultValue: "Login kamida 3 belgi, parol kamida 4 belgi bo'lishi kerak.",
-      })}`,
+      message: `${t("auth.login.validation")} ${t("auth.login.validationHints")}`,
     };
   }
 
   if (status === 429) {
     return {
       kind: "inline",
-      message:
-        detail ??
-        t("auth.login.tooManyAttempts", {
-          defaultValue: "Juda ko'p urinish. Bir necha daqiqadan so'ng qayta urinib ko'ring.",
-        }),
+      message: detail ?? t("auth.login.tooManyAttempts"),
     };
   }
 
   if (status >= 500) {
     return {
       kind: "inline",
-      message: t("auth.login.serverError", {
-        defaultValue: "Serverda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.",
-      }),
+      message: t("auth.login.serverError"),
     };
   }
 
@@ -121,27 +90,21 @@ export function Login() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
-  const { data: settings } = usePublicSettings();
+  const location = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<LoginError | null>(null);
 
+  // Profilaktika rejimi: RootLayout'dagi MaintenanceGuard bu sahifani ham yopadi;
+  // Super Admin uchun MaintenanceScreen'da /rescue havolasi bor.
   if (user) {
     if (user.must_change_password) {
       return <Navigate to="/change-password" replace />;
     }
-    return <Navigate to={landingPathFor(user.role)} replace />;
-  }
-
-  if (settings?.maintenance_mode) {
-    return (
-      <MaintenanceScreen
-        message={settings.maintenance_message}
-        siteName={settings.site_name}
-      />
-    );
+    // Sessiya tugab login'ga yo'naltirilgan bo'lsa — o'sha sahifaga qaytaramiz
+    return <Navigate to={postLoginPath(user.role, location.state)} replace />;
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -155,7 +118,7 @@ export function Login() {
       if (u.must_change_password) {
         navigate("/change-password", { replace: true });
       } else {
-        navigate(landingPathFor(u.role), { replace: true });
+        navigate(postLoginPath(u.role, location.state), { replace: true });
       }
     } catch (err) {
       const mapped = mapLoginError(err, t);
@@ -183,30 +146,22 @@ export function Login() {
 
         <div className="login-brand-copy">
           <img src="/chdpu-logo.png" alt="CHDPU" />
-          <span className="login-kicker">
-            {t("auth.login.brand.kicker", { defaultValue: "4+2 RAQAMLI AMALIYOT" })}
-          </span>
+          <span className="login-kicker">{t("auth.login.brand.kicker")}</span>
           <h1>
             <Trans
               i18nKey="auth.login.brand.headline"
-              defaults="Ta'limni tajriba<br/>bilan <em>bog'laymiz.</em>"
               components={{ br: <br />, em: <em /> }}
             />
           </h1>
-          <p>
-            {t("auth.login.brand.description", {
-              defaultValue:
-                "Chirchiq davlat pedagogika universiteti talabalari, rahbarlari va fakultetlari uchun yagona professional akademik muhit.",
-            })}
-          </p>
+          <p>{t("auth.login.brand.description")}</p>
         </div>
 
         <div className="login-metric">
-          <strong>{t("auth.login.brand.metricValue", { defaultValue: "4+2" })}</strong>
+          <strong>{t("auth.login.brand.metricValue")}</strong>
           <span>
-            {t("auth.login.brand.metricTheory", { defaultValue: "NAZARIYA" })}
+            {t("auth.login.brand.metricTheory")}
             <br />
-            {t("auth.login.brand.metricPractice", { defaultValue: "+ AMALIYOT" })}
+            {t("auth.login.brand.metricPractice")}
           </span>
         </div>
       </section>
@@ -219,9 +174,7 @@ export function Login() {
         </div>
 
         <div className="login-box">
-          <span className="section-index">
-            {t("auth.login.secureIndex", { defaultValue: "XAVFSIZ KIRISH" })}
-          </span>
+          <span className="section-index">{t("auth.login.secureIndex")}</span>
           <h2>{t("auth.login.title")}</h2>
           <p>{t("auth.login.subtitle")}</p>
 
@@ -258,9 +211,7 @@ export function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={t("auth.login.passwordPlaceholder", {
-                    defaultValue: "Parolingiz",
-                  })}
+                  placeholder={t("auth.login.passwordPlaceholder")}
                   autoComplete="current-password"
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -281,11 +232,10 @@ export function Login() {
             {error?.kind === "blocked" && (
               <Alert variant="destructive" className="text-left">
                 <ShieldAlert className="h-4 w-4" />
-                <AlertTitle>
-                  {t("auth.login.blockedTitle", { defaultValue: "Kirish cheklangan" })}
-                </AlertTitle>
+                <AlertTitle>{t("auth.login.blockedTitle")}</AlertTitle>
+                {/* Alert'ning o'zi role="alert" — ichkarida takrorlansa ekran o'qigich ikki marta o'qiydi */}
                 <AlertDescription className="space-y-1">
-                  <p role="alert">{error.message}</p>
+                  <p>{error.message}</p>
                   {error.help && <p className="text-xs opacity-90">{error.help}</p>}
                 </AlertDescription>
               </Alert>
@@ -303,10 +253,7 @@ export function Login() {
           </form>
 
           <small className="secure-note">
-            <LockKeyhole />{" "}
-            {t("auth.login.secureNote", {
-              defaultValue: "Ma'lumotlaringiz maxfiy va xavfsiz himoyalangan",
-            })}
+            <LockKeyhole aria-hidden="true" /> {t("auth.login.secureNote")}
           </small>
         </div>
       </section>

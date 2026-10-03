@@ -1,124 +1,37 @@
-import { useAuthStore } from "@/stores/auth";
 import i18n from "@/i18n";
+import { downloadFile } from "@/lib/api";
 
 export type ExportKind = "students" | "attendance" | "assignments" | "final-reports";
 
+type ExportParams = Record<string, string | number | undefined>;
+
+function exportUrl(file: string, params: ExportParams): string {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
+  }
+  const query = qs.toString();
+  return `/api/v1/exports/${file}${query ? `?${query}` : ""}`;
+}
+
+/** Token + 401→refresh bilan yuklab olish; xatoda server `detail`i ko'rsatiladi. */
+function downloadExportFile(file: string, params: ExportParams, fallbackName: string): Promise<void> {
+  return downloadFile(exportUrl(file, params), fallbackName, i18n.t("apiFiles.exportFailed"));
+}
+
 /** Talabalar login/parol jadvali (Excel) — students bilan bir xil filtrlar. */
-export async function downloadCredentialsExport(
-  params: Record<string, string | number | undefined> = {},
-): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-
-  const qs = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
-  }
-  const url = `/api/v1/exports/credentials.xlsx${qs.toString() ? "?" + qs.toString() : ""}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(i18n.t("common.exportFailed", { status: res.status }));
-
-  const disposition = res.headers.get("content-disposition") ?? "";
-  const match = disposition.match(/filename="?([^";]+)"?/);
-  const filename = match?.[1] ?? "login_parol.xlsx";
-
-  const blob = await res.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = blobUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(blobUrl);
+export function downloadCredentialsExport(params: ExportParams = {}): Promise<void> {
+  return downloadExportFile("credentials.xlsx", params, "login_parol.xlsx");
 }
 
-export async function downloadExport(
-  kind: ExportKind,
-  params: Record<string, string | number | undefined> = {},
-): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-
-  const qs = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
-  }
-  const url = `/api/v1/exports/${kind}.csv${qs.toString() ? "?" + qs.toString() : ""}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) {
-    throw new Error(i18n.t("common.exportFailed", { status: res.status }));
-  }
-
-  const disposition = res.headers.get("content-disposition") ?? "";
-  const match = disposition.match(/filename="?([^";]+)"?/);
-  const filename = match?.[1] ?? `${kind}.csv`;
-
-  const blob = await res.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = blobUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(blobUrl);
+export function downloadExport(kind: ExportKind, params: ExportParams = {}): Promise<void> {
+  return downloadExportFile(`${kind}.csv`, params, `${kind}.csv`);
 }
 
-export async function downloadOrganizationsExport(
-  params: Record<string, string | number | undefined> = {},
-): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-
-  const qs = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
-  }
-  const url = `/api/v1/exports/organizations.xlsx${qs.toString() ? "?" + qs.toString() : ""}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(i18n.t("common.exportFailed", { status: res.status }));
-
-  const disposition = res.headers.get("content-disposition") ?? "";
-  const match = disposition.match(/filename="?([^";]+)"?/);
-  const filename = match?.[1] ?? "tashkilotlar.xlsx";
-
-  const blob = await res.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = blobUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(blobUrl);
+export function downloadOrganizationsExport(params: ExportParams = {}): Promise<void> {
+  return downloadExportFile("organizations.xlsx", params, "tashkilotlar.xlsx");
 }
 
-export async function downloadAreasExport(
-  params: Record<string, string | number | undefined> = {},
-): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-
-  const qs = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== "") qs.set(k, String(v));
-  }
-  const url = `/api/v1/exports/areas.xlsx${qs.toString() ? "?" + qs.toString() : ""}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(i18n.t("common.exportFailed", { status: res.status }));
-
-  const disposition = res.headers.get("content-disposition") ?? "";
-  const match = disposition.match(/filename="?([^";]+)"?/);
-  const filename = match?.[1] ?? "hududlar.xlsx";
-
-  const blob = await res.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = blobUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(blobUrl);
+export function downloadAreasExport(params: ExportParams = {}): Promise<void> {
+  return downloadExportFile("areas.xlsx", params, "hududlar.xlsx");
 }

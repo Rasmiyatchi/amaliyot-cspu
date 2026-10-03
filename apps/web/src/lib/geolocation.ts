@@ -7,10 +7,12 @@
  *   - aniqlik ≤ desiredAccuracyM bo'lishi bilan darhol qaytadi;
  *   - maxWaitMs tugasa — ko'rilgan eng yaxshi fix qaytadi;
  *   - umuman fix bo'lmasa — bitta past-aniqlikdagi (tarmoq) fallback so'rov;
+ *   - joylashuv xizmati o'chiq (ketma-ket POSITION_UNAVAILABLE, fix yo'q) — kutmasdan fallback;
  *   - har doim `clearWatch` qilinadi.
  *
  * Xatolar `GeoError` ko'rinishida: `code` + lokalizatsiyalangan `message` + `help`
- * (platformaga mos qadamlar: Android Chrome / iOS Safari / desktop).
+ * (platformaga mos qadamlar: Android Chrome / iOS Safari / desktop). UI matnni
+ * render paytida `geoErrorTexts(code)` orqali olishi kerak — til almashsa ham to'g'ri bo'ladi.
  */
 import i18n from "@/i18n";
 
@@ -68,71 +70,28 @@ export function detectGeoPlatform(): GeoPlatform {
 export function geoPermissionHelp(platform: GeoPlatform = detectGeoPlatform()): string {
   switch (platform) {
     case "android":
-      return i18n.t("geo.help.android", {
-        defaultValue:
-          "Chrome: manzil satridagi qulf belgisini bosing → Ruxsatlar → Joylashuv → Ruxsat berish.\nTelefon Sozlamalari → Joylashuv (GPS) yoqilgan bo'lishi shart.\nSo'ng «Ruxsatni qayta so'rash» tugmasini bosing yoki sahifani yangilang.",
-      });
+      return i18n.t("geo.help.android");
     case "ios":
-      return i18n.t("geo.help.ios", {
-        defaultValue:
-          "iPhone: Sozlamalar → Maxfiylik va xavfsizlik → Joylashuv xizmatlari → Safari veb-saytlari → «Foydalanish vaqtida».\nSafari'da manzil satridagi «aA» → Veb-sayt sozlamalari → Joylashuv → Ruxsat berish.\nSo'ng sahifani yangilang.",
-      });
+      return i18n.t("geo.help.ios");
     default:
-      return i18n.t("geo.help.desktop", {
-        defaultValue:
-          "Brauzer manzil satridagi qulf belgisini bosing → Sayt sozlamalari → Joylashuv → Ruxsat berish, so'ng sahifani yangilang.",
-      });
+      return i18n.t("geo.help.desktop");
   }
 }
 
+/** Joriy tildagi xabar + yo'riqnoma. Render paytida chaqiring (til almashsa yangilanadi). */
 export function geoErrorTexts(code: GeoErrorCode): { message: string; help: string } {
   switch (code) {
     case "denied":
-      return {
-        message: i18n.t("geo.error.denied", {
-          defaultValue: "Joylashuvga ruxsat berilmagan. Davomat uchun joylashuv shart.",
-        }),
-        help: geoPermissionHelp(),
-      };
+      return { message: i18n.t("geo.error.denied"), help: geoPermissionHelp() };
     case "unavailable":
-      return {
-        message: i18n.t("geo.error.unavailable", {
-          defaultValue: "Qurilma joylashuvni aniqlay olmadi.",
-        }),
-        help: i18n.t("geo.help.unavailable", {
-          defaultValue:
-            "Telefon sozlamalarida Joylashuv (GPS) yoqilganini tekshiring.\nOchiq joyga chiqing, Wi-Fi va mobil internetni yoqing, so'ng qayta urinib ko'ring.",
-        }),
-      };
+      return { message: i18n.t("geo.error.unavailable"), help: i18n.t("geo.help.unavailable") };
     case "timeout":
-      return {
-        message: i18n.t("geo.error.timeout", {
-          defaultValue: "Joylashuv belgilangan vaqtda aniqlanmadi.",
-        }),
-        help: i18n.t("geo.help.timeout", {
-          defaultValue:
-            "Bino ichida GPS signal zaif bo'ladi — deraza yoniga yoki hovliga chiqing.\nWi-Fi yoqilgan bo'lsa joylashuv tezroq aniqlanadi. Keyin qayta urinib ko'ring.",
-        }),
-      };
+      return { message: i18n.t("geo.error.timeout"), help: i18n.t("geo.help.timeout") };
     case "insecure":
-      return {
-        message: i18n.t("geo.error.insecure", {
-          defaultValue: "Sayt xavfsiz ulanish (https) orqali ochilmagan — joylashuv ishlamaydi.",
-        }),
-        help: i18n.t("geo.help.insecure", {
-          defaultValue: "Manzilni https:// bilan boshlanadigan ko'rinishda qayta oching.",
-        }),
-      };
+      return { message: i18n.t("geo.error.insecure"), help: i18n.t("geo.help.insecure") };
     case "unsupported":
     default:
-      return {
-        message: i18n.t("geo.error.unsupported", {
-          defaultValue: "Brauzeringiz joylashuvni qo'llamaydi.",
-        }),
-        help: i18n.t("geo.help.unsupported", {
-          defaultValue: "Chrome yoki Safari'ning yangi versiyasidan foydalaning.",
-        }),
-      };
+      return { message: i18n.t("geo.error.unsupported"), help: i18n.t("geo.help.unsupported") };
   }
 }
 
@@ -174,16 +133,26 @@ function codeFromPositionError(err: GeolocationPositionError): GeoErrorCode {
   }
 }
 
-/** Bitta past-aniqlikdagi (Wi-Fi/tarmoq, 60 s keshga rozi) so'rov — oxirgi urinish. */
-function fallbackPosition(): Promise<GeoFix> {
+/**
+ * Bitta past-aniqlikdagi (Wi-Fi/tarmoq, 60 s keshga rozi) so'rov — oxirgi urinish.
+ * `sawUnavailable` — watch "joylashuv mavjud emas" degan bo'lsa, fallback'ning timeout'i ham
+ * aslida o'chiq GPS belgisi: talabaga "GPS'ni yoqing" yo'riqnomasi ko'rsatiladi.
+ */
+function fallbackPosition(sawUnavailable: boolean): Promise<GeoFix> {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve(toFix(pos)),
-      (err) => reject(new GeoError(codeFromPositionError(err))),
+      (err) => {
+        const code = codeFromPositionError(err);
+        reject(new GeoError(code === "timeout" && sawUnavailable ? "unavailable" : code));
+      },
       { enableHighAccuracy: false, maximumAge: 60_000, timeout: 10_000 },
     );
   });
 }
+
+/** Fix bo'lmagan holda shuncha POSITION_UNAVAILABLE kelsa — xizmat o'chiq, kutish befoyda. */
+const UNAVAILABLE_ERRORS_BEFORE_FALLBACK = 2;
 
 export function acquirePosition(opts: AcquireOptions = {}): Promise<GeoFix> {
   const desired = opts.desiredAccuracyM ?? 60;
@@ -201,6 +170,7 @@ export function acquirePosition(opts: AcquireOptions = {}): Promise<GeoFix> {
     let settled = false;
     let watchId: number | null = null;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let unavailableErrors = 0;
 
     const cleanup = () => {
       if (timer !== null) clearTimeout(timer);
@@ -236,11 +206,26 @@ export function acquirePosition(opts: AcquireOptions = {}): Promise<GeoFix> {
       if (fix.accuracy <= desired) finish(() => resolve(fix));
     };
 
+    const runFallback = () =>
+      finish(() => {
+        fallbackPosition(unavailableErrors > 0).then(resolve, reject);
+      });
+
     const onError = (err: GeolocationPositionError) => {
       if (settled) return;
       // Ruxsat rad etilgan — kutishdan ma'no yo'q
-      if (err.code === 1) finish(() => reject(new GeoError("denied")));
-      // POSITION_UNAVAILABLE / TIMEOUT: watch davom etadi, deadline'da hal qilinadi
+      if (err.code === 1) {
+        finish(() => reject(new GeoError("denied")));
+        return;
+      }
+      // Joylashuv xizmati o'chiq bo'lsa watch har safar POSITION_UNAVAILABLE beradi —
+      // 20 s kutmasdan tarmoq fallback'iga o'tamiz (u ham bo'lmasa "GPS'ni yoqing" chiqadi).
+      // Bitta xato (iOS'da vaqtinchalik bo'lishi mumkin) yetarli emas.
+      if (err.code === 2 && !best) {
+        unavailableErrors += 1;
+        if (unavailableErrors >= UNAVAILABLE_ERRORS_BEFORE_FALLBACK) runFallback();
+      }
+      // TIMEOUT va bitta UNAVAILABLE: watch davom etadi, deadline'da hal qilinadi
     };
 
     const onDeadline = () => {
@@ -250,9 +235,7 @@ export function acquirePosition(opts: AcquireOptions = {}): Promise<GeoFix> {
         finish(() => resolve(snapshot));
         return;
       }
-      finish(() => {
-        fallbackPosition().then(resolve, reject);
-      });
+      runFallback();
     };
 
     try {

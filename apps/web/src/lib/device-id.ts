@@ -62,11 +62,18 @@ function setCookie(name: string, value: string, days = 365) {
   }
 }
 
+/** Backend `LoginRequest.device_id` max_length=128; o'zimiz yaratgan ID 36 belgi. */
+const DEVICE_ID_MAX = 128;
+
+function usableId(id: string | null): string | null {
+  return id && id.length <= DEVICE_ID_MAX ? id : null;
+}
+
 export function getDeviceId(): string {
   try {
-    let id = localStorage.getItem(STORAGE_KEY);
+    let id = usableId(localStorage.getItem(STORAGE_KEY));
     if (!id) {
-      id = getCookie(COOKIE_NAME);
+      id = usableId(getCookie(COOKIE_NAME));
     }
     if (!id) {
       id =
@@ -78,7 +85,7 @@ export function getDeviceId(): string {
     setCookie(COOKIE_NAME, id);
     return id;
   } catch {
-    const cookieId = getCookie(COOKIE_NAME);
+    const cookieId = usableId(getCookie(COOKIE_NAME));
     if (cookieId) return cookieId;
     return `ephemeral-${Math.random().toString(36).slice(2)}`;
   }
@@ -270,5 +277,45 @@ export async function collectDeviceInfo(): Promise<DeviceInfo> {
   }
 
   if (!info.brand && info.browser) info.brand = info.browser;
-  return info;
+  return clampToServerLimits(info);
+}
+
+/**
+ * Backend `DeviceInfo` sxemasi chegaralari (apps/api/app/schemas/auth.py). Qurilma ma'lumoti
+ * faqat diagnostika uchun — juda uzun UA (ba'zi WebView'lar) butun login'ni 422 qilmasin.
+ */
+const DEVICE_INFO_LIMITS = {
+  platform: 64,
+  platform_version: 64,
+  model: 128,
+  brand: 64,
+  browser: 64,
+  browser_version: 64,
+  screen: 64,
+  timezone: 64,
+  language: 32,
+} as const;
+
+const USER_AGENT_MAX = 512;
+
+function clip(value: string | null, max: number): string | null {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, max) : null;
+}
+
+function clampToServerLimits(info: DeviceInfo): DeviceInfo {
+  return {
+    ...info,
+    platform: clip(info.platform, DEVICE_INFO_LIMITS.platform),
+    platform_version: clip(info.platform_version, DEVICE_INFO_LIMITS.platform_version),
+    model: clip(info.model, DEVICE_INFO_LIMITS.model),
+    brand: clip(info.brand, DEVICE_INFO_LIMITS.brand),
+    browser: clip(info.browser, DEVICE_INFO_LIMITS.browser),
+    browser_version: clip(info.browser_version, DEVICE_INFO_LIMITS.browser_version),
+    screen: clip(info.screen, DEVICE_INFO_LIMITS.screen),
+    timezone: clip(info.timezone, DEVICE_INFO_LIMITS.timezone),
+    language: clip(info.language, DEVICE_INFO_LIMITS.language),
+    user_agent: info.user_agent.slice(0, USER_AGENT_MAX),
+  };
 }

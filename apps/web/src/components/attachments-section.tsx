@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import { Download, Eye, FileIcon, Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,8 +10,8 @@ import {
   downloadAttachment,
   useDeleteAttachment,
   useUploadAttachment,
-  type Attachment,
   type AttachmentKind,
+  type AttachmentLike,
 } from "@/lib/api/uploads";
 import { cn } from "@/lib/utils";
 import { dateLocale } from "@/i18n";
@@ -21,7 +20,7 @@ import type { UUID } from "@/lib/api/types";
 type Props = {
   kind: AttachmentKind;
   entityId: UUID;
-  attachments: Attachment[];
+  attachments: readonly AttachmentLike[];
   /** Talabalar uchun true (boshqa rollar faqat ko'radi/yuklab oladi). */
   canEdit?: boolean;
   className?: string;
@@ -31,6 +30,13 @@ function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function metaLine(a: AttachmentLike, locale: string): string {
+  const parts: string[] = [];
+  if (a.size !== undefined) parts.push(fmtSize(a.size));
+  if (a.uploaded_at) parts.push(new Date(a.uploaded_at).toLocaleString(locale));
+  return parts.join(" · ");
 }
 
 export function AttachmentsSection({
@@ -44,8 +50,8 @@ export function AttachmentsSection({
   const upload = useUploadAttachment(kind, entityId);
   const remove = useDeleteAttachment(kind, entityId);
   const [dragOver, setDragOver] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<Attachment | null>(null);
-  const [previewFile, setPreviewFile] = useState<Attachment | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<AttachmentLike | null>(null);
+  const [previewFile, setPreviewFile] = useState<AttachmentLike | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = async (files: FileList | null) => {
@@ -55,17 +61,17 @@ export function AttachmentsSection({
         await upload.mutateAsync(file);
         toast.success(t("attachmentsSection.fileUploaded", { name: file.name }));
       } catch (e) {
-        const msg =
-          e instanceof HTTPError ? e.message : e instanceof Error ? e.message : t("common.error");
+        const msg = e instanceof Error ? e.message : t("common.error");
         toast.error(`${file.name}: ${msg}`);
       }
     }
   };
 
   const handleDelete = async () => {
-    if (!confirmDelete) return;
+    const id = confirmDelete?.id;
+    if (!id) return;
     try {
-      await remove.mutateAsync(confirmDelete.id);
+      await remove.mutateAsync(id);
       toast.success(t("common.deleted"));
       setConfirmDelete(null);
     } catch (e) {
@@ -73,7 +79,7 @@ export function AttachmentsSection({
     }
   };
 
-  const handleDownload = async (att: Attachment) => {
+  const handleDownload = async (att: AttachmentLike) => {
     try {
       await downloadAttachment(att);
     } catch (e) {
@@ -97,60 +103,69 @@ export function AttachmentsSection({
 
       {attachments.length > 0 && (
         <div className="space-y-1.5">
-          {attachments.map((a) => (
-            <div
-              key={a.id}
-              className="flex items-center gap-1.5 sm:gap-2 rounded-md border border-border p-2 text-xs sm:text-sm min-w-0"
-            >
-              <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <button
-                type="button"
-                className="flex-1 min-w-0 text-left hover:underline focus:outline-none cursor-pointer"
-                onClick={() => setPreviewFile(a)}
+          {attachments.map((a) => {
+            const meta = metaLine(a, dateLocale());
+            return (
+              <div
+                key={a.id ?? a.path}
+                className="flex items-center gap-1.5 sm:gap-2 rounded-md border border-border p-2 text-xs sm:text-sm min-w-0"
               >
-                <div className="truncate font-medium text-xs sm:text-sm">{a.name}</div>
-                <div className="text-[11px] sm:text-xs text-muted-foreground truncate">
-                  {fmtSize(a.size)} · {new Date(a.uploaded_at).toLocaleString(dateLocale())}
-                </div>
-              </button>
-              <div className="flex items-center gap-0.5 shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <button
+                  type="button"
+                  className="flex-1 min-w-0 text-left hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
                   onClick={() => setPreviewFile(a)}
-                  title={t("common.viewInBrowser", { defaultValue: "Saytda ko'rish" })}
                 >
-                  <Eye className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => handleDownload(a)}
-                  title={t("common.download")}
-                >
-                  <Download className="h-3.5 w-3.5" />
-                </Button>
-                {canEdit && (
+                  <div className="truncate font-medium text-xs sm:text-sm">{a.name}</div>
+                  {meta && (
+                    <div className="text-[11px] sm:text-xs text-muted-foreground truncate">{meta}</div>
+                  )}
+                </button>
+                <div className="flex items-center gap-0.5 shrink-0">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    onClick={() => setConfirmDelete(a)}
-                    title={t("common.delete")}
+                    className="h-7 w-7 text-muted-foreground hover:text-primary"
+                    onClick={() => setPreviewFile(a)}
+                    title={t("common.viewInBrowser")}
+                    aria-label={t("common.viewInBrowser")}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Eye className="h-3.5 w-3.5" />
                   </Button>
-                )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleDownload(a)}
+                    title={t("common.download")}
+                    aria-label={t("common.download")}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                  {canEdit && a.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => setConfirmDelete(a)}
+                      title={t("common.delete")}
+                      aria-label={t("common.delete")}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {canEdit && (
         <div
+          role="button"
+          tabIndex={0}
+          aria-label={t("attachmentsSection.dropHint")}
           onDragOver={(e) => {
             e.preventDefault();
             setDragOver(true);
@@ -159,11 +174,17 @@ export function AttachmentsSection({
           onDrop={(e) => {
             e.preventDefault();
             setDragOver(false);
-            handleFiles(e.dataTransfer.files);
+            void handleFiles(e.dataTransfer.files);
           }}
           onClick={() => fileRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              fileRef.current?.click();
+            }
+          }}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-3 sm:p-4 text-center text-xs sm:text-sm transition-colors min-w-0",
+            "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-3 sm:p-4 text-center text-xs sm:text-sm transition-colors min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             dragOver
               ? "border-primary bg-primary/5"
               : "border-border hover:border-primary/50 hover:bg-muted/30",
@@ -187,7 +208,13 @@ export function AttachmentsSection({
             type="file"
             multiple
             className="hidden"
-            onChange={(e) => handleFiles(e.target.files)}
+            onChange={(e) => {
+              const input = e.currentTarget;
+              void handleFiles(input.files).finally(() => {
+                // Xuddi shu faylni qayta tanlash ham `change` chiqarsin
+                input.value = "";
+              });
+            }}
             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
           />
         </div>

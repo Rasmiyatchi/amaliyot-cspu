@@ -1,8 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import i18n from "@/i18n";
 
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth";
+import i18n from "@/i18n";
+import {
+  api,
+  authFetch,
+  downloadFile,
+  filenameFromDisposition,
+  readErrorDetail,
+  saveBlob,
+} from "@/lib/api";
 import type {
   Contract,
   ContractCreate,
@@ -40,42 +46,41 @@ function qs(filters: ContractFilters, page: number, pageSize: number): string {
 }
 
 /** Shartnoma PDF'ini autentifikatsiya bilan yuklab oladi. */
-export async function downloadContractPdf(id: UUID, number: string): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-  const res = await fetch(`/api/v1/contracts/${id}/pdf`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`PDF yuklab bo'lmadi (${res.status})`);
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${number}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+export function downloadContractPdf(id: UUID, number: string): Promise<void> {
+  return downloadFile(
+    `/api/v1/contracts/${id}/pdf`,
+    `${number}.pdf`,
+    i18n.t("contractsContractDetailDialog.pdfDownloadFailed"),
+  );
 }
 
-/** Shartnoma yuklangan skanini autentifikatsiya bilan yuklab oladi/ko'radi. */
+/** Shartnoma skanini yangi oynada ochadi (brauzer bloklasa — yuklab oladi). */
 export async function downloadContractScan(id: UUID, number: string): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-  const res = await fetch(`/api/v1/contracts/${id}/scan`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(`Skan faylini yuklab bo'lmadi (${res.status})`);
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const win = window.open(url, "_blank");
-  if (!win) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${number}_scan`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  // Oyna so'rovdan OLDIN ochiladi — await'dan keyin ochilsa popup bloker to'sadi
+  const win = window.open("", "_blank");
+  let blob: Blob;
+  let disposition: string | null;
+  try {
+    const res = await authFetch(`/api/v1/contracts/${id}/scan`);
+    if (!res.ok) throw new Error(await readErrorDetail(res, i18n.t("common.downloadFailed")));
+    disposition = res.headers.get("content-disposition");
+    blob = await res.blob();
+  } catch (e) {
+    // Tarmoq xatosida ham bo'sh oyna ochiq qolmasin
+    win?.close();
+    throw e instanceof Error ? e : new Error(i18n.t("common.downloadFailed"));
   }
+  if (win) {
+    const url = URL.createObjectURL(blob);
+    win.location.href = url;
+    // Oyna yuklab bo'lgach URL'ni bo'shatamiz
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return;
+  }
+  saveBlob(
+    blob,
+    filenameFromDisposition(disposition, `${number}_scan`),
+  );
 }
 
 export function useContracts(filters: ContractFilters = {}, page = 1, pageSize = 20) {
@@ -89,7 +94,7 @@ export function useContracts(filters: ContractFilters = {}, page = 1, pageSize =
 
 export function useContract(id: UUID | null) {
   return useQuery({
-    queryKey: id ? contractKeys.detail(id) : [],
+    queryKey: contractKeys.detail(id ?? ""),
     enabled: !!id,
     queryFn: () => api.get(`v1/contracts/${id}`).json<Contract>(),
   });
@@ -162,17 +167,41 @@ export function useDeleteContract() {
   });
 }
 
-// Public verify (auth talab qilmaydi — ky bypass qilamiz)
+/** Ochiq QR tekshiruvi xatosi: `notFound` — shartnoma yo'q; aks holda tarmoq/server xatosi. */
+export class VerifyContractError extends Error {
+  readonly notFound: boolean;
+
+  constructor(message: string, notFound: boolean) {
+    super(message);
+    this.name = "VerifyContractError";
+    this.notFound = notFound;
+  }
+}
+
+// Ochiq tekshiruv (auth talab qilinmaydi — ky'siz). Faqat 404 "topilmadi" deb hisoblanadi:
+// server vaqtincha ishlamasa, tashqi tekshiruvchiga "shartnoma yo'q" degan noto'g'ri xulosa
+// ko'rsatilmasligi kerak.
 export function useVerifyContract(token: string | null) {
   return useQuery({
     queryKey: ["verify", token],
     enabled: !!token,
+    retry: (failureCount, error) =>
+      !(error instanceof VerifyContractError && error.notFound) && failureCount < 2,
     queryFn: async () => {
-      let res = await fetch(`/api/v1/verify/${token}`, { credentials: "omit" });
-      if (!res.ok) {
-        res = await fetch(`/verify/${token}`, { credentials: "omit" });
+      let res: Response;
+      try {
+        res = await fetch(`/api/v1/verify/${encodeURIComponent(token ?? "")}`, {
+          credentials: "omit",
+        });
+      } catch {
+        throw new VerifyContractError(i18n.t("verify.checkFailed"), false);
       }
-      if (!res.ok) throw new Error(i18n.t("common.contractNotFound"));
+      if (res.status === 404) {
+        throw new VerifyContractError(i18n.t("common.contractNotFound"), true);
+      }
+      if (!res.ok) {
+        throw new VerifyContractError(i18n.t("verify.checkFailed"), false);
+      }
       return (await res.json()) as ContractVerifyResponse;
     },
   });

@@ -3,8 +3,8 @@ import {
   ArrowUpRight,
   Check,
   GraduationCap,
+  Info,
   School,
-  Search,
   ShieldCheck,
   UserRoundCheck,
 } from "lucide-react";
@@ -18,51 +18,32 @@ import { Button } from "@/components/ui/button";
 import { landingPathFor } from "@/lib/routing";
 import { useAuthStore } from "@/stores/auth";
 
-const stats = [
-  ["4,000+", "TALABALAR"],
-  ["08", "AMALIYOT TURLARI"],
-  ["43+", "TOPSHIRIQLAR"],
-  ["04", "FOYDALANUVCHI ROLLARI"],
-];
+/** Platformaning o'zi haqidagi faktlar (konfiguratsiya) — foydalanish statistikasi emas. */
+const STATS = [
+  { value: "08", labelKey: "home.statsBand.practiceTypes" },
+  { value: "43+", labelKey: "home.statsBand.syllabusTasks" },
+  { value: "100", labelKey: "home.statsBand.gradingScale" },
+  { value: "04", labelKey: "home.statsBand.userRoles" },
+] as const;
 
-const steps = [
-  ["01", "Profil", "Talaba ma’lumotlari tasdiqlanadi."],
-  ["02", "Amaliyot joyi", "Hamkor maktab bilan biriktiriladi."],
-  ["03", "Topshiriqlar", "Reja asosida vazifalar bajariladi."],
-  ["04", "Davomat", "Amaliyot kunlari qayd etiladi."],
-  ["05", "Natija", "Yakuniy hisobot va baho."],
-];
+const STEPS = ["s1", "s2", "s3", "s4", "s5"] as const;
 
-const roles = [
-  {
-    n: "01",
-    t: "TALABA",
-    i: GraduationCap,
-    c: ["Profil", "Topshiriqlar", "Davomat", "Amaliyot holati"],
-  },
-  {
-    n: "02",
-    t: "AMALIYOT RAHBARI",
-    i: UserRoundCheck,
-    c: ["Talabalarni kuzatish", "Topshiriqlar", "Davomat", "Monitoring"],
-  },
-  {
-    n: "03",
-    t: "FAKULTET",
-    i: School,
-    c: ["Guruhlar", "Monitoring", "Statistika", "Hisobot"],
-  },
-  {
-    n: "04",
-    t: "AMALIYOT BO‘LIMI",
-    i: ShieldCheck,
-    c: ["Jarayon nazorati", "Tashkilotlar", "Tahlil", "Boshqaruv"],
-  },
-];
+const ROLES = [
+  { key: "student", icon: GraduationCap },
+  { key: "supervisor", icon: UserRoundCheck },
+  { key: "faculty", icon: School },
+  { key: "department", icon: ShieldCheck },
+] as const;
+
+const ROLE_ITEMS = ["c1", "c2", "c3", "c4"] as const;
 
 export function Home() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
+
+  const primaryCta = user
+    ? { to: landingPathFor(user.role), label: t("siteChrome.myDashboard") }
+    : { to: "/login", label: t("siteChrome.login") };
 
   return (
     <>
@@ -75,51 +56,39 @@ export function Home() {
           <div className="container mx-auto px-4 hero-inner">
             <div className="hero-copy">
               <div className="eyebrow">
-                <span /> CHDPU · 4+2 AMALIYOT TIZIMI
+                <span /> {t("home.hero.eyebrow")}
               </div>
               <h1>
-                <span className="hero-number">
+                <span className="hero-number" aria-hidden="true">
                   <i>4</i>
                   <b>+</b>
                   <i>2</i>
                 </span>
                 <span>
-                  DIGITAL
+                  {t("home.hero.titleLine1")}
                   <br />
-                  PRACTICE
+                  {t("home.hero.titleLine2")}
                 </span>
               </h1>
-              <p>
-                Chirchiq davlat pedagogika universiteti talabalari amaliyot
-                jarayonini boshqarish, topshiriqlar va natijalarni nazorat qilish
-                uchun yagona raqamli platforma.
-              </p>
+              <p>{t("home.hero.description")}</p>
               <div className="hero-actions">
-                {user ? (
-                  <Button asChild size="lg">
-                    <Link to={landingPathFor(user.role)}>
-                      {t("common.myDashboard", "Kabinetime o'tish")} <ArrowUpRight />
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button asChild size="lg">
-                    <Link to="/login">
-                      Platformaga kirish <ArrowUpRight />
-                    </Link>
-                  </Button>
-                )}
+                <Button asChild size="lg">
+                  <Link to={primaryCta.to}>
+                    {primaryCta.label} <ArrowUpRight />
+                  </Link>
+                </Button>
                 <Button asChild size="lg" variant="outline">
                   <Link to="/amaliyot">
-                    Amaliyotni izlash <Search />
+                    {t("home.hero.practiceInfo")} <Info />
                   </Link>
                 </Button>
               </div>
               <div className="hero-note">
                 <span>
-                  <Check /> Xavfsiz kirish
+                  <Check /> {t("home.hero.noteSecure")}
                 </span>
                 <span>
-                  <Check /> Real vaqtda kuzatuv
+                  <Check /> {t("home.hero.noteRealtime")}
                 </span>
               </div>
             </div>
@@ -127,15 +96,15 @@ export function Home() {
           </div>
         </section>
 
-        {/* Quick Search Band */}
+        {/* Amaliyot ma'lumotlari — shaxsiy kabinetda (ochiq qidiruv yo'q) */}
         <section className="search-band">
           <div className="container mx-auto px-4 search-card">
             <div>
-              <span className="section-index">01 / QIDIRUV</span>
-              <h2>Amaliyotingizni toping</h2>
-              <p>Talaba F.I.Sh. yoki shaxsiy amaliyot ID raqami orqali</p>
+              <span className="section-index">{t("home.search.index")}</span>
+              <h2>{t("home.search.title")}</h2>
+              <p>{t("home.search.description")}</p>
             </div>
-            <PracticeSearch compact />
+            <PracticeSearch />
           </div>
         </section>
 
@@ -144,24 +113,21 @@ export function Home() {
           <div className="container mx-auto px-4">
             <div className="section-heading">
               <div>
-                <span className="section-index">02 / NAMUNAVIY KO‘RSATKICHLAR</span>
+                <span className="section-index">{t("home.statsBand.index")}</span>
                 <h2>
-                  AMALIYOT
+                  {t("home.statsBand.titleLine1")}
                   <br />
-                  <em>PLATFORMASI</em>
+                  <em>{t("home.statsBand.titleLine2")}</em>
                 </h2>
               </div>
-              <p>
-                Nazariya va real pedagogik tajribani yagona raqamli muhitda
-                birlashtiramiz.
-              </p>
+              <p>{t("home.statsBand.description")}</p>
             </div>
             <div className="stats-row">
-              {stats.map(([n, l], i) => (
-                <div className="stat" key={l}>
+              {STATS.map((s, i) => (
+                <div className="stat" key={s.labelKey}>
                   <small>0{i + 1}</small>
-                  <strong>{n}</strong>
-                  <span>{l}</span>
+                  <strong>{s.value}</strong>
+                  <span>{t(s.labelKey)}</span>
                 </div>
               ))}
             </div>
@@ -171,29 +137,26 @@ export function Home() {
         {/* Journey Timeline */}
         <section className="journey">
           <div className="container mx-auto px-4">
-            <span className="section-index light">03 / JARAYON</span>
+            <span className="section-index light">{t("home.journey.index")}</span>
             <div className="section-heading dark">
               <h2>
-                Amaliyot qanday
+                {t("home.journey.titleLine1")}
                 <br />
-                <em>ishlaydi?</em>
+                <em>{t("home.journey.titleLine2")}</em>
               </h2>
-              <p>
-                Biriktirishdan yakuniy natijagacha — har bir bosqich aniq, shaffof
-                va nazoratda.
-              </p>
+              <p>{t("home.journey.description")}</p>
             </div>
-            <div className="timeline">
-              {steps.map((s, i) => (
-                <div className="timeline-step" key={s[0]}>
+            <ol className="timeline">
+              {STEPS.map((step, i) => (
+                <li className="timeline-step" key={step}>
                   <div className="timeline-dot">
-                    <span>{i === 0 ? <Check size={15} /> : s[0]}</span>
+                    <span>{i === 0 ? <Check size={15} /> : `0${i + 1}`}</span>
                   </div>
-                  <h3>{s[1]}</h3>
-                  <p>{s[2]}</p>
-                </div>
+                  <h3>{t(`home.journey.steps.${step}.title`)}</h3>
+                  <p>{t(`home.journey.steps.${step}.desc`)}</p>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
         </section>
 
@@ -202,39 +165,44 @@ export function Home() {
           <div className="container mx-auto px-4">
             <div className="section-heading">
               <div>
-                <span className="section-index">04 / EKOTIZIM</span>
+                <span className="section-index">{t("home.ecosystem.index")}</span>
                 <h2>
-                  Har bir rol uchun
+                  {t("home.ecosystem.titleLine1")}
                   <br />
-                  <em>aniq imkoniyat</em>
+                  <em>{t("home.ecosystem.titleLine2")}</em>
                 </h2>
               </div>
-              <p>Talabadan boshqaruvgacha yagona, bog‘langan akademik ekotizim.</p>
+              <p>{t("home.ecosystem.description")}</p>
             </div>
             <div className="role-grid">
-              {roles.map((r) => (
-                <article className="role-card" key={r.t}>
-                  <div className="role-top">
-                    <span>{r.n}</span>
-                    <r.i />
-                  </div>
-                  <h3>{r.t}</h3>
-                  <ul>
-                    {r.c.map((x) => (
-                      <li key={x}>
-                        <Check size={15} />
-                        {x}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    to="/login"
-                    aria-label={`${r.t} sifatida kirish`}
-                  >
-                    <ArrowUpRight />
-                  </Link>
-                </article>
-              ))}
+              {ROLES.map((r, idx) => {
+                const title = t(`home.ecosystem.roles.${r.key}.title`);
+                return (
+                  <article className="role-card" key={r.key}>
+                    <div className="role-top">
+                      <span>0{idx + 1}</span>
+                      <r.icon aria-hidden="true" />
+                    </div>
+                    <h3>{title}</h3>
+                    <ul>
+                      {ROLE_ITEMS.map((item) => (
+                        <li key={item}>
+                          <Check size={15} aria-hidden="true" />
+                          {t(`home.ecosystem.roles.${r.key}.${item}`)}
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      to={primaryCta.to}
+                      aria-label={
+                        user ? primaryCta.label : t("home.ecosystem.loginAs", { role: title })
+                      }
+                    >
+                      <ArrowUpRight />
+                    </Link>
+                  </article>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -243,28 +211,23 @@ export function Home() {
         <section className="campus-section">
           <img
             src="/chdpu-campus.jpg"
-            alt="Chirchiq davlat pedagogika universiteti binosi"
+            alt={t("home.campus.imageAlt")}
             onError={(e) => {
-              // Fallback image if needed
-              (e.target as HTMLElement).style.display = "none";
+              // Rasm topilmasa — buzilgan rasm belgisi ko'rinmasin
+              e.currentTarget.style.display = "none";
             }}
           />
           <div className="campus-overlay" />
           <div className="campus-content">
-            <span className="section-index light">
-              CHIRCHIQ DAVLAT PEDAGOGIKA UNIVERSITETI
-            </span>
+            <span className="section-index light">{t("home.campus.index")}</span>
             <h2>
-              TA’LIM.
+              {t("home.campus.line1")}
               <br />
-              TAJRIBA.
+              {t("home.campus.line2")}
               <br />
-              <em>AMALIYOT.</em>
+              <em>{t("home.campus.line3")}</em>
             </h2>
-            <p>
-              Kelajak pedagoglarini real maktab muhiti, raqamli nazorat va
-              tajribali ustozlar bilan bog‘laymiz.
-            </p>
+            <p>{t("home.campus.description")}</p>
             <Button asChild variant="secondary">
               <a
                 href="https://cspu.uz/"
@@ -272,7 +235,7 @@ export function Home() {
                 rel="noreferrer"
                 className="inline-flex items-center gap-2"
               >
-                Universitet haqida <ArrowUpRight />
+                {t("home.campus.aboutUniversity")} <ArrowUpRight />
               </a>
             </Button>
           </div>
@@ -282,26 +245,18 @@ export function Home() {
         <section className="cta-band">
           <div className="container mx-auto px-4 cta-inner">
             <div>
-              <span className="section-index">RAQAMLI AMALIYOT</span>
+              <span className="section-index">{t("home.ctaBand.index")}</span>
               <h2>
-                Amaliyot jarayonini
+                {t("home.ctaBand.line1")}
                 <br />
-                bugun boshlang.
+                {t("home.ctaBand.line2")}
               </h2>
             </div>
-            {user ? (
-              <Button asChild size="lg">
-                <Link to={landingPathFor(user.role)}>
-                  Kabinetime o'tish <ArrowRight />
-                </Link>
-              </Button>
-            ) : (
-              <Button asChild size="lg">
-                <Link to="/login">
-                  Platformaga kirish <ArrowRight />
-                </Link>
-              </Button>
-            )}
+            <Button asChild size="lg">
+              <Link to={primaryCta.to}>
+                {primaryCta.label} <ArrowRight />
+              </Link>
+            </Button>
           </div>
         </section>
       </main>
