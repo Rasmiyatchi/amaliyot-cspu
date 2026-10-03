@@ -17,6 +17,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.core.clock import UZB_TZ, today_uzb
 from app.core.config import settings
 from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.contract_template import ContractTemplateDoc
@@ -86,7 +87,7 @@ async def get_next_shared_contract_number(db: AsyncSession, year: int | None = N
     Agar shartnoma bazadan o'chirilsa, MAX qiymat kamayadi va yangi raqam o'chirilgan o'rinni egallaydi.
     """
     if year is None:
-        year = datetime.now(UTC).year
+        year = today_uzb().year  # 1-yanvar 00:00–05:00 da ham yangi yil prefiksi
     prefix = f"{year % 100:02d}"
 
     # Bir vaqtda ikki admin tasdiqlasa/yaratsa ikkalasi bir xil MAX+1 ni olmasin: tranzaksiya
@@ -512,7 +513,7 @@ async def _build_contract_context(
         )
     ).first()
 
-    now = datetime.now(UTC)
+    now = datetime.now(UZB_TZ)  # hujjat sanasi — Toshkent vaqti
     fish = ""
     edu_form = ""
     ctx: dict[str, Any] = {
@@ -657,7 +658,7 @@ async def _generate_contract(db: AsyncSession, obj: PracticeApplication) -> None
     if not tpl:
         return  # shablon o'chirilgan bo'lsa — generatsiya qilinmaydi
 
-    now = datetime.now(UTC)
+    now = datetime.now(UZB_TZ)  # hujjat sanasi — Toshkent vaqti
     number = obj.contract_number or (await _next_contract_number(db, now.year))
 
     # Build common context
@@ -1121,7 +1122,7 @@ async def generate_official_contract_pdf(
             )
         ).scalars().first()
 
-    now = datetime.now(UTC)
+    now = datetime.now(UZB_TZ)  # hujjat sanasi — Toshkent vaqti
     start_d = contract.start_date or now.date()
     end_d = contract.end_date or now.date()
 
