@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { formatTashkentDateTime } from "@/components/attendance/attendance-date-utils";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -37,14 +38,17 @@ function pctTone(p: number | null): { bar: string; text: string } {
   return { bar: "[&>div]:bg-rose-500", text: "text-rose-700 dark:text-rose-300" };
 }
 
+const LAST_CHECK_IN: Intl.DateTimeFormatOptions = {
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+};
+
+/** Oxirgi kelish — Toshkent vaqtida (admin brauzeri boshqa zonada bo'lsa ham). */
 function fmtLast(s: string | null): string {
-  if (!s) return "—";
-  return new Date(s).toLocaleString(dateLocale(), {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatTashkentDateTime(s, dateLocale(), LAST_CHECK_IN);
 }
 
 export function AttendanceSummaryTable({
@@ -64,7 +68,8 @@ export function AttendanceSummaryTable({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const allVisibleSelected = rows.length > 0 && rows.every((r) => selectedIds.has(r.assignment_id));
 
-  const selectAllLabel = t("common.selectAll", { defaultValue: "Sahifadagi barchasi" });
+  const selectAllLabel = t("common.selectAll");
+  const percentLabel = t("attendanceStudentView.percent");
 
   return (
     <div className="space-y-3">
@@ -135,7 +140,7 @@ export function AttendanceSummaryTable({
                   <Progress
                     value={r.attendance_percent ?? 0}
                     className={cn("h-1.5 flex-1", tone.bar)}
-                    aria-label={t("attendanceStudentView.percent", { defaultValue: "Davomat %" })}
+                    aria-label={percentLabel}
                   />
                   <span className={cn("w-10 text-right text-xs font-semibold", tone.text)}>
                     {r.attendance_percent === null ? "—" : `${Math.round(r.attendance_percent)}%`}
@@ -168,10 +173,8 @@ export function AttendanceSummaryTable({
                 {t("common.group")}/{t("common.course")}
               </TableHead>
               <TableHead>{t("adminAttendance.object")}</TableHead>
-              <TableHead>{t("adminAttendance.period", { defaultValue: "Muddat" })}</TableHead>
-              <TableHead className="text-right">
-                {t("attendanceStudentView.expected", { defaultValue: "Kutilgan" })}
-              </TableHead>
+              <TableHead>{t("adminAttendance.period")}</TableHead>
+              <TableHead className="text-right">{t("attendanceStudentView.expected")}</TableHead>
               <TableHead className="text-right text-emerald-700 dark:text-emerald-300">
                 {t("adminAttendance.status.green")}
               </TableHead>
@@ -181,12 +184,8 @@ export function AttendanceSummaryTable({
               <TableHead className="text-right text-amber-700 dark:text-amber-300">
                 {t("adminAttendance.status.pending")}
               </TableHead>
-              <TableHead className="min-w-[140px]">
-                {t("attendanceStudentView.percent", { defaultValue: "Davomat %" })}
-              </TableHead>
-              <TableHead>
-                {t("adminAttendance.lastCheckIn", { defaultValue: "Oxirgi kelish" })}
-              </TableHead>
+              <TableHead className="min-w-[140px]">{percentLabel}</TableHead>
+              <TableHead>{t("adminAttendance.lastCheckIn")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -216,7 +215,17 @@ export function AttendanceSummaryTable({
                     </TableCell>
                   )}
                   <TableCell>
-                    <div className="font-medium">{r.student_full_name}</div>
+                    {/* Klaviatura uchun: qator bosilishi bilan bir xil amal */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRowClick(r);
+                      }}
+                      className="rounded-sm text-left font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {r.student_full_name}
+                    </button>
                     <div className="font-mono text-xs text-muted-foreground">
                       {r.student_hemis_id ?? "—"}
                       {r.student_username && ` · @${r.student_username}`}
@@ -255,6 +264,7 @@ export function AttendanceSummaryTable({
                       <Progress
                         value={r.attendance_percent ?? 0}
                         className={cn("h-1.5 flex-1", tone.bar)}
+                        aria-label={percentLabel}
                       />
                       <span className={cn("w-10 text-right text-xs font-semibold", tone.text)}>
                         {r.attendance_percent === null

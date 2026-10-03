@@ -2,13 +2,12 @@ import { Download, FileIcon, FolderArchive, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { formatTashkentDateTime } from "@/components/attendance/attendance-date-utils";
+import { describeRequestError } from "@/components/attendance/request-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  downloadAttachment,
-  useAssignmentAttachments,
-} from "@/lib/api/uploads";
+import { downloadAttachment, useAssignmentAttachments } from "@/lib/api/uploads";
 import { dateLocale } from "@/i18n";
 import type { UUID } from "@/lib/api/types";
 
@@ -36,11 +35,13 @@ export function StudentDocumentsCard({ assignmentId }: Props) {
   const { t } = useTranslation();
   const { data, isPending } = useAssignmentAttachments(assignmentId);
 
+  const locale = dateLocale();
+
   const handleDownload = async (att: { name: string; path: string }) => {
     try {
-      await downloadAttachment(att as never);
+      await downloadAttachment(att);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("common.error"));
+      toast.error(describeRequestError(e, t, "common.downloadError"));
     }
   };
 
@@ -78,15 +79,16 @@ export function StudentDocumentsCard({ assignmentId }: Props) {
                       {t(SOURCE_LABEL[a.source as keyof typeof SOURCE_LABEL])}
                     </Badge>
                     <span>{fmtSize(a.size)}</span>
-                    <span>· {new Date(a.uploaded_at).toLocaleString(dateLocale())}</span>
+                    <span>· {formatTashkentDateTime(a.uploaded_at, locale)}</span>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={() => handleDownload(a)}
+                  onClick={() => void handleDownload(a)}
                   title={t("common.download")}
+                  aria-label={`${t("common.download")}: ${a.name}`}
                 >
                   <Download className="h-3.5 w-3.5" />
                 </Button>

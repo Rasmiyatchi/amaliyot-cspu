@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import { CalendarClock, Loader2, Pencil } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,6 +9,7 @@ import {
   toDatetimeLocal,
   todayStr,
 } from "@/components/attendance/attendance-date-utils";
+import { describeRequestError } from "@/components/attendance/request-error";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,17 +135,11 @@ function DayEditForm({
 
   const handleSubmit = async () => {
     if (reasonTooShort) {
-      toast.error(
-        t("attendanceDayEdit.reasonRequired", { defaultValue: "Sabab (kamida 3 belgi) majburiy" }),
-      );
+      toast.error(t("attendanceDayEdit.reasonRequired"));
       return;
     }
     if (timesInvalid) {
-      toast.error(
-        t("attendanceDayEdit.timesInvalid", {
-          defaultValue: "Ketish vaqti kelish vaqtidan oldin bo'lishi mumkin emas",
-        }),
-      );
+      toast.error(t("attendanceDayEdit.timesInvalid"));
       return;
     }
     try {
@@ -159,16 +153,12 @@ function DayEditForm({
               data: body,
             });
       toast.success(
-        t("attendanceDayEdit.saved", {
-          defaultValue: "{{date}} — {{status}} sifatida saqlandi",
-          date,
-          status: t(`adminAttendance.status.${status}`),
-        }),
+        t("attendanceDayEdit.saved", { date, status: t(`adminAttendance.status.${status}`) }),
       );
       onSaved?.(detail);
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(describeRequestError(e, t));
     }
   };
 
@@ -177,9 +167,7 @@ function DayEditForm({
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Pencil className="h-5 w-5 text-primary" />
-          {isNew
-            ? t("attendanceDayEdit.titleNew", { defaultValue: "Kunni belgilash" })
-            : t("attendanceDayEdit.titleEdit", { defaultValue: "Kunni tahrirlash" })}
+          {isNew ? t("attendanceDayEdit.titleNew") : t("attendanceDayEdit.titleEdit")}
         </DialogTitle>
         <DialogDescription asChild>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
@@ -189,7 +177,7 @@ function DayEditForm({
             {existing && <AttendanceStatusBadge status={existing.status} />}
             {isNew && (
               <span className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                {t("attendanceDayEdit.noRecordYet", { defaultValue: "Yozuv yo'q" })}
+                {t("attendanceDayEdit.noRecordYet")}
               </span>
             )}
           </div>
@@ -199,12 +187,7 @@ function DayEditForm({
       {isFuture && (
         <Alert variant="info">
           <CalendarClock className="h-4 w-4" />
-          <AlertDescription>
-            {t("attendanceDayEdit.futureHint", {
-              defaultValue:
-                "Kelajakdagi sana: bu oldindan tasdiqlash. Talaba shu kuni check-in qilsa, status o'zgarmaydi.",
-            })}
-          </AlertDescription>
+          <AlertDescription>{t("attendanceDayEdit.futureHint")}</AlertDescription>
         </Alert>
       )}
 
@@ -250,15 +233,11 @@ function DayEditForm({
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          {t("attendanceDayEdit.timesHint", {
-            defaultValue: "Vaqtlar ixtiyoriy. Bo'sh qoldirilsa mavjud qiymat tozalanadi.",
-          })}
+          {t("attendanceDayEdit.timesHint")} {t("attendanceDayEdit.timesTimezone")}
         </p>
         {timesInvalid && (
           <p className="text-xs text-destructive" role="alert">
-            {t("attendanceDayEdit.timesInvalid", {
-              defaultValue: "Ketish vaqti kelish vaqtidan oldin bo'lishi mumkin emas",
-            })}
+            {t("attendanceDayEdit.timesInvalid")}
           </p>
         )}
 
@@ -270,16 +249,13 @@ function DayEditForm({
             onChange={(e) => setNote(e.target.value)}
             rows={2}
             className="mt-1"
-            placeholder={t("attendanceDayEdit.notePlaceholder", {
-              defaultValue: "Talabaga ko'rinadigan izoh (ixtiyoriy)",
-            })}
+            placeholder={t("attendanceDayEdit.notePlaceholder")}
           />
         </div>
 
         <div>
           <Label htmlFor="day-edit-reason">
-            {t("attendanceDayEdit.reason", { defaultValue: "Sabab (audit uchun)" })}{" "}
-            <span className="text-destructive">*</span>
+            {t("attendanceDayEdit.reason")} <span className="text-destructive">*</span>
           </Label>
           <Textarea
             id="day-edit-reason"

@@ -1,17 +1,9 @@
-import { HTTPError } from "ky";
-import {
-  CheckCircle2,
-  Clock,
-  Download,
-  FileText,
-  Loader2,
-  Upload,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Clock, Download, FileText, Loader2, Upload, XCircle } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { describeRequestError } from "@/components/attendance/request-error";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,6 +58,7 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
   const [title, setTitle] = useState(() => t("studentFinalReportCard.title"));
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
@@ -75,9 +68,7 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
       setAttachment(att);
       toast.success(t("studentFinalReportCard.toasts.fileUploaded"));
     } catch (e) {
-      toast.error(
-        e instanceof Error ? e.message : t("studentFinalReportCard.errors.uploadError"),
-      );
+      toast.error(describeRequestError(e, t, "studentFinalReportCard.errors.uploadError"));
     } finally {
       setUploading(false);
     }
@@ -100,7 +91,19 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
       toast.success(t("studentFinalReportCard.toasts.submitted"));
       setAttachment(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(describeRequestError(e, t));
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!report || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadAttachment(report.file_attachment);
+    } catch (e) {
+      toast.error(describeRequestError(e, t, "common.downloadError"));
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -139,18 +142,23 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => downloadAttachment(report.file_attachment)}
+                onClick={() => void handleDownload()}
+                disabled={downloading}
+                aria-label={t("common.download")}
+                title={t("common.download")}
               >
-                <Download className="h-4 w-4" />
+                {downloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
               </Button>
             </div>
 
             {report.status === "rejected" && report.reviewer_note && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  <div className="font-medium">
-                    {t("studentFinalReportCard.rejectReason")}
-                  </div>
+                  <div className="font-medium">{t("studentFinalReportCard.rejectReason")}</div>
                   <div className="mt-1 text-sm">{report.reviewer_note}</div>
                 </AlertDescription>
               </Alert>
@@ -169,8 +177,11 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
         {!isPending && canResubmit && (
           <div className="space-y-3 border-t border-border pt-3">
             <div>
-              <Label>{t("studentFinalReportCard.reportTitleLabel")}</Label>
+              <Label htmlFor="final-report-title">
+                {t("studentFinalReportCard.reportTitleLabel")}
+              </Label>
               <Input
+                id="final-report-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={500}
@@ -198,11 +209,7 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
                       {(attachment.size / 1024).toFixed(1)} KB
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setAttachment(null)}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => setAttachment(null)}>
                     {t("studentFinalReportCard.removeFile")}
                   </Button>
                 </div>
@@ -227,15 +234,9 @@ export function FinalReportCard({ assignmentId }: { assignmentId: UUID }) {
                 </Button>
               )}
             </div>
-            <Button
-              className="w-full"
-              onClick={handleSubmit}
-              disabled={busy || !attachment}
-            >
+            <Button className="w-full" onClick={handleSubmit} disabled={busy || !attachment}>
               {submit.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {report
-                ? t("studentFinalReportCard.resubmit")
-                : t("studentFinalReportCard.submit")}
+              {report ? t("studentFinalReportCard.resubmit") : t("studentFinalReportCard.submit")}
             </Button>
           </div>
         )}

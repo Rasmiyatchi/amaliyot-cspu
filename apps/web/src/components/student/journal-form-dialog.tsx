@@ -1,9 +1,10 @@
-import { HTTPError } from "ky";
 import { FileText, Loader2, Save, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { toTashkentDateStr, todayStr } from "@/components/attendance/attendance-date-utils";
+import { describeRequestError } from "@/components/attendance/request-error";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,8 @@ import { useCreateJournal, useUpdateJournal } from "@/lib/api/tasks";
 import type { Attachment } from "@/lib/api/uploads";
 import type { JournalEntry, UUID } from "@/lib/api/types";
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 type Props = {
   open: boolean;
   assignmentId: UUID;
@@ -28,14 +31,10 @@ type Props = {
   onClose: () => void;
 };
 
-function defaultDate(): string {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
-}
-
 export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props) {
   const { t } = useTranslation();
-  const [date, setDate] = useState<string>(defaultDate());
+  // Toshkent sanasi: 00:00–05:00 oralig'ida UTC sanasi hali kecha bo'ladi
+  const [date, setDate] = useState<string>(todayStr);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,10 +47,10 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
   useEffect(() => {
     if (!open) return;
     if (entry) {
-      setDate(entry.date.slice(0, 10));
+      setDate(toTashkentDateStr(entry.date));
       setAttachments((entry.attachments ?? []) as Attachment[]);
     } else {
-      setDate(defaultDate());
+      setDate(todayStr());
       setAttachments([]);
     }
   }, [open, entry]);
@@ -63,7 +62,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
       setAttachments((prev) => [...prev, att]);
       toast.success(t("studentJournalFormDialog.pdfUploaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("studentJournalFormDialog.uploadError"));
+      toast.error(describeRequestError(e, t, "studentJournalFormDialog.uploadError"));
     } finally {
       setUploading(false);
     }
@@ -76,6 +75,15 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
   const handleSave = async () => {
     if (attachments.length === 0) {
       toast.error(t("studentJournalFormDialog.pdfRequired"));
+      return;
+    }
+    // `max` atributi qo'lda kiritilgan sanani to'xtatmaydi — yuborishdan oldin tekshiramiz
+    if (!isEdit && !DATE_RE.test(date)) {
+      toast.error(t("studentJournalFormDialog.dateRequired"));
+      return;
+    }
+    if (!isEdit && date > todayStr()) {
+      toast.error(t("studentJournalFormDialog.futureDate"));
       return;
     }
     try {
@@ -97,7 +105,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(describeRequestError(e, t));
     }
   };
 
@@ -107,7 +115,11 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
     <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-h-[88dvh] sm:max-w-xl overflow-y-auto">
         <DialogHeader className="pr-6 sm:pr-0 text-left">
-          <DialogTitle className="text-base sm:text-lg font-semibold">{isEdit ? t("studentJournalFormDialog.editTitle") : t("studentJournalFormDialog.newTitle")}</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg font-semibold">
+            {isEdit
+              ? t("studentJournalFormDialog.editTitle")
+              : t("studentJournalFormDialog.newTitle")}
+          </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
             {t("studentJournalFormDialog.description")}
           </DialogDescription>
@@ -116,7 +128,9 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
         {entry?.status === "rejected" && entry.rejection_reason && (
           <Alert variant="destructive" className="py-2.5 px-3">
             <AlertDescription>
-              <div className="font-medium text-xs sm:text-sm">{t("studentJournalFormDialog.rejected")}</div>
+              <div className="font-medium text-xs sm:text-sm">
+                {t("studentJournalFormDialog.rejected")}
+              </div>
               <div className="mt-1 text-xs sm:text-sm break-words">{entry.rejection_reason}</div>
             </AlertDescription>
           </Alert>
@@ -133,7 +147,7 @@ export function JournalFormDialog({ open, assignmentId, entry, onClose }: Props)
               value={date}
               onChange={(e) => setDate(e.target.value)}
               disabled={isEdit || isApproved}
-              max={defaultDate()}
+              max={todayStr()}
               className="mt-1 text-xs sm:text-sm"
             />
           </div>

@@ -1,17 +1,13 @@
-import { HTTPError } from "ky";
 import { Loader2, Send } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import {
-  TaskStatusBadge,
-} from "@/components/admin/tasks/task-status-badge";
-import {
-  TaskCategoryBadge,
-  TaskTypeLabel,
-} from "@/components/admin/tasks/task-type-badge";
+import { TaskStatusBadge } from "@/components/admin/tasks/task-status-badge";
+import { TaskCategoryBadge, TaskTypeLabel } from "@/components/admin/tasks/task-type-badge";
 import { AttachmentsSection } from "@/components/attachments-section";
+import { formatTashkentDateTime } from "@/components/attendance/attendance-date-utils";
+import { describeRequestError } from "@/components/attendance/request-error";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,18 +31,17 @@ type Props = {
 };
 
 export function StudentTaskSubmitDialog({ task, onClose }: Props) {
-  const { t } = useTranslation();
-  const [content, setContent] = useState("");
-  const submit = useSubmitTask();
-
-  // Faqat task almashganda reset — submission_md ni deps'ga qo'shsak, har saqlashda
-  // foydalanuvchi yozayotgan matn qayta yozilib ketadi
-  useEffect(() => {
-    setContent(task?.submission_md ?? "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task?.id]);
-
   if (!task) return null;
+  // Faqat topshiriq almashganda forma qaytadan yaratiladi — saqlashdan keyingi yangilanish
+  // talaba yozayotgan matnni o'chirib yubormaydi
+  return <TaskSubmitDialogBody key={task.id} task={task} onClose={onClose} />;
+}
+
+function TaskSubmitDialogBody({ task, onClose }: { task: Task; onClose: () => void }) {
+  const { t } = useTranslation();
+  const [content, setContent] = useState(() => task.submission_md ?? "");
+  const submit = useSubmitTask();
+  const locale = dateLocale();
 
   const handleSubmit = async () => {
     if (content.trim().length < 3) {
@@ -56,7 +51,7 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
     try {
       await submit.mutateAsync({
         id: task.id,
-        data: { 
+        data: {
           submission_md: content.trim(),
           attachments: task.attachments ?? [],
         },
@@ -64,19 +59,21 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
       toast.success(t("studentTaskSubmitDialog.submitted"));
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(describeRequestError(e, t));
     }
   };
 
   const isApproved = task.status === "approved";
 
   return (
-    <Dialog open={!!task} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[88dvh] sm:max-w-2xl overflow-y-auto">
         <DialogHeader className="pr-6 sm:pr-0 text-left">
           <DialogTitle className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
             <div className="flex-1 min-w-0 pr-1 sm:pr-0">
-              <div className="break-words font-semibold text-base sm:text-lg leading-snug">{task.template_title}</div>
+              <div className="break-words font-semibold text-base sm:text-lg leading-snug">
+                {task.template_title}
+              </div>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs font-normal">
                 <TaskCategoryBadge category={task.template_category} />
                 <TaskTypeLabel type={task.template_type} />
@@ -98,14 +95,18 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
             </div>
           </DialogTitle>
           {task.template_description && (
-            <DialogDescription className="mt-2 text-xs sm:text-sm break-words">{task.template_description}</DialogDescription>
+            <DialogDescription className="mt-2 text-xs sm:text-sm break-words">
+              {task.template_description}
+            </DialogDescription>
           )}
         </DialogHeader>
 
         {task.status === "rejected" && task.rejection_reason && (
           <Alert variant="destructive" className="py-2.5 px-3">
             <AlertDescription>
-              <div className="font-medium text-xs sm:text-sm">{t("studentTaskSubmitDialog.rejectedTitle")}</div>
+              <div className="font-medium text-xs sm:text-sm">
+                {t("studentTaskSubmitDialog.rejectedTitle")}
+              </div>
               <div className="mt-1 text-xs sm:text-sm break-words">{task.rejection_reason}</div>
               <div className="mt-1.5 text-[11px] sm:text-xs opacity-90">
                 {t("studentTaskSubmitDialog.rejectedHint")}
@@ -117,7 +118,9 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
         {isApproved && (
           <Alert className="border-success/30 bg-success/5 py-2.5 px-3">
             <AlertDescription>
-              <div className="font-medium text-xs sm:text-sm">{t("studentTaskSubmitDialog.approvedTitle")}</div>
+              <div className="font-medium text-xs sm:text-sm">
+                {t("studentTaskSubmitDialog.approvedTitle")}
+              </div>
               {task.points_earned !== null && (
                 <div className="mt-1 text-xs sm:text-sm font-mono">
                   {t("studentTaskSubmitDialog.points", {
@@ -129,8 +132,7 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
               {task.graded_by_name && (
                 <div className="mt-1 text-[11px] sm:text-xs text-muted-foreground">
                   {t("studentTaskSubmitDialog.gradedBy", { name: task.graded_by_name })}
-                  {task.graded_at &&
-                    ` · ${new Date(task.graded_at).toLocaleString(dateLocale())}`}
+                  {task.graded_at && ` · ${formatTashkentDateTime(task.graded_at, locale)}`}
                 </div>
               )}
             </AlertDescription>
@@ -140,7 +142,9 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
         <Separator />
 
         <div>
-          <Label htmlFor="submission" className="text-xs sm:text-sm font-medium">{t("studentTaskSubmitDialog.submissionLabel")}</Label>
+          <Label htmlFor="submission" className="text-xs sm:text-sm font-medium">
+            {t("studentTaskSubmitDialog.submissionLabel")}
+          </Label>
           <textarea
             id="submission"
             value={content}
@@ -154,8 +158,9 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
             <span>{t("studentTaskSubmitDialog.charCount", { n: content.length })}</span>
             {task.submitted_at && (
               <span>
-                · {t("studentTaskSubmitDialog.lastSubmitted", {
-                  date: new Date(task.submitted_at).toLocaleString(dateLocale()),
+                ·{" "}
+                {t("studentTaskSubmitDialog.lastSubmitted", {
+                  date: formatTashkentDateTime(task.submitted_at, locale),
                 })}
               </span>
             )}
@@ -167,7 +172,7 @@ export function StudentTaskSubmitDialog({ task, onClose }: Props) {
         <AttachmentsSection
           kind="task"
           entityId={task.id}
-          attachments={(task.attachments ?? []) as never}
+          attachments={task.attachments ?? []}
           canEdit={!isApproved}
         />
 

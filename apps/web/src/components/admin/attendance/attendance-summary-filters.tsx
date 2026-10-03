@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAcademicYears, useDirections, useFaculties, useGroups } from "@/lib/api/academic";
+import { useAcademicYears, useAllGroups, useDirections, useFaculties } from "@/lib/api/academic";
 import type { AttendanceSummaryFilters, AttendanceSummarySort } from "@/lib/api/attendance";
 import type { AssignmentStatus, Semester } from "@/lib/api/types";
 
@@ -39,7 +39,8 @@ export function AttendanceSummaryFiltersBar({
   const { t } = useTranslation();
   const faculties = useFaculties();
   const directions = useDirections(filters.faculty_id);
-  const groups = useGroups({ directionId: filters.direction_id });
+  // Barcha guruhlar (ilgari birinchi 100 tasi bilan cheklanardi)
+  const groups = useAllGroups({ directionId: filters.direction_id });
   const years = useAcademicYears();
 
   const hasAny =
@@ -60,9 +61,7 @@ export function AttendanceSummaryFiltersBar({
           type="search"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={t("adminAttendance.searchPlaceholder", {
-            defaultValue: "Talaba: F.I.SH., HEMIS ID yoki login...",
-          })}
+          placeholder={t("adminAttendance.searchPlaceholder")}
           aria-label={t("common.search")}
           className="pl-9 pr-9"
           autoComplete="off"
@@ -81,7 +80,9 @@ export function AttendanceSummaryFiltersBar({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <Label className="text-xs">{t("common.faculty")}</Label>
+          <Label htmlFor="summary-faculty" className="text-xs">
+            {t("common.faculty")}
+          </Label>
           <Select
             value={filters.faculty_id ?? ALL}
             onValueChange={(v) =>
@@ -92,7 +93,7 @@ export function AttendanceSummaryFiltersBar({
               })
             }
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="summary-faculty" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
@@ -107,14 +108,16 @@ export function AttendanceSummaryFiltersBar({
         </div>
 
         <div>
-          <Label className="text-xs">{t("common.direction")}</Label>
+          <Label htmlFor="summary-direction" className="text-xs">
+            {t("common.direction")}
+          </Label>
           <Select
             value={filters.direction_id ?? ALL}
             onValueChange={(v) =>
               onChange({ direction_id: v === ALL ? undefined : v, group_id: undefined })
             }
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="summary-direction" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
@@ -129,17 +132,19 @@ export function AttendanceSummaryFiltersBar({
         </div>
 
         <div>
-          <Label className="text-xs">{t("common.group")}</Label>
+          <Label htmlFor="summary-group" className="text-xs">
+            {t("common.group")}
+          </Label>
           <Select
             value={filters.group_id ?? ALL}
             onValueChange={(v) => onChange({ group_id: v === ALL ? undefined : v })}
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="summary-group" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
               <SelectItem value={ALL}>{t("adminAttendance.allGroups")}</SelectItem>
-              {(groups.data?.items ?? []).map((g) => (
+              {(groups.data ?? []).map((g) => (
                 <SelectItem key={g.id} value={g.id}>
                   {g.name} ({t("common.courseN", { n: g.course })})
                 </SelectItem>
@@ -149,12 +154,14 @@ export function AttendanceSummaryFiltersBar({
         </div>
 
         <div>
-          <Label className="text-xs">{t("common.academicYear")}</Label>
+          <Label htmlFor="summary-year" className="text-xs">
+            {t("common.academicYear")}
+          </Label>
           <Select
             value={filters.academic_year_id ?? ALL}
             onValueChange={(v) => onChange({ academic_year_id: v === ALL ? undefined : v })}
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="summary-year" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -170,12 +177,14 @@ export function AttendanceSummaryFiltersBar({
         </div>
 
         <div>
-          <Label className="text-xs">{t("common.semester")}</Label>
+          <Label htmlFor="summary-semester" className="text-xs">
+            {t("common.semester")}
+          </Label>
           <Select
             value={filters.semester ?? ALL}
             onValueChange={(v) => onChange({ semester: v === ALL ? undefined : (v as Semester) })}
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="summary-semester" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -187,8 +196,8 @@ export function AttendanceSummaryFiltersBar({
         </div>
 
         <div>
-          <Label className="text-xs">
-            {t("adminAttendance.assignmentStatus", { defaultValue: "Biriktirish holati" })}
+          <Label htmlFor="summary-assignment-status" className="text-xs">
+            {t("adminAttendance.assignmentStatus")}
           </Label>
           <Select
             value={filters.assignment_status ?? ALL}
@@ -196,16 +205,14 @@ export function AttendanceSummaryFiltersBar({
               onChange({ assignment_status: v === ALL ? undefined : (v as AssignmentStatus) })
             }
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="summary-assignment-status" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>
-                {t("adminAttendance.assignmentStatusDefault", { defaultValue: "Aktiv + qoralama" })}
-              </SelectItem>
+              <SelectItem value={ALL}>{t("adminAttendance.assignmentStatusDefault")}</SelectItem>
               {STATUSES.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {t(`adminAttendance.assignmentStatuses.${s}`, { defaultValue: s })}
+                  {t(`adminAttendance.assignmentStatuses.${s}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -213,20 +220,20 @@ export function AttendanceSummaryFiltersBar({
         </div>
 
         <div>
-          <Label className="text-xs">
-            {t("adminAttendance.sort", { defaultValue: "Saralash" })}
+          <Label htmlFor="summary-sort" className="text-xs">
+            {t("adminAttendance.sort")}
           </Label>
           <Select
             value={filters.sort ?? "name"}
             onValueChange={(v) => onChange({ sort: v as AttendanceSummarySort })}
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="summary-sort" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {SORTS.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {t(`adminAttendance.sorts.${s}`, { defaultValue: s })}
+                  {t(`adminAttendance.sorts.${s}`)}
                 </SelectItem>
               ))}
             </SelectContent>

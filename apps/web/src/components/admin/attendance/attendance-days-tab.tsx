@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { BulkOverrideDialog } from "@/components/admin/attendance/bulk-override-dialog";
 import { DayDetailDialog } from "@/components/admin/attendance/day-detail-dialog";
+import { formatTashkentTime } from "@/components/attendance/attendance-date-utils";
+import { describeRequestError } from "@/components/attendance/request-error";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -39,7 +41,7 @@ import {
 } from "@/components/ui/table";
 import { useDebounce } from "@/hooks/use-debounce";
 import { dateLocale } from "@/i18n";
-import { useDirections, useFaculties, useGroups } from "@/lib/api/academic";
+import { useAllGroups, useDirections, useFaculties } from "@/lib/api/academic";
 import { useAttendanceDays, type AttendanceFilters } from "@/lib/api/attendance";
 import { downloadExport } from "@/lib/api/exports";
 import type { AttendanceDay, AttendanceDayStatus, UUID } from "@/lib/api/types";
@@ -56,8 +58,8 @@ type Props = {
   onClearPreset: () => void;
 };
 
-const fmtTime = (s: string | null) =>
-  s ? new Date(s).toLocaleTimeString(dateLocale(), { hour: "2-digit", minute: "2-digit" }) : "—";
+/** Kelish/ketish — Toshkent vaqtida. */
+const fmtTime = (s: string | null) => formatTashkentTime(s, dateLocale());
 
 export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
   const { t } = useTranslation();
@@ -96,7 +98,8 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
 
   const faculties = useFaculties();
   const directions = useDirections(filters.faculty_id);
-  const groups = useGroups({ directionId: filters.direction_id });
+  // Barcha guruhlar (ilgari birinchi 100 tasi bilan cheklanardi)
+  const groups = useAllGroups({ directionId: filters.direction_id });
 
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
 
@@ -133,10 +136,12 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
         faculty_id: queryFilters.faculty_id,
         date_from: queryFilters.date_from,
         date_to: queryFilters.date_to,
+        // Ekrandagi ro'yxat bilan bir xil bo'lsin (qidiruv ham)
+        search: queryFilters.search,
       });
       toast.success(t("common.csvDownloaded"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("common.error"));
+      toast.error(describeRequestError(e, t));
     } finally {
       setExporting(false);
     }
@@ -177,9 +182,7 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("adminAttendance.searchPlaceholder", {
-              defaultValue: "Talaba: F.I.SH., HEMIS ID yoki login...",
-            })}
+            placeholder={t("adminAttendance.searchPlaceholder")}
             aria-label={t("common.search")}
             className="pl-9"
             autoComplete="off"
@@ -198,7 +201,9 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
       {/* Filtrlar */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <Label className="text-xs">{t("common.faculty")}</Label>
+          <Label htmlFor="days-faculty" className="text-xs">
+            {t("common.faculty")}
+          </Label>
           <Select
             value={filters.faculty_id ?? ALL}
             onValueChange={(v) =>
@@ -209,7 +214,7 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
               })
             }
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="days-faculty" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
@@ -224,14 +229,16 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
         </div>
 
         <div>
-          <Label className="text-xs">{t("common.direction")}</Label>
+          <Label htmlFor="days-direction" className="text-xs">
+            {t("common.direction")}
+          </Label>
           <Select
             value={filters.direction_id ?? ALL}
             onValueChange={(v) =>
               patch({ direction_id: v === ALL ? undefined : v, group_id: undefined })
             }
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="days-direction" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
@@ -246,17 +253,19 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
         </div>
 
         <div>
-          <Label className="text-xs">{t("common.group")}</Label>
+          <Label htmlFor="days-group" className="text-xs">
+            {t("common.group")}
+          </Label>
           <Select
             value={filters.group_id ?? ALL}
             onValueChange={(v) => patch({ group_id: v === ALL ? undefined : v })}
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="days-group" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
               <SelectItem value={ALL}>{t("adminAttendance.allGroups")}</SelectItem>
-              {(groups.data?.items ?? []).map((g) => (
+              {(groups.data ?? []).map((g) => (
                 <SelectItem key={g.id} value={g.id}>
                   {g.name} ({t("common.courseN", { n: g.course })})
                 </SelectItem>
@@ -266,14 +275,16 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
         </div>
 
         <div>
-          <Label className="text-xs">{t("common.status")}</Label>
+          <Label htmlFor="days-status" className="text-xs">
+            {t("common.status")}
+          </Label>
           <Select
             value={filters.status ?? ALL}
             onValueChange={(v) =>
               patch({ status: v === ALL ? undefined : (v as AttendanceDayStatus) })
             }
           >
-            <SelectTrigger className="mt-1">
+            <SelectTrigger id="days-status" className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -333,35 +344,30 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium">
-              {t("adminAttendance.selectedCount", {
-                defaultValue: "Tanlangan: {{count}} ta yozuv",
-                count: selectedIds.size,
-              })}
+              {t("adminAttendance.selectedCount", { count: selectedIds.size })}
             </span>
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-muted-foreground">
-                {t("common.quickSelect", { defaultValue: "Tezkor tanlash:" })}
-              </span>
+              <span className="text-muted-foreground">{t("common.quickSelect")}</span>
               <button
                 type="button"
                 onClick={() => selectByStatus("pending")}
                 className="cursor-pointer rounded bg-amber-100 px-2 py-0.5 font-medium text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-300"
               >
-                {t("adminAttendance.selectPending", { defaultValue: "Kutilayotganlar" })}
+                {t("adminAttendance.selectPending")}
               </button>
               <button
                 type="button"
                 onClick={() => selectByStatus("red")}
                 className="cursor-pointer rounded bg-rose-100 px-2 py-0.5 font-medium text-rose-800 transition-colors hover:bg-rose-200 dark:bg-rose-950/60 dark:text-rose-300"
               >
-                {t("adminAttendance.selectRed", { defaultValue: "Qizillar" })}
+                {t("adminAttendance.selectRed")}
               </button>
               <button
                 type="button"
                 onClick={toggleSelectAllVisible}
                 className="cursor-pointer rounded bg-secondary px-2 py-0.5 font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
               >
-                {t("common.selectAll", { defaultValue: "Sahifadagi barchasi" })}
+                {t("common.selectAll")}
               </button>
             </div>
           </div>
@@ -377,9 +383,7 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
                 }}
               >
                 <CheckCircle2 className="h-4 w-4" />
-                {t("adminAttendance.bulkApproveBtn", {
-                  defaultValue: "Ommaviy tasdiqlash (Yashil)",
-                })}
+                {t("adminAttendance.bulkApproveBtn")}
               </Button>
               <Button
                 size="sm"
@@ -390,7 +394,7 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
                 }}
               >
                 <XCircle className="h-4 w-4" />
-                {t("adminAttendance.bulkRejectBtn", { defaultValue: "Ommaviy rad etish (Qizil)" })}
+                {t("adminAttendance.bulkRejectBtn")}
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
                 {t("common.clear")}
@@ -434,7 +438,7 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
                         checked={items.every((d) => selectedIds.has(d.id))}
                         onChange={toggleSelectAllVisible}
                         className="h-4 w-4 cursor-pointer rounded border-input accent-primary"
-                        aria-label={t("common.selectAll", { defaultValue: "Sahifadagi barchasi" })}
+                        aria-label={t("common.selectAll")}
                       />
                     </TableHead>
                   )}
@@ -469,7 +473,19 @@ export function AttendanceDaysTab({ preset, onClearPreset }: Props) {
                         />
                       </TableCell>
                     )}
-                    <TableCell className="font-mono text-sm">{d.date}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {/* Klaviatura uchun: qator bosilishi bilan bir xil amal */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelected(d);
+                        }}
+                        className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {d.date}
+                      </button>
+                    </TableCell>
                     <TableCell>
                       <div className="font-medium">{d.student_full_name ?? "—"}</div>
                       <div className="text-xs text-muted-foreground">

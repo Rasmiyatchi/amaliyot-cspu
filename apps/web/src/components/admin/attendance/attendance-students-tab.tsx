@@ -1,5 +1,5 @@
 import { CalendarRange, Users } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AttendanceSummaryFiltersBar } from "@/components/admin/attendance/attendance-summary-filters";
@@ -52,18 +52,21 @@ export function AttendanceStudentsTab({ onOpenInDaysList }: Props) {
   );
   const rows = data?.items ?? [];
 
-  // Filtr yoki qidiruv o'zgarsa — 1-sahifa
-  useEffect(() => {
-    setPage(1);
-  }, [filters, debouncedSearch]);
-
+  // Filtr yoki qidiruv o'zgarsa — darhol 1-sahifa (eski sahifa raqami bilan ortiqcha so'rov ketmasin)
   const patchFilters = useCallback((patch: Partial<AttendanceSummaryFilters>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
+    setPage(1);
+  }, []);
+
+  const changeSearch = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
   }, []);
 
   const resetFilters = () => {
     setSearch("");
     setFilters({ sort: "name" });
+    setPage(1);
   };
 
   const toggleRow = (id: string) => {
@@ -125,26 +128,22 @@ export function AttendanceStudentsTab({ onOpenInDaysList }: Props) {
     <div className="space-y-4">
       <AttendanceSummaryFiltersBar
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={changeSearch}
         filters={filters}
         onChange={patchFilters}
         onReset={resetFilters}
       />
 
-      {isSuperAdmin && rows.length > 0 && (
+      {/* Tanlov sahifalar/filtrlar o'rtasida saqlanadi — natija bo'sh bo'lsa ham ko'rinib tursin */}
+      {isSuperAdmin && (rows.length > 0 || selectedIds.size > 0) && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <span className="text-sm font-medium">
-            {t("adminAttendance.selectedStudents", {
-              defaultValue: "Tanlangan: {{count}} ta talaba",
-              count: selectedIds.size,
-            })}
+            {t("adminAttendance.selectedStudents", { count: selectedIds.size })}
           </span>
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" onClick={openBulkRange} disabled={selectedIds.size === 0}>
               <CalendarRange className="h-4 w-4" />
-              {t("adminAttendance.rangeForSelected", {
-                defaultValue: "Tanlanganlar uchun oraliq belgilash",
-              })}
+              {t("adminAttendance.rangeForSelected")}
             </Button>
             {selectedIds.size > 0 && (
               <Button size="sm" variant="ghost" onClick={clearSelection}>
@@ -167,17 +166,11 @@ export function AttendanceStudentsTab({ onOpenInDaysList }: Props) {
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={Users}
-            title={t("adminAttendance.noStudentsTitle", { defaultValue: "Talaba topilmadi" })}
+            title={t("adminAttendance.noStudentsTitle")}
             description={
               debouncedSearch
-                ? t("adminAttendance.noStudentsSearch", {
-                    defaultValue:
-                      "«{{q}}» bo'yicha mos talaba yo'q. Qidiruvni yoki filtrlarni o'zgartiring.",
-                    q: debouncedSearch,
-                  })
-                : t("adminAttendance.noStudentsDefault", {
-                    defaultValue: "Filtrlarga mos aktiv biriktirish yo'q",
-                  })
+                ? t("adminAttendance.noStudentsSearch", { q: debouncedSearch })
+                : t("adminAttendance.noStudentsDefault")
             }
           />
         </div>

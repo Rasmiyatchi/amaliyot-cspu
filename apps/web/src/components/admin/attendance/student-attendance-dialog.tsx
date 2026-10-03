@@ -9,7 +9,7 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
@@ -24,6 +24,8 @@ import {
   DEFAULT_REQUIRED_WEEKDAYS,
   clampDateStr,
   compareMonth,
+  formatMonthLabel,
+  formatTashkentTime,
   monthEndStr,
   monthOf,
   monthStartStr,
@@ -55,7 +57,6 @@ type Props = {
 };
 
 const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-const WEEKDAY_DEFAULTS = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"];
 
 export function StudentAttendanceDialog({ row, onClose, onOpenInDaysList }: Props) {
   return (
@@ -80,9 +81,9 @@ function percentTone(p: number | null): string {
   return "[&>div]:bg-rose-500";
 }
 
+/** Kelish/ketish — Toshkent vaqtida. */
 function fmtTime(s: string | null): string {
-  if (!s) return "—";
-  return new Date(s).toLocaleTimeString(dateLocale(), { hour: "2-digit", minute: "2-digit" });
+  return formatTashkentTime(s, dateLocale());
 }
 
 function StudentAttendanceBody({
@@ -96,6 +97,7 @@ function StudentAttendanceBody({
   const role = useAuthStore((s) => s.user?.role);
   const isSuperAdmin = role === "super_admin";
   const today = todayStr();
+  const weekdaysCaptionId = useId();
 
   const { data, isPending, error } = useAttendanceDays(
     { assignment_id: row.assignment_id },
@@ -123,10 +125,7 @@ function StudentAttendanceBody({
       return { year: d.getFullYear(), month: d.getMonth() };
     });
 
-  const monthLabel = new Date(view.year, view.month, 1).toLocaleDateString(dateLocale(), {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = formatMonthLabel(view.year, view.month, dateLocale());
   const visibleFrom = clampDateStr(
     monthStartStr(view.year, view.month),
     row.start_date,
@@ -224,20 +223,19 @@ function StudentAttendanceBody({
       {/* Hafta kunlari + statistika */}
       <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
         <div>
-          <div className="mb-1 text-[11px] font-medium text-muted-foreground">
-            {t("attendanceStudentView.requiredWeekdays", { defaultValue: "Talab qilingan kunlar" })}
-          </div>
           <div
-            className="flex gap-1"
-            aria-label={t("attendanceStudentView.requiredWeekdays", {
-              defaultValue: "Talab qilingan kunlar",
-            })}
+            id={weekdaysCaptionId}
+            className="mb-1 text-[11px] font-medium text-muted-foreground"
           >
+            {t("attendanceStudentView.requiredWeekdays")}
+          </div>
+          {/* Ro'yxat — ekran o'quvchi har bir kun va uning holatini o'qiydi */}
+          <ul className="flex gap-1" aria-labelledby={weekdaysCaptionId}>
             {WEEKDAY_KEYS.map((k, idx) => {
               const iso = idx + 1;
               const on = required.includes(iso);
               return (
-                <span
+                <li
                   key={k}
                   className={cn(
                     "inline-flex h-7 w-7 items-center justify-center rounded-md border text-[11px] font-medium",
@@ -246,18 +244,20 @@ function StudentAttendanceBody({
                       : "border-border/50 text-muted-foreground/50 line-through",
                   )}
                 >
-                  {t(`attendanceMonthGrid.weekdaysShort.${k}`, {
-                    defaultValue: WEEKDAY_DEFAULTS[idx],
-                  })}
-                </span>
+                  <span aria-hidden="true">{t(`attendanceMonthGrid.weekdaysShort.${k}`)}</span>
+                  <span className="sr-only">
+                    {t(`attendanceMonthGrid.weekdays.${k}`)}
+                    {on ? "" : ` — ${t("attendanceMonthGrid.notRequired")}`}
+                  </span>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <Stat
-            label={t("attendanceStudentView.expected", { defaultValue: "Kutilgan" })}
+            label={t("attendanceStudentView.expected")}
             value={row.expected_days_to_date ?? "—"}
           />
           <Stat
@@ -277,12 +277,16 @@ function StudentAttendanceBody({
           />
           <div className="col-span-2 rounded-lg border bg-card p-2 sm:col-span-1">
             <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-              <span>{t("attendanceStudentView.percent", { defaultValue: "Davomat %" })}</span>
+              <span>{t("attendanceStudentView.percent")}</span>
               <span className="font-bold text-foreground">
                 {pct === null ? "—" : `${Math.round(pct)}%`}
               </span>
             </div>
-            <Progress value={pct ?? 0} className={cn("mt-2 h-2", percentTone(pct))} />
+            <Progress
+              value={pct ?? 0}
+              className={cn("mt-2 h-2", percentTone(pct))}
+              aria-label={t("attendanceStudentView.percent")}
+            />
           </div>
         </div>
       </div>
@@ -300,7 +304,7 @@ function StudentAttendanceBody({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="min-w-[9rem] text-center text-sm font-semibold capitalize">
+          <span className="min-w-[9rem] text-center text-sm font-semibold" aria-live="polite">
             {monthLabel}
           </span>
           <Button
@@ -319,7 +323,7 @@ function StudentAttendanceBody({
           {onOpenInDaysList && (
             <Button size="sm" variant="ghost" onClick={() => onOpenInDaysList(row)}>
               <ListChecks className="h-4 w-4" />
-              {t("attendanceStudentView.openInDays", { defaultValue: "Kunlar ro'yxati" })}
+              {t("attendanceStudentView.openInDays")}
             </Button>
           )}
           {isSuperAdmin && (
@@ -330,7 +334,7 @@ function StudentAttendanceBody({
                 onClick={() => openRange({ date_from: visibleFrom, date_to: visibleTo })}
               >
                 <CalendarRange className="h-4 w-4" />
-                {t("attendanceRange.title", { defaultValue: "Oraliqni belgilash" })}
+                {t("attendanceRange.title")}
               </Button>
               <Button
                 size="sm"
@@ -340,9 +344,7 @@ function StudentAttendanceBody({
                 }
               >
                 <Sparkles className="h-4 w-4" />
-                {t("attendanceStudentView.greenThisMonth", {
-                  defaultValue: "Shu oyni yashil qilish",
-                })}
+                {t("attendanceStudentView.greenThisMonth")}
               </Button>
             </>
           )}
@@ -377,18 +379,14 @@ function StudentAttendanceBody({
       )}
 
       {isSuperAdmin && (
-        <p className="text-xs text-muted-foreground">
-          {t("attendanceStudentView.cellHint", {
-            defaultValue: "Katakchani bosib kunni belgilang yoki tahrirlang (kelajak kunlar ham).",
-          })}
-        </p>
+        <p className="text-xs text-muted-foreground">{t("attendanceStudentView.cellHint")}</p>
       )}
 
       {/* Oy kunlari ro'yxati */}
       <div>
         <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
           <Clock className="h-4 w-4" />
-          {t("attendanceStudentView.monthRecords", { defaultValue: "Shu oydagi yozuvlar" })}
+          {t("attendanceStudentView.monthRecords")}
           <span className="font-normal text-muted-foreground">({monthDays.length})</span>
           {isPending && data && (
             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
@@ -396,7 +394,7 @@ function StudentAttendanceBody({
         </h3>
         {monthDays.length === 0 ? (
           <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-            {t("attendanceStudentView.noMonthRecords", { defaultValue: "Bu oyda yozuv yo'q" })}
+            {t("attendanceStudentView.noMonthRecords")}
           </div>
         ) : (
           <ul className="divide-y rounded-lg border">

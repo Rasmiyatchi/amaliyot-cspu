@@ -32,11 +32,11 @@ export function AttendancePage() {
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="students" className="flex-1 gap-1.5 sm:flex-none">
             <Users className="h-4 w-4" />
-            {t("adminAttendance.tabStudents", { defaultValue: "Talabalar" })}
+            {t("adminAttendance.tabStudents")}
           </TabsTrigger>
           <TabsTrigger value="days" className="flex-1 gap-1.5 sm:flex-none">
             <CalendarDays className="h-4 w-4" />
-            {t("adminAttendance.tabDays", { defaultValue: "Kunlar" })}
+            {t("adminAttendance.tabDays")}
           </TabsTrigger>
         </TabsList>
 
