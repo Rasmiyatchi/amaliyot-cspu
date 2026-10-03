@@ -8,11 +8,12 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.clock import today_uzb
 from app.core.config import settings
 from app.models.academic import AcademicYear, Group
 from app.models.area import Area
 from app.models.attendance import AttendanceDay
-from app.models.enums import AssignmentStatus, AttendanceDayStatus
+from app.models.enums import AssignmentStatus, AttendanceDayStatus, Semester
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
@@ -32,14 +33,19 @@ _STATUS_LABEL = {
 
 
 async def build_context(
-    db: AsyncSession, user: User, academic_year_id: UUID | None = None
+    db: AsyncSession,
+    user: User,
+    academic_year_id: UUID | None = None,
+    *,
+    all_years: bool = False,
+    semester: Semester | None = None,
 ) -> dict[str, Any]:
     """Joriy supervizorning talabalari bo'yicha hisobot konteksti.
 
-    Yil bo'yicha filtrlanadi (default — aktiv o'quv yili), aks holda PDF
-    supervizor ishlagan BARCHA yillarni bitta ro'yxatga aralashtirib yuborardi.
+    Yil bo'yicha filtrlanadi (default — aktiv o'quv yili); `all_years=True` — barcha yillar.
+    `semester` berilsa faqat o'sha semestr biriktirishlari.
     """
-    if academic_year_id is None:
+    if academic_year_id is None and not all_years:
         academic_year_id = (
             await db.execute(select(AcademicYear.id).where(AcademicYear.is_active.is_(True)))
         ).scalar_one_or_none()
@@ -109,8 +115,10 @@ async def build_context(
             .where(PracticeAssignment.supervisor_id.in_(supervisor_ids))
             .order_by(Group.name, User.last_name, User.first_name)
         )
-        if academic_year_id:
+        if academic_year_id and not all_years:
             stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
+        if semester is not None:
+            stmt = stmt.where(PracticeAssignment.semester == semester)
         result = (await db.execute(stmt)).all()
 
         assignment_ids = [r.id for r in result]
@@ -125,7 +133,11 @@ async def build_context(
                         AttendanceDay.status,
                         func.count(AttendanceDay.id),
                     )
-                    .where(AttendanceDay.assignment_id.in_(assignment_ids))
+                    .where(
+                        AttendanceDay.assignment_id.in_(assignment_ids),
+                        # oldindan yashil qilingan kelajak kunlar hisobga olinmaydi
+                        AttendanceDay.date <= today_uzb(),
+                    )
                     .group_by(AttendanceDay.assignment_id, AttendanceDay.status)
                 )
             ).all()
@@ -163,6 +175,7 @@ async def build_context(
                 start=r.start_date,
                 end=r.end_date,
                 weekdays=r.required_weekdays,
+                upto=today_uzb(),
             )
             rows.append(
                 {
@@ -199,6 +212,15 @@ async def build_context(
     }
 
 
-async def render_pdf(db: AsyncSession, user: User, academic_year_id: UUID | None = None) -> bytes:
-    context = await build_context(db, user, academic_year_id)
+async def render_pdf(
+    db: AsyncSession,
+    user: User,
+    academic_year_id: UUID | None = None,
+    *,
+    all_years: bool = False,
+    semester: Semester | None = None,
+) -> bytes:
+    context = await build_context(
+        db, user, academic_year_id, all_years=all_years, semester=semester
+    )
     return await asyncio.to_thread(pdf_svc.render_supervisor_report_pdf, context)

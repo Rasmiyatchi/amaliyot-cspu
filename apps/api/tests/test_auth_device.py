@@ -176,6 +176,7 @@ class TestRefreshGrace:
             replaced_by_id=uuid4(),
         )
         db = AsyncMock()
+        db.add = MagicMock()  # Session.add sinxron
         db.execute.return_value = MagicMock(scalar_one_or_none=lambda: old)
         db.get.return_value = user
         monkeypatch.setattr(auth_svc, "decode_token", lambda *a, **k: {"sub": str(user.id)})

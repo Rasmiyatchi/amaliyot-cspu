@@ -38,6 +38,7 @@ def _scoped_faculty(user: User, faculty_id: UUID | None) -> UUID | None:
         return user.faculty_id
     return faculty_id
 
+
 _XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
@@ -102,9 +103,7 @@ async def export_credentials(
     return Response(
         content=build_student_credentials_xlsx(rows),
         media_type=_XLSX_MIME,
-        headers={
-            "Content-Disposition": f'attachment; filename="login_parol_{ts}.xlsx"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="login_parol_{ts}.xlsx"'},
     )
 
 
@@ -176,8 +175,13 @@ async def export_assignments(
     status: AssignmentStatus | None = None,
     semester: Semester | None = None,
     practice_type_id: UUID | None = None,
+    student_id: UUID | None = None,
+    organization_id: UUID | None = None,
+    area_id: UUID | None = None,
+    supervisor_id: UUID | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
 ) -> Response:
+    # Ro'yxatdagi barcha filtrlar — CSV ekrandagi jadval bilan bir xil bo'lsin
     content = await svc.export_assignments(
         db,
         academic_year_id=academic_year_id,
@@ -188,6 +192,10 @@ async def export_assignments(
         status=status,
         semester=semester,
         practice_type_id=practice_type_id,
+        student_id=student_id,
+        organization_id=organization_id,
+        area_id=area_id,
+        supervisor_id=supervisor_id,
         search=search,
     )
     return _csv_response(content, "biriktirishlar")
@@ -236,9 +244,7 @@ async def export_organizations(
     return Response(
         content=build_organizations_xlsx(items),
         media_type=_XLSX_MIME,
-        headers={
-            "Content-Disposition": f'attachment; filename="tashkilotlar_{ts}.xlsx"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="tashkilotlar_{ts}.xlsx"'},
     )
 
 
@@ -259,7 +265,5 @@ async def export_areas(
     return Response(
         content=build_areas_xlsx(items),
         media_type=_XLSX_MIME,
-        headers={
-            "Content-Disposition": f'attachment; filename="hududlar_{ts}.xlsx"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="hududlar_{ts}.xlsx"'},
     )

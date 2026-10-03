@@ -576,7 +576,10 @@ async def student_overview(db: AsyncSession, user: User) -> dict[str, Any] | Non
     att_rows = (
         await db.execute(
             select(AttendanceDay.status, func.count(AttendanceDay.id))
-            .where(AttendanceDay.assignment_id == assignment.id)
+            .where(
+                AttendanceDay.assignment_id == assignment.id,
+                AttendanceDay.date <= today_uzb(),
+            )
             .group_by(AttendanceDay.status)
         )
     ).all()

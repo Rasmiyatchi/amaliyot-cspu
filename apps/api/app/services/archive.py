@@ -17,6 +17,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from weasyprint import HTML
 
+from app.core.clock import today_uzb
 from app.models.academic import Direction, Group
 from app.models.attendance import AttendanceDay
 from app.models.contract import Contract
@@ -162,7 +163,10 @@ async def _load_stats(db: AsyncSession, assignment_id: UUID) -> dict[str, Any]:
     att_rows = (
         await db.execute(
             select(AttendanceDay.status, func.count(AttendanceDay.id))
-            .where(AttendanceDay.assignment_id == assignment_id)
+            .where(
+                AttendanceDay.assignment_id == assignment_id,
+                AttendanceDay.date <= today_uzb(),
+            )
             .group_by(AttendanceDay.status)
         )
     ).all()

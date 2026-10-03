@@ -40,6 +40,11 @@ EXACT: dict[str, str] = {
     ),
     "Baholashga ruxsat yo'q": "Нет разрешения на оценивание",
     "Bekor qilingan amaliyotni baholab bo'lmaydi": "Нельзя оценивать отменённую практику",
+    "Biriktirish holatini bunday o'zgartirib bo'lmaydi": "Невозможно так изменить статус назначения",
+    "Amaliyotni yakunlash uchun avval baholang (Baholash → Yakunlash)": (
+        "Чтобы завершить практику, сначала выставьте оценку (Оценивание → Завершить)"
+    ),
+    "academic_year_id noto'g'ri": "Некорректный academic_year_id",
     "Biriktirish sizga tegishli emas": "Прикрепление не принадлежит вам",
     "Biriktirish topilmadi": "Прикрепление не найдено",
     "Biriktirish topilmadi yoki siz supervizor emassiz": (

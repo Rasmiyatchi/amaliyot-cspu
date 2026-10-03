@@ -15,6 +15,7 @@ from app.models.enums import UserRole
 from app.models.organization import Organization
 from app.models.supervisor import Supervisor, SupervisorOrganization
 from app.models.user import User
+from app.services.search_utils import like_pattern, normalized_col
 
 
 def _supervisor_base_select() -> Any:
@@ -92,9 +93,7 @@ async def _set_supervisor_organizations(
         )
     )
     for org_id in unique_ids:
-        db.add(
-            SupervisorOrganization(supervisor_id=supervisor_id, organization_id=org_id)
-        )
+        db.add(SupervisorOrganization(supervisor_id=supervisor_id, organization_id=org_id))
 
 
 async def list_supervisors(
@@ -141,11 +140,12 @@ async def list_supervisors(
         if is_active is not None:
             stmt = stmt.where(User.is_active.is_(is_active))
         if search:
-            like = f"%{search.lower()}%"
+            # Apostroflar farqsiz: "Ro'ziyev" = "Roʻziyev" = "Ro’ziyev"
+            pattern = like_pattern(search)
             stmt = stmt.where(
-                func.lower(User.first_name).like(like)
-                | func.lower(User.last_name).like(like)
-                | User.username.like(f"%{search}%")
+                normalized_col(User.last_name + " " + User.first_name).like(pattern, escape="\\")
+                | normalized_col(User.first_name + " " + User.last_name).like(pattern, escape="\\")
+                | normalized_col(User.username).like(pattern, escape="\\")
             )
         return stmt
 
@@ -271,9 +271,7 @@ async def update_supervisor(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
     return await get_supervisor(db, supervisor.id)
 
 
-async def update_credentials(
-    db: AsyncSession, id_: UUID, data: BaseModel
-) -> dict[str, Any]:
+async def update_credentials(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[str, Any]:
     """Admin orqali supervizor login/parolini yangilash."""
     supervisor = await db.get(Supervisor, id_)
     if not supervisor:

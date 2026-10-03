@@ -59,6 +59,8 @@ async def list_days(
     direction_id: UUID | None = None,
     faculty_id: UUID | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
+    academic_year_id: UUID | None = None,
+    semester: Semester | None = None,
 ) -> Paginated[AttendanceDayRead]:
     supervisor_user_id: UUID | None = None
 
@@ -89,6 +91,8 @@ async def list_days(
         faculty_id=faculty_id,
         search=search,
         supervisor_user_id=supervisor_user_id,
+        academic_year_id=academic_year_id,
+        semester=semester,
     )
     return Paginated(
         items=[AttendanceDayRead.model_validate(i) for i in items],

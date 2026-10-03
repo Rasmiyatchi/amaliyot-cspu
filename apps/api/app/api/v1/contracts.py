@@ -1,6 +1,5 @@
 """Contracts endpoints + public verify."""
 
-from datetime import date
 from pathlib import Path
 from uuid import UUID
 
@@ -8,6 +7,7 @@ from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, 
 from fastapi.responses import FileResponse
 
 from app.api.deps import CurrentUser, RequireContracts
+from app.core.clock import today_uzb
 from app.db.session import SessionDep
 from app.models.enums import ContractStatus
 from app.schemas.common import Paginated
@@ -315,7 +315,7 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
             revoked_reason=data["revoked_reason"],
             revoked_at=data["revoked_at"],
             is_valid=is_valid,
-            is_expired=data["end_date"] < date.today(),
+            is_expired=data["end_date"] < today_uzb(),
             pdf_url=pdf_url,
         )
     except HTTPException:

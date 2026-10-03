@@ -27,7 +27,6 @@ from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
 from app.models.student import Student
-from app.models.supervisor import Supervisor
 from app.models.user import User
 
 
@@ -128,9 +127,7 @@ async def export_student_credentials(
     return [
         {
             "amaliyot_id": r.amaliyot_id,
-            "full_name": " ".join(
-                p for p in (r.last_name, r.first_name, r.middle_name) if p
-            ),
+            "full_name": " ".join(p for p in (r.last_name, r.first_name, r.middle_name) if p),
             "faculty_name": r.faculty_name,
             "direction_name": r.direction_name,
             "group_name": r.group_name,
@@ -312,6 +309,10 @@ async def export_assignments(
     status: AssignmentStatus | None = None,
     semester: Semester | None = None,
     practice_type_id: UUID | None = None,
+    student_id: UUID | None = None,
+    organization_id: UUID | None = None,
+    area_id: UUID | None = None,
+    supervisor_id: UUID | None = None,
     search: str | None = None,
 ) -> bytes:
     stmt = (
@@ -358,6 +359,14 @@ async def export_assignments(
         stmt = stmt.where(PracticeAssignment.semester == semester)
     if practice_type_id:
         stmt = stmt.where(PracticeAssignment.practice_type_id == practice_type_id)
+    if student_id:
+        stmt = stmt.where(PracticeAssignment.student_id == student_id)
+    if organization_id:
+        stmt = stmt.where(PracticeAssignment.organization_id == organization_id)
+    if area_id:
+        stmt = stmt.where(PracticeAssignment.area_id == area_id)
+    if supervisor_id:
+        stmt = stmt.where(PracticeAssignment.supervisor_id == supervisor_id)
     if search:
         from app.services.attendance import _search_clause
 
@@ -380,8 +389,6 @@ async def export_assignments(
         "Kredit",
     ]
     data = [list(r) for r in rows]
-    # supervisor_id keyin qo'shilishi mumkin — alohida JOIN
-    _ = Supervisor
     return _to_csv(headers, data)
 
 
@@ -482,9 +489,7 @@ async def export_final_reports(
     for r in rows:
         m = r._mapping
         status_label = _FINAL_REPORT_STATUS_LABEL.get(m["status"], m["status"])
-        reviewer_name = (
-            f"{m['reviewer_last'] or ''} {m['reviewer_first'] or ''}".strip() or None
-        )
+        reviewer_name = f"{m['reviewer_last'] or ''} {m['reviewer_first'] or ''}".strip() or None
         data.append(
             [
                 m["hemis_id"],

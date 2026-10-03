@@ -115,3 +115,67 @@ class TestAdminSchemas:
         with pytest.raises(ValidationError):
             AdminUpdate(permissions=["practice", "everything"])
         assert AdminUpdate(permissions=["practice", "practice"]).permissions == ["practice"]
+
+
+class TestCreditThreshold:
+    """Kredit chegarasi turda belgilanmagan bo'lsa — maksimumning 60%."""
+
+    @staticmethod
+    def _pt(rules: dict | None):
+        from app.models.practice_type import PracticeType
+
+        return PracticeType(name="T", grading_rules=rules)
+
+    def test_configured_threshold_wins(self):
+        from app.services.grading import _min_total
+
+        assert _min_total(self._pt({"min_total": 55}), 100) == 55
+
+    def test_missing_threshold_defaults_to_60_percent(self):
+        from app.services.grading import _min_total
+
+        assert _min_total(self._pt({}), 100) == 60
+        assert _min_total(self._pt({"min_total": 0}), 50) == 30
+        assert _min_total(self._pt(None), 0) == 0
+
+
+class TestAssignmentTransitions:
+    @staticmethod
+    def _asn(status, final_grade=None):
+        from app.models.practice_assignment import PracticeAssignment
+
+        return PracticeAssignment(status=status, final_grade=final_grade)
+
+    def test_allowed_and_rejected(self):
+        from app.models.enums import AssignmentStatus as S
+        from app.services.practice_assignment import _check_status_transition
+
+        _check_status_transition(self._asn(S.DRAFT), {"status": S.ACTIVE})
+        _check_status_transition(self._asn(S.CANCELLED), {"status": S.ACTIVE})
+        _check_status_transition(self._asn(S.ACTIVE), {"notes": "x"})
+        for current, target in [
+            (S.DRAFT, S.COMPLETED),
+            (S.CANCELLED, S.COMPLETED),
+            (S.COMPLETED, S.CANCELLED),
+        ]:
+            with pytest.raises(HTTPException) as e:
+                _check_status_transition(self._asn(current), {"status": target})
+            assert e.value.status_code == 409
+
+    def test_completed_requires_grade(self):
+        from app.models.enums import AssignmentStatus as S
+        from app.services.practice_assignment import _check_status_transition
+
+        with pytest.raises(HTTPException):
+            _check_status_transition(self._asn(S.ACTIVE), {"status": S.COMPLETED})
+        _check_status_transition(self._asn(S.ACTIVE, final_grade=75), {"status": S.COMPLETED})
+        _check_status_transition(self._asn(S.ACTIVE), {"status": S.COMPLETED, "final_grade": 80})
+
+
+class TestSearchNormalization:
+    def test_apostrophes_are_ignored(self):
+        from app.services.search_utils import like_pattern, normalize_term
+
+        variants = ["Ro'ziyev", "Ro’ziyev", "Roʻziyev", "RO`ZIYEV", " ro‘ziyev "]
+        assert {normalize_term(v) for v in variants} == {"roziyev"}
+        assert like_pattern("50%_o'g'li") == "%50\\%\\_ogli%"

@@ -20,6 +20,7 @@ DIQQAT: sillabusda 80-90% oralig'i ko'rsatilmagan — 0.7 (10 ballik mezonda 7)
 qilib olindi, monoton bo'lishi uchun.
 """
 
+import math
 from typing import Any
 from uuid import UUID
 
@@ -72,16 +73,24 @@ def _criteria_of(pt: PracticeType) -> list[dict[str, Any]]:
     return [c for c in criteria if isinstance(c, dict) and c.get("key")]
 
 
-def _min_total(pt: PracticeType) -> int:
-    return int((pt.grading_rules or {}).get("min_total") or 0)
+#: Universitet qoidasi: kredit uchun kamida 60% (100 ballikda 60 ball).
+DEFAULT_PASS_SHARE = 0.6
+
+
+def _min_total(pt: PracticeType, max_total: int) -> int:
+    """Kredit chegarasi. Turda belgilanmagan (0/None) bo'lsa — maksimumning 60%.
+
+    Ilgari belgilanmagan turda `finalize` hech qachon kredit bermasdi.
+    """
+    configured = int((pt.grading_rules or {}).get("min_total") or 0)
+    if configured > 0:
+        return configured
+    return math.ceil(max_total * DEFAULT_PASS_SHARE) if max_total > 0 else 0
 
 
 def is_auto(criterion: dict[str, Any]) -> bool:
     key = str(criterion.get("key", ""))
-    return (
-        criterion.get("grader") == "system"
-        or key in TASK_CRITERION_KEYS
-    )
+    return criterion.get("grader") == "system" or key in TASK_CRITERION_KEYS
 
 
 async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, Any]:
@@ -137,9 +146,7 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
         await db.execute(
             select(
                 func.coalesce(
-                    func.sum(
-                        func.coalesce(Task.points_earned, TaskTemplate.points)
-                    ),
+                    func.sum(func.coalesce(Task.points_earned, TaskTemplate.points)),
                     0,
                 )
             )
@@ -187,14 +194,15 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
 
     missing = [c["key"] for c in out if c["score"] is None]
     total = sum(c["score"] or 0 for c in out)
-    min_total = _min_total(pt)
+    max_total = sum(c["max"] for c in out)
+    min_total = _min_total(pt, max_total)
 
     return {
         "assignment_id": str(assignment_id),
         "practice_type_name": pt.name,
         "criteria": out,
         "total": total,
-        "max_total": sum(c["max"] for c in out),
+        "max_total": max_total,
         "min_total": min_total,
         "passed": total >= min_total if min_total else None,
         "missing_criteria": missing,
@@ -230,9 +238,7 @@ async def authorize(db: AsyncSession, assignment_id: UUID, user: User) -> Practi
         )
     ).scalar_one_or_none()
     if not owns:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN, "Bu talaba sizga biriktirilmagan"
-        )
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Bu talaba sizga biriktirilmagan")
     return asn
 
 

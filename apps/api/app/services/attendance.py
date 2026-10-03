@@ -47,6 +47,7 @@ from app.models.supervisor import Supervisor
 from app.models.user import User
 from app.services import notification as notification_svc
 from app.services.attendance_stats import compute_percent, expected_days
+from app.services.search_utils import like_pattern, normalized_col
 
 MIN_PRACTICE_SECONDS = 6 * 3600  # 6 soat = 21600 soniya
 UZB_TZ = timezone(timedelta(hours=5))
@@ -248,14 +249,20 @@ def _escape_like(term: str) -> str:
 
 
 def _search_clause(term: str) -> Any:
-    pattern = f"%{_escape_like(term.strip())}%"
+    """Ism-familiya (apostroflar farqsiz), HEMIS ID yoki login bo'yicha."""
+    raw = f"%{_escape_like(term.strip())}%"
+    pattern = like_pattern(term)
     return or_(
-        User.last_name.ilike(pattern, escape="\\"),
-        User.first_name.ilike(pattern, escape="\\"),
-        func.concat(User.last_name, " ", User.first_name).ilike(pattern, escape="\\"),
-        func.concat(User.first_name, " ", User.last_name).ilike(pattern, escape="\\"),
-        Student.hemis_id.ilike(pattern, escape="\\"),
-        User.username.ilike(pattern, escape="\\"),
+        normalized_col(
+            func.concat(
+                User.last_name, " ", User.first_name, " ", func.coalesce(User.middle_name, "")
+            )
+        ).like(pattern, escape="\\"),
+        normalized_col(func.concat(User.first_name, " ", User.last_name)).like(
+            pattern, escape="\\"
+        ),
+        Student.hemis_id.ilike(raw, escape="\\"),
+        User.username.ilike(raw, escape="\\"),
     )
 
 
@@ -1082,6 +1089,8 @@ async def list_days(
     faculty_id: UUID | None = None,
     search: str | None = None,
     supervisor_user_id: UUID | None = None,
+    academic_year_id: UUID | None = None,
+    semester: Any | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     # O'tgan qolib ketgan kunlarni avto-qizil qilish (global variant throttle bilan)
     await sync_missed_attendance_days(db, assignment_id=assignment_id, student_id=student_id)
@@ -1100,6 +1109,10 @@ async def list_days(
         stmt = stmt.where(AttendanceDay.date <= date_to)
     if search:
         stmt = stmt.where(_search_clause(search))
+    if academic_year_id:
+        stmt = stmt.where(PracticeAssignment.academic_year_id == academic_year_id)
+    if semester is not None:
+        stmt = stmt.where(PracticeAssignment.semester == semester)
     if supervisor_user_id:
         stmt = stmt.join(Supervisor, Supervisor.id == PracticeAssignment.supervisor_id).where(
             Supervisor.user_id == supervisor_user_id

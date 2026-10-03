@@ -16,7 +16,7 @@ from fastapi import (
 
 from app.api.deps import RequireAdmin, RequireSupervisor, RequireSupervisors
 from app.db.session import SessionDep
-from app.models.enums import UserRole
+from app.models.enums import Semester, UserRole
 from app.schemas.common import CredentialsUpdate, Paginated
 from app.schemas.supervisor import (
     SupervisorBulkDeleteError,
@@ -118,9 +118,23 @@ async def import_supervisors(
     summary="Supervizor: o'z talabalari bo'yicha yakuniy hisobot PDF",
 )
 async def my_report_pdf(
-    db: SessionDep, user: RequireSupervisor, academic_year_id: UUID | None = None
+    db: SessionDep,
+    user: RequireSupervisor,
+    academic_year_id: str | None = Query(None, description="UUID yoki 'all'"),
+    semester: Semester | None = None,
 ) -> Response:
-    pdf_bytes = await report_svc.render_pdf(db, user, academic_year_id)
+    all_years = (academic_year_id or "").lower() == "all"
+    year_uuid: UUID | None = None
+    if academic_year_id and not all_years:
+        try:
+            year_uuid = UUID(academic_year_id)
+        except ValueError as e:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "academic_year_id noto'g'ri"
+            ) from e
+    pdf_bytes = await report_svc.render_pdf(
+        db, user, year_uuid, all_years=all_years, semester=semester
+    )
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"amaliyot_hisoboti_{ts}.pdf"
     return Response(

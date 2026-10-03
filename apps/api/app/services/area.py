@@ -4,11 +4,12 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area import Area
+from app.services.search_utils import like_pattern, normalized_col
 
 
 async def list_areas(
@@ -24,14 +25,15 @@ async def list_areas(
 
     def apply(stmt):  # type: ignore[no-untyped-def]
         if search:
-            terms = [t.strip().lower() for t in search.split() if t.strip()]
-            for term in terms:
-                like = f"%{term}%"
+            for term in search.split():
+                pattern = like_pattern(term)
                 stmt = stmt.where(
-                    func.lower(Area.name).like(like)
-                    | func.lower(func.coalesce(Area.region, "")).like(like)
-                    | func.lower(func.coalesce(Area.district, "")).like(like)
-                    | func.lower(func.coalesce(Area.description, "")).like(like)
+                    or_(
+                        *(
+                            normalized_col(func.coalesce(col, "")).like(pattern, escape="\\")
+                            for col in (Area.name, Area.region, Area.district, Area.description)
+                        )
+                    )
                 )
         if region:
             like_reg = f"%{region.lower()}%"
