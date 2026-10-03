@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import { getDeviceId } from "@/lib/device-id";
+import { collectDeviceInfo, getDeviceId, type DeviceInfo } from "@/lib/device-id";
 import { useAuthStore, type User } from "@/stores/auth";
 
 type TokenResponse = {
@@ -8,12 +8,21 @@ type TokenResponse = {
   expires_in: number;
 };
 
+type LoginRequest = {
+  username: string;
+  password: string;
+  device_id: string;
+  device_info: DeviceInfo;
+};
+
 export async function login(username: string, password: string): Promise<User> {
-  const tokens = await api
-    .post("v1/auth/login", {
-      json: { username, password, device_id: getDeviceId() },
-    })
-    .json<TokenResponse>();
+  const body: LoginRequest = {
+    username,
+    password,
+    device_id: getDeviceId(),
+    device_info: await collectDeviceInfo(),
+  };
+  const tokens = await api.post("v1/auth/login", { json: body }).json<TokenResponse>();
 
   useAuthStore.getState().setToken(tokens.access_token);
 

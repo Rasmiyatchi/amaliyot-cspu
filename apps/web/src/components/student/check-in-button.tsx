@@ -3,24 +3,36 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Crosshair,
   Hourglass,
   Loader2,
+  LocateFixed,
   LogIn,
   LogOut,
   MapPin,
+  MapPinOff,
   Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import i18n, { dateLocale } from "@/i18n";
+import { dateLocale } from "@/i18n";
 import { useCheckIn, useCheckOut } from "@/lib/api/attendance";
-import type { AttendanceDayDetail, UUID } from "@/lib/api/types";
+import type { AttendanceDayDetail, CheckInRequest, UUID } from "@/lib/api/types";
+import { getDeviceId } from "@/lib/device-id";
+import {
+  acquirePosition,
+  geoErrorTexts,
+  getGeoPermissionState,
+  toGeoError,
+  type GeoErrorCode,
+  type GeoFix,
+} from "@/lib/geolocation";
 
 type Props = {
   assignmentId: UUID;
@@ -29,20 +41,14 @@ type Props = {
 };
 
 const REQUIRED_DURATION_MS = 6 * 60 * 60 * 1000; // 6 soat = 21,600,000 ms
+/** Shundan yomon aniqlikda qayd yuboriladi, lekin ogohlantirish ko'rsatiladi */
+const LOW_ACCURACY_M = 150;
 
-function getPosition(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error(i18n.t("studentCheckInButton.gpsUnavailable")));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0,
-    });
-  });
-}
+type GeoState =
+  | { phase: "idle" }
+  | { phase: "acquiring"; bestAccuracy: number | null }
+  | { phase: "ok"; accuracy: number }
+  | { phase: "failed"; code: GeoErrorCode; message: string; help: string };
 
 function formatDuration(
   ms: number,
@@ -75,16 +81,152 @@ function formatDigitalTimer(ms: number): string {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
+function roundAccuracy(m: number): number {
+  return Math.max(1, Math.round(m));
+}
+
+/* ─── Joylashuv holati paneli ─── */
+
+type GeoStatusProps = {
+  state: GeoState;
+  retrying: boolean;
+  onRetry: () => void;
+};
+
+function GeoStatus({ state, retrying, onRetry }: GeoStatusProps) {
+  const { t } = useTranslation();
+
+  if (state.phase === "acquiring") {
+    return (
+      <div
+        className="flex items-start gap-3 rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 text-sm"
+        role="status"
+        aria-live="polite"
+      >
+        <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-sky-600 dark:text-sky-400" />
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="font-medium text-sky-900 dark:text-sky-200">
+            {t("studentCheckInButton.acquiring", { defaultValue: "Joylashuv aniqlanmoqda…" })}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {state.bestAccuracy !== null
+              ? t("studentCheckInButton.currentAccuracy", {
+                  defaultValue: "Hozirgi aniqlik: ±{{m}} m",
+                  m: roundAccuracy(state.bestAccuracy),
+                })
+              : t("studentCheckInButton.waitingFirstFix", {
+                  defaultValue: "GPS signal kutilmoqda…",
+                })}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {t("studentCheckInButton.acquiringTip", {
+              defaultValue:
+                "Ochiq joyda turing, telefonda GPS va Wi-Fi yoqilgan bo'lsin. 20 soniyagacha davom etishi mumkin.",
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.phase === "failed") {
+    const isDenied = state.code === "denied";
+    return (
+      <Alert variant="destructive" className="text-left">
+        <MapPinOff className="h-4 w-4" />
+        <AlertTitle>
+          {isDenied
+            ? t("studentCheckInButton.deniedTitle", {
+                defaultValue: "Joylashuvga ruxsat yo'q",
+              })
+            : t("studentCheckInButton.geoFailedTitle", {
+                defaultValue: "Joylashuv aniqlanmadi",
+              })}
+        </AlertTitle>
+        <AlertDescription className="space-y-2">
+          <p>{state.message}</p>
+          <p className="whitespace-pre-line text-xs leading-relaxed opacity-90">{state.help}</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-1 w-full border-destructive/40 text-destructive hover:bg-destructive/10 sm:w-auto"
+            onClick={onRetry}
+            disabled={retrying}
+          >
+            {retrying ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <LocateFixed className="h-4 w-4" />
+            )}
+            {isDenied
+              ? t("studentCheckInButton.reaskPermission", {
+                  defaultValue: "Ruxsatni qayta so'rash",
+                })
+              : t("studentCheckInButton.retryLocation", { defaultValue: "Qayta aniqlash" })}
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (state.phase === "ok") {
+    const m = roundAccuracy(state.accuracy);
+    const low = state.accuracy > LOW_ACCURACY_M;
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+          <Crosshair className="h-3.5 w-3.5" />
+          <span>
+            {t("studentCheckInButton.accuracy", { defaultValue: "Aniqlik: ±{{m}} m", m })}
+          </span>
+        </div>
+        {low && (
+          <Alert variant="warning" className="text-left">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              {t("studentCheckInButton.lowAccuracy", {
+                defaultValue:
+                  "Aniqlik past (±{{m}} m) — hudud tekshiruvi xato bo'lishi mumkin. Ochiq joyga chiqib, GPS yoqilganini tekshiring.",
+                m,
+              })}
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
+
+/* ─── Asosiy komponent ─── */
+
 export function CheckInButton({ assignmentId, today, disabled }: Props) {
   const { t } = useTranslation();
   const checkIn = useCheckIn();
   const checkOut = useCheckOut();
-  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [geo, setGeo] = useState<GeoState>({ phase: "idle" });
+  const [retrying, setRetrying] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   const hasCheckIn = !!today?.check_in_at;
   const hasCheckOut = !!today?.check_out_at;
-  const busy = checkIn.isPending || checkOut.isPending;
+  const acquiring = geo.phase === "acquiring";
+  const busy = acquiring || retrying || checkIn.isPending || checkOut.isPending;
+
+  // Ruxsat avvaldan rad etilgan bo'lsa — talaba tugma bosishdan oldin nima qilishni ko'rsin
+  useEffect(() => {
+    let cancelled = false;
+    void getGeoPermissionState().then((state) => {
+      if (cancelled || state !== "denied") return;
+      const texts = geoErrorTexts("denied");
+      setGeo({ phase: "failed", code: "denied", ...texts });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Real-time timer update
   useEffect(() => {
@@ -100,14 +242,11 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
     const checkInMs = new Date(today.check_in_at).getTime();
     const unlockMs = checkInMs + REQUIRED_DURATION_MS;
     const remainingMs = Math.max(0, unlockMs - currentTime);
-    const elapsedMs = Math.min(
-      REQUIRED_DURATION_MS,
-      Math.max(0, currentTime - checkInMs)
-    );
+    const elapsedMs = Math.min(REQUIRED_DURATION_MS, Math.max(0, currentTime - checkInMs));
     const isLocked = remainingMs > 0;
     const progressPercent = Math.min(
       100,
-      Math.max(0, (elapsedMs / REQUIRED_DURATION_MS) * 100)
+      Math.max(0, (elapsedMs / REQUIRED_DURATION_MS) * 100),
     );
 
     return {
@@ -125,33 +264,63 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
       digitalTimer: formatDigitalTimer(remainingMs),
       durationText: formatDuration(remainingMs, t),
     };
-  }, [hasCheckIn, today?.check_in_at, currentTime]);
+  }, [hasCheckIn, today?.check_in_at, currentTime, t]);
+
+  /** Har safar yangidan so'raydi — avvalgi rad brauzer ruxsat bersa qayta prompt bo'ladi. */
+  const locate = async (): Promise<GeoFix | null> => {
+    setGeo({ phase: "acquiring", bestAccuracy: null });
+    try {
+      const fix = await acquirePosition({
+        onProgress: (best) => setGeo({ phase: "acquiring", bestAccuracy: best.accuracy }),
+      });
+      setGeo({ phase: "ok", accuracy: fix.accuracy });
+      return fix;
+    } catch (err) {
+      const geoErr = toGeoError(err);
+      setGeo({ phase: "failed", code: geoErr.code, message: geoErr.message, help: geoErr.help });
+      toast.error(geoErr.message);
+      return null;
+    }
+  };
+
+  const handleRetryLocation = async () => {
+    if (retrying) return;
+    setRetrying(true);
+    try {
+      const fix = await locate();
+      if (fix) {
+        toast.success(
+          t("studentCheckInButton.locationReady", {
+            defaultValue: "Joylashuv aniqlandi (±{{m}} m). Endi tugmani bosing.",
+            m: roundAccuracy(fix.accuracy),
+          }),
+        );
+      }
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const handle = async (kind: "in" | "out") => {
-    setGpsError(null);
+    const fix = await locate();
+    if (!fix) return;
+
+    const data: CheckInRequest = {
+      lat: fix.lat,
+      lng: fix.lng,
+      accuracy_m: fix.accuracy,
+      device_id: getDeviceId(),
+    };
     try {
-      const pos = await getPosition();
-      const data = {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-        accuracy_m: pos.coords.accuracy,
-      };
-      try {
-        if (kind === "in") {
-          await checkIn.mutateAsync({ assignmentId, data });
-          toast.success(t("studentCheckInButton.checkInSuccess"));
-        } else {
-          await checkOut.mutateAsync({ assignmentId, data });
-          toast.success(t("studentCheckInButton.checkOutSuccess"));
-        }
-      } catch (e) {
-        toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      if (kind === "in") {
+        await checkIn.mutateAsync({ assignmentId, data });
+        toast.success(t("studentCheckInButton.checkInSuccess"));
+      } else {
+        await checkOut.mutateAsync({ assignmentId, data });
+        toast.success(t("studentCheckInButton.checkOutSuccess"));
       }
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : t("studentCheckInButton.gpsFailed");
-      setGpsError(msg);
-      toast.error(msg);
+    } catch (e) {
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
@@ -163,7 +332,7 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
     );
   }
 
-  // 1. Agar bugungi davomat yakunlangan bo'lsa (Check-out qilingan)
+  // 1. Bugungi davomat yakunlangan (check-out qilingan)
   if (hasCheckOut && today?.check_in_at && today?.check_out_at) {
     const checkInDate = new Date(today.check_in_at);
     const checkOutDate = new Date(today.check_out_at);
@@ -175,8 +344,8 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-6 w-6" />
           </div>
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-center justify-between">
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-semibold text-emerald-800 dark:text-emerald-300">
                 {t("studentCheckInButton.doneToday")}
               </span>
@@ -201,13 +370,11 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
                 minute: "2-digit",
               })}
             </div>
-            <div className="text-xs text-muted-foreground pt-1 flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
               <Clock className="h-3.5 w-3.5 text-emerald-600" />
               <span>
                 {t("studentCheckInButton.durationSpent")}:{" "}
-                <strong className="text-foreground">
-                  {formatDuration(totalDurationMs, t)}
-                </strong>
+                <strong className="text-foreground">{formatDuration(totalDurationMs, t)}</strong>
               </span>
             </div>
           </div>
@@ -216,26 +383,25 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
     );
   }
 
-  // 2. Agar talaba check-in qilgan, lekin hali 6 soat to'lmagan yoki check-out qilinmagan bo'lsa
+  // 2. Check-in qilingan, 6 soat kutilmoqda yoki check-out qilinmagan
   if (hasCheckIn && timingInfo) {
     const isLocked = timingInfo.isLocked;
 
     return (
       <div className="space-y-4">
-        {gpsError && (
-          <Alert variant="destructive">
-            <AlertDescription>{gpsError}</AlertDescription>
-          </Alert>
-        )}
+        <GeoStatus state={geo} retrying={retrying} onRetry={handleRetryLocation} />
 
         {isLocked ? (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
+          <div className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-sm font-medium text-amber-900 dark:text-amber-300">
                 <Hourglass className="h-4 w-4 animate-spin text-amber-600" />
                 <span>{t("studentCheckInButton.lockedTitle")}</span>
               </div>
-              <Badge variant="outline" className="border-amber-500/40 text-amber-800 dark:text-amber-300 font-mono">
+              <Badge
+                variant="outline"
+                className="border-amber-500/40 font-mono text-amber-800 dark:text-amber-300"
+              >
                 {timingInfo.digitalTimer}
               </Badge>
             </div>
@@ -245,7 +411,7 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
               className="h-2 bg-amber-200/50 dark:bg-amber-950"
             />
 
-            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1">
+            <div className="grid grid-cols-2 gap-2 pt-1 text-xs text-muted-foreground">
               <div>
                 <span className="text-muted-foreground">
                   {t("studentCheckInButton.checkInTime", { defaultValue: "Kelgan vaqt:" })}
@@ -253,7 +419,9 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
                 <strong className="text-foreground">{timingInfo.checkInTimeStr}</strong>
               </div>
               <div className="text-right">
-                <span className="text-muted-foreground">{t("studentCheckInButton.unlocksAt")}:</span>{" "}
+                <span className="text-muted-foreground">
+                  {t("studentCheckInButton.unlocksAt")}:
+                </span>{" "}
                 <strong className="text-foreground">{timingInfo.unlockTimeStr}</strong>
               </div>
             </div>
@@ -267,8 +435,8 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-sm flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-sm">
+            <Sparkles className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
               {t("studentCheckInButton.readyForCheckOut")}
             </div>
@@ -276,7 +444,7 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
         )}
 
         <Button
-          onClick={() => handle("out")}
+          onClick={() => void handle("out")}
           disabled={busy || isLocked}
           size="lg"
           className="h-16 w-full text-base font-semibold shadow-sm transition-all"
@@ -287,8 +455,10 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
           ) : (
             <LogOut className="mr-2 h-5 w-5" />
           )}
-          {t("studentCheckInButton.checkOut")}
-          {isLocked && ` (${timingInfo.digitalTimer})`}
+          {acquiring
+            ? t("studentCheckInButton.acquiring", { defaultValue: "Joylashuv aniqlanmoqda…" })
+            : t("studentCheckInButton.checkOut")}
+          {isLocked && !acquiring && ` (${timingInfo.digitalTimer})`}
         </Button>
 
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -302,23 +472,21 @@ export function CheckInButton({ assignmentId, today, disabled }: Props) {
   // 3. Check-in qilinmagan (boshlang'ich holat)
   return (
     <div className="space-y-3">
-      {gpsError && (
-        <Alert variant="destructive">
-          <AlertDescription>{gpsError}</AlertDescription>
-        </Alert>
-      )}
+      <GeoStatus state={geo} retrying={retrying} onRetry={handleRetryLocation} />
       <Button
-        onClick={() => handle("in")}
+        onClick={() => void handle("in")}
         disabled={busy}
         size="lg"
-        className="h-20 w-full text-lg font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-all hover:scale-[1.01]"
+        className="h-20 w-full bg-emerald-600 text-lg font-semibold text-white shadow-md transition-all hover:scale-[1.01] hover:bg-emerald-700"
       >
         {busy ? (
           <Loader2 className="mr-2 h-6 w-6 animate-spin" />
         ) : (
           <LogIn className="mr-2 h-6 w-6" />
         )}
-        {t("studentCheckInButton.checkIn")}
+        {acquiring
+          ? t("studentCheckInButton.acquiring", { defaultValue: "Joylashuv aniqlanmoqda…" })
+          : t("studentCheckInButton.checkIn")}
       </Button>
       <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
         <MapPin className="h-3.5 w-3.5" />

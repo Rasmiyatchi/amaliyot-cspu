@@ -11,8 +11,14 @@ const AUTH_PATH_PREFIX = "auth/"; // login/refresh/logout — retry cyclini oldi
  * Oqim:
  *  1. beforeRequest: store'dan accessToken olib, `Authorization: Bearer ...` qo'shiladi
  *  2. 401 qaytsa va bu auth endpoint bo'lmasa → /auth/refresh chaqiriladi
+ *     (bir vaqtda kelgan bir nechta 401 BITTA refresh so'rovini kutadi — single-flight)
  *  3. Yangi access token bilan original so'rov qayta yuboriladi
- *  4. Refresh ham 401 qaytarsa → auth store tozalanadi (foydalanuvchi login'ga yo'naltiriladi)
+ *  4. Refresh aniq 401/403 qaytarsa → auth store tozalanadi (login'ga yo'naltiriladi).
+ *     Tarmoq xatosi (fetch throw, 5xx) bo'lsa — store SAQLANADI: internet uzilgani
+ *     foydalanuvchini chiqarib yuborishga sabab bo'lmasligi kerak.
+ *
+ * `beforeError` server `detail`ini `error.message`ga yozadi; `error.response.status`
+ * o'zgarishsiz qoladi — UI status bo'yicha xabarni ajrata oladi.
  */
 export const api = ky.create({
   prefixUrl: "/api",
@@ -60,35 +66,56 @@ export const api = ky.create({
         const url = new URL(request.url);
         if (url.pathname.includes(`/api/v1/${AUTH_PATH_PREFIX}`)) return;
 
-        // Refresh'ga urinish
-        const refreshed = await tryRefresh();
-        if (!refreshed) {
-          useAuthStore.getState().clear();
+        const outcome = await refreshAccessToken();
+        if (!outcome.token) {
+          // Faqat server sessiyani aniq rad etganda chiqaramiz
+          if (outcome.definitive) useAuthStore.getState().clear();
           return;
         }
 
         // Yangi token bilan qayta urinish
         const retryRequest = request.clone();
-        retryRequest.headers.set("Authorization", `Bearer ${refreshed}`);
+        retryRequest.headers.set("Authorization", `Bearer ${outcome.token}`);
         return ky(retryRequest);
       },
     ],
   },
 });
 
-/** /auth/refresh ga urinadi. Muvaffaqiyat → yangi access token. Xato → null. */
-async function tryRefresh(): Promise<string | null> {
+type RefreshOutcome = { token: string; definitive: false } | { token: null; definitive: boolean }; // definitive=true → server 401/403 (sessiya yo'q)
+
+let refreshPromise: Promise<RefreshOutcome> | null = null;
+
+/**
+ * Single-flight refresh: birinchi chaqiruv so'rovni boshlaydi, qolganlari
+ * o'sha promise'ni kutadi. Tugagach keyingi 401 uchun yangisi ochiladi.
+ */
+function refreshAccessToken(): Promise<RefreshOutcome> {
+  if (!refreshPromise) {
+    refreshPromise = performRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+async function performRefresh(): Promise<RefreshOutcome> {
   try {
     const res = await fetch("/api/v1/auth/refresh", {
       method: "POST",
       credentials: "include",
     });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { access_token: string };
+    if (res.status === 401 || res.status === 403) return { token: null, definitive: true };
+    if (!res.ok) return { token: null, definitive: false };
+    const data = (await res.json()) as { access_token?: unknown };
+    if (typeof data.access_token !== "string" || !data.access_token) {
+      return { token: null, definitive: false };
+    }
     useAuthStore.getState().setToken(data.access_token);
-    return data.access_token;
+    return { token: data.access_token, definitive: false };
   } catch {
-    return null;
+    // Tarmoq xatosi / timeout — sessiya haqida hech narsa deya olmaymiz
+    return { token: null, definitive: false };
   }
 }
 

@@ -33,6 +33,11 @@ export function Protected({ allowed, permission, allowedPermissions }: Props) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Birinchi kirishdagi majburiy parol almashtirish — backend ham boshqa endpointlarni 403 qiladi
+  if (user.must_change_password && location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" replace />;
+  }
+
   if (allowed && !allowed.includes(user.role)) {
     return <Navigate to="/" replace />;
   }

@@ -1,6 +1,6 @@
 import { HTTPError } from "ky";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -27,23 +27,17 @@ type Props = {
   onSuccess: () => void;
 };
 
-export function BulkOverrideDialog({
-  open,
-  onClose,
-  selectedIds,
-  targetStatus,
-  onSuccess,
-}: Props) {
+export function BulkOverrideDialog({ open, onClose, selectedIds, targetStatus, onSuccess }: Props) {
   const { t } = useTranslation();
   const [note, setNote] = useState("");
   const bulkUpdate = useBulkAttendanceUpdate();
 
-  useEffect(() => {
-    if (!open) {
-      setNote("");
-      bulkUpdate.reset();
-    }
-  }, [open]);
+  // Yopilganda forma tozalanadi (effect o'rniga — exhaustive-deps ogohlantirishisiz)
+  const handleClose = () => {
+    setNote("");
+    bulkUpdate.reset();
+    onClose();
+  };
 
   if (!targetStatus) return null;
 
@@ -51,7 +45,11 @@ export function BulkOverrideDialog({
 
   const handleSubmit = async () => {
     if (!isGreen && !note.trim()) {
-      toast.error(t("attendanceDayDetailDialog.reasonRequired", { defaultValue: "Rad etish sababini kiriting" }));
+      toast.error(
+        t("attendanceDayDetailDialog.reasonRequired", {
+          defaultValue: "Rad etish sababini kiriting",
+        }),
+      );
       return;
     }
 
@@ -74,7 +72,7 @@ export function BulkOverrideDialog({
             }),
       );
       onSuccess();
-      onClose();
+      handleClose();
     } catch (e) {
       toast.error(
         e instanceof HTTPError
@@ -85,7 +83,7 @@ export function BulkOverrideDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
@@ -117,11 +115,13 @@ export function BulkOverrideDialog({
             <AlertTitle className="text-sm font-medium">
               {isGreen
                 ? t("adminAttendance.bulkGreenAlert", {
-                    defaultValue: "Barcha {{count}} ta yozuv 'Kelgan / Tasdiqlangan' holatiga o'tadi.",
+                    defaultValue:
+                      "Barcha {{count}} ta yozuv 'Kelgan / Tasdiqlangan' holatiga o'tadi.",
                     count: selectedIds.length,
                   })
                 : t("adminAttendance.bulkRedAlert", {
-                    defaultValue: "Barcha {{count}} ta yozuv 'Rad etilgan / Qizil' holatiga o'tadi.",
+                    defaultValue:
+                      "Barcha {{count}} ta yozuv 'Rad etilgan / Qizil' holatiga o'tadi.",
                     count: selectedIds.length,
                   })}
             </AlertTitle>
@@ -151,7 +151,12 @@ export function BulkOverrideDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" type="button" onClick={onClose} disabled={bulkUpdate.isPending}>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={handleClose}
+            disabled={bulkUpdate.isPending}
+          >
             {t("common.cancel", { defaultValue: "Bekor qilish" })}
           </Button>
           <Button

@@ -1,0 +1,113 @@
+{
+  "common": {
+    "quickSelect": "Tezkor tanlash:",
+    "selectAll": "Sahifadagi barchasi"
+  },
+  "adminAttendance": {
+    "tabStudents": "Talabalar",
+    "tabDays": "Kunlar",
+    "searchPlaceholder": "Talaba: F.I.SH., HEMIS ID yoki login...",
+    "assignmentStatus": "Biriktirish holati",
+    "assignmentStatusDefault": "Aktiv + qoralama",
+    "assignmentStatuses": {
+      "active": "Aktiv",
+      "draft": "Qoralama",
+      "completed": "Yakunlangan",
+      "cancelled": "Bekor qilingan"
+    },
+    "sort": "Saralash",
+    "sorts": {
+      "name": "F.I.SH. bo'yicha",
+      "percent_asc": "Davomat % (past → yuqori)",
+      "percent_desc": "Davomat % (yuqori → past)",
+      "red_desc": "Qizillar ko'p → kam"
+    },
+    "period": "Muddat",
+    "lastCheckIn": "Oxirgi kelish",
+    "selectedStudents": "Tanlangan: {{count}} ta talaba",
+    "rangeForSelected": "Tanlanganlar uchun oraliq belgilash",
+    "noStudentsTitle": "Talaba topilmadi",
+    "noStudentsSearch": "«{{q}}» bo'yicha mos talaba yo'q. Qidiruvni yoki filtrlarni o'zgartiring.",
+    "noStudentsDefault": "Filtrlarga mos aktiv biriktirish yo'q",
+    "selectedCount": "Tanlangan: {{count}} ta yozuv",
+    "selectPending": "Kutilayotganlar",
+    "selectRed": "Qizillar",
+    "bulkApproveBtn": "Ommaviy tasdiqlash (Yashil)",
+    "bulkRejectBtn": "Ommaviy rad etish (Qizil)",
+    "bulkApproveTitle": "Ommaviy tasdiqlash (Yashil)",
+    "bulkRejectTitle": "Ommaviy rad etish (Qizil)",
+    "bulkDesc": "Tanlangan {{count}} ta yozuv o'zgartiriladi.",
+    "bulkGreenAlert": "Barcha {{count}} ta yozuv 'Kelgan / Tasdiqlangan' holatiga o'tadi.",
+    "bulkRedAlert": "Barcha {{count}} ta yozuv 'Rad etilgan / Qizil' holatiga o'tadi.",
+    "bulkNotePlaceholderGreen": "Ixtiyoriy izoh kiriting...",
+    "bulkNotePlaceholderRed": "Rad etish sababini yozing...",
+    "bulkGreenSuccess": "{{count}} ta davomat yozuvi tasdiqlandi (yashil)",
+    "bulkRedSuccess": "{{count}} ta davomat yozuvi rad etildi (qizil)",
+    "confirmApprove": "Tasdiqlash",
+    "confirmReject": "Rad etish"
+  },
+  "attendanceStudentView": {
+    "requiredWeekdays": "Talab qilingan kunlar",
+    "expected": "Kutilgan",
+    "percent": "Davomat %",
+    "openInDays": "Kunlar ro'yxati",
+    "greenThisMonth": "Shu oyni yashil qilish",
+    "cellHint": "Katakchani bosib kunni belgilang yoki tahrirlang (kelajak kunlar ham).",
+    "monthRecords": "Shu oydagi yozuvlar",
+    "noMonthRecords": "Bu oyda yozuv yo'q"
+  },
+  "attendanceDayEdit": {
+    "titleNew": "Kunni belgilash",
+    "titleEdit": "Kunni tahrirlash",
+    "noRecordYet": "Yozuv yo'q",
+    "futureHint": "Kelajakdagi sana: bu oldindan tasdiqlash. Talaba shu kuni check-in qilsa, status o'zgarmaydi.",
+    "timesHint": "Vaqtlar ixtiyoriy. Bo'sh qoldirilsa mavjud qiymat tozalanadi.",
+    "timesInvalid": "Ketish vaqti kelish vaqtidan oldin bo'lishi mumkin emas",
+    "notePlaceholder": "Talabaga ko'rinadigan izoh (ixtiyoriy)",
+    "reason": "Sabab (audit uchun)",
+    "reasonRequired": "Sabab (kamida 3 belgi) majburiy",
+    "saved": "{{date}} — {{status}} sifatida saqlandi"
+  },
+  "attendanceRange": {
+    "title": "Oraliqni belgilash",
+    "multiDescription": "{{count}} ta talaba tanlangan",
+    "mode": "Rejim",
+    "modeFill": "To'ldirish",
+    "modeFillHint": "Faqat yozuvsiz yoki kutilayotgan kunlar o'zgaradi",
+    "modeOverwrite": "Qayta yozish",
+    "modeOverwriteHint": "Oraliqdagi har bir kun shu statusni oladi (yashil/qizil ham)",
+    "onlyRequired": "Faqat talab qilingan hafta kunlari",
+    "onlyRequiredHint": "Yakshanba va jadvalga kirmagan kunlar o'tkazib yuboriladi",
+    "invalidRange": "Sana oralig'i noto'g'ri",
+    "previewNone": "Bu oraliqda belgilanadigan kun yo'q",
+    "previewDetail": "{{from}} — {{to}}: {{create}} ta yangi, {{update}} ta yangilanadi, {{skip}} ta o'tkazib yuboriladi",
+    "previewApprox": "{{from}} — {{to}}: ko'pi bilan {{count}} ta kun ({{assignments}} ta talaba)",
+    "reasonPlaceholder": "Masalan: rektor buyrug'i №12 — bayram kunlari",
+    "submit": "Belgilash",
+    "resultToast": "Yaratildi: {{created}}, yangilandi: {{updated}}, o'tkazib yuborildi: {{skipped}}",
+    "bulkResultToast": "{{assignments}} ta talaba · yaratildi: {{created}}, yangilandi: {{updated}}, o'tkazib yuborildi: {{skipped}}",
+    "bulkFailedToast": "{{count}} ta biriktirishda xatolik: {{first}}"
+  },
+  "attendanceMonthGrid": {
+    "weekdays": {
+      "mon": "Dush",
+      "tue": "Sesh",
+      "wed": "Chor",
+      "thu": "Pay",
+      "fri": "Jum",
+      "sat": "Shan",
+      "sun": "Yak"
+    },
+    "weekdaysShort": {
+      "mon": "Du",
+      "tue": "Se",
+      "wed": "Ch",
+      "thu": "Pa",
+      "fri": "Ju",
+      "sat": "Sh",
+      "sun": "Ya"
+    },
+    "notRequired": "Talab qilinmaydi",
+    "today": "Bugun"
+  }
+}

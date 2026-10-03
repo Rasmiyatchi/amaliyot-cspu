@@ -1,0 +1,113 @@
+{
+  "common": {
+    "quickSelect": "Быстрый выбор:",
+    "selectAll": "Все на странице"
+  },
+  "adminAttendance": {
+    "tabStudents": "Студенты",
+    "tabDays": "Дни",
+    "searchPlaceholder": "Студент: Ф.И.О., HEMIS ID или логин...",
+    "assignmentStatus": "Статус прикрепления",
+    "assignmentStatusDefault": "Активные + черновики",
+    "assignmentStatuses": {
+      "active": "Активное",
+      "draft": "Черновик",
+      "completed": "Завершено",
+      "cancelled": "Отменено"
+    },
+    "sort": "Сортировка",
+    "sorts": {
+      "name": "По Ф.И.О.",
+      "percent_asc": "Посещаемость % (низкая → высокая)",
+      "percent_desc": "Посещаемость % (высокая → низкая)",
+      "red_desc": "Красных больше → меньше"
+    },
+    "period": "Период",
+    "lastCheckIn": "Последний приход",
+    "selectedStudents": "Выбрано: {{count}} студент(ов)",
+    "rangeForSelected": "Отметить период для выбранных",
+    "noStudentsTitle": "Студент не найден",
+    "noStudentsSearch": "По запросу «{{q}}» ничего не найдено. Измените поиск или фильтры.",
+    "noStudentsDefault": "Нет активных прикреплений по заданным фильтрам",
+    "selectedCount": "Выбрано: {{count}} записей",
+    "selectPending": "Ожидающие",
+    "selectRed": "Красные",
+    "bulkApproveBtn": "Массовое подтверждение (Зелёный)",
+    "bulkRejectBtn": "Массовое отклонение (Красный)",
+    "bulkApproveTitle": "Массовое подтверждение (Зелёный)",
+    "bulkRejectTitle": "Массовое отклонение (Красный)",
+    "bulkDesc": "Будет изменено {{count}} выбранных записей.",
+    "bulkGreenAlert": "Все {{count}} записей перейдут в статус 'Присутствовал / Подтверждено'.",
+    "bulkRedAlert": "Все {{count}} записей перейдут в статус 'Отклонено / Красный'.",
+    "bulkNotePlaceholderGreen": "Необязательное примечание...",
+    "bulkNotePlaceholderRed": "Укажите причину отклонения...",
+    "bulkGreenSuccess": "Подтверждено {{count}} записей посещаемости (зелёный)",
+    "bulkRedSuccess": "Отклонено {{count}} записей посещаемости (красный)",
+    "confirmApprove": "Подтвердить",
+    "confirmReject": "Отклонить"
+  },
+  "attendanceStudentView": {
+    "requiredWeekdays": "Обязательные дни",
+    "expected": "Ожидалось",
+    "percent": "Посещаемость %",
+    "openInDays": "Список дней",
+    "greenThisMonth": "Отметить месяц зелёным",
+    "cellHint": "Нажмите на ячейку, чтобы отметить или изменить день (включая будущие дни).",
+    "monthRecords": "Записи за этот месяц",
+    "noMonthRecords": "В этом месяце записей нет"
+  },
+  "attendanceDayEdit": {
+    "titleNew": "Отметить день",
+    "titleEdit": "Редактировать день",
+    "noRecordYet": "Записи нет",
+    "futureHint": "Будущая дата: это предварительное подтверждение. Если студент отметится в этот день, статус не изменится.",
+    "timesHint": "Время необязательно. Если оставить пустым, текущее значение будет очищено.",
+    "timesInvalid": "Время ухода не может быть раньше времени прихода",
+    "notePlaceholder": "Примечание, видимое студенту (необязательно)",
+    "reason": "Причина (для аудита)",
+    "reasonRequired": "Причина (минимум 3 символа) обязательна",
+    "saved": "{{date}} — сохранено как {{status}}"
+  },
+  "attendanceRange": {
+    "title": "Отметить период",
+    "multiDescription": "Выбрано студентов: {{count}}",
+    "mode": "Режим",
+    "modeFill": "Заполнить",
+    "modeFillHint": "Изменятся только дни без записи или в статусе «ожидает»",
+    "modeOverwrite": "Перезаписать",
+    "modeOverwriteHint": "Каждый день периода получит этот статус (в том числе зелёные/красные)",
+    "onlyRequired": "Только обязательные дни недели",
+    "onlyRequiredHint": "Воскресенье и дни вне расписания будут пропущены",
+    "invalidRange": "Неверный период дат",
+    "previewNone": "В этом периоде нет дней для отметки",
+    "previewDetail": "{{from}} — {{to}}: новых {{create}}, обновится {{update}}, пропущено {{skip}}",
+    "previewApprox": "{{from}} — {{to}}: не более {{count}} дней ({{assignments}} студ.)",
+    "reasonPlaceholder": "Например: приказ ректора №12 — праздничные дни",
+    "submit": "Отметить",
+    "resultToast": "Создано: {{created}}, обновлено: {{updated}}, пропущено: {{skipped}}",
+    "bulkResultToast": "{{assignments}} студ. · создано: {{created}}, обновлено: {{updated}}, пропущено: {{skipped}}",
+    "bulkFailedToast": "Ошибка в {{count}} прикреплениях: {{first}}"
+  },
+  "attendanceMonthGrid": {
+    "weekdays": {
+      "mon": "Пн",
+      "tue": "Вт",
+      "wed": "Ср",
+      "thu": "Чт",
+      "fri": "Пт",
+      "sat": "Сб",
+      "sun": "Вс"
+    },
+    "weekdaysShort": {
+      "mon": "Пн",
+      "tue": "Вт",
+      "wed": "Ср",
+      "thu": "Чт",
+      "fri": "Пт",
+      "sat": "Сб",
+      "sun": "Вс"
+    },
+    "notRequired": "Не требуется",
+    "today": "Сегодня"
+  }
+}

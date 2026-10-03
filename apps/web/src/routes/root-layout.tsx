@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import { InAppBrowserWarning } from "@/components/in-app-browser-warning";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { ProfileDialog } from "@/components/profile-dialog";
 import { RouteTransition } from "@/components/route-transition";
@@ -38,6 +39,8 @@ export function RootLayout() {
   return (
     <MaintenanceGuard>
       <div className="min-h-screen bg-background">
+        {/* Telegram/Instagram ichidagi brauzer — GPS va qurilma bog'lash ishlamaydi */}
+        <InAppBrowserWarning />
         {!isEvolvePublicPage && (
           <header className="border-b border-border bg-background/95 backdrop-blur-xs sticky top-0 z-40">
             <div className="container mx-auto flex h-14 items-center justify-between px-3 sm:px-6">

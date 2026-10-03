@@ -314,7 +314,48 @@
       "red": "Qizil"
     },
     "subtitle": "Kunlik davomat: kelish, ketish va tasdiqlash",
-    "title": "Davomat"
+    "title": "Davomat",
+    "tabStudents": "Talabalar",
+    "tabDays": "Kunlar",
+    "searchPlaceholder": "Talaba: F.I.SH., HEMIS ID yoki login...",
+    "assignmentStatus": "Biriktirish holati",
+    "assignmentStatusDefault": "Aktiv + qoralama",
+    "assignmentStatuses": {
+      "active": "Aktiv",
+      "draft": "Qoralama",
+      "completed": "Yakunlangan",
+      "cancelled": "Bekor qilingan"
+    },
+    "sort": "Saralash",
+    "sorts": {
+      "name": "F.I.SH. bo'yicha",
+      "percent_asc": "Davomat % (past → yuqori)",
+      "percent_desc": "Davomat % (yuqori → past)",
+      "red_desc": "Qizillar ko'p → kam"
+    },
+    "period": "Muddat",
+    "lastCheckIn": "Oxirgi kelish",
+    "selectedStudents": "Tanlangan: {{count}} ta talaba",
+    "rangeForSelected": "Tanlanganlar uchun oraliq belgilash",
+    "noStudentsTitle": "Talaba topilmadi",
+    "noStudentsSearch": "«{{q}}» bo'yicha mos talaba yo'q. Qidiruvni yoki filtrlarni o'zgartiring.",
+    "noStudentsDefault": "Filtrlarga mos aktiv biriktirish yo'q",
+    "selectedCount": "Tanlangan: {{count}} ta yozuv",
+    "selectPending": "Kutilayotganlar",
+    "selectRed": "Qizillar",
+    "bulkApproveBtn": "Ommaviy tasdiqlash (Yashil)",
+    "bulkRejectBtn": "Ommaviy rad etish (Qizil)",
+    "bulkApproveTitle": "Ommaviy tasdiqlash (Yashil)",
+    "bulkRejectTitle": "Ommaviy rad etish (Qizil)",
+    "bulkDesc": "Tanlangan {{count}} ta yozuv o'zgartiriladi.",
+    "bulkGreenAlert": "Barcha {{count}} ta yozuv 'Kelgan / Tasdiqlangan' holatiga o'tadi.",
+    "bulkRedAlert": "Barcha {{count}} ta yozuv 'Rad etilgan / Qizil' holatiga o'tadi.",
+    "bulkNotePlaceholderGreen": "Ixtiyoriy izoh kiriting...",
+    "bulkNotePlaceholderRed": "Rad etish sababini yozing...",
+    "bulkGreenSuccess": "{{count}} ta davomat yozuvi tasdiqlandi (yashil)",
+    "bulkRedSuccess": "{{count}} ta davomat yozuvi rad etildi (qizil)",
+    "confirmApprove": "Tasdiqlash",
+    "confirmReject": "Rad etish"
   },
   "adminAuditLog": {
     "action": {
@@ -1042,19 +1083,6 @@
     "toRed": "Qizilga",
     "withinFence": "✓ hududda"
   },
-  "attendanceMarkRedDialog": {
-    "description": "Faqat o'tgan kunlar uchun. Check-in yo'q kunni qizil sifatida belgilaydi.",
-    "errors": {
-      "dateRequired": "Sanani kiriting"
-    },
-    "noteLabel": "Izoh (ixtiyoriy)",
-    "notePlaceholder": "Talaba nima uchun kelmadi?",
-    "submit": "Qizilga belgilash",
-    "title": "Qizilga belgilash",
-    "toasts": {
-      "marked": "{{date}} qizilga belgilandi"
-    }
-  },
   "attendanceOverrideDialog": {
     "description": "Hozirgi status: <0>{{status}}</0>. Bu amal audit jurnalga yoziladi.",
     "newStatus": "Yangi status",
@@ -1084,7 +1112,28 @@
       "title": "Tizimga kirish",
       "username": "Login",
       "usernamePlaceholder": "Talaba ID yoki username",
-      "welcome": "Xush kelibsiz, {{name}}!"
+      "welcome": "Xush kelibsiz, {{name}}!",
+      "brand": {
+        "kicker": "4+2 RAQAMLI AMALIYOT",
+        "headline": "Ta'limni tajriba<br/>bilan <em>bog'laymiz.</em>",
+        "description": "Chirchiq davlat pedagogika universiteti talabalari, rahbarlari va fakultetlari uchun yagona professional akademik muhit.",
+        "metricValue": "4+2",
+        "metricTheory": "NAZARIYA",
+        "metricPractice": "+ AMALIYOT"
+      },
+      "secureIndex": "XAVFSIZ KIRISH",
+      "secureNote": "Ma'lumotlaringiz maxfiy va xavfsiz himoyalangan",
+      "passwordPlaceholder": "Parolingiz",
+      "invalidCredentials": "Login yoki parol noto'g'ri.",
+      "forbidden": "Kirish taqiqlangan. Administratorga murojaat qiling.",
+      "blockedTitle": "Kirish cheklangan",
+      "deviceHelp": "Administratorga murojaat qiling — eski qurilma o'chirilgach qayta kirasiz.",
+      "blockedHelp": "Hisobingiz holati bo'yicha fakultet administratoriga murojaat qiling.",
+      "validation": "Ma'lumotlar noto'g'ri formatda.",
+      "validationHints": "Login kamida 3 belgi, parol kamida 4 belgi bo'lishi kerak.",
+      "tooManyAttempts": "Juda ko'p urinish. Bir necha daqiqadan so'ng qayta urinib ko'ring.",
+      "serverError": "Serverda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.",
+      "networkError": "Server bilan aloqa yo'q. Internet ulanishini tekshirib, qayta urinib ko'ring."
     }
   },
   "changePassword": {
@@ -1169,7 +1218,10 @@
     "updated": "Yangilandi",
     "upload": "Yuklash",
     "viewInBrowser": "Saytda ko'rish",
-    "yes": "Ha"
+    "yes": "Ha",
+    "quickSelect": "Tezkor tanlash:",
+    "selectAll": "Sahifadagi barchasi",
+    "seconds": "soniya"
   },
   "contractsContractDetailDialog": {
     "downloadPdf": "PDF yuklab olish",
@@ -1748,7 +1800,18 @@
     "noActivePractice": "Hozir aktiv amaliyotingiz yo'q",
     "readyForCheckOut": "6 soatlik amaliyot vaqti to'ldi! Endi ketishni qayd etishingiz mumkin.",
     "remainingTime": "Qolgan vaqt",
-    "unlocksAt": "Ketish ochiladi"
+    "unlocksAt": "Ketish ochiladi",
+    "acquiring": "Joylashuv aniqlanmoqda…",
+    "waitingFirstFix": "GPS signal kutilmoqda…",
+    "currentAccuracy": "Hozirgi aniqlik: ±{{m}} m",
+    "acquiringTip": "Ochiq joyda turing, telefonda GPS va Wi-Fi yoqilgan bo'lsin. 20 soniyagacha davom etishi mumkin.",
+    "accuracy": "Aniqlik: ±{{m}} m",
+    "lowAccuracy": "Aniqlik past (±{{m}} m) — hudud tekshiruvi xato bo'lishi mumkin. Ochiq joyga chiqib, GPS yoqilganini tekshiring.",
+    "deniedTitle": "Joylashuvga ruxsat yo'q",
+    "geoFailedTitle": "Joylashuv aniqlanmadi",
+    "reaskPermission": "Ruxsatni qayta so'rash",
+    "retryLocation": "Qayta aniqlash",
+    "locationReady": "Joylashuv aniqlandi (±{{m}} m). Endi tugmani bosing."
   },
   "studentDocumentsCard": {
     "empty": "Hali fayl yuklamagansiz. Topshiriq, kundalik yoki dars tahlilida fayl biriktiring.",
@@ -1903,7 +1966,16 @@
     "sectionPersonal": "Shaxsiy ma'lumot",
     "semesterN": "{{n}}-semestr",
     "studentDeleted": "Talaba o'chirildi",
-    "unknownDevice": "Noma'lum qurilma"
+    "unknownDevice": "Noma'lum qurilma",
+    "device": {
+      "platform": "Platforma",
+      "model": "Model",
+      "browser": "Brauzer",
+      "screen": "Ekran",
+      "timezone": "Vaqt mintaqasi",
+      "language": "Til",
+      "resetTitle": "Qurilmani o'chirish"
+    }
   },
   "studentsStudentFormDialog": {
     "autoCredentialsInfo": "Login va parol avtomatik generatsiya qilinadi (12 raqamli, \"2500\" bilan boshlanadi). Talaba birinchi kirishda parolni o'zgartiradi.",
@@ -2275,5 +2347,98 @@
     },
     "title": "Shartnoma tekshiruvi",
     "valid": "Yaroqli"
+  },
+  "inAppBrowser": {
+    "title": "Siz {{app}} ichidagi brauzerdan kirmoqdasiz",
+    "body": "Bu rejimda joylashuv (GPS) ruxsati va qurilma bog'lash to'g'ri ishlamaydi — davomat qayd etilmasligi yoki profil \"boshqa qurilma\" deb bloklanishi mumkin. Saytni Chrome yoki Safari brauzerida oching va doim o'sha brauzerdan kiring.",
+    "stepsAndroid": "Android: yuqori o'ng burchakdagi ⋮ (menyu) → \"Chrome'da ochish\" yoki havolani nusxalab Chrome manzil qatoriga qo'ying.",
+    "stepsIos": "iPhone: pastdagi Safari belgisiga yoki \"Safari'da ochish\" ga bosing, yoki havolani nusxalab Safari'ga qo'ying.",
+    "stepsGeneric": "Havolani nusxalab, oddiy brauzerda (Chrome, Safari, Firefox) oching.",
+    "copyLink": "Havolani nusxalash",
+    "copied": "Nusxalandi",
+    "copyFallback": "Havolani nusxalab oling:",
+    "genericApp": "ilova"
+  },
+  "attendanceStudentView": {
+    "requiredWeekdays": "Talab qilingan kunlar",
+    "expected": "Kutilgan",
+    "percent": "Davomat %",
+    "openInDays": "Kunlar ro'yxati",
+    "greenThisMonth": "Shu oyni yashil qilish",
+    "cellHint": "Katakchani bosib kunni belgilang yoki tahrirlang (kelajak kunlar ham).",
+    "monthRecords": "Shu oydagi yozuvlar",
+    "noMonthRecords": "Bu oyda yozuv yo'q"
+  },
+  "attendanceDayEdit": {
+    "titleNew": "Kunni belgilash",
+    "titleEdit": "Kunni tahrirlash",
+    "noRecordYet": "Yozuv yo'q",
+    "futureHint": "Kelajakdagi sana: bu oldindan tasdiqlash. Talaba shu kuni check-in qilsa, status o'zgarmaydi.",
+    "timesHint": "Vaqtlar ixtiyoriy. Bo'sh qoldirilsa mavjud qiymat tozalanadi.",
+    "timesInvalid": "Ketish vaqti kelish vaqtidan oldin bo'lishi mumkin emas",
+    "notePlaceholder": "Talabaga ko'rinadigan izoh (ixtiyoriy)",
+    "reason": "Sabab (audit uchun)",
+    "reasonRequired": "Sabab (kamida 3 belgi) majburiy",
+    "saved": "{{date}} — {{status}} sifatida saqlandi"
+  },
+  "attendanceRange": {
+    "title": "Oraliqni belgilash",
+    "multiDescription": "{{count}} ta talaba tanlangan",
+    "mode": "Rejim",
+    "modeFill": "To'ldirish",
+    "modeFillHint": "Faqat yozuvsiz yoki kutilayotgan kunlar o'zgaradi",
+    "modeOverwrite": "Qayta yozish",
+    "modeOverwriteHint": "Oraliqdagi har bir kun shu statusni oladi (yashil/qizil ham)",
+    "onlyRequired": "Faqat talab qilingan hafta kunlari",
+    "onlyRequiredHint": "Yakshanba va jadvalga kirmagan kunlar o'tkazib yuboriladi",
+    "invalidRange": "Sana oralig'i noto'g'ri",
+    "previewNone": "Bu oraliqda belgilanadigan kun yo'q",
+    "previewDetail": "{{from}} — {{to}}: {{create}} ta yangi, {{update}} ta yangilanadi, {{skip}} ta o'tkazib yuboriladi",
+    "previewApprox": "{{from}} — {{to}}: ko'pi bilan {{count}} ta kun ({{assignments}} ta talaba)",
+    "reasonPlaceholder": "Masalan: rektor buyrug'i №12 — bayram kunlari",
+    "submit": "Belgilash",
+    "resultToast": "Yaratildi: {{created}}, yangilandi: {{updated}}, o'tkazib yuborildi: {{skipped}}",
+    "bulkResultToast": "{{assignments}} ta talaba · yaratildi: {{created}}, yangilandi: {{updated}}, o'tkazib yuborildi: {{skipped}}",
+    "bulkFailedToast": "{{count}} ta biriktirishda xatolik: {{first}}"
+  },
+  "attendanceMonthGrid": {
+    "weekdays": {
+      "mon": "Dush",
+      "tue": "Sesh",
+      "wed": "Chor",
+      "thu": "Pay",
+      "fri": "Jum",
+      "sat": "Shan",
+      "sun": "Yak"
+    },
+    "weekdaysShort": {
+      "mon": "Du",
+      "tue": "Se",
+      "wed": "Ch",
+      "thu": "Pa",
+      "fri": "Ju",
+      "sat": "Sh",
+      "sun": "Ya"
+    },
+    "notRequired": "Talab qilinmaydi",
+    "today": "Bugun"
+  },
+  "geo": {
+    "error": {
+      "denied": "Joylashuvga ruxsat berilmagan. Davomat uchun joylashuv shart.",
+      "unavailable": "Qurilma joylashuvni aniqlay olmadi.",
+      "timeout": "Joylashuv belgilangan vaqtda aniqlanmadi.",
+      "insecure": "Sayt xavfsiz ulanish (https) orqali ochilmagan — joylashuv ishlamaydi.",
+      "unsupported": "Brauzeringiz joylashuvni qo'llamaydi."
+    },
+    "help": {
+      "android": "Chrome: manzil satridagi qulf belgisini bosing → Ruxsatlar → Joylashuv → Ruxsat berish.\nTelefon Sozlamalari → Joylashuv (GPS) yoqilgan bo'lishi shart.\nSo'ng «Ruxsatni qayta so'rash» tugmasini bosing yoki sahifani yangilang.",
+      "ios": "iPhone: Sozlamalar → Maxfiylik va xavfsizlik → Joylashuv xizmatlari → Safari veb-saytlari → «Foydalanish vaqtida».\nSafari'da manzil satridagi «aA» → Veb-sayt sozlamalari → Joylashuv → Ruxsat berish.\nSo'ng sahifani yangilang.",
+      "desktop": "Brauzer manzil satridagi qulf belgisini bosing → Sayt sozlamalari → Joylashuv → Ruxsat berish, so'ng sahifani yangilang.",
+      "unavailable": "Telefon sozlamalarida Joylashuv (GPS) yoqilganini tekshiring.\nOchiq joyga chiqing, Wi-Fi va mobil internetni yoqing, so'ng qayta urinib ko'ring.",
+      "timeout": "Bino ichida GPS signal zaif bo'ladi — deraza yoniga yoki hovliga chiqing.\nWi-Fi yoqilgan bo'lsa joylashuv tezroq aniqlanadi. Keyin qayta urinib ko'ring.",
+      "insecure": "Manzilni https:// bilan boshlanadigan ko'rinishda qayta oching.",
+      "unsupported": "Chrome yoki Safari'ning yangi versiyasidan foydalaning."
+    }
   }
 }

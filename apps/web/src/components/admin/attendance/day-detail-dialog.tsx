@@ -5,6 +5,7 @@ import {
   History,
   Loader2,
   MapPin,
+  Pencil,
   ShieldCheck,
   XCircle,
 } from "lucide-react";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 
 import { dateLocale } from "@/i18n";
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
+import { DayEditDialog } from "@/components/admin/attendance/day-edit-dialog";
 import { OverrideDialog } from "@/components/admin/attendance/override-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -39,8 +41,7 @@ type Props = {
   onClose: () => void;
 };
 
-const fmtDateTime = (s: string | null) =>
-  s ? new Date(s).toLocaleString(dateLocale()) : "—";
+const fmtDateTime = (s: string | null) => (s ? new Date(s).toLocaleString(dateLocale()) : "—");
 
 const fmtNum = (v: string | number | null): string => {
   if (v === null || v === undefined) return "—";
@@ -54,6 +55,7 @@ export function DayDetailDialog({ day, onClose }: Props) {
   const isSuperAdmin = role === "super_admin";
 
   const [overrideOpen, setOverrideOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -131,17 +133,25 @@ export function DayDetailDialog({ day, onClose }: Props) {
               </>
             )}
             {isSuperAdmin && (
-              <Button variant="outline" onClick={() => setOverrideOpen(true)}>
-                <ShieldCheck className="h-4 w-4" />
-                Override
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => setEditOpen(true)}>
+                  <Pencil className="h-4 w-4" />
+                  {t("common.edit")}
+                </Button>
+                <Button variant="outline" onClick={() => setOverrideOpen(true)}>
+                  <ShieldCheck className="h-4 w-4" />
+                  Override
+                </Button>
+              </>
             )}
           </div>
 
           {rejectMode && (
             <Alert>
               <AlertDescription className="space-y-2">
-                <div className="text-sm font-medium">{t("attendanceDayDetailDialog.rejectReason")}</div>
+                <div className="text-sm font-medium">
+                  {t("attendanceDayDetailDialog.rejectReason")}
+                </div>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
@@ -172,19 +182,27 @@ export function DayDetailDialog({ day, onClose }: Props) {
           {/* Meta */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
-              <div className="text-xs text-muted-foreground">{t("attendanceDayDetailDialog.checkInTime")}</div>
+              <div className="text-xs text-muted-foreground">
+                {t("attendanceDayDetailDialog.checkInTime")}
+              </div>
               <div>{fmtDateTime(day.check_in_at)}</div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">{t("attendanceDayDetailDialog.checkOutTime")}</div>
+              <div className="text-xs text-muted-foreground">
+                {t("attendanceDayDetailDialog.checkOutTime")}
+              </div>
               <div>{fmtDateTime(day.check_out_at)}</div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">{t("attendanceDayDetailDialog.approvedBy")}</div>
+              <div className="text-xs text-muted-foreground">
+                {t("attendanceDayDetailDialog.approvedBy")}
+              </div>
               <div>{day.approved_by_name ?? "—"}</div>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground">{t("attendanceDayDetailDialog.approvedAt")}</div>
+              <div className="text-xs text-muted-foreground">
+                {t("attendanceDayDetailDialog.approvedAt")}
+              </div>
               <div>{fmtDateTime(day.approved_at)}</div>
             </div>
             {day.note && (
@@ -214,10 +232,7 @@ export function DayDetailDialog({ day, onClose }: Props) {
             {detail && detail.events.length > 0 && (
               <div className="space-y-2">
                 {detail.events.map((ev) => (
-                  <div
-                    key={ev.id}
-                    className="rounded-md border border-border p-2 text-sm"
-                  >
+                  <div key={ev.id} className="rounded-md border border-border p-2 text-sm">
                     <div className="flex items-center justify-between">
                       <div className="font-medium">
                         {ev.kind === "check_in"
@@ -242,7 +257,9 @@ export function DayDetailDialog({ day, onClose }: Props) {
                           })}
                         </span>
                       )}
-                      <span className={ev.is_within_fence ? "text-emerald-600" : "text-destructive"}>
+                      <span
+                        className={ev.is_within_fence ? "text-emerald-600" : "text-destructive"}
+                      >
                         {ev.is_within_fence
                           ? t("attendanceDayDetailDialog.withinFence")
                           : t("attendanceDayDetailDialog.outsideFence")}
@@ -288,9 +305,11 @@ export function DayDetailDialog({ day, onClose }: Props) {
         </DialogContent>
       </Dialog>
 
-      <OverrideDialog
-        day={overrideOpen ? day : null}
-        onClose={() => setOverrideOpen(false)}
+      <OverrideDialog day={overrideOpen ? day : null} onClose={() => setOverrideOpen(false)} />
+      <DayEditDialog
+        target={editOpen ? { kind: "day", day } : null}
+        onClose={() => setEditOpen(false)}
+        onSaved={onClose}
       />
     </>
   );
