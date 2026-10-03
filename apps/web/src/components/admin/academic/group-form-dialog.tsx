@@ -2,12 +2,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { TFunction } from "i18next";
 import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import {
+  SearchableSelect,
+  type SearchableOption,
+} from "@/components/admin/academic/searchable-select";
+import { applyServerFieldErrors } from "@/components/admin/students/server-field-errors";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,18 +28,22 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   useAcademicYears,
+  useAllDirections,
   useCreateGroup,
-  useDirections,
   useUpdateGroup,
 } from "@/lib/api/academic";
 import type { Group } from "@/lib/api/types";
 
 const makeSchema = (t: TFunction) =>
   z.object({
-    direction_id: z.string().uuid(t("academicGroupFormDialog.directionRequired")),
-    academic_year_id: z.string().uuid(t("academicGroupFormDialog.yearRequired")),
-    name: z.string().min(1).max(32),
-    course: z.coerce.number().int().min(1).max(5),
+    direction_id: z.string().min(1, t("academicGroupFormDialog.directionRequired")),
+    academic_year_id: z.string().min(1, t("academicGroupFormDialog.yearRequired")),
+    name: z
+      .string()
+      .trim()
+      .min(1, t("adminValidation.required"))
+      .max(32, t("adminValidation.maxChars", { n: 32 })),
+    course: z.number().int().min(1).max(5),
   });
 
 type Values = z.infer<ReturnType<typeof makeSchema>>;
@@ -45,44 +54,46 @@ export function GroupFormDialog({ open, existing, onClose }: Props) {
   const { t } = useTranslation();
   const create = useCreateGroup();
   const update = useUpdateGroup();
-  const directions = useDirections();
+  const directions = useAllDirections();
   const academicYears = useAcademicYears();
   const isEdit = !!existing;
 
+  const schema = useMemo(() => makeSchema(t), [t]);
   const form = useForm<Values>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(makeSchema(t)) as any,
-    defaultValues: {
-      direction_id: "",
-      academic_year_id: "",
-      name: "",
-      course: 1,
-    },
+    resolver: zodResolver(schema),
+    defaultValues: { direction_id: "", academic_year_id: "", name: "", course: 1 },
   });
 
   useEffect(() => {
-    if (open && existing) {
-      form.reset({
-        direction_id: existing.direction_id,
-        academic_year_id: existing.academic_year_id,
-        name: existing.name,
-        course: existing.course,
-      });
-    } else if (open) {
-      // yangi yaratishda — active AY ni avto-tanlash
-      const activeAy = academicYears.data?.find((ay) => ay.is_active);
-      form.reset({
-        direction_id: "",
-        academic_year_id: activeAy?.id ?? "",
-        name: "",
-        course: 1,
-      });
-    }
-  }, [open, existing, form, academicYears.data]);
+    if (!open) return;
+    form.reset(
+      existing
+        ? {
+            direction_id: existing.direction_id,
+            academic_year_id: existing.academic_year_id,
+            name: existing.name,
+            course: existing.course,
+          }
+        : { direction_id: "", academic_year_id: "", name: "", course: 1 },
+    );
+  }, [open, existing, form]);
+
+  // Yangi guruh: aktiv o'quv yilini avtomatik tanlash — o'quv yillari keyinroq yuklansa ham,
+  // lekin foydalanuvchi tanlovini (yoki boshqa kiritilgan maydonlarni) qayta yozmasdan.
+  const activeYearId = academicYears.data?.find((ay) => ay.is_active)?.id;
+  useEffect(() => {
+    if (!open || existing || !activeYearId) return;
+    if (!form.getValues("academic_year_id")) form.setValue("academic_year_id", activeYearId);
+  }, [open, existing, activeYearId, form]);
+
+  const directionOptions: SearchableOption[] = useMemo(
+    () => (directions.data ?? []).map((d) => ({ value: d.id, label: d.name, hint: d.code })),
+    [directions.data],
+  );
 
   const onSubmit = async (v: Values) => {
     try {
-      if (isEdit && existing) {
+      if (existing) {
         await update.mutateAsync({ id: existing.id, data: v });
         toast.success(t("academicGroupFormDialog.updated"));
       } else {
@@ -91,14 +102,16 @@ export function GroupFormDialog({ open, existing, onClose }: Props) {
       }
       onClose();
     } catch (e) {
+      await applyServerFieldErrors(form, e);
       toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   const busy = create.isPending || update.isPending;
+  const years = academicYears.data ?? [];
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
@@ -109,31 +122,26 @@ export function GroupFormDialog({ open, existing, onClose }: Props) {
           <DialogDescription>{t("academicGroupFormDialog.subtitle")}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3" noValidate>
             <FormField
               control={form.control}
               name="direction_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("common.direction")} *</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("academicGroupFormDialog.selectPlaceholder")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {(directions.data?.items ?? []).length === 0 ? (
-                        <SelectEmpty message={t("academicGroupFormDialog.noDirections")} />
-                      ) : (
-                        (directions.data?.items ?? []).map((d) => (
-                          <SelectItem key={d.id} value={d.id}>
-                            {d.code} — {d.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <SearchableSelect
+                      value={field.value || null}
+                      onChange={(v) => field.onChange(v ?? "")}
+                      options={directionOptions}
+                      loading={directions.isPending}
+                      placeholder={
+                        !directions.isPending && directionOptions.length === 0
+                          ? t("academicGroupFormDialog.noDirections")
+                          : t("academicGroupFormDialog.selectPlaceholder")
+                      }
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -151,10 +159,10 @@ export function GroupFormDialog({ open, existing, onClose }: Props) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {(academicYears.data ?? []).length === 0 ? (
+                      {years.length === 0 ? (
                         <SelectEmpty message={t("academicGroupFormDialog.noYears")} />
                       ) : (
-                        (academicYears.data ?? []).map((ay) => (
+                        years.map((ay) => (
                           <SelectItem key={ay.id} value={ay.id}>
                             {ay.name}
                             {ay.is_active ? t("common.activeSuffix") : ""}
@@ -167,7 +175,7 @@ export function GroupFormDialog({ open, existing, onClose }: Props) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="name"
@@ -187,7 +195,10 @@ export function GroupFormDialog({ open, existing, onClose }: Props) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t("common.course")} *</FormLabel>
-                    <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
+                    <Select
+                      value={String(field.value)}
+                      onValueChange={(v) => field.onChange(Number(v))}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />

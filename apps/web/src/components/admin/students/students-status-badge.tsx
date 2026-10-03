@@ -1,17 +1,16 @@
-import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
+
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import type { StudentStatus } from "@/lib/api/types";
 
-const STATUS_LABELS: Record<StudentStatus, string> = {
-  studying: "O'qiyapti",
-  graduated: "Bitirgan",
-  expelled: "Haydalgan",
-  academic_leave: "Akademik ta'til",
+const STATUS_LABEL_KEY: Record<StudentStatus, string> = {
+  studying: "studentsStudentsFilters.statusStudying",
+  graduated: "studentsStudentsFilters.statusGraduated",
+  expelled: "studentsStudentsFilters.statusExpelled",
+  academic_leave: "studentsStudentsFilters.statusAcademicLeave",
 };
 
-const STATUS_VARIANT: Record<
-  StudentStatus,
-  "default" | "secondary" | "destructive" | "success" | "warning" | "outline"
-> = {
+const STATUS_VARIANT: Record<StudentStatus, NonNullable<BadgeProps["variant"]>> = {
   studying: "success",
   graduated: "secondary",
   expelled: "destructive",
@@ -19,5 +18,6 @@ const STATUS_VARIANT: Record<
 };
 
 export function StudentStatusBadge({ status }: { status: StudentStatus }) {
-  return <Badge variant={STATUS_VARIANT[status]}>{STATUS_LABELS[status]}</Badge>;
+  const { t } = useTranslation();
+  return <Badge variant={STATUS_VARIANT[status]}>{t(STATUS_LABEL_KEY[status])}</Badge>;
 }

@@ -1,9 +1,9 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { ListPagination } from "@/components/admin/students/list-pagination";
+import { StudentStatusBadge } from "@/components/admin/students/students-status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { TableSkeleton } from "@/components/ui/loading-skeletons";
 import {
   Table,
@@ -13,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StudentStatusBadge } from "@/components/admin/students/students-status-badge";
 import { useStudents, type StudentFilters } from "@/lib/api/students";
 import type { Student } from "@/lib/api/types";
 
@@ -41,11 +40,11 @@ export function StudentsTable({
 }: Props) {
   const { t } = useTranslation();
   const q = useStudents(filters, page, pageSize);
-  const selectable = !!selectedIds && !!onToggleSelect && !!onTogglePage;
+  const selection =
+    selectedIds && onToggleSelect && onTogglePage
+      ? { selectedIds, onToggleSelect, onTogglePage }
+      : null;
 
-  if (q.isPending && !q.data) {
-    return <TableSkeleton rows={8} columns={6} />;
-  }
   if (q.error) {
     return (
       <Alert variant="destructive">
@@ -53,14 +52,16 @@ export function StudentsTable({
       </Alert>
     );
   }
+  if (!q.data) {
+    return <TableSkeleton rows={8} columns={6} />;
+  }
 
-  const data = q.data!;
+  const data = q.data;
   const pageIds = data.items.map((s) => s.id);
-  const allOnPageSelected =
-    selectable && pageIds.length > 0 && pageIds.every((id) => selectedIds!.has(id));
-  const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
-  const from = data.items.length === 0 ? 0 : (data.page - 1) * data.page_size + 1;
-  const to = (data.page - 1) * data.page_size + data.items.length;
+  const selectedOnPage = selection
+    ? pageIds.filter((id) => selection.selectedIds.has(id)).length
+    : 0;
+  const allOnPageSelected = pageIds.length > 0 && selectedOnPage === pageIds.length;
 
   return (
     <div className="space-y-3">
@@ -68,14 +69,18 @@ export function StudentsTable({
         <Table>
           <TableHeader>
             <TableRow>
-              {selectable && (
+              {selection && (
                 <TableHead className="w-[44px]">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 cursor-pointer"
+                    className="h-4 w-4 cursor-pointer accent-primary"
                     aria-label={t("studentsStudentsTable.selectAllOnPage")}
                     checked={allOnPageSelected}
-                    onChange={(e) => onTogglePage!(pageIds, e.target.checked)}
+                    ref={(el) => {
+                      if (el) el.indeterminate = selectedOnPage > 0 && !allOnPageSelected;
+                    }}
+                    disabled={pageIds.length === 0}
+                    onChange={(e) => selection.onTogglePage(pageIds, e.target.checked)}
                   />
                 </TableHead>
               )}
@@ -90,38 +95,47 @@ export function StudentsTable({
             {data.items.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={selectable ? 6 : 5}
-                  className="text-center text-muted-foreground"
+                  colSpan={selection ? 6 : 5}
+                  className="h-24 text-center text-muted-foreground"
                 >
                   {t("studentsStudentsTable.empty")}
                 </TableCell>
               </TableRow>
             )}
             {data.items.map((s) => (
-              <TableRow
-                key={s.id}
-                onClick={() => onRowClick(s)}
-                className="cursor-pointer"
-              >
-                {selectable && (
+              <TableRow key={s.id} onClick={() => onRowClick(s)} className="cursor-pointer">
+                {selection && (
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
-                      className="h-4 w-4 cursor-pointer"
-                      aria-label={t("studentsStudentsTable.selectRow")}
-                      checked={selectedIds!.has(s.id)}
-                      onChange={() => onToggleSelect!(s.id)}
+                      className="h-4 w-4 cursor-pointer accent-primary"
+                      aria-label={t("studentsStudentsTable.selectRowNamed", { name: s.full_name })}
+                      checked={selection.selectedIds.has(s.id)}
+                      onChange={() => selection.onToggleSelect(s.id)}
                     />
                   </TableCell>
                 )}
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
-                      {s.last_name[0]}
-                      {s.first_name[0]}
+                    <div
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold"
+                      aria-hidden="true"
+                    >
+                      {s.last_name.charAt(0)}
+                      {s.first_name.charAt(0)}
                     </div>
                     <div className="min-w-0">
-                      <div className="truncate font-medium">{s.full_name}</div>
+                      {/* Klaviatura bilan ham ochilsin: qator bosilishi bilan bir xil */}
+                      <button
+                        type="button"
+                        className="block max-w-full truncate text-left font-medium hover:underline focus-visible:underline focus-visible:outline-none"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRowClick(s);
+                        }}
+                      >
+                        {s.full_name}
+                      </button>
                       <div className="text-xs text-muted-foreground">
                         {s.hemis_id}
                         {s.phone ? ` · ${s.phone}` : ""}
@@ -172,36 +186,13 @@ export function StudentsTable({
         </Table>
       </div>
 
-      {data.total > 0 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <div>
-            <span className="font-medium text-foreground">{from}–{to}</span> / {data.total}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(page - 1)}
-              disabled={page <= 1 || q.isFetching}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              {t("common.previous")}
-            </Button>
-            <span className="px-2">
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(page + 1)}
-              disabled={page >= totalPages || q.isFetching}
-            >
-              {t("common.next")}
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <ListPagination
+        page={page}
+        pageSize={pageSize}
+        total={data.total}
+        onPageChange={onPageChange}
+        disabled={q.isFetching}
+      />
     </div>
   );
 }

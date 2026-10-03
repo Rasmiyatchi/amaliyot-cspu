@@ -22,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   useDeleteStudent,
   useResetStudentDevice,
+  useStudent,
   useUpdateStudentCredentials,
 } from "@/lib/api/students";
 import { dateLocale } from "@/i18n";
@@ -185,12 +186,19 @@ function DeviceCard({ student, isPending, onReset }: DeviceCardProps) {
 }
 
 type Props = {
+  /** Ro'yxatdagi qator — darhol ko'rsatish uchun; keyin serverdan yangi ma'lumot olinadi */
   student: Student | null;
   onClose: () => void;
+  /** O'chirilgandan keyin — ro'yxat sahifasi tanlovdan chiqarib qo'yishi uchun */
+  onDeleted?: (id: string) => void;
 };
 
-export function StudentDetailDialog({ student, onClose }: Props) {
+export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props) {
   const { t } = useTranslation();
+  // Tahrirlash / login / qurilma o'zgargach dialog eski qatorni emas, yangi holatni ko'rsatsin:
+  // mutatsiyalar detal keshini server javobi bilan yangilaydi.
+  const detail = useStudent(row?.id ?? null);
+  const student = row ? (detail.data ?? row) : null;
   const updateCreds = useUpdateStudentCredentials();
   const deleteStudent = useDeleteStudent();
   const resetDevice = useResetStudentDevice();
@@ -215,9 +223,16 @@ export function StudentDetailDialog({ student, onClose }: Props) {
       await deleteStudent.mutateAsync(student.id);
       toast.success(t("studentsStudentDetailDialog.studentDeleted"));
       setConfirmDelete(false);
+      onDeleted?.(student.id);
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      if (e instanceof HTTPError) {
+        // 409: amaliyot/ariza tarixi bor — server sababini va yechimini (statusni o'zgartirish) aytadi
+        if (e.response.status === 409) setConfirmDelete(false);
+        toast.error(e.message, { duration: 10_000 });
+      } else {
+        toast.error(t("common.error"));
+      }
     }
   };
 
@@ -334,6 +349,7 @@ export function StudentDetailDialog({ student, onClose }: Props) {
             <Separator />
 
             <CredentialsSection
+              key={student.id}
               currentUsername={student.username}
               isPending={updateCreds.isPending}
               onSave={(payload) =>

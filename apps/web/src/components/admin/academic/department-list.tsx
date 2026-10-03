@@ -1,12 +1,15 @@
-import { Building2, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { HTTPError } from "ky";
+import { Building2, Loader2, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { DepartmentFormDialog } from "@/components/admin/academic/department-form-dialog";
+import { ListPagination } from "@/components/admin/students/list-pagination";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   Select,
@@ -16,57 +19,64 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useDeleteDepartment, useDepartments, useFaculties } from "@/lib/api/academic";
+import { useAllFaculties, useDeleteDepartment, useDepartments } from "@/lib/api/academic";
 import type { Department, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
+const PAGE_SIZE = 50;
 
-export function DepartmentList() {
+type Props = {
+  /** "Yangi kafedra" dialogi sahifa sarlavhasidagi tugma bilan boshqariladi */
+  createOpen: boolean;
+  onCreateOpenChange: (open: boolean) => void;
+};
+
+export function DepartmentList({ createOpen, onCreateOpenChange }: Props) {
   const { t } = useTranslation();
-  const faculties = useFaculties();
+  const faculties = useAllFaculties();
   const [facultyId, setFacultyId] = useState<UUID | undefined>(undefined);
-  const departments = useDepartments(facultyId);
+  const [page, setPage] = useState(1);
+  const departments = useDepartments(facultyId, page, PAGE_SIZE, { keepPrevious: true });
   const del = useDeleteDepartment();
   const [editing, setEditing] = useState<Department | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<Department | null>(null);
 
-  const facultyById = new Map((faculties.data?.items ?? []).map((f) => [f.id, f]));
+  const facultyById = new Map((faculties.data ?? []).map((f) => [f.id, f]));
+  const items = departments.data?.items ?? [];
 
-  const handleDelete = async (d: Department) => {
-    if (!confirm(t("academicDepartmentList.deleteConfirm", { name: d.name }))) return;
+  const handleDelete = async () => {
+    if (!deleting) return;
     try {
-      await del.mutateAsync(d.id);
+      await del.mutateAsync(deleting.id);
       toast.success(t("common.deleted"));
+      setDeleting(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("common.error"));
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"), { duration: 8000 });
     }
   };
-
-  const items = departments.data?.items ?? [];
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={facultyId ?? ALL}
-          onValueChange={(v) => setFacultyId(v === ALL ? undefined : (v as UUID))}
+          onValueChange={(v) => {
+            setFacultyId(v === ALL ? undefined : v);
+            setPage(1);
+          }}
         >
-          <SelectTrigger className="w-[240px]">
+          <SelectTrigger className="w-full sm:w-[240px]" aria-label={t("common.faculty")}>
             <SelectValue placeholder={t("common.faculty")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
             <SelectItem value={ALL}>{t("academicDepartmentList.allFaculties")}</SelectItem>
-            {(faculties.data?.items ?? []).map((f) => (
+            {(faculties.data ?? []).map((f) => (
               <SelectItem key={f.id} value={f.id}>
                 {f.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Button className="ml-auto" onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" />
-          {t("academicDepartmentList.newDepartment")}
-        </Button>
       </div>
 
       {departments.isPending && (
@@ -98,7 +108,9 @@ export function DepartmentList() {
                 <TableHead>{t("common.name")}</TableHead>
                 <TableHead className="w-[120px]">{t("academicDepartmentList.code")}</TableHead>
                 <TableHead>{t("common.faculty")}</TableHead>
-                <TableHead className="w-[100px]"></TableHead>
+                <TableHead className="w-[100px]">
+                  <span className="sr-only">{t("common.actions")}</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -124,15 +136,16 @@ export function DepartmentList() {
                         variant="ghost"
                         onClick={() => setEditing(d)}
                         aria-label={t("common.edit")}
+                        title={t("common.edit")}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => handleDelete(d)}
+                        onClick={() => setDeleting(d)}
                         aria-label={t("common.delete")}
-                        disabled={del.isPending}
+                        title={t("common.delete")}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -145,13 +158,35 @@ export function DepartmentList() {
         </div>
       )}
 
+      {departments.data && (
+        <ListPagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={departments.data.total}
+          onPageChange={setPage}
+          disabled={departments.isFetching}
+        />
+      )}
+
       <DepartmentFormDialog
-        open={creating || !!editing}
+        open={createOpen || !!editing}
         existing={editing}
         onClose={() => {
-          setCreating(false);
+          onCreateOpenChange(false);
           setEditing(null);
         }}
+      />
+      <ConfirmDialog
+        open={!!deleting}
+        title={t("adminStructure.deleteTitle")}
+        description={
+          deleting ? t("academicDepartmentList.deleteConfirm", { name: deleting.name }) : ""
+        }
+        confirmText={t("common.delete")}
+        variant="destructive"
+        isPending={del.isPending}
+        onConfirm={handleDelete}
+        onClose={() => setDeleting(null)}
       />
     </div>
   );

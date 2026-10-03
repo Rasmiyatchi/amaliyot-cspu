@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { saveBlob } from "@/lib/api";
 import { downloadSupervisorsTemplate } from "@/lib/api/import-templates";
 import {
   useSupervisorImport,
@@ -47,9 +48,15 @@ export function SupervisorImportDialog({ open, onClose }: Props) {
   };
 
   const handleClose = () => {
+    // Import ketayotganda yopilmaydi: so'rov serverda davom etadi, natija (bir martalik
+    // parollar) esa yo'qolib qolardi
+    if (mut.isPending) return;
     reset();
     onClose();
   };
+
+  /** Overlay/Escape bilan tasodifan yopilmasin: yuklash paytida va natija ko'rinib turganda. */
+  const blockAccidentalClose = mut.isPending || !!result;
 
   const handleFile = (f: File | null) => {
     if (!f) return;
@@ -84,19 +91,32 @@ export function SupervisorImportDialog({ open, onClose }: Props) {
         password: c.password,
       })),
     );
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const date = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `chdpu-supervisors-credentials-${date}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    // BOM — Excel UTF-8 (kirill/o'zbek harflari) ni to'g'ri ochishi uchun
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const date = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tashkent",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    saveBlob(blob, `chdpu-supervisors-credentials-${date}.csv`);
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent
+        className="max-h-[90vh] max-w-2xl overflow-y-auto"
+        showClose={!mut.isPending}
+        onPointerDownOutside={(e) => {
+          if (blockAccidentalClose) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (blockAccidentalClose) e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          if (blockAccidentalClose) e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{t("supervisorsSupervisorImportDialog.title")}</DialogTitle>
           <DialogDescription>
@@ -120,7 +140,7 @@ export function SupervisorImportDialog({ open, onClose }: Props) {
                   <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs">
                     {result.errors.slice(0, 50).map((e, i) => (
                       <li key={i}>
-                        <span className="font-mono">{t("supervisorsSupervisorImportDialog.rowN", { row: e.row })}</span>
+                        <span className="font-mono">{t("supervisorsSupervisorImportDialog.rowLabel", { row: e.row })}</span>
                         {e.name ? ` · ${e.name}` : ""}: {e.message}
                       </li>
                     ))}
@@ -132,7 +152,7 @@ export function SupervisorImportDialog({ open, onClose }: Props) {
             {result.credentials.length > 0 && (
               <>
                 <Separator />
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-semibold">{t("supervisorsSupervisorImportDialog.credentialsTitle")}</h3>
                     <p className="text-xs text-muted-foreground">
@@ -212,14 +232,14 @@ export function SupervisorImportDialog({ open, onClose }: Props) {
                 <>
                   <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
                   <div className="mb-2 text-sm">{t("supervisorsSupervisorImportDialog.dropHint")}</div>
-                  <label>
+                  <label className="rounded-md has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
                     <Button asChild size="sm" variant="outline">
                       <span>{t("supervisorsSupervisorImportDialog.chooseFile")}</span>
                     </Button>
                     <input
                       type="file"
                       accept=".xlsx,.xls"
-                      className="hidden"
+                      className="sr-only"
                       onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         handleFile(e.target.files?.[0] ?? null)
                       }

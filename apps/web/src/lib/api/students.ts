@@ -1,7 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
-import type { Paginated, Student, StudentStatus, UUID } from "@/lib/api/types";
+import { bulkDeleteInBatches } from "@/lib/api/bulk-delete";
+import type {
+  DegreeType,
+  EducationForm,
+  Gender,
+  Paginated,
+  Student,
+  StudentStatus,
+  UUID,
+} from "@/lib/api/types";
 
 export type CredentialsUpdate = {
   username?: string;
@@ -21,8 +30,9 @@ export type StudentFilters = {
 
 export const studentKeys = {
   all: ["students"] as const,
+  lists: () => [...studentKeys.all, "list"] as const,
   list: (filters: StudentFilters, page: number, pageSize: number) =>
-    [...studentKeys.all, "list", filters, page, pageSize] as const,
+    [...studentKeys.lists(), filters, page, pageSize] as const,
   detail: (id: UUID) => [...studentKeys.all, "detail", id] as const,
 };
 
@@ -52,30 +62,42 @@ export function useStudents(filters: StudentFilters = {}, page = 1, pageSize = 2
 
 export function useStudent(id: UUID | null) {
   return useQuery({
-    queryKey: id ? studentKeys.detail(id) : [],
+    queryKey: studentKeys.detail(id ?? ""),
     enabled: !!id,
     queryFn: () => api.get(`v1/students/${id}`).json<Student>(),
   });
 }
 
-export function useResetStudentDevice() {
+/**
+ * Talaba o'zgargach: detal keshini server javobi bilan darhol yangilaymiz (ochiq dialog
+ * eski ma'lumotni ko'rsatib turmasin) va ro'yxatlarni qayta so'raymiz.
+ */
+function useStudentSaved() {
   const qc = useQueryClient();
+  return (student: Student) => {
+    qc.setQueryData(studentKeys.detail(student.id), student);
+    return qc.invalidateQueries({ queryKey: studentKeys.lists() });
+  };
+}
+
+export function useResetStudentDevice() {
+  const onSaved = useStudentSaved();
   return useMutation({
-    mutationFn: (id: UUID) =>
-      api.post(`v1/students/${id}/reset-device`).json<Student>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+    mutationFn: (id: UUID) => api.post(`v1/students/${id}/reset-device`).json<Student>(),
+    onSuccess: onSaved,
   });
 }
 
 export function useUpdateStudentCredentials() {
-  const qc = useQueryClient();
+  const onSaved = useStudentSaved();
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: CredentialsUpdate }) =>
       api.patch(`v1/students/${id}/credentials`, { json: data }).json<Student>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+    onSuccess: onSaved,
   });
 }
 
+/** Backend `StudentCreate` bilan bir xil maydonlar (qolganlari server tomonidan e'tiborsiz). */
 export type StudentCreatePayload = {
   hemis_id: string;
   first_name: string;
@@ -83,39 +105,40 @@ export type StudentCreatePayload = {
   middle_name?: string | null;
   email?: string | null;
   phone?: string | null;
-  gender?: "male" | "female" | null;
+  gender?: Gender | null;
   region?: string | null;
   district?: string | null;
   group_id: UUID;
   current_semester?: number | null;
+  /** Qabul yili — login prefiksi va kurs hisobi uchun */
+  enrollment_year?: number | null;
   is_graduating?: boolean;
   education_language?: string | null;
-  education_form?: string | null;
-  degree_type?: string | null;
+  education_form?: EducationForm | null;
+  degree_type?: DegreeType | null;
 };
 
 export type StudentUpdatePayload = Partial<Omit<StudentCreatePayload, "hemis_id">> & {
   /** Amaliyot ID — import xato ID bilan kelsa admin tuzatadi (unique) */
   hemis_id?: string;
-  enrollment_year?: number | null;
   status?: StudentStatus;
 };
 
 export function useCreateStudent() {
-  const qc = useQueryClient();
+  const onSaved = useStudentSaved();
   return useMutation({
     mutationFn: (data: StudentCreatePayload) =>
       api.post("v1/students", { json: data }).json<Student>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+    onSuccess: onSaved,
   });
 }
 
 export function useUpdateStudent() {
-  const qc = useQueryClient();
+  const onSaved = useStudentSaved();
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: StudentUpdatePayload }) =>
       api.patch(`v1/students/${id}`, { json: data }).json<Student>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+    onSuccess: onSaved,
   });
 }
 
@@ -123,7 +146,11 @@ export function useDeleteStudent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: UUID) => api.delete(`v1/students/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+    onSuccess: (_res, id) => {
+      // O'chirilgan talabaning detalini qayta so'ramaslik uchun (404 bo'lardi)
+      qc.removeQueries({ queryKey: studentKeys.detail(id), exact: true });
+      return qc.invalidateQueries({ queryKey: studentKeys.lists() });
+    },
   });
 }
 
@@ -133,14 +160,22 @@ export type StudentBulkDeleteResult = {
   failed: { id: UUID; full_name: string | null; error: string }[];
 };
 
+
+
+/** Backend chegarasi: bir so'rovda 200 ta (StudentBulkDeleteRequest). */
+const STUDENT_BULK_MAX = 200;
+
 /** Ko'p tanlangan talabalarni o'chirish — qisman muvaffaqiyat bo'lishi mumkin. */
 export function useBulkDeleteStudents() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (ids: UUID[]) =>
-      api
-        .post("v1/students/bulk-delete", { json: { ids }, timeout: 120_000 })
-        .json<StudentBulkDeleteResult>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+      bulkDeleteInBatches(ids, STUDENT_BULK_MAX, (chunk) =>
+        api
+          .post("v1/students/bulk-delete", { json: { ids: chunk }, timeout: 120_000 })
+          .json<StudentBulkDeleteResult>(),
+      ),
+    // Qisman bajarilgan bo'lsa ham ro'yxat yangilansin
+    onSettled: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
   });
 }

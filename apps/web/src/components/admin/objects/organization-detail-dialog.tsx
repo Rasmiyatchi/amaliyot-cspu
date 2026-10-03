@@ -1,5 +1,6 @@
 import {
   Building2,
+  ExternalLink,
   FileText,
   Globe,
   Mail,
@@ -7,10 +8,11 @@ import {
   Pencil,
   Phone,
   Users,
-  Wifi,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { WEEKDAYS } from "@/components/admin/assignments/weekday-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,22 +49,37 @@ const KIND_BADGE_STYLE: Record<OrganizationKind, string> = {
   other: "bg-muted text-muted-foreground border-border",
 };
 
-const DAY_NAMES = [
-  "Dushanba",
-  "Seshanba",
-  "Chorshanba",
-  "Payshanba",
-  "Juma",
-  "Shanba",
-  "Yakshanba",
-];
+const WEEKDAY_LABEL_KEY = new Map<number, string>(WEEKDAYS.map((d) => [d.value, d.labelKey]));
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+/** API Decimal'ni satr ko'rinishida qaytarishi mumkin ("41.311") */
+function toCoord(value: number | string | null): number | null {
+  if (value === null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="grid grid-cols-[160px_1fr] gap-2 text-sm">
+    <div className="grid min-w-0 grid-cols-1 gap-0.5 text-sm sm:grid-cols-[160px_1fr] sm:gap-2">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="break-words font-medium">{value ?? <span className="font-normal text-muted-foreground">—</span>}</dd>
+      <dd className="min-w-0 break-words font-medium [overflow-wrap:anywhere]">
+        {value ?? <span className="font-normal text-muted-foreground">—</span>}
+      </dd>
     </div>
+  );
+}
+
+function Section({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {icon}
+        {title}
+      </h3>
+      <div className="rounded-lg border border-border/80 bg-card p-3.5">
+        <dl className="space-y-2">{children}</dl>
+      </div>
+    </section>
   );
 }
 
@@ -74,6 +91,9 @@ type Props = {
 
 export function OrganizationDetailDialog({ organization, onClose, onEdit }: Props) {
   const { t } = useTranslation();
+  const lat = organization ? toCoord(organization.geo_lat) : null;
+  const lng = organization ? toCoord(organization.geo_lng) : null;
+  const hasGeo = lat !== null && lng !== null;
 
   return (
     <Dialog open={!!organization} onOpenChange={(open) => !open && onClose()}>
@@ -81,13 +101,13 @@ export function OrganizationDetailDialog({ organization, onClose, onEdit }: Prop
         {organization && (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                  <Building2 className="h-6 w-6 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-lg font-semibold">{organization.name}</div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+              <DialogTitle className="flex items-center gap-3 text-left">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <Building2 className="h-6 w-6 text-primary" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words text-lg font-semibold">{organization.name}</span>
+                  <span className="mt-0.5 flex flex-wrap items-center gap-2">
                     <Badge
                       variant="outline"
                       className={`text-xs font-medium ${KIND_BADGE_STYLE[organization.kind] || ""}`}
@@ -95,7 +115,7 @@ export function OrganizationDetailDialog({ organization, onClose, onEdit }: Prop
                       {t(KIND_LABEL_KEY[organization.kind])}
                     </Badge>
                     {organization.is_active ? (
-                      <Badge variant="default" className="text-xs bg-emerald-600 hover:bg-emerald-600 text-white">
+                      <Badge variant="success" className="text-xs">
                         {t("objectsOrganizationsList.activeBadge")}
                       </Badge>
                     ) : (
@@ -103,216 +123,216 @@ export function OrganizationDetailDialog({ organization, onClose, onEdit }: Prop
                         {t("objectsOrganizationsList.inactiveBadge")}
                       </Badge>
                     )}
-                  </div>
-                </div>
+                  </span>
+                </span>
               </DialogTitle>
-              {organization.legal_name && organization.legal_name !== organization.name && (
-                <DialogDescription className="text-xs">
-                  {organization.legal_name}
+              {organization.legal_name && organization.legal_name !== organization.name ? (
+                <DialogDescription className="text-xs">{organization.legal_name}</DialogDescription>
+              ) : (
+                <DialogDescription className="sr-only">
+                  {t("objectsOrganizationDetailDialog.description")}
                 </DialogDescription>
               )}
             </DialogHeader>
 
             <div className="space-y-4 pt-2">
-              {/* Asosiy ma'lumotlar va Rahbariyat */}
-              <section className="space-y-2">
-                <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <FileText className="h-3.5 w-3.5" />
-                  Asosiy ma'lumotlar va rekvizitlar
-                </h3>
-                <div className="rounded-lg border border-border/80 bg-card p-3.5">
-                  <dl className="space-y-2">
-                    <Row
-                      label="Rahbar"
-                      value={
-                        <div>
-                          <div>{organization.director_full_name}</div>
-                          {organization.director_position && (
-                            <div className="text-xs font-normal text-muted-foreground">
-                              {organization.director_position}
-                            </div>
-                          )}
+              <Section
+                icon={<FileText className="h-3.5 w-3.5" aria-hidden="true" />}
+                title={t("objectsOrganizationDetailDialog.sectionMain")}
+              >
+                <Row
+                  label={t("objectsOrganizationDetailDialog.director")}
+                  value={
+                    <div>
+                      <div>{organization.director_full_name}</div>
+                      {organization.director_position && (
+                        <div className="text-xs font-normal text-muted-foreground">
+                          {organization.director_position}
                         </div>
-                      }
-                    />
-                    {organization.inn && (
-                      <Row
-                        label="INN / STIR"
-                        value={<span className="font-mono">{organization.inn}</span>}
-                      />
-                    )}
-                    {organization.bank_name && (
-                      <Row
-                        label="Bank nomi"
-                        value={organization.bank_name}
-                      />
-                    )}
-                    {organization.bank_account && (
-                      <Row
-                        label="Hisob raqami (H/R)"
-                        value={<span className="font-mono text-xs">{organization.bank_account}</span>}
-                      />
-                    )}
-                    {organization.bank_mfo && (
-                      <Row
-                        label="MFO"
-                        value={<span className="font-mono text-xs">{organization.bank_mfo}</span>}
-                      />
-                    )}
-                  </dl>
-                </div>
-              </section>
+                      )}
+                    </div>
+                  }
+                />
+                {organization.inn && (
+                  <Row
+                    label={t("objectsOrganizationDetailDialog.inn")}
+                    value={<span className="font-mono">{organization.inn}</span>}
+                  />
+                )}
+                {organization.bank_name && (
+                  <Row
+                    label={t("objectsOrganizationDetailDialog.bankName")}
+                    value={organization.bank_name}
+                  />
+                )}
+                {organization.bank_account && (
+                  <Row
+                    label={t("objectsOrganizationDetailDialog.bankAccount")}
+                    value={<span className="font-mono text-xs">{organization.bank_account}</span>}
+                  />
+                )}
+                {organization.bank_mfo && (
+                  <Row
+                    label={t("objectsOrganizationDetailDialog.mfo")}
+                    value={<span className="font-mono text-xs">{organization.bank_mfo}</span>}
+                  />
+                )}
+              </Section>
 
-              {/* Aloqa va Manzil */}
-              <section className="space-y-2">
-                <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  Aloqa va joylashuv
-                </h3>
-                <div className="rounded-lg border border-border/80 bg-card p-3.5">
-                  <dl className="space-y-2">
-                    <Row
-                      label="Telefon"
-                      value={
-                        organization.phone ? (
-                          <a
-                            href={`tel:${organization.phone}`}
-                            className="inline-flex items-center gap-1.5 text-primary hover:underline font-mono"
-                          >
-                            <Phone className="h-3.5 w-3.5" />
-                            {organization.phone}
-                          </a>
-                        ) : null
-                      }
-                    />
-                    {organization.email && (
-                      <Row
-                        label="Email"
-                        value={
-                          <a
-                            href={`mailto:${organization.email}`}
-                            className="inline-flex items-center gap-1.5 text-primary hover:underline"
-                          >
-                            <Mail className="h-3.5 w-3.5" />
-                            {organization.email}
-                          </a>
+              <Section
+                icon={<MapPin className="h-3.5 w-3.5" aria-hidden="true" />}
+                title={t("objectsOrganizationDetailDialog.sectionContact")}
+              >
+                <Row
+                  label={t("objectsOrganizationDetailDialog.phone")}
+                  value={
+                    organization.phone ? (
+                      <a
+                        href={`tel:${organization.phone}`}
+                        className="inline-flex items-center gap-1.5 font-mono text-primary hover:underline"
+                      >
+                        <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                        {organization.phone}
+                      </a>
+                    ) : null
+                  }
+                />
+                {organization.email && (
+                  <Row
+                    label={t("objectsOrganizationDetailDialog.email")}
+                    value={
+                      <a
+                        href={`mailto:${organization.email}`}
+                        className="inline-flex items-center gap-1.5 text-primary hover:underline"
+                      >
+                        <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+                        {organization.email}
+                      </a>
+                    }
+                  />
+                )}
+                {organization.website && (
+                  <Row
+                    label={t("objectsOrganizationDetailDialog.website")}
+                    value={
+                      <a
+                        href={
+                          organization.website.startsWith("http")
+                            ? organization.website
+                            : `https://${organization.website}`
                         }
-                      />
-                    )}
-                    {organization.website && (
-                      <Row
-                        label="Veb-sayt"
-                        value={
-                          <a
-                            href={organization.website.startsWith("http") ? organization.website : `https://${organization.website}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-primary hover:underline"
-                          >
-                            <Globe className="h-3.5 w-3.5" />
-                            {organization.website}
-                          </a>
-                        }
-                      />
-                    )}
-                    <Row
-                      label="Hudud"
-                      value={
-                        <span>
-                          {organization.region}
-                          {organization.district ? `, ${organization.district}` : ""}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-primary hover:underline"
+                      >
+                        <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+                        {organization.website}
+                      </a>
+                    }
+                  />
+                )}
+                <Row
+                  label={t("objectsOrganizationDetailDialog.area")}
+                  value={
+                    <span>
+                      {organization.region}
+                      {organization.district ? `, ${organization.district}` : ""}
+                    </span>
+                  }
+                />
+                <Row
+                  label={t("objectsOrganizationDetailDialog.address")}
+                  value={organization.address_line}
+                />
+                <Row
+                  label={t("objectsOrganizationDetailDialog.geolocation")}
+                  value={
+                    hasGeo ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {lat.toFixed(5)}, {lng.toFixed(5)}
                         </span>
-                      }
-                    />
-                    <Row
-                      label="Manzil"
-                      value={organization.address_line}
-                    />
-                    {(organization.geo_lat != null && organization.geo_lng != null) && (
-                      <Row
-                        label="Geolokatsiya"
-                        value={
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-xs text-muted-foreground">
-                              {Number(organization.geo_lat).toFixed(5)}, {Number(organization.geo_lng).toFixed(5)}
-                            </span>
-                            {organization.geo_radius_m ? (
-                              <Badge variant="secondary" className="text-xs">
-                                Radius: {organization.geo_radius_m}m
-                              </Badge>
-                            ) : null}
-                          </div>
-                        }
-                      />
-                    )}
-                  </dl>
-                </div>
-              </section>
+                        <a
+                          href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-normal text-primary hover:underline"
+                        >
+                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                          {t("objectsOrganizationDetailDialog.openMap")}
+                        </a>
+                      </div>
+                    ) : (
+                      <span className="font-normal text-amber-700 dark:text-amber-400">
+                        {t("objectsOrganizationDetailDialog.geoNotSet")}
+                      </span>
+                    )
+                  }
+                />
+                <Row
+                  label={t("objectsOrganizationDetailDialog.geoRadius")}
+                  value={
+                    <Badge variant="secondary" className="text-xs">
+                      {t("objectsOrganizationDetailDialog.radiusValue", {
+                        m: organization.geo_radius_m,
+                      })}
+                    </Badge>
+                  }
+                />
+              </Section>
 
-              {/* Sig'im va Ish tartibi */}
-              <section className="space-y-2">
-                <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <Users className="h-3.5 w-3.5" />
-                  Sig'im va amaliyot sharoitlari
-                </h3>
-                <div className="rounded-lg border border-border/80 bg-card p-3.5">
-                  <dl className="space-y-2">
-                    <Row
-                      label="Sig'imi (kvota)"
-                      value={
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">{organization.capacity} ta talaba</span>
-                          <span className="text-xs text-muted-foreground">
-                            (Hozirda biriktirilgan:{" "}
-                            <span className="font-semibold text-primary">
-                              {organization.assigned_students_count ?? 0}
-                            </span>
-                            )
-                          </span>
-                        </div>
-                      }
-                    />
-                    {organization.work_days && organization.work_days.length > 0 && (
-                      <Row
-                        label="Ish kunlari"
-                        value={
-                          <div className="flex flex-wrap gap-1">
-                            {organization.work_days.map((d) => (
+              <Section
+                icon={<Users className="h-3.5 w-3.5" aria-hidden="true" />}
+                title={t("objectsOrganizationDetailDialog.sectionCapacity")}
+              >
+                <Row
+                  label={t("objectsOrganizationDetailDialog.capacity")}
+                  value={
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="font-semibold">
+                        {t("objectsOrganizationDetailDialog.capacityValue", {
+                          n: organization.capacity,
+                        })}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {t("objectsOrganizationDetailDialog.assignedNow", {
+                          n: organization.assigned_students_count ?? 0,
+                        })}
+                      </span>
+                    </div>
+                  }
+                />
+                {organization.work_days && organization.work_days.length > 0 && (
+                  <Row
+                    label={t("objectsOrganizationDetailDialog.workDays")}
+                    value={
+                      <div className="flex flex-wrap gap-1">
+                        {[...organization.work_days]
+                          .sort((a, b) => a - b)
+                          .map((d) => {
+                            const key = WEEKDAY_LABEL_KEY.get(d);
+                            return (
                               <Badge key={d} variant="secondary" className="text-xs">
-                                {DAY_NAMES[d - 1] ?? d}
+                                {key ? t(key) : d}
                               </Badge>
-                            ))}
-                          </div>
-                        }
-                      />
-                    )}
-                    {organization.wifi_ssids && organization.wifi_ssids.length > 0 && (
-                      <Row
-                        label="Wi-Fi tarmoqlari"
-                        value={
-                          <div className="flex flex-wrap gap-1">
-                            {organization.wifi_ssids.map((ssid) => (
-                              <Badge key={ssid} variant="outline" className="font-mono text-xs">
-                                <Wifi className="mr-1 h-3 w-3" />
-                                {ssid}
-                              </Badge>
-                            ))}
-                          </div>
-                        }
-                      />
-                    )}
-                    {organization.notes && (
-                      <Row
-                        label="Qo'shimcha izoh"
-                        value={<span className="font-normal text-muted-foreground">{organization.notes}</span>}
-                      />
-                    )}
-                  </dl>
-                </div>
-              </section>
+                            );
+                          })}
+                      </div>
+                    }
+                  />
+                )}
+                {organization.notes && (
+                  <Row
+                    label={t("objectsOrganizationDetailDialog.notes")}
+                    value={
+                      <span className="font-normal text-muted-foreground">{organization.notes}</span>
+                    }
+                  />
+                )}
+              </Section>
             </div>
 
-            <DialogFooter className="mt-4 flex sm:justify-between items-center gap-2">
+            <DialogFooter className="mt-4 gap-2 sm:justify-between">
               {onEdit && (
                 <Button
                   variant="outline"

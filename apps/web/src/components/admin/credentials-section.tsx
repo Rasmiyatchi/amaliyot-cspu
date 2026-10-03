@@ -1,6 +1,6 @@
 import { HTTPError } from "ky";
 import { Eye, EyeOff, KeyRound, Loader2, Save } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -8,7 +8,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+
+/** Backend `CredentialsUpdate`: username 3..64, password 6..128 */
+const USERNAME_MIN = 3;
+const PASSWORD_MIN = 6;
 
 type Props = {
   currentUsername: string;
@@ -19,30 +22,43 @@ type Props = {
 
 export function CredentialsSection({ currentUsername, onSave, isPending }: Props) {
   const { t } = useTranslation();
+  const usernameId = useId();
+  const passwordId = useId();
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState(currentUsername);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const hasChange =
-    (username.trim() && username.trim() !== currentUsername) || password.length >= 4;
+  const trimmed = username.trim();
+  const usernameChanged = trimmed !== "" && trimmed !== currentUsername;
+  const hasChange = usernameChanged || password.length > 0;
 
-  const reset = () => {
+  const startEditing = () => {
+    // Har safar joriy (yangilangan) login bilan boshlanadi — eski qiymat qaytarib yuborilmasin
     setUsername(currentUsername);
     setPassword("");
-    setOpen(false);
     setShowPassword(false);
+    setOpen(true);
+  };
+
+  const close = () => {
+    setPassword("");
+    setShowPassword(false);
+    setOpen(false);
   };
 
   const handleSave = async () => {
     const payload: { username?: string; password?: string } = {};
-    const trimmed = username.trim();
-    if (trimmed && trimmed !== currentUsername) {
+    if (usernameChanged) {
+      if (trimmed.length < USERNAME_MIN) {
+        toast.error(t("adminCredentialsSection.usernameMinLength", { n: USERNAME_MIN }));
+        return;
+      }
       payload.username = trimmed;
     }
     if (password) {
-      if (password.length < 4) {
-        toast.error(t("adminCredentialsSection.passwordMinLength"));
+      if (password.length < PASSWORD_MIN) {
+        toast.error(t("adminCredentialsSection.passwordMinLengthN", { n: PASSWORD_MIN }));
         return;
       }
       payload.password = password;
@@ -54,20 +70,20 @@ export function CredentialsSection({ currentUsername, onSave, isPending }: Props
     try {
       await onSave(payload);
       toast.success(t("adminCredentialsSection.credentialsUpdated"));
-      reset();
+      close();
     } catch (e) {
       toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
   };
 
   return (
-    <div className="space-y-2 min-w-0">
+    <div className="min-w-0 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t("adminCredentialsSection.title")}
         </h3>
         {!open && (
-          <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+          <Button type="button" size="sm" variant="outline" onClick={startEditing}>
             <KeyRound className="h-3.5 w-3.5" />
             {t("common.edit")}
           </Button>
@@ -75,27 +91,31 @@ export function CredentialsSection({ currentUsername, onSave, isPending }: Props
       </div>
 
       {!open && (
-        <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] gap-1 sm:gap-2 text-sm min-w-0">
-          <dt className="text-muted-foreground min-w-0 shrink-0">{t("adminCredentialsSection.usernameLabel")}</dt>
-          <dd className="font-mono min-w-0 break-all">{currentUsername}</dd>
-          <dt className="text-muted-foreground min-w-0 shrink-0">{t("adminCredentialsSection.passwordLabel")}</dt>
-          <dd className="text-muted-foreground min-w-0">••••••••</dd>
-        </div>
+        <dl className="grid min-w-0 grid-cols-1 gap-1 text-sm sm:grid-cols-[130px_1fr] sm:gap-2">
+          <dt className="min-w-0 shrink-0 text-muted-foreground">
+            {t("adminCredentialsSection.usernameLabel")}
+          </dt>
+          <dd className="min-w-0 break-all font-mono">{currentUsername}</dd>
+          <dt className="min-w-0 shrink-0 text-muted-foreground">
+            {t("adminCredentialsSection.passwordLabel")}
+          </dt>
+          <dd className="min-w-0 text-muted-foreground">••••••••</dd>
+        </dl>
       )}
 
       {open && (
         <>
-          <Alert className="border-warning/30 bg-warning/5">
+          <Alert variant="warning">
             <AlertDescription className="text-xs">
               {t("adminCredentialsSection.hint")}
             </AlertDescription>
           </Alert>
 
           <div className="space-y-3">
-            <div>
-              <Label htmlFor="cred-username">{t("adminCredentialsSection.newUsername")}</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor={usernameId}>{t("adminCredentialsSection.newUsername")}</Label>
               <Input
-                id="cred-username"
+                id={usernameId}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="off"
@@ -104,11 +124,11 @@ export function CredentialsSection({ currentUsername, onSave, isPending }: Props
               />
             </div>
 
-            <div>
-              <Label htmlFor="cred-password">{t("adminCredentialsSection.newPassword")}</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor={passwordId}>{t("adminCredentialsSection.newPassword")}</Label>
               <div className="relative">
                 <Input
-                  id="cred-password"
+                  id={passwordId}
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -118,9 +138,14 @@ export function CredentialsSection({ currentUsername, onSave, isPending }: Props
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPassword ? t("adminCredentialsSection.hide") : t("adminCredentialsSection.show")}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={
+                    showPassword
+                      ? t("adminCredentialsSection.hide")
+                      : t("adminCredentialsSection.show")
+                  }
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -130,22 +155,24 @@ export function CredentialsSection({ currentUsername, onSave, isPending }: Props
 
           <div className="flex gap-2">
             <Button
+              type="button"
               size="sm"
               onClick={handleSave}
               disabled={!hasChange || isPending}
             >
-              {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              <Save className="h-3.5 w-3.5" />
+              {isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Save className="h-3.5 w-3.5" />
+              )}
               {t("common.save")}
             </Button>
-            <Button size="sm" variant="ghost" onClick={reset} disabled={isPending}>
+            <Button type="button" size="sm" variant="ghost" onClick={close} disabled={isPending}>
               {t("common.cancel")}
             </Button>
           </div>
         </>
       )}
-
-      <Separator />
     </div>
   );
 }
