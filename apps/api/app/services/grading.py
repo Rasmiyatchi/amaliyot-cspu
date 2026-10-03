@@ -247,6 +247,9 @@ async def set_criterion_score(
 ) -> dict[str, Any]:
     """Qo'lda baholanadigan mezonga ball qo'yadi."""
     asn = await authorize(db, assignment_id, user)
+    if asn.status == AssignmentStatus.CANCELLED:
+        # finalize ham rad etadi — bekor qilingan amaliyotga ball yig'ilib qolmasin
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bekor qilingan amaliyotni baholab bo'lmaydi")
     pt = await db.get(PracticeType, asn.practice_type_id)
     if not pt:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Amaliyot turi topilmadi")
