@@ -232,12 +232,14 @@ async def admin_overview(db: AsyncSession) -> dict[str, Any]:
         await db.execute(select(func.count()).select_from(Supervisor))
     ).scalar_one()
 
-    # Attendance — oxirgi 30 kun
-    thirty_days_ago = today_uzb() - timedelta(days=30)
+    # Attendance — oxirgi 30 kun (bugungacha; oldindan yashil qilingan KELAJAK kunlar hisobga
+    # olinmaydi — aks holda foiz sun'iy oshib ketardi)
+    today = today_uzb()
+    thirty_days_ago = today - timedelta(days=30)
     att_rows = (
         await db.execute(
             select(AttendanceDay.status, func.count(AttendanceDay.id))
-            .where(AttendanceDay.date >= thirty_days_ago)
+            .where(AttendanceDay.date >= thirty_days_ago, AttendanceDay.date <= today)
             .group_by(AttendanceDay.status)
         )
     ).all()
@@ -246,29 +248,39 @@ async def admin_overview(db: AsyncSession) -> dict[str, Any]:
         att[s.value] = c
     att_total_recent = sum(att.values())
 
-    # Maxraj — oxirgi 30 kunda kutilgan kunlar: har bir aktiv biriktirishning majburiy
-    # kunlarini [30 kun oldin .. bugun] oralig'ida sanaymiz. Yozuvlar soniga bo'lish
-    # xato edi: kelmagan kunlar yozuv ham qoldirmaydi, shuning uchun foiz doim ~100%
-    # bo'lib chiqardi. Kunlari belgilanmagan biriktirishlar eski yo'lda qoladi.
-    today = today_uzb()
-    active_rows = (
+    # Foiz biriktirish bo'yicha: yashil kunlar / kutilgan kunlar. Kunlari belgilanmagan eski
+    # biriktirishlarda maxraj — o'sha biriktirish yozuvlari soni. Qoralama (draft) biriktirishlar
+    # ham kiradi: talaba ularda ham davomat qiladi.
+    per_assignment = (
         await db.execute(
             select(
                 PracticeAssignment.start_date,
                 PracticeAssignment.end_date,
                 PracticeAssignment.required_weekdays,
-            ).where(
+                func.count(AttendanceDay.id).label("records"),
+                func.count(AttendanceDay.id)
+                .filter(AttendanceDay.status == AttendanceDayStatus.GREEN)
+                .label("green"),
+            )
+            .outerjoin(
+                AttendanceDay,
+                (AttendanceDay.assignment_id == PracticeAssignment.id)
+                & (AttendanceDay.date >= thirty_days_ago)
+                & (AttendanceDay.date <= today),
+            )
+            .where(
                 PracticeAssignment.status.in_(
-                    [AssignmentStatus.ACTIVE, AssignmentStatus.COMPLETED]
+                    [AssignmentStatus.ACTIVE, AssignmentStatus.DRAFT, AssignmentStatus.COMPLETED]
                 ),
                 PracticeAssignment.end_date >= thirty_days_ago,
                 PracticeAssignment.start_date <= today,
             )
+            .group_by(PracticeAssignment.id)
         )
     ).all()
+    green_total = 0
     expected_total = 0
-    has_weekdays = False
-    for row in active_rows:
+    for row in per_assignment:
         exp = expected_days(
             row.start_date,
             row.end_date,
@@ -276,13 +288,11 @@ async def admin_overview(db: AsyncSession) -> dict[str, Any]:
             upto=today,
             since=thirty_days_ago,
         )
-        if exp is not None:
-            has_weekdays = True
-            expected_total += exp
+        expected_total += exp if exp is not None else int(row.records)
+        green_total += int(row.green)
 
-    denominator = expected_total if has_weekdays else att_total_recent
     att_percent = (
-        min(100, int(round(att["green"] / denominator * 100))) if denominator else None
+        min(100, int(round(green_total / expected_total * 100))) if expected_total else None
     )
 
     # Tasks overview
