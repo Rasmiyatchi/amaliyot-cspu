@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  FileCheck2,
   LayoutDashboard,
   LogOut,
   ScrollText,
@@ -55,11 +56,20 @@ const navSections: NavSection[] = [
       { to: "/supervisor/students", labelKey: "supervisorSupervisorSidebar.nav.myStudents", icon: Users },
       { to: "/supervisor/attendance", labelKey: "supervisorSupervisorSidebar.nav.attendance", icon: CalendarCheck },
       { to: "/supervisor/tasks", labelKey: "supervisorSupervisorSidebar.nav.tasks", icon: ClipboardList },
+      { to: "/supervisor/reports", labelKey: "supervisorSupervisorSidebar.nav.reports", icon: FileCheck2 },
     ],
   },
 ];
 
 const STORAGE_KEY = "supervisor-sidebar-collapsed";
+
+function readCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * @param inSheet - mobil drawer ichida render qilinyaptimi (admin sidebar bilan bir xil).
@@ -68,16 +78,17 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [collapsedPref, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(STORAGE_KEY) === "1";
-  });
+  const [collapsedPref, setCollapsed] = useState<boolean>(readCollapsed);
 
   // Drawer ichida yig'ilmaydi (yorliqlar ko'rinsin)
   const collapsed = inSheet ? false : collapsedPref;
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, collapsedPref ? "1" : "0");
+    try {
+      window.localStorage.setItem(STORAGE_KEY, collapsedPref ? "1" : "0");
+    } catch {
+      /* xususiy rejim — tanlov faqat shu sessiyada saqlanadi */
+    }
   }, [collapsedPref]);
 
   const handleLogout = async () => {
@@ -103,11 +114,11 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
           <img src="/favicon.png" alt="CHDPU" className="h-8 w-8 shrink-0 object-contain rounded" />
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="truncate font-extrabold text-sm text-slate-900 tracking-tight dark:text-white">
-                CHDPU AMALIYOT
+              <span className="truncate font-extrabold text-sm uppercase text-slate-900 tracking-tight dark:text-white">
+                {t("supervisorSupervisorLayout.brand")}
               </span>
-              <span className="text-[9px] font-bold text-indigo-600 tracking-wider dark:text-indigo-400">
-                AMALIYOT RAHBARI
+              <span className="truncate text-[9px] font-bold uppercase text-indigo-600 tracking-wider dark:text-indigo-400">
+                {t("supervisorSupervisorSidebar.title")}
               </span>
             </div>
           )}
@@ -190,14 +201,15 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
+                    type="button"
                     onClick={() => setProfileOpen(true)}
                     className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-50 text-sm font-semibold text-indigo-700 dark:bg-indigo-600/20 dark:text-indigo-300 transition-opacity hover:opacity-80"
-                    title={t("supervisorSupervisorSidebar.myProfile")}
+                    aria-label={t("supervisorSupervisorSidebar.myProfile")}
                   >
                     {user?.avatar_url ? (
                       <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      user?.first_name[0] ?? "?"
+                      (user?.first_name?.[0] ?? "?").toUpperCase()
                     )}
                   </button>
                 </TooltipTrigger>
@@ -223,17 +235,20 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
           ) : (
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setProfileOpen(true)}
                 className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-50 text-sm font-semibold text-indigo-700 dark:bg-indigo-600/20 dark:text-indigo-300 transition-opacity hover:opacity-80"
                 title={t("supervisorSupervisorSidebar.myProfile")}
+                aria-label={t("supervisorSupervisorSidebar.myProfile")}
               >
                 {user?.avatar_url ? (
                   <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  user?.first_name[0] ?? "?"
+                  (user?.first_name?.[0] ?? "?").toUpperCase()
                 )}
               </button>
               <button
+                type="button"
                 onClick={() => setProfileOpen(true)}
                 className="flex-1 overflow-hidden text-left transition-opacity hover:opacity-80"
               >
@@ -259,6 +274,7 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
 
           {!inSheet && (
             <button
+              type="button"
               onClick={() => setCollapsed((c) => !c)}
               className="mt-3 flex h-8 w-full items-center justify-center gap-1.5 rounded-md text-xs text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               aria-label={

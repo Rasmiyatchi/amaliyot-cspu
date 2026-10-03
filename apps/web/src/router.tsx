@@ -1,153 +1,210 @@
 import { createBrowserRouter } from "react-router-dom";
 
-import { AdminLayout } from "@/components/admin/admin-layout";
-import { SupervisorLayout } from "@/components/supervisor/supervisor-layout";
-import { AcademicPage } from "@/routes/dashboard/admin/academic";
-import { AdminsPage } from "@/routes/dashboard/admin/admins";
-import { AssignmentsPage } from "@/routes/dashboard/admin/assignments";
-import { AttendancePage } from "@/routes/dashboard/admin/attendance";
-import { AuditLogPage } from "@/routes/dashboard/admin/audit-log";
-import { ContractsPage } from "@/routes/dashboard/admin/contracts";
-import { DocumentsPage } from "@/routes/dashboard/admin/documents";
-import { AdminHome } from "@/routes/dashboard/admin/index";
-import { ObjectsPage } from "@/routes/dashboard/admin/objects";
-import { PracticeTypesPage } from "@/routes/dashboard/admin/practice-types";
-import { ApplicationsPage } from "@/routes/dashboard/admin/applications";
-import { ContractTemplatesPage } from "@/routes/dashboard/admin/contract-templates";
-import { ContractTemplateEditorPage } from "@/routes/dashboard/admin/contract-template-editor";
-import { InquiriesPage } from "@/routes/dashboard/admin/inquiries";
-import { IntegrationsPage } from "@/routes/dashboard/admin/integrations";
-import { MonitoringPage } from "@/routes/dashboard/admin/monitoring";
-import { RecordsPage } from "@/routes/dashboard/admin/records";
-import { ReportsPage } from "@/routes/dashboard/admin/reports";
-import { StudentsPage } from "@/routes/dashboard/admin/students";
-import { SupervisorsPage } from "@/routes/dashboard/admin/supervisors";
-import { SystemSettingsPage } from "@/routes/dashboard/admin/system-settings";
-import { TaskTemplatesPage } from "@/routes/dashboard/admin/task-templates";
-// Structure pages (alohida to'liq sahifalar)
-import { FacultiesPage } from "@/routes/dashboard/admin/structure/faculties";
-import { DepartmentsPage } from "@/routes/dashboard/admin/structure/departments";
-import { DirectionsPage } from "@/routes/dashboard/admin/structure/directions";
-import { GroupsPage } from "@/routes/dashboard/admin/structure/groups";
-import { AcademicYearsPage } from "@/routes/dashboard/admin/structure/academic-years";
-import { StructureStudentsPage } from "@/routes/dashboard/admin/structure/students";
-import { StudentDashboard } from "@/routes/dashboard/student";
-import { SupervisorDashboard } from "@/routes/dashboard/supervisor";
-import {
-  SupervisorProgramsPage,
-  SupervisorRegulationsPage,
-} from "@/routes/dashboard/supervisor/documents";
-import { SupervisorStudentsPage } from "@/routes/dashboard/supervisor/students";
-import { AmaliyotPage } from "@/routes/amaliyot";
+import { RouteErrorScreen } from "@/components/error-boundary";
+import { RouteFallback } from "@/components/route-loading";
+import { lazyPage } from "@/lib/lazy-route";
 import { ChangePasswordPage } from "@/routes/change-password";
-import { FaqPage } from "@/routes/faq";
 import { Home } from "@/routes/home";
 import { Login } from "@/routes/login";
 import { NotFound } from "@/routes/not-found";
 import { Protected } from "@/routes/protected";
-import { RescuePage } from "@/routes/rescue";
 import { RootLayout } from "@/routes/root-layout";
 import { VerifyPage } from "@/routes/verify";
-import { YoriqnomaPage } from "@/routes/yoriqnoma";
+
+// Xato chegaralari: har bir yuqori darajadagi route va har bir layout ichida (pathless route) —
+// sahifa yiqilsa layout (sidebar) saqlanadi, react-router'ning inglizcha standart sahifasi chiqmaydi.
+const errorElement = <RouteErrorScreen />;
+
+// Bosh sahifa, login, parolni almashtirish va QR tekshiruv darhol yuklanadi. Admin, supervizor
+// va talaba bo'limlari esa alohida chunk'larda — kerak bo'lganda (lib/lazy-route.ts).
+const admin = {
+  layout: lazyPage(() => import("@/components/admin/admin-layout"), "AdminLayout"),
+  home: lazyPage(() => import("@/routes/dashboard/admin/index"), "AdminHome"),
+  academic: lazyPage(() => import("@/routes/dashboard/admin/academic"), "AcademicPage"),
+  students: lazyPage(() => import("@/routes/dashboard/admin/students"), "StudentsPage"),
+  faculties: lazyPage(() => import("@/routes/dashboard/admin/structure/faculties"), "FacultiesPage"),
+  departments: lazyPage(
+    () => import("@/routes/dashboard/admin/structure/departments"),
+    "DepartmentsPage",
+  ),
+  directions: lazyPage(
+    () => import("@/routes/dashboard/admin/structure/directions"),
+    "DirectionsPage",
+  ),
+  groups: lazyPage(() => import("@/routes/dashboard/admin/structure/groups"), "GroupsPage"),
+  academicYears: lazyPage(
+    () => import("@/routes/dashboard/admin/structure/academic-years"),
+    "AcademicYearsPage",
+  ),
+  structureStudents: lazyPage(
+    () => import("@/routes/dashboard/admin/structure/students"),
+    "StructureStudentsPage",
+  ),
+  practiceTypes: lazyPage(
+    () => import("@/routes/dashboard/admin/practice-types"),
+    "PracticeTypesPage",
+  ),
+  assignments: lazyPage(() => import("@/routes/dashboard/admin/assignments"), "AssignmentsPage"),
+  attendance: lazyPage(() => import("@/routes/dashboard/admin/attendance"), "AttendancePage"),
+  taskTemplates: lazyPage(
+    () => import("@/routes/dashboard/admin/task-templates"),
+    "TaskTemplatesPage",
+  ),
+  documents: lazyPage(() => import("@/routes/dashboard/admin/documents"), "DocumentsPage"),
+  reports: lazyPage(() => import("@/routes/dashboard/admin/reports"), "ReportsPage"),
+  records: lazyPage(() => import("@/routes/dashboard/admin/records"), "RecordsPage"),
+  contracts: lazyPage(() => import("@/routes/dashboard/admin/contracts"), "ContractsPage"),
+  applications: lazyPage(
+    () => import("@/routes/dashboard/admin/applications"),
+    "ApplicationsPage",
+  ),
+  supervisors: lazyPage(() => import("@/routes/dashboard/admin/supervisors"), "SupervisorsPage"),
+  objects: lazyPage(() => import("@/routes/dashboard/admin/objects"), "ObjectsPage"),
+  monitoring: lazyPage(() => import("@/routes/dashboard/admin/monitoring"), "MonitoringPage"),
+  inquiries: lazyPage(() => import("@/routes/dashboard/admin/inquiries"), "InquiriesPage"),
+  integrations: lazyPage(
+    () => import("@/routes/dashboard/admin/integrations"),
+    "IntegrationsPage",
+  ),
+  contractTemplates: lazyPage(
+    () => import("@/routes/dashboard/admin/contract-templates"),
+    "ContractTemplatesPage",
+  ),
+  contractTemplateEditor: lazyPage(
+    () => import("@/routes/dashboard/admin/contract-template-editor"),
+    "ContractTemplateEditorPage",
+  ),
+  admins: lazyPage(() => import("@/routes/dashboard/admin/admins"), "AdminsPage"),
+  auditLog: lazyPage(() => import("@/routes/dashboard/admin/audit-log"), "AuditLogPage"),
+  systemSettings: lazyPage(
+    () => import("@/routes/dashboard/admin/system-settings"),
+    "SystemSettingsPage",
+  ),
+};
+
+const supervisor = {
+  layout: lazyPage(() => import("@/components/supervisor/supervisor-layout"), "SupervisorLayout"),
+  dashboard: lazyPage(() => import("@/routes/dashboard/supervisor"), "SupervisorDashboard"),
+  regulations: lazyPage(
+    () => import("@/routes/dashboard/supervisor/documents"),
+    "SupervisorRegulationsPage",
+  ),
+  programs: lazyPage(
+    () => import("@/routes/dashboard/supervisor/documents"),
+    "SupervisorProgramsPage",
+  ),
+  students: lazyPage(
+    () => import("@/routes/dashboard/supervisor/students"),
+    "SupervisorStudentsPage",
+  ),
+  reports: lazyPage(() => import("@/routes/dashboard/supervisor/reports"), "SupervisorReportsPage"),
+};
+
+const publicPages = {
+  amaliyot: lazyPage(() => import("@/routes/amaliyot"), "AmaliyotPage"),
+  yoriqnoma: lazyPage(() => import("@/routes/yoriqnoma"), "YoriqnomaPage"),
+  faq: lazyPage(() => import("@/routes/faq"), "FaqPage"),
+  rescue: lazyPage(() => import("@/routes/rescue"), "RescuePage"),
+  student: lazyPage(() => import("@/routes/dashboard/student"), "StudentDashboard"),
+};
 
 export const router = createBrowserRouter([
   // Admin — sidebar layout
   {
     element: <Protected allowed={["super_admin", "admin"]} />,
+    errorElement,
+    HydrateFallback: RouteFallback,
     children: [
       {
         path: "/admin",
-        element: <AdminLayout />,
+        lazy: admin.layout,
         children: [
-          { index: true, Component: AdminHome },
-
-          // Structure (Akademik tuzilma)
           {
-            element: <Protected permission="structure" />,
+            errorElement,
             children: [
-              { path: "academic", Component: AcademicPage },
-              { path: "students", Component: StudentsPage },
-              { path: "structure/faculties", Component: FacultiesPage },
-              { path: "structure/departments", Component: DepartmentsPage },
-              { path: "structure/directions", Component: DirectionsPage },
-              { path: "structure/groups", Component: GroupsPage },
-              { path: "structure/academic-years", Component: AcademicYearsPage },
-              { path: "structure/students", Component: StructureStudentsPage },
-            ],
-          },
+              { index: true, lazy: admin.home },
 
-          // Practice (Amaliyot jarayonlari)
-          {
-            element: <Protected permission="practice" />,
-            children: [
-              { path: "practice-types", Component: PracticeTypesPage },
-              { path: "assignments", Component: AssignmentsPage },
-              { path: "attendance", Component: AttendancePage },
-              { path: "task-templates", Component: TaskTemplatesPage },
-              { path: "documents", Component: DocumentsPage },
-              { path: "reports", Component: ReportsPage },
-              { path: "records", Component: RecordsPage },
-            ],
-          },
+              // Structure (Akademik tuzilma)
+              {
+                element: <Protected permission="structure" />,
+                children: [
+                  { path: "academic", lazy: admin.academic },
+                  { path: "students", lazy: admin.students },
+                  { path: "structure/faculties", lazy: admin.faculties },
+                  { path: "structure/departments", lazy: admin.departments },
+                  { path: "structure/directions", lazy: admin.directions },
+                  { path: "structure/groups", lazy: admin.groups },
+                  { path: "structure/academic-years", lazy: admin.academicYears },
+                  { path: "structure/students", lazy: admin.structureStudents },
+                ],
+              },
 
-          // Contracts & Applications (Shartnomalar va arizalar)
-          {
-            element: <Protected allowedPermissions={["contracts", "practice"]} />,
-            children: [
-              { path: "contracts", Component: ContractsPage },
-              { path: "applications", Component: ApplicationsPage },
-            ],
-          },
+              // Practice (Amaliyot jarayonlari)
+              {
+                element: <Protected permission="practice" />,
+                children: [
+                  { path: "practice-types", lazy: admin.practiceTypes },
+                  { path: "assignments", lazy: admin.assignments },
+                  { path: "attendance", lazy: admin.attendance },
+                  { path: "task-templates", lazy: admin.taskTemplates },
+                  { path: "documents", lazy: admin.documents },
+                  { path: "reports", lazy: admin.reports },
+                  { path: "records", lazy: admin.records },
+                ],
+              },
 
-          // Supervisors (Rahbarlar)
-          {
-            element: <Protected permission="supervisors" />,
-            children: [
-              { path: "supervisors", Component: SupervisorsPage },
-            ],
-          },
+              // Contracts & Applications (Shartnomalar va arizalar)
+              {
+                element: <Protected allowedPermissions={["contracts", "practice"]} />,
+                children: [
+                  { path: "contracts", lazy: admin.contracts },
+                  { path: "applications", lazy: admin.applications },
+                ],
+              },
 
-          // Partners / Organizations / Areas (Hamkorlar)
-          {
-            element: <Protected permission="partners" />,
-            children: [
-              { path: "objects", Component: ObjectsPage },
-            ],
-          },
+              // Supervisors (Rahbarlar)
+              {
+                element: <Protected permission="supervisors" />,
+                children: [{ path: "supervisors", lazy: admin.supervisors }],
+              },
 
-          // Monitoring
-          {
-            element: <Protected permission="monitoring" />,
-            children: [
-              { path: "monitoring", Component: MonitoringPage },
-              { path: "monitoring/:tab", Component: MonitoringPage },
-            ],
-          },
+              // Partners / Organizations / Areas (Hamkorlar)
+              {
+                element: <Protected permission="partners" />,
+                children: [{ path: "objects", lazy: admin.objects }],
+              },
 
-          // Inquiries (Murojaatlar)
-          {
-            element: <Protected permission="inquiries" />,
-            children: [
-              { path: "inquiries", Component: InquiriesPage },
-            ],
-          },
+              // Monitoring
+              {
+                element: <Protected permission="monitoring" />,
+                children: [
+                  { path: "monitoring", lazy: admin.monitoring },
+                  { path: "monitoring/:tab", lazy: admin.monitoring },
+                ],
+              },
 
-          // System settings (Tizim sozlamalari)
-          {
-            element: <Protected permission="system" />,
-            children: [
-              { path: "integrations", Component: IntegrationsPage },
-            ],
-          },
+              // Inquiries (Murojaatlar)
+              {
+                element: <Protected permission="inquiries" />,
+                children: [{ path: "inquiries", lazy: admin.inquiries }],
+              },
 
-          {
-            element: <Protected allowed={["super_admin"]} />,
-            children: [
-              { path: "contract-templates", Component: ContractTemplatesPage },
-              { path: "contract-templates/:id/edit", Component: ContractTemplateEditorPage },
-              { path: "admins", Component: AdminsPage },
-              { path: "audit-log", Component: AuditLogPage },
-              { path: "system-settings", Component: SystemSettingsPage },
+              // System settings (Tizim sozlamalari)
+              {
+                element: <Protected permission="system" />,
+                children: [{ path: "integrations", lazy: admin.integrations }],
+              },
+
+              {
+                element: <Protected allowed={["super_admin"]} />,
+                children: [
+                  { path: "contract-templates", lazy: admin.contractTemplates },
+                  { path: "contract-templates/:id/edit", lazy: admin.contractTemplateEditor },
+                  { path: "admins", lazy: admin.admins },
+                  { path: "audit-log", lazy: admin.auditLog },
+                  { path: "system-settings", lazy: admin.systemSettings },
+                ],
+              },
             ],
           },
         ],
@@ -156,28 +213,41 @@ export const router = createBrowserRouter([
   },
 
   // Public QR verify — auth yo'q, layout yo'q
-  { path: "/verify/:token", Component: VerifyPage },
+  { path: "/verify/:token", Component: VerifyPage, errorElement },
 
   // Super Admin rescue — MaintenanceGuard'siz, faqat super_admin uchun
-  { path: "/rescue", Component: RescuePage },
+  {
+    path: "/rescue",
+    lazy: publicPages.rescue,
+    errorElement,
+    HydrateFallback: RouteFallback,
+  },
 
   // Force change password — must_change_password=true bo'lganda
-  { path: "/change-password", Component: ChangePasswordPage },
+  { path: "/change-password", Component: ChangePasswordPage, errorElement },
 
   // Supervisor — sidebar layout
   {
     element: <Protected allowed={["supervisor"]} />,
+    errorElement,
+    HydrateFallback: RouteFallback,
     children: [
       {
         path: "/supervisor",
-        element: <SupervisorLayout />,
+        lazy: supervisor.layout,
         children: [
-          { index: true, Component: SupervisorDashboard },
-          { path: "regulations", Component: SupervisorRegulationsPage },
-          { path: "programs", Component: SupervisorProgramsPage },
-          { path: "students", Component: SupervisorStudentsPage },
-          { path: "attendance", Component: SupervisorDashboard },
-          { path: "tasks", Component: SupervisorDashboard },
+          {
+            errorElement,
+            children: [
+              { index: true, lazy: supervisor.dashboard },
+              { path: "regulations", lazy: supervisor.regulations },
+              { path: "programs", lazy: supervisor.programs },
+              { path: "students", lazy: supervisor.students },
+              { path: "reports", lazy: supervisor.reports },
+              { path: "attendance", lazy: supervisor.dashboard },
+              { path: "tasks", lazy: supervisor.dashboard },
+            ],
+          },
         ],
       },
     ],
@@ -186,17 +256,24 @@ export const router = createBrowserRouter([
   // Public + boshqa rollar (student hozircha RootLayout'da)
   {
     element: <RootLayout />,
+    errorElement,
+    HydrateFallback: RouteFallback,
     children: [
-      { index: true, Component: Home },
-      { path: "amaliyot", Component: AmaliyotPage },
-      { path: "yoriqnoma", Component: YoriqnomaPage },
-      { path: "faq", Component: FaqPage },
-      { path: "login", Component: Login },
       {
-        element: <Protected allowed={["student"]} />,
-        children: [{ path: "student", Component: StudentDashboard }],
+        errorElement,
+        children: [
+          { index: true, Component: Home },
+          { path: "amaliyot", lazy: publicPages.amaliyot },
+          { path: "yoriqnoma", lazy: publicPages.yoriqnoma },
+          { path: "faq", lazy: publicPages.faq },
+          { path: "login", Component: Login },
+          {
+            element: <Protected allowed={["student"]} />,
+            children: [{ path: "student", lazy: publicPages.student }],
+          },
+          { path: "*", Component: NotFound },
+        ],
       },
-      { path: "*", Component: NotFound },
     ],
   },
 ]);
