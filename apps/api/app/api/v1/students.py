@@ -190,18 +190,12 @@ async def bulk_delete_students(
             deleted += 1
         except HTTPException as e:
             await db.rollback()
-            failed.append(
-                StudentBulkDeleteError(id=sid, full_name=full_name, error=str(e.detail))
-            )
+            failed.append(StudentBulkDeleteError(id=sid, full_name=full_name, error=str(e.detail)))
         except Exception as e:  # noqa: BLE001
             await db.rollback()
-            failed.append(
-                StudentBulkDeleteError(id=sid, full_name=full_name, error=str(e))
-            )
+            failed.append(StudentBulkDeleteError(id=sid, full_name=full_name, error=str(e)))
 
-    return StudentBulkDeleteResult(
-        requested=len(payload.ids), deleted=deleted, failed=failed
-    )
+    return StudentBulkDeleteResult(requested=len(payload.ids), deleted=deleted, failed=failed)
 
 
 @router.delete(
@@ -247,9 +241,7 @@ async def update_student_credentials(
     response_model=StudentRead,
     summary="Admin: talabaning bog'langan qurilmasini o'chirish",
 )
-async def reset_student_device(
-    id_: UUID, db: SessionDep, user: RequireStructure
-) -> StudentRead:
+async def reset_student_device(id_: UUID, db: SessionDep, user: RequireStructure) -> StudentRead:
     student = await svc_get_student(db, id_)
     _check_faculty_access(user, student, "tahrirlash")
     return StudentRead.model_validate(await svc_reset_device(db, id_))

@@ -304,6 +304,7 @@ async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
         district=payload.get("district"),
         group_id=group_id,
         current_semester=payload.get("current_semester"),
+        enrollment_year=payload.get("enrollment_year"),
         is_graduating=payload.get("is_graduating", False),
         education_language=payload.get("education_language"),
         education_form=payload.get("education_form"),

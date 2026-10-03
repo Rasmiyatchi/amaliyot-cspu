@@ -53,9 +53,7 @@ async def supervisors_import_template(_: RequireSupervisors) -> Response:
     return Response(
         content=build_supervisors_template(),
         media_type=_XLSX_MIME,
-        headers={
-            "Content-Disposition": 'attachment; filename="oqituvchilar_import_shablon.xlsx"'
-        },
+        headers={"Content-Disposition": 'attachment; filename="oqituvchilar_import_shablon.xlsx"'},
     )
 
 
@@ -281,13 +279,9 @@ async def bulk_delete_supervisors(
             )
         except Exception as e:  # noqa: BLE001
             await db.rollback()
-            failed.append(
-                SupervisorBulkDeleteError(id=sid, full_name=full_name, error=str(e))
-            )
+            failed.append(SupervisorBulkDeleteError(id=sid, full_name=full_name, error=str(e)))
 
-    return SupervisorBulkDeleteResult(
-        requested=len(payload.ids), deleted=deleted, failed=failed
-    )
+    return SupervisorBulkDeleteResult(requested=len(payload.ids), deleted=deleted, failed=failed)
 
 
 @router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)

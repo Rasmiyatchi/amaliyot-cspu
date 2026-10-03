@@ -77,11 +77,12 @@ async def list_directions(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
     faculty_id: UUID | None = None,
+    search: str | None = Query(None, min_length=1, max_length=100),
 ) -> Paginated[DirectionRead]:
     if user.role == UserRole.ADMIN and user.faculty_id:
         faculty_id = user.faculty_id
     offset = (page - 1) * page_size
-    items, total = await svc.list_directions(db, offset, page_size, faculty_id)
+    items, total = await svc.list_directions(db, offset, page_size, faculty_id, search)
     return Paginated(
         items=[DirectionRead.model_validate(i) for i in items],
         total=total,
@@ -91,7 +92,9 @@ async def list_directions(
 
 
 @router.post("/directions", response_model=DirectionRead, status_code=status.HTTP_201_CREATED)
-async def create_direction(data: DirectionCreate, db: SessionDep, _: RequireStructure) -> DirectionRead:
+async def create_direction(
+    data: DirectionCreate, db: SessionDep, _: RequireStructure
+) -> DirectionRead:
     return DirectionRead.model_validate(await svc.create_direction(db, data))
 
 
@@ -149,7 +152,9 @@ async def delete_department(id_: UUID, db: SessionDep, _: RequireStructure) -> N
 
 # ─── AcademicYear ─────────────────────────────────────────
 @router.get("/academic-years", response_model=list[AcademicYearRead])
-async def list_academic_years(db: SessionDep, _: RequireSupervisorOrAdmin) -> list[AcademicYearRead]:
+async def list_academic_years(
+    db: SessionDep, _: RequireSupervisorOrAdmin
+) -> list[AcademicYearRead]:
     items = await svc.list_academic_years(db)
     return [AcademicYearRead.model_validate(i) for i in items]
 
@@ -187,11 +192,12 @@ async def list_groups(
     direction_id: UUID | None = None,
     academic_year_id: UUID | None = None,
     course: int | None = Query(None, ge=1, le=5),
+    search: str | None = Query(None, min_length=1, max_length=100),
 ) -> Paginated[GroupRead]:
     faculty_id = user.faculty_id if (user.role == UserRole.ADMIN and user.faculty_id) else None
     offset = (page - 1) * page_size
     items, total = await svc.list_groups(
-        db, offset, page_size, direction_id, academic_year_id, course, faculty_id
+        db, offset, page_size, direction_id, academic_year_id, course, faculty_id, search
     )
     return Paginated(
         items=[GroupRead.model_validate(i) for i in items],
@@ -207,7 +213,9 @@ async def create_group(data: GroupCreate, db: SessionDep, _: RequireStructure) -
 
 
 @router.patch("/groups/{id_}", response_model=GroupRead)
-async def update_group(id_: UUID, data: GroupUpdate, db: SessionDep, _: RequireStructure) -> GroupRead:
+async def update_group(
+    id_: UUID, data: GroupUpdate, db: SessionDep, _: RequireStructure
+) -> GroupRead:
     return GroupRead.model_validate(await svc.update_group(db, id_, data))
 
 
