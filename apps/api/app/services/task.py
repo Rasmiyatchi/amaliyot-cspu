@@ -18,6 +18,8 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# ─── Access helpers ─────────────────────────────────────
+from app.core.clock import today_uzb
 from app.models.academic import Group
 from app.models.enums import (
     AssignmentStatus,
@@ -34,8 +36,6 @@ from app.models.supervisor import Supervisor
 from app.models.task import JournalEntry, LessonAnalysis, Task, TaskTemplate
 from app.models.user import User
 from app.services import notification as notification_svc
-
-# ─── Access helpers ─────────────────────────────────────
 from app.services.uploads import clean_client_attachments
 
 
@@ -457,7 +457,7 @@ def _task_row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
     d["is_overdue"] = bool(
         due is not None
         and st in (TaskStatus.NOT_STARTED, TaskStatus.REJECTED)
-        and due < datetime.now(UTC).date()
+        and due < today_uzb()
     )
     return d
 
@@ -519,7 +519,7 @@ async def list_overdue_tasks(
 
     admin/super_admin: barchasi; supervizor: faqat o'z biriktirishlari.
     """
-    today = datetime.now(UTC).date()
+    today = today_uzb()
     stmt = (
         select(
             Task.id.label("task_id"),

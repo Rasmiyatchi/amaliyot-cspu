@@ -27,6 +27,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.clock import today_uzb
 from app.models.attendance import AttendanceDay
 from app.models.enums import (
     AssignmentStatus,
@@ -92,11 +93,13 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
     if not pt:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Amaliyot turi topilmadi")
 
-    # Davomat
+    # Davomat — faqat bugungacha (Toshkent) bo'lgan kunlar: oldindan yashil qilingan KELAJAK
+    # kunlar bahoni oshirmasin; maxraj ham bugungacha.
+    today = today_uzb()
     att_rows = (
         await db.execute(
             select(AttendanceDay.status, func.count(AttendanceDay.id))
-            .where(AttendanceDay.assignment_id == assignment_id)
+            .where(AttendanceDay.assignment_id == assignment_id, AttendanceDay.date <= today)
             .group_by(AttendanceDay.status)
         )
     ).all()
@@ -109,6 +112,7 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
         start=asn.start_date,
         end=asn.end_date,
         weekdays=asn.required_weekdays,
+        upto=today,
     )
 
     # O'quv topshiriqlar ballari (category != SPIRITUAL va status == APPROVED)

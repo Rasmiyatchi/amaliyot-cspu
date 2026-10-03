@@ -1251,6 +1251,7 @@ async def summary(
                 AttendanceDay.date <= today,
             )
             .label("green_to_date"),
+            func.count().filter(AttendanceDay.date <= today).label("records_to_date"),
             func.max(AttendanceDay.check_in_at).label("last_check_in_at"),
         )
         .group_by(AttendanceDay.assignment_id)
@@ -1297,6 +1298,7 @@ async def summary(
             func.coalesce(agg.c.red_count, 0).label("red_count"),
             func.coalesce(agg.c.pending_count, 0).label("pending_count"),
             func.coalesce(agg.c.green_to_date, 0).label("green_to_date"),
+            func.coalesce(agg.c.records_to_date, 0).label("records_to_date"),
             agg.c.last_check_in_at,
         )
         .select_from(PracticeAssignment)
@@ -1343,7 +1345,7 @@ async def summary(
     ratio = (
         func.coalesce(agg.c.green_to_date, 0)
         * 1.0
-        / func.nullif(func.coalesce(agg.c.total_records, 0), 0)
+        / func.nullif(func.coalesce(agg.c.records_to_date, 0), 0)
     )
     if sort == "percent_asc":
         stmt = stmt.order_by(ratio.asc().nulls_last(), User.last_name, User.first_name)
@@ -1365,7 +1367,7 @@ async def summary(
         )
         item["attendance_percent"] = compute_percent(
             green=item.pop("green_to_date", 0),
-            record_total=item["total_records"],
+            record_total=item.pop("records_to_date", 0),
             start=item["start_date"],
             end=item["end_date"],
             weekdays=item["required_weekdays"],
