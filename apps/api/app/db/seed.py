@@ -102,9 +102,20 @@ async def _ensure_directions(
 ) -> dict[str, Direction]:
     out: dict[str, Direction] = {}
     for data in SAMPLE_DIRECTIONS:
+        # Yo'nalish kodi UNIKAL EMAS (c4e6a8b0d2f3) — bir kod bilan bir nechta yo'nalish bo'lishi
+        # mumkin; scalar_one_or_none() ikkinchi qator paydo bo'lganda API'ni yiqitardi.
         existing = (
-            await db.execute(select(Direction).where(Direction.code == data["code"]))
-        ).scalar_one_or_none()
+            (
+                await db.execute(
+                    select(Direction)
+                    .where(Direction.code == data["code"])
+                    .order_by(Direction.created_at.asc())
+                    .limit(1)
+                )
+            )
+            .scalars()
+            .first()
+        )
         if existing:
             out[data["code"]] = existing
             continue

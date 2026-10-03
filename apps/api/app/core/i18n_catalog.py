@@ -162,9 +162,7 @@ EXACT: dict[str, str] = {
     "Shartnoma shabloni tanlanmagan": "Шаблон договора не выбран",
     "Shartnoma shabloni topilmadi": "Шаблон договора не найден",
     "Shartnoma topilmadi": "Договор не найден",
-    "Shartnoma yopilgan — skanni o'zgartirib bo'lmaydi": (
-        "Договор закрыт — изменить скан нельзя"
-    ),
+    "Shartnoma yopilgan — skanni o'zgartirib bo'lmaydi": ("Договор закрыт — изменить скан нельзя"),
     "Shu akademik yilda, shu yo'nalishda xuddi shunday nomli guruh mavjud": (
         "В этом учебном году по этому направлению уже есть группа с таким названием"
     ),
@@ -182,9 +180,7 @@ EXACT: dict[str, str] = {
     "Siz bu biriktirishga amaliyot rahbari emassiz": (
         "Вы не являетесь руководителем практики для этого прикрепления"
     ),
-    "Siz bu biriktirishga supervizor emassiz": (
-        "Вы не являетесь руководителем этого прикрепления"
-    ),
+    "Siz bu biriktirishga supervizor emassiz": ("Вы не являетесь руководителем этого прикрепления"),
     "Sizda faol ariza allaqachon bor — avval uni yakunlang yoki bekor qiling": (
         "У вас уже есть активная заявка — сначала завершите или отмените её"
     ),
@@ -197,9 +193,7 @@ EXACT: dict[str, str] = {
     "Skan yuklash uchun avval PDF generatsiya qiling": (
         "Перед загрузкой скана сначала сгенерируйте PDF"
     ),
-    "Supervizor bu tashkilotga biriktirilmagan": (
-        "Руководитель не прикреплён к этой организации"
-    ),
+    "Supervizor bu tashkilotga biriktirilmagan": ("Руководитель не прикреплён к этой организации"),
     "Supervizorga bog'langan amaliyotlar bor — is_active=false qiling.": (
         "К руководителю привязаны практики — установите is_active=false."
     ),
@@ -211,12 +205,8 @@ EXACT: dict[str, str] = {
     "Tasdiqlangan kundalikni o'zgartirib bo'lmaydi": (
         "Нельзя изменять подтверждённую запись дневника"
     ),
-    "Tasdiqlangan tahlilni o'zgartirib bo'lmaydi": (
-        "Нельзя изменять подтверждённый анализ"
-    ),
-    "Tasdiqlangan topshiriqni o'chirib bo'lmaydi": (
-        "Нельзя удалить подтверждённое задание"
-    ),
+    "Tasdiqlangan tahlilni o'zgartirib bo'lmaydi": ("Нельзя изменять подтверждённый анализ"),
+    "Tasdiqlangan topshiriqni o'chirib bo'lmaydi": ("Нельзя удалить подтверждённое задание"),
     "Tashkilot topilmadi": "Организация не найдена",
     "Tashkilot yaratishda xatolik (takroriy qiymat)": (
         "Ошибка при создании организации (повторяющееся значение)"
@@ -238,13 +228,11 @@ EXACT: dict[str, str] = {
     ),
     "Ushbu talaba ushbu o'quv yilida shu amaliyot turiga (Bahorgi semestr) "
     "allaqachon biriktirilgan": (
-        "Этот студент уже прикреплён к этому типу практики в этом учебном году "
-        "(весенний семестр)"
+        "Этот студент уже прикреплён к этому типу практики в этом учебном году (весенний семестр)"
     ),
     "Ushbu talaba ushbu o'quv yilida shu amaliyot turiga (Kuzgi semestr) "
     "allaqachon biriktirilgan": (
-        "Этот студент уже прикреплён к этому типу практики в этом учебном году "
-        "(осенний семестр)"
+        "Этот студент уже прикреплён к этому типу практики в этом учебном году (осенний семестр)"
     ),
     "Ushbu talaba ushbu o'quv yilida shu amaliyot turiga allaqachon biriktirilgan": (
         "Этот студент уже прикреплён к этому типу практики в этом учебном году"
@@ -267,9 +255,48 @@ EXACT: dict[str, str] = {
     "organization_id yoki area_id — faqat bittasi ko'rsatilishi kerak": (
         "organization_id или area_id — укажите только одно из двух"
     ),
+    # ── auth.py (aniq login xatolari, parol almashtirish qulfi) ──────────────
+    "Bu profil boshqa qurilmaga bog'langan. Yangi qurilmadan kirish uchun "
+    "administratorga murojaat qiling (eski qurilmani o'chirishi kerak). "
+    "Siz ilova ichidagi brauzerdan (masalan, Telegram) kirmoqdasiz — "
+    "saytni Chrome yoki Safari'da oching.": (
+        "Этот профиль привязан к другому устройству. Чтобы войти с нового устройства, "
+        "обратитесь к администратору (нужно отвязать старое устройство). "
+        "Вы входите через встроенный браузер приложения (например, Telegram) — "
+        "откройте сайт в Chrome или Safari."
+    ),
+    "Bunday login topilmadi": "Такой логин не найден",
+    "Parol noto'g'ri": "Неверный пароль",
+    "Avval parolni o'zgartirishingiz kerak": "Сначала необходимо сменить пароль",
+    "Yangi parol login bilan bir xil bo'lmasin": "Новый пароль не должен совпадать с логином",
+    # ── attendance.py (to'liq boshqaruv) ─────────────────────────────────────
+    "Biriktirish bekor qilingan": "Прикрепление отменено",
+    "Amaliyot yakunlangan": "Практика завершена",
+    "O'zgarish yo'q": "Изменений нет",
+    "Biriktirish va sana kerak": "Нужны прикрепление и дата",
+    "Kelish vaqti tanlangan kunga mos emas": "Время прихода не соответствует выбранному дню",
+    "Ketish vaqti uchun kelish vaqti ham kerak": "Для времени ухода нужно и время прихода",
+    "Ketish vaqti kelish vaqtidan oldin bo'lishi mumkin emas": (
+        "Время ухода не может быть раньше времени прихода"
+    ),
+    "Kelish va ketish orasidagi vaqt 24 soatdan oshmasin": (
+        "Между приходом и уходом не должно пройти больше 24 часов"
+    ),
+    "Rad etish sababini kiriting": "Укажите причину отклонения",
+    "Davomat super admin tomonidan o'zgartirildi": "Посещаемость изменена супер-администратором",
 }
 
 PATTERNS: list[tuple[str, str]] = [
+    # ── auth.py (brute-force himoyasi) ───────────────────────────────────────
+    (
+        r"Juda ko'p urinish\. (?P<minutes>\d+) daqiqadan keyin qayta urinib ko'ring",
+        "Слишком много попыток. Повторите через {minutes} мин.",
+    ),
+    # ── attendance.py (oraliq) ───────────────────────────────────────────────
+    (
+        r"Oraliq amaliyot muddati bilan kesishmaydi \((?P<range>.+)\)",
+        "Диапазон не пересекается со сроком практики ({range})",
+    ),
     # ── academic.py (_404 helper: "{entity} topilmadi: {id}") ────────────────
     (r"Fakultet topilmadi: (?P<id>.+)", "Факультет не найден: {id}"),
     (r"Yo'nalish topilmadi: (?P<id>.+)", "Направление не найдено: {id}"),
@@ -278,8 +305,10 @@ PATTERNS: list[tuple[str, str]] = [
     (r"Akademik yil topilmadi: (?P<id>.+)", "Учебный год не найден: {id}"),
     # ── student.py ───────────────────────────────────────────────────────────
     (r"Talaba topilmadi: (?P<id>.+)", "Студент не найден: {id}"),
-    (r"Bu Talaba ID allaqachon mavjud: (?P<hemis_id>.+)",
-     "Такой ID студента уже существует: {hemis_id}"),
+    (
+        r"Bu Talaba ID allaqachon mavjud: (?P<hemis_id>.+)",
+        "Такой ID студента уже существует: {hemis_id}",
+    ),
     # ── practice_type.py / practice_assignment.py ────────────────────────────
     (r"Amaliyot turi topilmadi: (?P<id>.+)", "Тип практики не найден: {id}"),
     (r"Amaliyot turi aktiv emas: (?P<code>.+)", "Тип практики неактивен: {code}"),
@@ -289,77 +318,116 @@ PATTERNS: list[tuple[str, str]] = [
     (r"Hudud aktiv emas: (?P<name>.+)", "Территория неактивна: {name}"),
     (r"Supervizor topilmadi: (?P<id>.+)", "Руководитель не найден: {id}"),
     (r"Supervizor aktiv emas: (?P<id>.+)", "Руководитель неактивен: {id}"),
-    (r"'(?P<name>.+)' amaliyot turi tashkilot talab qiladi, hudud emas",
-     "Тип практики '{name}' требует организацию, а не территорию"),
-    (r"'(?P<name>.+)' amaliyot turi hudud talab qiladi, tashkilot emas",
-     "Тип практики '{name}' требует территорию, а не организацию"),
-    (r"Davomiylik juda qisqa: (?P<weeks>[\d.]+) hafta \(min: (?P<min>\d+)\)",
-     "Длительность слишком короткая: {weeks} нед. (мин: {min})"),
-    (r"Davomiylik juda uzun: (?P<weeks>[\d.]+) hafta "
-     r"\(max: (?P<max>\d+), ta'til bilan: (?P<allowed>[\d.]+)\)",
-     "Длительность слишком большая: {weeks} нед. (макс: {max}, с учётом каникул: {allowed})"),
-    (r"(?P<course>\d+)-kurs '(?P<name>.+)' uchun ruxsat etilmagan \(ruxsat: (?P<allowed>.+)\)",
-     "{course}-й курс не допускается к '{name}' (разрешены: {allowed})"),
-    (r"Tashkilot sig'imi to'la \((?P<current>\d+)/(?P<capacity>\d+)\)",
-     "Вместимость организации заполнена ({current}/{capacity})"),
-    (r"'(?P<name>.+)' hududi sig'imi to'la \((?P<current>\d+)/(?P<capacity>\d+)\)",
-     "Вместимость территории '{name}' заполнена ({current}/{capacity})"),
-    (r"Supervizor sig'imi to'la \((?P<current>\d+)/(?P<capacity>\d+)\)",
-     "Вместимость руководителя заполнена ({current}/{capacity})"),
+    (
+        r"'(?P<name>.+)' amaliyot turi tashkilot talab qiladi, hudud emas",
+        "Тип практики '{name}' требует организацию, а не территорию",
+    ),
+    (
+        r"'(?P<name>.+)' amaliyot turi hudud talab qiladi, tashkilot emas",
+        "Тип практики '{name}' требует территорию, а не организацию",
+    ),
+    (
+        r"Davomiylik juda qisqa: (?P<weeks>[\d.]+) hafta \(min: (?P<min>\d+)\)",
+        "Длительность слишком короткая: {weeks} нед. (мин: {min})",
+    ),
+    (
+        r"Davomiylik juda uzun: (?P<weeks>[\d.]+) hafta "
+        r"\(max: (?P<max>\d+), ta'til bilan: (?P<allowed>[\d.]+)\)",
+        "Длительность слишком большая: {weeks} нед. (макс: {max}, с учётом каникул: {allowed})",
+    ),
+    (
+        r"(?P<course>\d+)-kurs '(?P<name>.+)' uchun ruxsat etilmagan \(ruxsat: (?P<allowed>.+)\)",
+        "{course}-й курс не допускается к '{name}' (разрешены: {allowed})",
+    ),
+    (
+        r"Tashkilot sig'imi to'la \((?P<current>\d+)/(?P<capacity>\d+)\)",
+        "Вместимость организации заполнена ({current}/{capacity})",
+    ),
+    (
+        r"'(?P<name>.+)' hududi sig'imi to'la \((?P<current>\d+)/(?P<capacity>\d+)\)",
+        "Вместимость территории '{name}' заполнена ({current}/{capacity})",
+    ),
+    (
+        r"Supervizor sig'imi to'la \((?P<current>\d+)/(?P<capacity>\d+)\)",
+        "Вместимость руководителя заполнена ({current}/{capacity})",
+    ),
     (r"Biriktirish topilmadi: (?P<id>.+)", "Прикрепление не найдено: {id}"),
     # ── contract.py / pdf.py ─────────────────────────────────────────────────
     (r"Shartnoma topilmadi: (?P<id>.+)", "Договор не найден: {id}"),
     (r"Shartnoma allaqachon (?P<status>.+)", "Договор уже {status}"),
-    (r"Regen faqat DRAFT/GENERATED holatda \((?P<status>.+)\)",
-     "Повторная генерация возможна только в статусе DRAFT/GENERATED ({status})"),
+    (
+        r"Regen faqat DRAFT/GENERATED holatda \((?P<status>.+)\)",
+        "Повторная генерация возможна только в статусе DRAFT/GENERATED ({status})",
+    ),
     (r"PDF generatsiya xatoligi: (?P<error>.+)", "Ошибка генерации PDF: {error}"),
     (r"Biriktirishlar topilmadi: (?P<ids>.+)", "Прикрепления не найдены: {ids}"),
-    (r"Biriktirish boshqa tashkilotga tegishli: (?P<id>.+)",
-     "Прикрепление относится к другой организации: {id}"),
-    (r"Talabaning yo'nalishi aniqlanmagan: assignment=(?P<id>.+)",
-     "Направление студента не определено: assignment={id}"),
+    (
+        r"Biriktirish boshqa tashkilotga tegishli: (?P<id>.+)",
+        "Прикрепление относится к другой организации: {id}",
+    ),
+    (
+        r"Talabaning yo'nalishi aniqlanmagan: assignment=(?P<id>.+)",
+        "Направление студента не определено: assignment={id}",
+    ),
     (r"Template topilmadi: (?P<ref>.+)", "Шаблон не найден: {ref}"),
     # ── fayl yuklash (contracts/hemis/supervisors/uploads/contract_template) ─
     # Aniqroq variantlar oldin — umumiy "Qo'llab-quvvatlanmaydigan format" oxirida.
-    (r"Qo'llab-quvvatlanmaydigan format: (?P<format>.+)\. \.xlsx fayl yuklang\.",
-     "Неподдерживаемый формат: {format}. Загрузите файл .xlsx."),
-    (r"Qo'llab-quvvatlanmaydigan format: (?P<format>.+)\. \.xlsx yuklang\.",
-     "Неподдерживаемый формат: {format}. Загрузите .xlsx."),
-    (r"Qo'llab-quvvatlanmaydigan format: (?P<format>.+)",
-     "Неподдерживаемый формат: {format}"),
+    (
+        r"Qo'llab-quvvatlanmaydigan format: (?P<format>.+)\. \.xlsx fayl yuklang\.",
+        "Неподдерживаемый формат: {format}. Загрузите файл .xlsx.",
+    ),
+    (
+        r"Qo'llab-quvvatlanmaydigan format: (?P<format>.+)\. \.xlsx yuklang\.",
+        "Неподдерживаемый формат: {format}. Загрузите .xlsx.",
+    ),
+    (r"Qo'llab-quvvatlanmaydigan format: (?P<format>.+)", "Неподдерживаемый формат: {format}"),
     (r"Fayl juda katta \(max (?P<max>\d+) MB\)", "Файл слишком большой (макс. {max} MB)"),
-    (r"Fayl hajmi maksimaldan oshdi \((?P<size>\d+) KB > (?P<max>\d+) MB\)",
-     "Размер файла превышает максимум ({size} KB > {max} MB)"),
-    (r"Ruxsat etilmagan fayl turi: \.(?P<ext>.+)\. Ruxsat etilgan: (?P<allowed>.+)",
-     "Недопустимый тип файла: .{ext}. Разрешены: {allowed}"),
+    (
+        r"Fayl hajmi maksimaldan oshdi \((?P<size>\d+) KB > (?P<max>\d+) MB\)",
+        "Размер файла превышает максимум ({size} KB > {max} MB)",
+    ),
+    (
+        r"Ruxsat etilmagan fayl turi: \.(?P<ext>.+)\. Ruxsat etilgan: (?P<allowed>.+)",
+        "Недопустимый тип файла: .{ext}. Разрешены: {allowed}",
+    ),
     (r"Ruxsat etilmagan fayl turi: (?P<ext>.+)", "Недопустимый тип файла: {ext}"),
     (r"Noto'g'ri turi: (?P<kind>.+)", "Неверный тип: {kind}"),
     (r"DOCX o'qib bo'lmadi: (?P<error>.+)", "Не удалось прочитать DOCX: {error}"),
     # ── attendance.py ────────────────────────────────────────────────────────
-    (r"Sana amaliyot diapazonidan tashqarida \((?P<start>.+) – (?P<end>.+)\)",
-     "Дата вне диапазона практики ({start} – {end})"),
-    (r"Geo-fence tashqarisida — tashkilot hududida emassiz \(masofa: (?P<distance>\d+) m\)",
-     "Вне геозоны — вы не на территории организации (расстояние: {distance} м)"),
+    (
+        r"Sana amaliyot diapazonidan tashqarida \((?P<start>.+) – (?P<end>.+)\)",
+        "Дата вне диапазона практики ({start} – {end})",
+    ),
+    (
+        r"Geo-fence tashqarisida — tashkilot hududida emassiz \(masofa: (?P<distance>\d+) m\)",
+        "Вне геозоны — вы не на территории организации (расстояние: {distance} м)",
+    ),
     (r"Allaqachon (?P<status>.+)", "Уже {status}"),
     # ── grading.py ───────────────────────────────────────────────────────────
     (r"Bunday mezon yo'q: (?P<key>.+)", "Такого критерия нет: {key}"),
-    (r"'(?P<name>.+)' avtomatik hisoblanadi — qo'lda qo'yib bo'lmaydi",
-     "'{name}' рассчитывается автоматически — вручную выставить нельзя"),
-    (r"Ball 0 va (?P<max>\d+) oralig'ida bo'lishi kerak",
-     "Балл должен быть в диапазоне от 0 до {max}"),
-    (r"Avval barcha mezonlarni baholang: (?P<names>.+)",
-     "Сначала оцените все критерии: {names}"),
+    (
+        r"'(?P<name>.+)' avtomatik hisoblanadi — qo'lda qo'yib bo'lmaydi",
+        "'{name}' рассчитывается автоматически — вручную выставить нельзя",
+    ),
+    (
+        r"Ball 0 va (?P<max>\d+) oralig'ida bo'lishi kerak",
+        "Балл должен быть в диапазоне от 0 до {max}",
+    ),
+    (r"Avval barcha mezonlarni baholang: (?P<names>.+)", "Сначала оцените все критерии: {names}"),
     # ── task.py ──────────────────────────────────────────────────────────────
-    (r"Bu shablonga (?P<count>\d+) ta topshiriq bog'langan — avval ularni o'chiring "
-     r"yoki shablonni faqat 'is_active=false' qilib qo'ying",
-     "К этому шаблону привязано {count} заданий — сначала удалите их "
-     "или просто установите шаблону 'is_active=false'"),
+    (
+        r"Bu shablonga (?P<count>\d+) ta topshiriq bog'langan — avval ularni o'chiring "
+        r"yoki shablonni faqat 'is_active=false' qilib qo'ying",
+        "К этому шаблону привязано {count} заданий — сначала удалите их "
+        "или просто установите шаблону 'is_active=false'",
+    ),
     (r"Mos kelmaydigan template: (?P<ids>.+)", "Неподходящие шаблоны: {ids}"),
     # ── practice_application.py / contract_template.py / pdf.py (ariza tizimi) ─
     (r"Preview xatosi: (?P<error>.+)", "Ошибка предпросмотра: {error}"),
-    (r"«(?P<label>.+)» maydoni to'ldirilishi shart",
-     "Поле «{label}» обязательно для заполнения"),
-    (r"«(?P<label>.+)» uchun noto'g'ri qiymat: (?P<value>.+)",
-     "Недопустимое значение для «{label}»: {value}"),
+    (r"«(?P<label>.+)» maydoni to'ldirilishi shart", "Поле «{label}» обязательно для заполнения"),
+    (
+        r"«(?P<label>.+)» uchun noto'g'ri qiymat: (?P<value>.+)",
+        "Недопустимое значение для «{label}»: {value}",
+    ),
     (r"Tashqi URL'lar taqiqlangan: (?P<url>.+)", "Внешние URL запрещены: {url}"),
 ]

@@ -296,14 +296,15 @@ async def update_credentials(
         user.username = new_username
     if new_password:
         user.password_hash = hash_password(new_password)
+        from app.services.auth import revoke_all_refresh_tokens
+
+        await revoke_all_refresh_tokens(db, user.id)
 
     try:
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, "Bu username allaqachon band"
-        ) from e
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bu username allaqachon band") from e
 
     return await get_supervisor(db, id_)
 

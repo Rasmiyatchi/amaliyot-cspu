@@ -3,15 +3,42 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.enums import UserRole
+
+
+class DeviceInfo(BaseModel):
+    """Brauzer yuboradigan qurilma ma'lumoti (navigator.userAgentData + ekran + vaqt zonasi).
+
+    Hammasi ixtiyoriy — server User-Agent'ni ham o'zi tahlil qiladi va ikkisini birlashtiradi.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    platform: str | None = Field(None, max_length=64)
+    platform_version: str | None = Field(None, max_length=64)
+    model: str | None = Field(None, max_length=128)
+    brand: str | None = Field(None, max_length=64)
+    browser: str | None = Field(None, max_length=64)
+    browser_version: str | None = Field(None, max_length=64)
+    screen: str | None = Field(None, max_length=64)
+    timezone: str | None = Field(None, max_length=64)
+    language: str | None = Field(None, max_length=32)
+    touch: bool | None = None
+    user_agent: str | None = Field(None, max_length=512)
 
 
 class LoginRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=64)
     password: str = Field(..., min_length=4, max_length=128)
     device_id: str | None = Field(None, max_length=128, description="Qurilma fingerprint'i")
+    device_info: DeviceInfo | None = Field(None, description="Qurilma haqida ma'lumot")
+
+    @field_validator("username")
+    @classmethod
+    def _strip_username(cls, v: str) -> str:
+        return v.strip()
 
 
 class TokenResponse(BaseModel):
@@ -38,7 +65,7 @@ class UserMeResponse(BaseModel):
     faculty_id: UUID | None = None
     permissions: list[str] = Field(default_factory=list)
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ChangePasswordRequest(BaseModel):

@@ -229,6 +229,9 @@ async def update_credentials(
         user.username = new_username
     if new_password:
         user.password_hash = hash_password(new_password)
+        from app.services.auth import revoke_all_refresh_tokens
+
+        await revoke_all_refresh_tokens(db, user.id)
 
     try:
         await db.commit()

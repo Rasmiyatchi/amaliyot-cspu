@@ -5,10 +5,12 @@ Profile detallari (Student, Supervisor) alohida jadvallarga ajratiladi keyingi b
 """
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import ARRAY, Boolean, DateTime, ForeignKey, String
 from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, UUIDMixin
@@ -54,8 +56,11 @@ class User(UUIDMixin, TimestampMixin, Base):
     device_label: Mapped[str | None] = mapped_column(
         String(255), nullable=True, comment="Qurilma tavsifi (user-agent)"
     )
-    device_bound_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+    device_bound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    device_info: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Bog'langan qurilma tafsiloti: platforma, model, brauzer, ekran, vaqt zonasi, IP",
     )
 
     # Admin scoping & permissions
