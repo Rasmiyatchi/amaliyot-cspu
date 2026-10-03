@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -94,7 +93,9 @@ export function GradingRulesDialog({ open, practiceType, onClose }: Props) {
         if (i !== idx) return c;
         const next = { ...c, [key]: value };
         if (key === "name" && (!c.key || c.key === slugify(c.name))) {
-          next.key = slugify(value as string);
+          // Lotin harfi bo'lmagan nomda slug bo'sh chiqadi — bo'sh kalitli mezonni backend
+          // e'tiborsiz qoldiradi, shuning uchun mavjud/zaxira kalit saqlanadi
+          next.key = slugify(value as string) || c.key || `criterion_${idx + 1}`;
         }
         return next;
       }),
@@ -126,8 +127,12 @@ export function GradingRulesDialog({ open, practiceType, onClose }: Props) {
       toast.error(t("practiceTypesGradingRulesDialog.minTotalRange"));
       return;
     }
-    // Unique key check
-    const keys = criteria.map((c) => c.key);
+    // Kalitlar bo'sh bo'lmasin va takrorlanmasin
+    const keys = criteria.map((c) => c.key.trim());
+    if (keys.some((k) => !k)) {
+      toast.error(t("practiceTypesGradingRulesDialog.emptyKey"));
+      return;
+    }
     if (new Set(keys).size !== keys.length) {
       toast.error(t("practiceTypesGradingRulesDialog.uniqueKeys"));
       return;
@@ -146,7 +151,7 @@ export function GradingRulesDialog({ open, practiceType, onClose }: Props) {
       toast.success(t("practiceTypesGradingRulesDialog.savedToast"));
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -166,7 +171,7 @@ export function GradingRulesDialog({ open, practiceType, onClose }: Props) {
 
         <div className="space-y-3">
           <div className="rounded-md border border-border">
-            <div className="grid grid-cols-[2fr_1fr_140px_40px] gap-2 border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
+            <div className="hidden gap-2 border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground sm:grid sm:grid-cols-[2fr_1fr_110px_40px]">
               <div>{t("practiceTypesGradingRulesDialog.criterionColumn")}</div>
               <div>{t("practiceTypesGradingRulesDialog.graderColumn")}</div>
               <div className="text-right">{t("practiceTypesGradingRulesDialog.maxColumn")}</div>
@@ -175,13 +180,14 @@ export function GradingRulesDialog({ open, practiceType, onClose }: Props) {
             {criteria.map((c, i) => (
               <div
                 key={i}
-                className="grid grid-cols-[2fr_1fr_140px_40px] items-end gap-2 border-b border-border px-3 py-2 last:border-0"
+                className="grid grid-cols-[1fr_96px_40px] items-end gap-2 border-b border-border px-3 py-2 last:border-0 sm:grid-cols-[2fr_1fr_110px_40px]"
               >
-                <div>
+                <div className="col-span-3 sm:col-span-1">
                   <Input
                     value={c.name}
                     onChange={(e) => updateCriterion(i, "name", e.target.value)}
                     placeholder={t("practiceTypesGradingRulesDialog.criterionPlaceholder")}
+                    aria-label={t("practiceTypesGradingRulesDialog.criterionColumn")}
                   />
                   <div className="mt-1 font-mono text-[10px] text-muted-foreground">
                     key: {c.key}
@@ -191,7 +197,7 @@ export function GradingRulesDialog({ open, practiceType, onClose }: Props) {
                   value={c.grader}
                   onValueChange={(v) => updateCriterion(i, "grader", v as Criterion["grader"])}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label={t("practiceTypesGradingRulesDialog.graderColumn")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -210,6 +216,7 @@ export function GradingRulesDialog({ open, practiceType, onClose }: Props) {
                   onChange={(e) =>
                     updateCriterion(i, "max", Number(e.target.value) || 0)
                   }
+                  aria-label={t("practiceTypesGradingRulesDialog.maxColumn")}
                   className="text-right"
                 />
                 <Button
@@ -217,6 +224,8 @@ export function GradingRulesDialog({ open, practiceType, onClose }: Props) {
                   variant="ghost"
                   onClick={() => removeCriterion(i)}
                   disabled={criteria.length <= 1}
+                  aria-label={t("common.delete")}
+                  title={t("common.delete")}
                   className="text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -246,8 +255,11 @@ export function GradingRulesDialog({ open, practiceType, onClose }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 items-end gap-2">
             <div>
-              <Label>{t("practiceTypesGradingRulesDialog.minTotalLabel")}</Label>
+              <Label htmlFor="grading-min-total">
+                {t("practiceTypesGradingRulesDialog.minTotalLabel")}
+              </Label>
               <Input
+                id="grading-min-total"
                 type="number"
                 min={0}
                 max={100}

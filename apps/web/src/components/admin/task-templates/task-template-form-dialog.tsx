@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -72,6 +72,8 @@ type FormState = {
   display_order: string;
   is_active: boolean;
 };
+
+const MAX_POINTS = 100;
 
 const EMPTY: FormState = {
   practice_type_id: "",
@@ -136,7 +138,7 @@ export function TaskTemplateFormDialog({
       return;
     }
     const points = Number(form.points);
-    if (Number.isNaN(points) || points < 0) {
+    if (!Number.isInteger(points) || points < 0 || points > MAX_POINTS) {
       toast.error(t("taskTemplatesTaskTemplateFormDialog.errors.invalidPoints"));
       return;
     }
@@ -168,7 +170,7 @@ export function TaskTemplateFormDialog({
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -190,13 +192,13 @@ export function TaskTemplateFormDialog({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Label>{t("common.practiceType")} *</Label>
+            <Label htmlFor="tt-practice-type">{t("common.practiceType")} *</Label>
             <Select
               value={form.practice_type_id}
               onValueChange={(v) => set("practice_type_id", v)}
               disabled={isEdit}
             >
-              <SelectTrigger>
+              <SelectTrigger id="tt-practice-type">
                 <SelectValue
                   placeholder={t("taskTemplatesTaskTemplateFormDialog.selectPlaceholder")}
                 />
@@ -212,9 +214,9 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>{t("common.course")} *</Label>
+            <Label htmlFor="tt-course">{t("common.course")} *</Label>
             <Select value={form.course} onValueChange={(v) => set("course", v)}>
-              <SelectTrigger>
+              <SelectTrigger id="tt-course">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -228,12 +230,12 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>{t("common.semester")} *</Label>
+            <Label htmlFor="tt-semester">{t("common.semester")} *</Label>
             <Select
               value={form.semester}
               onValueChange={(v) => set("semester", v as "fall" | "spring")}
             >
-              <SelectTrigger>
+              <SelectTrigger id="tt-semester">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -244,12 +246,14 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>{t("taskTemplatesTaskTemplateFormDialog.categoryLabel")} *</Label>
+            <Label htmlFor="tt-category">
+              {t("taskTemplatesTaskTemplateFormDialog.categoryLabel")} *
+            </Label>
             <Select
               value={form.category}
               onValueChange={(v) => set("category", v as TaskCategory)}
             >
-              <SelectTrigger>
+              <SelectTrigger id="tt-category">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -263,12 +267,12 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>{t("taskTemplatesTaskTemplateFormDialog.typeLabel")} *</Label>
+            <Label htmlFor="tt-type">{t("taskTemplatesTaskTemplateFormDialog.typeLabel")} *</Label>
             <Select
               value={form.type}
               onValueChange={(v) => set("type", v as TaskType)}
             >
-              <SelectTrigger>
+              <SelectTrigger id="tt-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -282,8 +286,9 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div className="sm:col-span-2">
-            <Label>{t("taskTemplatesTaskTemplateFormDialog.titleLabel")} *</Label>
+            <Label htmlFor="tt-title">{t("taskTemplatesTaskTemplateFormDialog.titleLabel")} *</Label>
             <Input
+              id="tt-title"
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
               placeholder={t("taskTemplatesTaskTemplateFormDialog.titlePlaceholder")}
@@ -292,29 +297,39 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div className="sm:col-span-2">
-            <Label>{t("taskTemplatesTaskTemplateFormDialog.descriptionLabel")}</Label>
-            <Input
+            <Label htmlFor="tt-description">
+              {t("taskTemplatesTaskTemplateFormDialog.descriptionLabel")}
+            </Label>
+            <Textarea
+              id="tt-description"
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
               placeholder={t("taskTemplatesTaskTemplateFormDialog.descriptionPlaceholder")}
+              rows={3}
               maxLength={10000}
             />
           </div>
 
           <div>
-            <Label>{t("taskTemplatesTaskTemplateFormDialog.pointsLabel")} *</Label>
+            <Label htmlFor="tt-points">{t("taskTemplatesTaskTemplateFormDialog.pointsLabel")} *</Label>
             <Input
+              id="tt-points"
               type="number"
+              inputMode="numeric"
+              step={1}
               min={0}
-              max={100}
+              max={MAX_POINTS}
               value={form.points}
               onChange={(e) => set("points", e.target.value)}
             />
           </div>
 
           <div>
-            <Label>{t("taskTemplatesTaskTemplateFormDialog.quantityLabel")}</Label>
+            <Label htmlFor="tt-quantity">
+              {t("taskTemplatesTaskTemplateFormDialog.quantityLabel")}
+            </Label>
             <Input
+              id="tt-quantity"
               type="number"
               min={1}
               max={100}
@@ -324,8 +339,11 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>{t("taskTemplatesTaskTemplateFormDialog.monthHintLabel")}</Label>
+            <Label htmlFor="tt-month-hint">
+              {t("taskTemplatesTaskTemplateFormDialog.monthHintLabel")}
+            </Label>
             <Input
+              id="tt-month-hint"
               value={form.month_hint}
               onChange={(e) => set("month_hint", e.target.value)}
               placeholder={t("taskTemplatesTaskTemplateFormDialog.monthHintPlaceholder")}
@@ -334,8 +352,11 @@ export function TaskTemplateFormDialog({
           </div>
 
           <div>
-            <Label>{t("taskTemplatesTaskTemplateFormDialog.displayOrderLabel")}</Label>
+            <Label htmlFor="tt-display-order">
+              {t("taskTemplatesTaskTemplateFormDialog.displayOrderLabel")}
+            </Label>
             <Input
+              id="tt-display-order"
               type="number"
               min={0}
               value={form.display_order}

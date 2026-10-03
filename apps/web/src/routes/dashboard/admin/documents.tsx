@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import {
   BookOpen,
   Download,
@@ -36,7 +35,11 @@ import {
   type DocumentEntity,
   type DocumentKind,
 } from "@/lib/api/documents";
+import type { UUID } from "@/lib/api/types";
 import { downloadAttachment } from "@/lib/api/uploads";
+
+const ALL = "all";
+const COURSES = [1, 2, 3, 4, 5];
 
 const EDU_FORMS = [
   { value: "daytime", labelKey: "studentsStudentFormDialog.eduForm.daytime" },
@@ -47,21 +50,20 @@ const EDU_FORMS = [
 
 function DocumentList({ kind }: { kind: DocumentKind }) {
   const { t } = useTranslation();
-  const [course, setCourse] = useState<string>("");
-  const [educationForm, setEducationForm] = useState<string>("");
-  const [directionId, setDirectionId] = useState<string>("");
-  const [practiceTypeId, setPracticeTypeId] = useState<string>("");
+  const [course, setCourse] = useState<string>(ALL);
+  const [educationForm, setEducationForm] = useState<string>(ALL);
+  const [directionId, setDirectionId] = useState<string>(ALL);
+  const [practiceTypeId, setPracticeTypeId] = useState<string>(ALL);
 
-  const { data, isPending, error } = useDocuments({ 
+  const { data, isPending, error } = useDocuments({
     kind,
-    course: course && course !== "all" ? Number(course) : undefined,
-    educationForm: educationForm && educationForm !== "all" ? educationForm : undefined,
-    directionId: directionId && directionId !== "all" ? directionId : undefined,
-    practiceTypeId:
-      practiceTypeId && practiceTypeId !== "all" ? practiceTypeId : undefined,
+    course: course !== ALL ? Number(course) : undefined,
+    educationForm: educationForm !== ALL ? educationForm : undefined,
+    directionId: directionId !== ALL ? (directionId as UUID) : undefined,
+    practiceTypeId: practiceTypeId !== ALL ? (practiceTypeId as UUID) : undefined,
   });
   const [editing, setEditing] = useState<DocumentEntity | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<UUID | null>(null);
   const del = useDeleteDocument();
   const practiceTypes = usePracticeTypes();
   const directionsQ = useDirections(undefined, 1, 200);
@@ -69,11 +71,11 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
   const handleDelete = async () => {
     if (!deletingId) return;
     try {
-      await del.mutateAsync(deletingId as never);
+      await del.mutateAsync(deletingId);
       toast.success(t("adminDocuments.deletedToast"));
       setDeletingId(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -85,48 +87,24 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
     }
   };
 
-  if (isPending) {
-    return (
-      <div className="flex h-32 items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>{error.message}</AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (!data || data.length === 0) {
-    return (
-      <EmptyState
-        icon={kind === "regulation" ? ScrollText : BookOpen}
-        title={
-          kind === "regulation"
-            ? t("adminDocuments.emptyRegulations")
-            : t("adminDocuments.emptyPrograms")
-        }
-        description={t("adminDocuments.emptyDesc")}
-        accent="muted"
-      />
-    );
-  }
+  const hasFilters =
+    course !== ALL || educationForm !== ALL || directionId !== ALL || practiceTypeId !== ALL;
 
   return (
     <div className="space-y-4">
+      {/* Filtrlar har doim ko'rinadi — natija bo'sh bo'lsa ham tozalash mumkin bo'lsin */}
       {kind === "program" && (
-        <div className="grid gap-4 md:grid-cols-4 bg-muted/30 p-4 rounded-lg border">
+        <div className="grid gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-2 md:grid-cols-4">
           <div>
-            <Label className="text-xs text-muted-foreground">{t("common.practiceType")}</Label>
+            <Label htmlFor="docs-filter-type" className="text-xs text-muted-foreground">
+              {t("common.practiceType")}
+            </Label>
             <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
-              <SelectTrigger className="h-8">
-                <SelectValue placeholder={t("common.all")} />
+              <SelectTrigger id="docs-filter-type" className="h-8">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t("common.all")}</SelectItem>
+                <SelectItem value={ALL}>{t("common.all")}</SelectItem>
                 {(practiceTypes.data ?? []).map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
@@ -136,29 +114,33 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
             </Select>
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">{t("common.course")}</Label>
+            <Label htmlFor="docs-filter-course" className="text-xs text-muted-foreground">
+              {t("common.course")}
+            </Label>
             <Select value={course} onValueChange={setCourse}>
-              <SelectTrigger className="h-8">
-                <SelectValue placeholder={t("common.all")} />
+              <SelectTrigger id="docs-filter-course" className="h-8">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t("common.all")}</SelectItem>
-                <SelectItem value="1">1</SelectItem>
-                <SelectItem value="2">2</SelectItem>
-                <SelectItem value="3">3</SelectItem>
-                <SelectItem value="4">4</SelectItem>
-                <SelectItem value="5">5</SelectItem>
+                <SelectItem value={ALL}>{t("common.all")}</SelectItem>
+                {COURSES.map((c) => (
+                  <SelectItem key={c} value={String(c)}>
+                    {t("common.courseN", { n: c })}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">{t("studentsStudentFormDialog.educationFormLabel")}</Label>
+            <Label htmlFor="docs-filter-form" className="text-xs text-muted-foreground">
+              {t("studentsStudentFormDialog.educationFormLabel")}
+            </Label>
             <Select value={educationForm} onValueChange={setEducationForm}>
-              <SelectTrigger className="h-8">
-                <SelectValue placeholder={t("common.all")} />
+              <SelectTrigger id="docs-filter-form" className="h-8">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t("common.all")}</SelectItem>
+                <SelectItem value={ALL}>{t("common.all")}</SelectItem>
                 {EDU_FORMS.map((f) => (
                   <SelectItem key={f.value} value={f.value}>
                     {t(f.labelKey)}
@@ -168,90 +150,132 @@ function DocumentList({ kind }: { kind: DocumentKind }) {
             </Select>
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">{t("common.direction")}</Label>
+            <Label htmlFor="docs-filter-direction" className="text-xs text-muted-foreground">
+              {t("common.direction")}
+            </Label>
             <Select value={directionId} onValueChange={setDirectionId}>
-              <SelectTrigger className="h-8">
-                <SelectValue placeholder={t("common.all")} />
+              <SelectTrigger id="docs-filter-direction" className="h-8">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t("common.all")}</SelectItem>
+                <SelectItem value={ALL}>{t("common.all")}</SelectItem>
                 {(directionsQ.data?.items ?? []).map((d) => (
                   <SelectItem key={d.id} value={d.id}>
-                    {d.code}
+                    {d.code} · {d.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+          {hasFilters && (
+            <div className="sm:col-span-2 md:col-span-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setCourse(ALL);
+                  setEducationForm(ALL);
+                  setDirectionId(ALL);
+                  setPracticeTypeId(ALL);
+                }}
+              >
+                {t("common.clear")}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
-      <div className="grid gap-3 md:grid-cols-2">
-        {data.map((doc) => (
-          <Card key={doc.id} className="card-hover">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-start gap-3 text-base">
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <FileText className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="leading-snug">{doc.title}</div>
-                  {doc.practice_type_name && (
-                    <div className="mt-0.5 text-xs font-normal text-muted-foreground">
-                      {doc.practice_type_name}
-                    </div>
-                  )}
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {doc.description && (
-                <div className="text-sm text-muted-foreground">{doc.description}</div>
-              )}
-              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span className="truncate">{doc.file_attachment.name}</span>
-                <span className="shrink-0">
-                  {(doc.file_attachment.size / 1024).toFixed(1)} KB
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleDownload(doc)}
-                  className="flex-1"
-                >
-                  <Download className="h-4 w-4" />
-                  {t("common.download")}
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setEditing(doc)}
-                  title={t("common.edit")}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-destructive hover:bg-destructive/10"
-                  onClick={() => setDeletingId(doc.id)}
-                  title={t("common.delete")}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {isPending && (
+        <div className="flex h-32 items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+      )}
 
-      <DocumentFormDialog
-        open={!!editing}
-        document={editing}
-        onClose={() => setEditing(null)}
-      />
+      {data && data.length === 0 && (
+        <EmptyState
+          icon={kind === "regulation" ? ScrollText : BookOpen}
+          title={
+            kind === "regulation"
+              ? t("adminDocuments.emptyRegulations")
+              : t("adminDocuments.emptyPrograms")
+          }
+          description={t("adminDocuments.emptyDesc")}
+          accent="muted"
+        />
+      )}
+
+      {data && data.length > 0 && (
+        <div className="grid gap-3 md:grid-cols-2">
+          {data.map((doc) => (
+            <Card key={doc.id} className="card-hover">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-start gap-3 text-base">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="break-words leading-snug">{doc.title}</div>
+                    {doc.practice_type_name && (
+                      <div className="mt-0.5 text-xs font-normal text-muted-foreground">
+                        {doc.practice_type_name}
+                      </div>
+                    )}
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {doc.description && (
+                  <div className="text-sm text-muted-foreground">{doc.description}</div>
+                )}
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span className="truncate">{doc.file_attachment.name}</span>
+                  <span className="shrink-0">
+                    {(doc.file_attachment.size / 1024).toFixed(1)} KB
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDownload(doc)}
+                    className="flex-1"
+                  >
+                    <Download className="h-4 w-4" />
+                    {t("common.download")}
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setEditing(doc)}
+                    title={t("common.edit")}
+                    aria-label={t("common.edit")}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeletingId(doc.id)}
+                    title={t("common.delete")}
+                    aria-label={t("common.delete")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <DocumentFormDialog open={!!editing} document={editing} onClose={() => setEditing(null)} />
       <ConfirmDialog
         open={!!deletingId}
         title={t("adminDocuments.deleteTitle")}
@@ -286,9 +310,7 @@ export function DocumentsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-semibold">{t("adminDocuments.title")}</h1>
-            <p className="text-sm text-muted-foreground">
-              {t("adminDocuments.subtitle")}
-            </p>
+            <p className="text-sm text-muted-foreground">{t("adminDocuments.subtitle")}</p>
           </div>
         </div>
         <Button onClick={handleNew}>

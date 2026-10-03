@@ -1,4 +1,5 @@
 import { BookOpen, FileText, Users } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
@@ -25,9 +26,9 @@ const GRADER_LABEL_KEY: Record<string, string> = {
   department_head: "practiceTypesPracticeTypeDetailDialog.graders.departmentHead",
 };
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="grid grid-cols-[160px_1fr] gap-2 text-sm">
+    <div className="grid grid-cols-1 gap-0.5 text-sm sm:grid-cols-[160px_1fr] sm:gap-2">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="break-words">{value ?? <span className="text-muted-foreground">—</span>}</dd>
     </div>
@@ -47,12 +48,12 @@ export function PracticeTypeDetailDialog({ practiceType, onClose }: Props) {
         {practiceType && (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <DialogTitle className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <BookOpen className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <div>{practiceType.name}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="break-words">{practiceType.name}</div>
                   <div className="mt-0.5 font-mono text-xs font-normal text-muted-foreground">
                     {practiceType.code}
                   </div>

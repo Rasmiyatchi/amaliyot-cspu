@@ -97,13 +97,14 @@ export function InquiriesPage() {
           {data.map((q) => (
             <div
               key={q.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
             >
               <button
+                type="button"
                 className="min-w-0 flex-1 text-left"
                 onClick={() => setSelected(q)}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate font-medium">{q.subject}</span>
                   <Badge variant={q.is_resolved ? "secondary" : "success"}>
                     {q.is_resolved
@@ -123,7 +124,7 @@ export function InquiriesPage() {
                 disabled={resolveMut.isPending}
                 onClick={() => toggleResolved(q)}
               >
-                {q.is_resolved ? t("adminInquiries.reopenBtn") : t("common.close")}
+                {q.is_resolved ? t("adminInquiries.reopenBtn") : t("adminInquiries.resolveBtn")}
               </Button>
             </div>
           ))}

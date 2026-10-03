@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import { AlertCircle, CheckCircle2, Loader2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -31,14 +30,15 @@ import {
   useCreateAssignment,
 } from "@/lib/api/assignments";
 import { usePracticeTypes } from "@/lib/api/practice-types";
-import { useStudents } from "@/lib/api/students";
 import type { PracticeType, Semester } from "@/lib/api/types";
-import { WeekdayPicker } from "@/components/admin/assignments/weekday-picker";
-import { StudentSearchSelect } from "@/components/admin/assignments/student-search-select";
-import { SupervisorSearchSelect } from "@/components/admin/assignments/supervisor-search-select";
+import { AreaSearchSelect } from "@/components/admin/assignments/area-search-select";
 import { GroupSearchSelect } from "@/components/admin/assignments/group-search-select";
 import { OrganizationSearchSelect } from "@/components/admin/assignments/organization-search-select";
-import { AreaSearchSelect } from "@/components/admin/assignments/area-search-select";
+import { StudentSearchSelect } from "@/components/admin/assignments/student-search-select";
+import { useGroupStudents } from "@/components/admin/assignments/student-queries";
+import { SupervisorSearchSelect } from "@/components/admin/assignments/supervisor-search-select";
+import { WeekdayPicker } from "@/components/admin/assignments/weekday-picker";
+import { addDays } from "@/components/attendance/attendance-date-utils";
 
 const NONE = "__none__";
 
@@ -54,11 +54,26 @@ type Props = {
 
 type Mode = "single" | "group";
 
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function daysBetween(start: string, end: string): number {
+  return Math.round(
+    (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / DAY_MS,
+  );
 }
+
+/**
+ * Semestr boshlanish oyidan — backend ham shu qoidani ishlatadi (task.py:_semester_for_date):
+ * 8-oy va undan keyin — kuzgi, aks holda bahorgi.
+ */
+function inferSemester(startDate: string): Semester {
+  return Number(startDate.slice(5, 7)) >= 8 ? "fall" : "spring";
+}
+
+type DurationCheck =
+  | { kind: "error"; message: string }
+  | { kind: "warning"; message: string }
+  | null;
 
 export function AssignmentWizard({ open, onClose }: Props) {
   const { t } = useTranslation();
@@ -76,7 +91,10 @@ export function AssignmentWizard({ open, onClose }: Props) {
   const [supervisorId, setSupervisorId] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  // Qo'lda kiritilgan tugash sanasi / semestr avtomatik taklif bilan ustidan yozilmaydi
+  const [endTouched, setEndTouched] = useState(false);
   const [semester, setSemester] = useState<string>(NONE);
+  const [semesterTouched, setSemesterTouched] = useState(false);
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [notes, setNotes] = useState<string>("");
 
@@ -85,7 +103,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
     [practiceTypes.data, practiceTypeId],
   );
 
-  // Active AY'ni default qilamiz
+  // Faol o'quv yili — standart qiymat
   useEffect(() => {
     if (!academicYearId && academicYears.data?.length) {
       const active = academicYears.data.find((ay) => ay.is_active);
@@ -93,37 +111,92 @@ export function AssignmentWizard({ open, onClose }: Props) {
     }
   }, [academicYears.data, academicYearId]);
 
-  // Group tanlanganda — groupdagi talabalarni yuklash
-  const groupStudentsQuery = useStudents({ group_id: groupId || undefined }, 1, 100);
-  const groupStudents = groupStudentsQuery.data?.items ?? [];
+  // Guruh rejimi — faqat guruh tanlanganda so'raladi
+  const groupStudentsQuery = useGroupStudents(mode === "group" && groupId ? groupId : null);
+  const groupStudents = useMemo(
+    () => groupStudentsQuery.data?.items ?? [],
+    [groupStudentsQuery.data],
+  );
 
-  // Single mode uchun kurslar bo'yicha filter
   const allowedCourses = useMemo(
     () => practiceType?.allowed_courses ?? [],
     [practiceType],
   );
 
-  // Amaliyot turi o'zgarganda — end_date avto-taklif
-  useEffect(() => {
-    if (startDate && practiceType) {
-      setEndDate(addDays(startDate, practiceType.min_weeks * 7));
-    }
-  }, [startDate, practiceType]);
+  const suggestEnd = (start: string, type: PracticeType | undefined) =>
+    start && type ? addDays(start, type.min_weeks * 7) : "";
 
-  // Semestr — boshlanish oyidan avto-taklif. Backend ham shu qoidani ishlatadi
-  // (task.py:_semester_for_date): 8-oy va undan keyin — kuzgi, aks holda bahorgi.
-  useEffect(() => {
-    if (!startDate) return;
-    const month = Number(startDate.slice(5, 7));
-    setSemester(month >= 8 ? "fall" : "spring");
-  }, [startDate]);
-
-  // Amaliyot turi o'zgarganda — obyektni reset
-  useEffect(() => {
+  const handlePracticeTypeChange = (id: string) => {
+    setPracticeTypeId(id);
+    // Obyekt turi o'zgarishi mumkin — tanlangan obyekt va supervizor tozalanadi
     setOrganizationId("");
     setAreaId("");
     setSupervisorId("");
-  }, [practiceTypeId]);
+    if (!endTouched) {
+      setEndDate(suggestEnd(startDate, practiceTypes.data?.find((p) => p.id === id)));
+    }
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setStartDate(value);
+    if (!endTouched) setEndDate(suggestEnd(value, practiceType));
+    if (!semesterTouched) setSemester(value ? inferSemester(value) : NONE);
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setEndDate(value);
+    // Tozalansa — yana avtomatik taklif qilinadi
+    setEndTouched(value !== "");
+  };
+
+  const handleGroupChange = (id: string) => {
+    setGroupId(id);
+    // Oldingi guruhdan tanlangan talabalar yangi guruh bilan yuborilib ketmasin
+    setSelectedStudentIds(new Set());
+  };
+
+  // Sana va davomiylik — backend (_validate_and_resolve) bilan bir xil qoidalar
+  const durationCheck: DurationCheck = useMemo(() => {
+    if (!startDate || !endDate) return null;
+    const days = daysBetween(startDate, endDate);
+    if (days < 0) {
+      return { kind: "error", message: t("assignmentsAssignmentWizard.endBeforeStart") };
+    }
+    if (!practiceType) return null;
+    const weeks = days / 7;
+    const weeksText = weeks.toFixed(1);
+    if (weeks + 0.01 < practiceType.min_weeks) {
+      return {
+        kind: "error",
+        message: t("assignmentsAssignmentWizard.durationTooShort", {
+          weeks: weeksText,
+          min: practiceType.min_weeks,
+        }),
+      };
+    }
+    // Uzoq amaliyotlar (4+2) qish ta'tili orqali o'tadi — backend 1.5x + 2 hafta zaxira beradi
+    const maxAllowed = practiceType.max_weeks * 1.5 + 2;
+    if (weeks > maxAllowed) {
+      return {
+        kind: "error",
+        message: t("assignmentsAssignmentWizard.durationTooLong", {
+          weeks: weeksText,
+          max: practiceType.max_weeks,
+          allowed: Math.floor(maxAllowed),
+        }),
+      };
+    }
+    if (weeks > practiceType.max_weeks) {
+      return {
+        kind: "warning",
+        message: t("assignmentsAssignmentWizard.durationOverMax", {
+          weeks: weeksText,
+          max: practiceType.max_weeks,
+        }),
+      };
+    }
+    return null;
+  }, [startDate, endDate, practiceType, t]);
 
   const createOne = useCreateAssignment();
   const createBulk = useBulkCreateAssignment();
@@ -139,7 +212,9 @@ export function AssignmentWizard({ open, onClose }: Props) {
     setSupervisorId("");
     setStartDate("");
     setEndDate("");
+    setEndTouched(false);
     setSemester(NONE);
+    setSemesterTouched(false);
     setWeekdays([]);
     setNotes("");
     createOne.reset();
@@ -156,6 +231,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
     !!academicYearId &&
     !!startDate &&
     !!endDate &&
+    durationCheck?.kind !== "error" &&
     weekdays.length > 0 &&
     (!!organizationId || !!areaId) &&
     (mode === "single"
@@ -169,9 +245,17 @@ export function AssignmentWizard({ open, onClose }: Props) {
     setSelectedStudentIds(next);
   };
 
-  const selectAllGroup = () => {
-    setSelectedStudentIds(new Set(groupStudents.map((s) => s.id)));
+  const allGroupSelected =
+    groupStudents.length > 0 && groupStudents.every((s) => selectedStudentIds.has(s.id));
+
+  const toggleAllGroup = () => {
+    setSelectedStudentIds(
+      allGroupSelected ? new Set() : new Set(groupStudents.map((s) => s.id)),
+    );
   };
+
+  const studentName = (id: string) =>
+    groupStudents.find((s) => s.id === id)?.full_name ?? id.slice(0, 8);
 
   const handleSubmit = async () => {
     const base = {
@@ -214,20 +298,18 @@ export function AssignmentWizard({ open, onClose }: Props) {
       }
     } catch (e) {
       toast.error(
-        e instanceof HTTPError
-          ? e.message
-          : t("assignmentsAssignmentWizard.errorOccurred"),
+        e instanceof Error ? e.message : t("assignmentsAssignmentWizard.errorOccurred"),
       );
     }
   };
 
   const busy = createOne.isPending || createBulk.isPending;
 
-  // Show only compatible practice types (active)
+  // Faqat faol amaliyot turlari
   const availablePracticeTypes = (practiceTypes.data ?? []).filter((p) => p.is_active);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && !busy && handleClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("assignmentsAssignmentWizard.title")}</DialogTitle>
@@ -240,9 +322,9 @@ export function AssignmentWizard({ open, onClose }: Props) {
           {/* Practice type + academic year */}
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <Label>{t("common.practiceType")} *</Label>
-              <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
-                <SelectTrigger className="mt-1.5">
+              <Label htmlFor="wizard-practice-type">{t("common.practiceType")} *</Label>
+              <Select value={practiceTypeId} onValueChange={handlePracticeTypeChange}>
+                <SelectTrigger id="wizard-practice-type" className="mt-1.5">
                   <SelectValue placeholder={t("assignmentsAssignmentWizard.selectPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -255,9 +337,9 @@ export function AssignmentWizard({ open, onClose }: Props) {
               </Select>
             </div>
             <div>
-              <Label>{t("common.academicYear")} *</Label>
+              <Label htmlFor="wizard-academic-year">{t("common.academicYear")} *</Label>
               <Select value={academicYearId} onValueChange={setAcademicYearId}>
-                <SelectTrigger className="mt-1.5">
+                <SelectTrigger id="wizard-academic-year" className="mt-1.5">
                   <SelectValue placeholder={t("assignmentsAssignmentWizard.selectPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -311,8 +393,8 @@ export function AssignmentWizard({ open, onClose }: Props) {
             </Tabs>
           </div>
 
-          {/* Bo'sh groupStudents holati */}
-          {mode === "group" && groupId && groupStudents.length === 0 && !groupStudentsQuery.isPending && (
+          {/* Bo'sh guruh holati */}
+          {mode === "group" && groupId && groupStudents.length === 0 && groupStudentsQuery.isSuccess && (
             <Alert variant="warning">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>{t("assignmentsAssignmentWizard.emptyGroupTitle")}</AlertTitle>
@@ -348,7 +430,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
                 <div className="mt-1.5">
                   <GroupSearchSelect
                     value={groupId}
-                    onValueChange={setGroupId}
+                    onValueChange={handleGroupChange}
                     allowedCourses={allowedCourses}
                     placeholder={t("assignmentsAssignmentWizard.groupPlaceholder")}
                   />
@@ -356,7 +438,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
               </div>
               {groupId && (
                 <div className="rounded-lg border border-border p-3">
-                  <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="h-4 w-4 text-muted-foreground" />
                       {t("assignmentsAssignmentWizard.groupSelected", {
@@ -368,28 +450,37 @@ export function AssignmentWizard({ open, onClose }: Props) {
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={selectAllGroup}
+                      onClick={toggleAllGroup}
+                      disabled={groupStudents.length === 0}
                     >
-                      {t("assignmentsAssignmentWizard.selectAll")}
+                      {allGroupSelected
+                        ? t("assignmentsAssignmentWizard.deselectAll")
+                        : t("assignmentsAssignmentWizard.selectAll")}
                     </Button>
                   </div>
-                  <div className="max-h-48 space-y-1 overflow-y-auto">
-                    {groupStudents.map((s) => (
-                      <label
-                        key={s.id}
-                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedStudentIds.has(s.id)}
-                          onChange={() => toggleStudent(s.id)}
-                          className="h-4 w-4"
-                        />
-                        <span className="flex-1">{s.full_name}</span>
-                        <span className="text-xs text-muted-foreground">{s.hemis_id}</span>
-                      </label>
-                    ))}
-                  </div>
+                  {groupStudentsQuery.isPending ? (
+                    <div className="flex h-16 items-center justify-center">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <div className="max-h-48 space-y-1 overflow-y-auto">
+                      {groupStudents.map((s) => (
+                        <label
+                          key={s.id}
+                          className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedStudentIds.has(s.id)}
+                            onChange={() => toggleStudent(s.id)}
+                            className="h-4 w-4"
+                          />
+                          <span className="min-w-0 flex-1 truncate">{s.full_name}</span>
+                          <span className="text-xs text-muted-foreground">{s.hemis_id}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -397,7 +488,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
 
           <Separator />
 
-          {/* Object selection */}
+          {/* Obyekt */}
           {practiceType && (
             <div>
               <Label>
@@ -418,6 +509,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
                     value={organizationId}
                     onValueChange={(v) => {
                       setOrganizationId(v);
+                      setSupervisorId("");
                       if (v) setAreaId("");
                     }}
                     placeholder={t("assignmentsAssignmentWizard.orgPlaceholder")}
@@ -437,7 +529,7 @@ export function AssignmentWizard({ open, onClose }: Props) {
             </div>
           )}
 
-          {/* Supervisor — tashkilot yoki hudud tanlangan bo'lsa */}
+          {/* Supervizor — tashkilot yoki hudud tanlangan bo'lsa */}
           {(organizationId || areaId) && (
             <div>
               <Label>{t("common.supervisor")}</Label>
@@ -454,35 +546,69 @@ export function AssignmentWizard({ open, onClose }: Props) {
 
           <Separator />
 
-          {/* Dates */}
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <Label htmlFor="start_date">{t("assignmentsAssignmentWizard.startDate")} *</Label>
-              <Input
-                id="start_date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="mt-1.5"
-              />
+          {/* Sanalar */}
+          <div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <Label htmlFor="start_date">{t("assignmentsAssignmentWizard.startDate")} *</Label>
+                <Input
+                  id="start_date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="end_date">{t("assignmentsAssignmentWizard.endDate")} *</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
+                  aria-invalid={durationCheck?.kind === "error"}
+                  aria-describedby={durationCheck ? "wizard-duration-check" : undefined}
+                  className="mt-1.5"
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="end_date">{t("assignmentsAssignmentWizard.endDate")} *</Label>
-              <Input
-                id="end_date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
+            {durationCheck ? (
+              <p
+                id="wizard-duration-check"
+                role={durationCheck.kind === "error" ? "alert" : undefined}
+                className={
+                  durationCheck.kind === "error"
+                    ? "mt-1.5 text-xs text-destructive"
+                    : "mt-1.5 text-xs text-amber-600 dark:text-amber-500"
+                }
+              >
+                {durationCheck.message}
+              </p>
+            ) : (
+              practiceType &&
+              !endTouched &&
+              endDate && (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {t("assignmentsAssignmentWizard.endSuggested", {
+                    weeks: practiceType.min_weeks,
+                  })}
+                </p>
+              )
+            )}
           </div>
 
           {/* Semestr — 4+2 da kuzgi va bahorgi baho alohida chiqadi */}
           <div>
-            <Label>{t("common.semester")}</Label>
-            <Select value={semester} onValueChange={setSemester}>
-              <SelectTrigger className="mt-1.5">
+            <Label htmlFor="wizard-semester">{t("common.semester")}</Label>
+            <Select
+              value={semester}
+              onValueChange={(v) => {
+                setSemester(v);
+                setSemesterTouched(true);
+              }}
+            >
+              <SelectTrigger id="wizard-semester" className="mt-1.5">
                 <SelectValue placeholder={t("assignmentsAssignmentWizard.choosePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
@@ -540,16 +666,16 @@ export function AssignmentWizard({ open, onClose }: Props) {
             />
           </div>
 
-          {/* Bulk result (agar xatolar bo'lsa) */}
+          {/* Ommaviy natija (xatolar bo'lsa) */}
           {createBulk.data && createBulk.data.failed.length > 0 && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>{t("assignmentsAssignmentWizard.bulkFailedTitle")}</AlertTitle>
               <AlertDescription>
                 <div className="mt-2 max-h-40 overflow-y-auto text-xs">
-                  {createBulk.data.failed.map((f, i) => (
-                    <div key={i} className="mb-1">
-                      <span className="font-mono">{f.student_id.slice(0, 8)}</span>:{" "}
+                  {createBulk.data.failed.map((f) => (
+                    <div key={f.student_id} className="mb-1">
+                      <span className="font-medium">{studentName(f.student_id)}</span>:{" "}
                       {f.error}
                     </div>
                   ))}
@@ -588,4 +714,3 @@ export function AssignmentWizard({ open, onClose }: Props) {
     </Dialog>
   );
 }
-

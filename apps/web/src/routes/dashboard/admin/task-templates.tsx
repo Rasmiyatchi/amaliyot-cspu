@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import { BookOpen, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -51,6 +50,12 @@ export function TaskTemplatesPage() {
     return found?.id ?? "";
   }, [practiceTypeId, practiceTypes.data]);
 
+  // Kurs filtri — tanlangan amaliyot turining ruxsat etilgan kurslari (avval faqat 3 va 4 edi)
+  const courseOptions = useMemo(() => {
+    const pt = practiceTypes.data?.find((p) => p.id === effectivePracticeTypeId);
+    return pt?.allowed_courses.length ? [...pt.allowed_courses].sort((a, b) => a - b) : [1, 2, 3, 4, 5];
+  }, [practiceTypes.data, effectivePracticeTypeId]);
+
   const { data: templates, isPending, error } = useTaskTemplates({
     practice_type_id: effectivePracticeTypeId || undefined,
     course: course !== ALL ? Number(course) : undefined,
@@ -69,7 +74,7 @@ export function TaskTemplatesPage() {
       toast.success(t("adminTaskTemplates.templateDeleted"));
       setDeletingId(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -114,12 +119,17 @@ export function TaskTemplatesPage() {
       {/* Filtrlar */}
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
-          <Label className="text-xs">{t("common.practiceType")}</Label>
+          <Label htmlFor="tt-filter-type" className="text-xs">
+            {t("common.practiceType")}
+          </Label>
           <Select
             value={effectivePracticeTypeId}
-            onValueChange={setPracticeTypeId}
+            onValueChange={(v) => {
+              setPracticeTypeId(v);
+              setCourse(ALL);
+            }}
           >
-            <SelectTrigger>
+            <SelectTrigger id="tt-filter-type">
               <SelectValue placeholder={t("common.practiceType")} />
             </SelectTrigger>
             <SelectContent>
@@ -132,22 +142,29 @@ export function TaskTemplatesPage() {
           </Select>
         </div>
         <div>
-          <Label className="text-xs">{t("common.course")}</Label>
+          <Label htmlFor="tt-filter-course" className="text-xs">
+            {t("common.course")}
+          </Label>
           <Select value={course} onValueChange={setCourse}>
-            <SelectTrigger>
+            <SelectTrigger id="tt-filter-course">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>{t("common.all")}</SelectItem>
-              <SelectItem value="3">{t("common.courseN", { n: 3 })}</SelectItem>
-              <SelectItem value="4">{t("common.courseN", { n: 4 })}</SelectItem>
+              {courseOptions.map((c) => (
+                <SelectItem key={c} value={String(c)}>
+                  {t("common.courseN", { n: c })}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label className="text-xs">{t("common.semester")}</Label>
+          <Label htmlFor="tt-filter-semester" className="text-xs">
+            {t("common.semester")}
+          </Label>
           <Select value={semester} onValueChange={setSemester}>
-            <SelectTrigger>
+            <SelectTrigger id="tt-filter-semester">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -227,13 +244,15 @@ export function TaskTemplatesPage() {
                     {items.map((tpl) => (
                       <div
                         key={tpl.id}
-                        className="flex items-start gap-3 rounded-md border border-border p-3"
+                        className="flex flex-wrap items-start gap-3 rounded-md border border-border p-3 sm:flex-nowrap"
                       >
                         <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300">
                           {tpl.display_order}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-bold text-sm text-slate-900 dark:text-slate-100 leading-snug">{tpl.title}</div>
+                          <div className="break-words text-sm font-bold leading-snug text-foreground">
+                            {tpl.title}
+                          </div>
                           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
                             <TaskTypeLabel type={tpl.type} />
                             {tpl.quantity > 1 && (
@@ -260,6 +279,7 @@ export function TaskTemplatesPage() {
                             variant="ghost"
                             onClick={() => setEditing(tpl)}
                             title={t("common.edit")}
+                            aria-label={t("common.edit")}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -268,6 +288,7 @@ export function TaskTemplatesPage() {
                             variant="ghost"
                             onClick={() => setDeletingId(tpl.id)}
                             title={t("common.delete")}
+                            aria-label={t("common.delete")}
                             className="text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-4 w-4" />

@@ -1,15 +1,35 @@
-import { Archive, ChevronLeft, ChevronRight, ClipboardCheck, Download, FileText, Loader2, RotateCcw, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Archive,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Download,
+  FileText,
+  Loader2,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
+import { HTTPError } from "ky";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useDebounce } from "@/hooks/use-debounce";
+import { formatTashkentDate } from "@/components/attendance/attendance-date-utils";
 import { dateLocale } from "@/i18n";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/loading-skeletons";
@@ -29,7 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDirections, useGroups } from "@/lib/api/academic";
+import { useDirections } from "@/lib/api/academic";
 import {
   downloadRecordsPdf,
   downloadRecordsXlsx,
@@ -40,6 +60,7 @@ import {
   type RecordFilters,
   type RecordRow,
 } from "@/lib/api/records";
+import { GroupSearchSelect } from "@/components/admin/assignments/group-search-select";
 import { SupervisorSearchSelect } from "@/components/admin/assignments/supervisor-search-select";
 import { useAuthStore } from "@/stores/auth";
 import type { UUID } from "@/lib/api/types";
@@ -72,17 +93,14 @@ export function RecordsPage() {
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState<"xlsx" | "pdf" | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<RecordRow | null>(null);
+  // Server o'chirishni rad etsa (409 — faol/yakunlangan amaliyot) — sababi va "arxivlash" taklifi
+  const [deleteBlocked, setDeleteBlocked] = useState<string | null>(null);
 
   const archiveMut = useArchiveRecord();
   const unarchiveMut = useUnarchiveRecord();
   const deleteMut = useDeleteRecord();
 
   const directionsQ = useDirections(undefined, 1, 200);
-  const groupsQ = useGroups(
-    { directionId: filters.direction_id, course: filters.course },
-    1,
-    200,
-  );
 
   const effectiveFilters = useMemo(
     () => ({
@@ -134,12 +152,37 @@ export function RecordsPage() {
     }
   };
 
+  const openDelete = (row: RecordRow) => {
+    setDeleteBlocked(null);
+    setRecordToDelete(row);
+  };
+
+  const closeDelete = () => {
+    setRecordToDelete(null);
+    setDeleteBlocked(null);
+  };
+
   const handleDeleteConfirm = async () => {
     if (!recordToDelete) return;
     try {
       await deleteMut.mutateAsync(recordToDelete.assignment_id);
       toast.success(t("adminRecords.deleteSuccess"));
-      setRecordToDelete(null);
+      closeDelete();
+    } catch (e) {
+      if (e instanceof HTTPError && e.response.status === 409) {
+        setDeleteBlocked(e.message);
+        return;
+      }
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
+
+  const handleArchiveInstead = async () => {
+    if (!recordToDelete) return;
+    try {
+      await archiveMut.mutateAsync(recordToDelete.assignment_id);
+      toast.success(t("adminRecords.archiveSuccess"));
+      closeDelete();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
@@ -214,7 +257,7 @@ export function RecordsPage() {
             value={filters.degree_type ?? ALL}
             onValueChange={(v) => setFilter({ degree_type: v === ALL ? undefined : v })}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px]">
               <SelectValue placeholder={t("adminRecords.degreeTypeFilter")} />
             </SelectTrigger>
             <SelectContent>
@@ -230,7 +273,7 @@ export function RecordsPage() {
             value={filters.education_form ?? ALL}
             onValueChange={(v) => setFilter({ education_form: v === ALL ? undefined : v })}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px]">
               <SelectValue placeholder={t("adminRecords.eduFormFilter")} />
             </SelectTrigger>
             <SelectContent>
@@ -248,7 +291,7 @@ export function RecordsPage() {
               setFilter({ direction_id: v === ALL ? undefined : (v as UUID), group_id: undefined })
             }
           >
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder={t("adminRecords.specialty")} />
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
@@ -266,7 +309,7 @@ export function RecordsPage() {
               setFilter({ course: v === ALL ? undefined : Number(v), group_id: undefined })
             }
           >
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-full sm:w-[130px]">
               <SelectValue placeholder={t("common.course")} />
             </SelectTrigger>
             <SelectContent>
@@ -278,40 +321,41 @@ export function RecordsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={filters.group_id ?? ALL}
-            onValueChange={(v) => setFilter({ group_id: v === ALL ? undefined : (v as UUID) })}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder={t("common.group")} />
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              <SelectItem value={ALL}>{t("adminRecords.allGroups")}</SelectItem>
-              {(groupsQ.data?.items ?? []).map((g) => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="w-[200px]">
+          <div className="w-full sm:w-[200px]">
+            <GroupSearchSelect
+              value={filters.group_id ?? ""}
+              onValueChange={(v) => setFilter({ group_id: v ? (v as UUID) : undefined })}
+              directionId={filters.direction_id}
+              course={filters.course}
+              placeholder={t("adminRecords.allGroups")}
+              noneLabel={t("adminRecords.allGroups")}
+            />
+          </div>
+          <div className="w-full sm:w-[200px]">
             <SupervisorSearchSelect
               value={filters.supervisor_id ?? ""}
               onValueChange={(v) => setFilter({ supervisor_id: v ? (v as UUID) : undefined })}
               placeholder={t("adminRecords.allSupervisors")}
+              noneLabel={t("adminRecords.allSupervisors")}
+              includeInactive
             />
           </div>
           <Input
             type="date"
             value={filters.start_from ?? ""}
             onChange={(e) => setFilter({ start_from: e.target.value || undefined })}
-            className="w-[160px]"
+            aria-label={t("adminRecords.startFromLabel")}
+            title={t("adminRecords.startFromLabel")}
+            className="w-full sm:w-[160px]"
           />
           <Input
             type="date"
             value={filters.end_to ?? ""}
+            min={filters.start_from}
             onChange={(e) => setFilter({ end_to: e.target.value || undefined })}
-            className="w-[160px]"
+            aria-label={t("adminRecords.endToLabel")}
+            title={t("adminRecords.endToLabel")}
+            className="w-full sm:w-[160px]"
           />
         </div>
       </div>
@@ -373,8 +417,8 @@ export function RecordsPage() {
                   <TableCell className="text-sm">{r.practice_type_name}</TableCell>
                   <TableCell className="text-sm">{r.object_name ?? "—"}</TableCell>
                   <TableCell className="text-xs">
-                    {new Date(r.start_date).toLocaleDateString(dateLocale())} —{" "}
-                    {new Date(r.end_date).toLocaleDateString(dateLocale())}
+                    {formatTashkentDate(r.start_date, dateLocale())} —{" "}
+                    {formatTashkentDate(r.end_date, dateLocale())}
                   </TableCell>
                   <TableCell>
                     {r.attendance_pct !== null ? `${r.attendance_pct}%` : "—"}
@@ -402,6 +446,7 @@ export function RecordsPage() {
                           onClick={() => handleArchive(r)}
                           disabled={archiveMut.isPending}
                           title={t("adminRecords.archive")}
+                          aria-label={t("adminRecords.archive")}
                         >
                           <Archive className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                         </Button>
@@ -412,17 +457,20 @@ export function RecordsPage() {
                           onClick={() => handleUnarchive(r)}
                           disabled={unarchiveMut.isPending}
                           title={t("adminRecords.unarchive")}
+                          aria-label={t("adminRecords.unarchive")}
                         >
                           <RotateCcw className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                         </Button>
                       )}
-                      {isSuperAdmin && (
+                      {/* Davomat/baho tarixi bor (draft bo'lmagan) qaydnomani backend o'chirmaydi */}
+                      {isSuperAdmin && (!r.status || r.status === "draft") && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setRecordToDelete(r)}
+                          onClick={() => openDelete(r)}
                           disabled={deleteMut.isPending}
                           title={t("adminRecords.delete")}
+                          aria-label={t("adminRecords.delete")}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -462,18 +510,85 @@ export function RecordsPage() {
         </div>
       )}
 
-      {/* Confirmation Modal for Delete */}
-      <ConfirmDialog
+      {/* O'chirish — nima yo'qolishini aniq ko'rsatadi; faol/yakunlangan bo'lsa arxivlash taklif qilinadi */}
+      <Dialog
         open={!!recordToDelete}
-        title={t("adminRecords.deleteConfirmTitle")}
-        description={t("adminRecords.deleteConfirmDesc")}
-        confirmText={t("adminRecords.delete")}
-        cancelText={t("common.cancel")}
-        variant="destructive"
-        isPending={deleteMut.isPending}
-        onConfirm={handleDeleteConfirm}
-        onClose={() => setRecordToDelete(null)}
-      />
+        onOpenChange={(o) => !o && !deleteMut.isPending && !archiveMut.isPending && closeDelete()}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              {t("adminRecords.deleteConfirmTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {recordToDelete &&
+                t("adminRecords.deleteTarget", {
+                  student: recordToDelete.student_name,
+                  practice: recordToDelete.practice_type_name,
+                })}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 text-sm">
+            <p className="font-medium">{t("adminRecords.deleteRemovesTitle")}</p>
+            <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+              <li>{t("adminRecords.deleteRemovesAssignment")}</li>
+              <li>{t("adminRecords.deleteRemovesAttendance")}</li>
+              <li>{t("adminRecords.deleteRemovesWork")}</li>
+              <li>{t("adminRecords.deleteRemovesGrade")}</li>
+            </ul>
+            <p className="text-xs text-muted-foreground">{t("adminRecords.deleteOnlyDraft")}</p>
+          </div>
+
+          {deleteBlocked && (
+            <Alert variant="warning">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <p>{deleteBlocked}</p>
+                {tab === "active" && (
+                  <p className="mt-1">{t("adminRecords.archiveInsteadHint")}</p>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <DialogFooter className="flex-wrap gap-2">
+            <Button
+              variant="ghost"
+              onClick={closeDelete}
+              disabled={deleteMut.isPending || archiveMut.isPending}
+            >
+              {t("common.cancel")}
+            </Button>
+            {deleteBlocked ? (
+              tab === "active" && (
+                <Button onClick={handleArchiveInstead} disabled={archiveMut.isPending}>
+                  {archiveMut.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Archive className="h-4 w-4" />
+                  )}
+                  {t("adminRecords.archiveInstead")}
+                </Button>
+              )
+            ) : (
+              <Button
+                variant="destructive"
+                onClick={handleDeleteConfirm}
+                disabled={deleteMut.isPending}
+              >
+                {deleteMut.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                {t("adminRecords.deletePermanently")}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

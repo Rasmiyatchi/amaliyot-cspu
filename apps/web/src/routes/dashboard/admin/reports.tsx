@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import {
   CheckCircle2,
   Clock,
@@ -12,6 +11,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { GroupSearchSelect } from "@/components/admin/assignments/group-search-select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useAcademicYears, useDirections, useFaculties, useGroups } from "@/lib/api/academic";
+import { useAcademicYears, useDirections, useFaculties } from "@/lib/api/academic";
 import { downloadExport } from "@/lib/api/exports";
 import {
   useFinalReports,
@@ -82,6 +82,14 @@ function StatusBadge({ status }: { status: FinalReportStatus }) {
   );
 }
 
+async function downloadReportFile(report: FinalReport, fallback: string) {
+  try {
+    await downloadAttachment(report.file_attachment);
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : fallback);
+  }
+}
+
 function ReviewDialog({
   report,
   onClose,
@@ -89,12 +97,22 @@ function ReviewDialog({
   report: FinalReport | null;
   onClose: () => void;
 }) {
+  return (
+    <Dialog open={!!report} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-xl">
+        {/* `key` — boshqa hisobot ochilganda oldingi izoh qolib ketmasin */}
+        {report && <ReviewForm key={report.id} report={report} onClose={onClose} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ReviewForm({ report, onClose }: { report: FinalReport; onClose: () => void }) {
   const { t } = useTranslation();
   const [note, setNote] = useState("");
   const review = useReviewFinalReport();
 
   const handle = async (approve: boolean) => {
-    if (!report) return;
     if (!approve && note.trim().length < 3) {
       toast.error(t("adminReports.rejectReasonRequired"));
       return;
@@ -107,75 +125,72 @@ function ReviewDialog({
       toast.success(
         approve ? t("adminReports.approvedToast") : t("adminReports.rejectedToast"),
       );
-      setNote("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
   return (
-    <Dialog open={!!report} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl">
-        {report && (
-          <>
-            <DialogHeader>
-              <DialogTitle>{t("adminReports.reviewDialog.title")}</DialogTitle>
-              <DialogDescription>
-                {report.student_full_name} · {report.practice_type_name}
-              </DialogDescription>
-            </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle>{t("adminReports.reviewDialog.title")}</DialogTitle>
+        <DialogDescription>
+          {report.student_full_name} · {report.practice_type_name}
+        </DialogDescription>
+      </DialogHeader>
 
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 p-3">
-                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <div className="truncate text-sm font-medium">{report.title}</div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {report.file_attachment.name}
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => downloadAttachment(report.file_attachment)}
-                >
-                  <Download className="h-4 w-4" />
-                  {t("common.download")}
-                </Button>
-              </div>
-
-              <div>
-                <Label>{t("adminReports.reviewDialog.noteLabel")}</Label>
-                <Textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  rows={3}
-                  placeholder={t("adminReports.reviewDialog.notePlaceholder")}
-                />
-              </div>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/30 p-3">
+          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium">{report.title}</div>
+            <div className="truncate text-xs text-muted-foreground">
+              {report.file_attachment.name}
             </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => downloadReportFile(report, t("common.downloadError"))}
+          >
+            <Download className="h-4 w-4" />
+            {t("common.download")}
+          </Button>
+        </div>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                className="text-destructive hover:bg-destructive/10"
-                onClick={() => handle(false)}
-                disabled={review.isPending}
-              >
-                <XCircle className="h-4 w-4" />
-                {t("common.reject")}
-              </Button>
-              <Button onClick={() => handle(true)} disabled={review.isPending}>
-                {review.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                <CheckCircle2 className="h-4 w-4" />
-                {t("common.approve")}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+        <div>
+          <Label htmlFor="report-review-note">{t("adminReports.reviewDialog.noteLabel")}</Label>
+          <Textarea
+            id="report-review-note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            placeholder={t("adminReports.reviewDialog.notePlaceholder")}
+          />
+        </div>
+      </div>
+
+      <DialogFooter className="flex-wrap gap-2">
+        <Button
+          variant="outline"
+          className="text-destructive hover:bg-destructive/10"
+          onClick={() => handle(false)}
+          disabled={review.isPending}
+        >
+          <XCircle className="h-4 w-4" />
+          {t("common.reject")}
+        </Button>
+        <Button onClick={() => handle(true)} disabled={review.isPending}>
+          {review.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <CheckCircle2 className="h-4 w-4" />
+          )}
+          {t("common.approve")}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
 
@@ -262,7 +277,7 @@ function ReportsList({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => downloadAttachment(r.file_attachment)}
+                  onClick={() => downloadReportFile(r, t("common.downloadError"))}
                   className="flex-1"
                 >
                   <Download className="h-4 w-4" />
@@ -297,7 +312,6 @@ export function ReportsPage() {
   const academicYears = useAcademicYears();
   const faculties = useFaculties();
   const directions = useDirections(facultyId);
-  const groups = useGroups({ directionId });
 
   const filters: FinalReportFilters = {
     academic_year_id: academicYearId,
@@ -357,15 +371,16 @@ export function ReportsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
           placeholder={t("adminReports.searchPlaceholder")}
+          aria-label={t("adminReports.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="min-w-[220px] max-w-xs"
+          className="w-full sm:min-w-[220px] sm:max-w-xs"
         />
         <Select
           value={academicYearId ?? ALL}
           onValueChange={(v) => setAcademicYearId(v === ALL ? undefined : (v as UUID))}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]" aria-label={t("common.academicYear")}>
             <SelectValue placeholder={t("common.academicYear")} />
           </SelectTrigger>
           <SelectContent>
@@ -386,7 +401,7 @@ export function ReportsPage() {
             setGroupId(undefined);
           }}
         >
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]" aria-label={t("common.faculty")}>
             <SelectValue placeholder={t("common.faculty")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
@@ -405,7 +420,7 @@ export function ReportsPage() {
             setGroupId(undefined);
           }}
         >
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]" aria-label={t("common.direction")}>
             <SelectValue placeholder={t("common.direction")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
@@ -417,27 +432,24 @@ export function ReportsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select
-          value={groupId ?? ALL}
-          onValueChange={(v) => setGroupId(v === ALL ? undefined : (v as UUID))}
-        >
-          <SelectTrigger className="w-[170px]">
-            <SelectValue placeholder={t("common.group")} />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>{t("adminReports.allGroups")}</SelectItem>
-            {(groups.data?.items ?? []).map((g) => (
-              <SelectItem key={g.id} value={g.id}>
-                {g.name} ({t("common.courseN", { n: g.course })})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="w-full sm:w-[200px]">
+          <GroupSearchSelect
+            value={groupId ?? ""}
+            onValueChange={(v) => setGroupId(v ? (v as UUID) : undefined)}
+            directionId={directionId}
+            course={course}
+            placeholder={t("adminReports.allGroups")}
+            noneLabel={t("adminReports.allGroups")}
+          />
+        </div>
         <Select
           value={course !== undefined ? String(course) : ALL}
-          onValueChange={(v) => setCourse(v === ALL ? undefined : Number(v))}
+          onValueChange={(v) => {
+            setCourse(v === ALL ? undefined : Number(v));
+            setGroupId(undefined);
+          }}
         >
-          <SelectTrigger className="w-[130px]">
+          <SelectTrigger className="w-full sm:w-[130px]" aria-label={t("common.course")}>
             <SelectValue placeholder={t("common.course")} />
           </SelectTrigger>
           <SelectContent>
@@ -452,7 +464,7 @@ export function ReportsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="submitted">{t("adminReports.status.submitted")}</TabsTrigger>
           <TabsTrigger value="approved">{t("adminReports.status.approved")}</TabsTrigger>
           <TabsTrigger value="rejected">{t("adminReports.status.rejected")}</TabsTrigger>

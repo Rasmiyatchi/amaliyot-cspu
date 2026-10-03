@@ -9,6 +9,7 @@ import { PracticeTypeFormDialog } from "@/components/admin/practice-types/practi
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Select,
   SelectContent,
@@ -50,13 +51,15 @@ export function PracticeTypesPage() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
-  const { data, isPending, error } = usePracticeTypes();
+  // Super Admin nofaol turlarni ham ko'radi — aks holda o'chirib qo'yilgan turni qayta yoqib bo'lmasdi
+  const { data, isPending, error } = usePracticeTypes(isSuperAdmin);
   const [selected, setSelected] = useState<PracticeType | null>(null);
   const [editingGrading, setEditingGrading] = useState<PracticeType | null>(null);
   const [editing, setEditing] = useState<PracticeType | null>(null);
   const [creating, setCreating] = useState(false);
   const [formFilter, setFormFilter] = useState<string>(ALL);
   const [courseFilter, setCourseFilter] = useState<string>(ALL);
+  const [toDelete, setToDelete] = useState<PracticeType | null>(null);
   const del = useDeletePracticeType();
 
   const filtered = (data ?? []).filter((pt) => {
@@ -73,11 +76,12 @@ export function PracticeTypesPage() {
     return true;
   });
 
-  const handleDelete = async (pt: PracticeType) => {
-    if (!confirm(t("adminPracticeTypes.deleteConfirm", { name: pt.name }))) return;
+  const handleDelete = async () => {
+    if (!toDelete) return;
     try {
-      await del.mutateAsync(pt.id);
+      await del.mutateAsync(toDelete.id);
       toast.success(t("common.deleted"));
+      setToDelete(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
@@ -120,7 +124,10 @@ export function PracticeTypesPage() {
       {data && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Select value={formFilter} onValueChange={setFormFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger
+              className="w-full sm:w-[180px]"
+              aria-label={t("adminPracticeTypes.eduFormPlaceholder")}
+            >
               <SelectValue placeholder={t("adminPracticeTypes.eduFormPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -133,7 +140,7 @@ export function PracticeTypesPage() {
             </SelectContent>
           </Select>
           <Select value={courseFilter} onValueChange={setCourseFilter}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-full sm:w-[150px]" aria-label={t("common.course")}>
               <SelectValue placeholder={t("common.course")} />
             </SelectTrigger>
             <SelectContent>
@@ -184,13 +191,31 @@ export function PracticeTypesPage() {
                 <TableRow
                   key={pt.id}
                   onClick={() => setSelected(pt)}
-                  className="cursor-pointer"
+                  onKeyDown={(e) => {
+                    if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      setSelected(pt);
+                    }
+                  }}
+                  tabIndex={0}
+                  className={
+                    pt.is_active
+                      ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      : "cursor-pointer opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  }
                 >
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {pt.display_order}
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{pt.name}</div>
+                    <div className="flex flex-wrap items-center gap-1.5 font-medium">
+                      {pt.name}
+                      {!pt.is_active && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {t("adminPracticeTypes.inactiveBadge")}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="font-mono text-xs text-muted-foreground">{pt.code}</div>
                   </TableCell>
                   <TableCell>
@@ -241,6 +266,7 @@ export function PracticeTypesPage() {
                           size="icon"
                           variant="ghost"
                           title={t("common.edit")}
+                          aria-label={t("common.edit")}
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditing(pt);
@@ -252,6 +278,7 @@ export function PracticeTypesPage() {
                           size="icon"
                           variant="ghost"
                           title={t("adminPracticeTypes.gradingScale")}
+                          aria-label={t("adminPracticeTypes.gradingScale")}
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingGrading(pt);
@@ -263,10 +290,11 @@ export function PracticeTypesPage() {
                           size="icon"
                           variant="ghost"
                           title={t("common.delete")}
+                          aria-label={t("common.delete")}
                           disabled={del.isPending}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(pt);
+                            setToDelete(pt);
                           }}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -289,6 +317,18 @@ export function PracticeTypesPage() {
         open={!!editingGrading}
         practiceType={editingGrading}
         onClose={() => setEditingGrading(null)}
+      />
+      <ConfirmDialog
+        open={!!toDelete}
+        title={t("common.delete")}
+        description={
+          toDelete ? t("adminPracticeTypes.deleteConfirm", { name: toDelete.name }) : undefined
+        }
+        confirmText={t("common.delete")}
+        variant="destructive"
+        isPending={del.isPending}
+        onConfirm={handleDelete}
+        onClose={() => setToDelete(null)}
       />
       <PracticeTypeFormDialog
         open={creating || !!editing}

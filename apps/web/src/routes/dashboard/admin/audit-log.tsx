@@ -40,6 +40,10 @@ const ACTION_LABEL_KEY: Record<string, string> = {
   login_reset: "adminAuditLog.action.loginReset",
   import: "adminAuditLog.action.import",
   export: "adminAuditLog.action.export",
+  bulk_update: "adminAuditLog.action.bulkUpdate",
+  revert: "adminAuditLog.action.revert",
+  grade: "adminAuditLog.action.grade",
+  finalize: "adminAuditLog.action.finalize",
 };
 
 const ACTION_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -52,6 +56,10 @@ const ACTION_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   login_reset: "secondary",
   import: "secondary",
   export: "outline",
+  bulk_update: "secondary",
+  revert: "secondary",
+  grade: "default",
+  finalize: "default",
 };
 
 const ENTITY_LABEL_KEY: Record<string, string> = {
@@ -68,6 +76,14 @@ const ENTITY_LABEL_KEY: Record<string, string> = {
   area: "common.area",
   admin: "adminAuditLog.entity.admin",
   system_settings: "adminAuditLog.entity.systemSettings",
+  database: "adminAuditLog.entity.database",
+};
+
+const ROLE_LABEL_KEY: Record<string, string> = {
+  super_admin: "adminAdminSidebar.roles.superAdmin",
+  admin: "adminAdminSidebar.roles.admin",
+  supervisor: "common.supervisor",
+  student: "common.student",
 };
 
 export function AuditLogPage() {
@@ -101,7 +117,7 @@ export function AuditLogPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]" aria-label={t("adminAuditLog.actionFilter")}>
             <SelectValue placeholder={t("adminAuditLog.actionFilter")} />
           </SelectTrigger>
           <SelectContent>
@@ -120,7 +136,7 @@ export function AuditLogPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]" aria-label={t("adminAuditLog.entityFilter")}>
             <SelectValue placeholder={t("adminAuditLog.entityFilter")} />
           </SelectTrigger>
           <SelectContent>
@@ -177,7 +193,11 @@ export function AuditLogPage() {
                   <TableCell>
                     <div className="text-sm">{log.actor_name ?? "—"}</div>
                     {log.actor_role && (
-                      <div className="text-xs text-muted-foreground">{log.actor_role}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {ROLE_LABEL_KEY[log.actor_role]
+                          ? t(ROLE_LABEL_KEY[log.actor_role]!)
+                          : log.actor_role}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell>
@@ -193,7 +213,10 @@ export function AuditLogPage() {
                   <TableCell className="text-sm">
                     <div>{log.summary}</div>
                     {log.metadata_json && (
-                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                      <div
+                        className="mt-0.5 max-w-[48ch] truncate text-xs text-muted-foreground"
+                        title={JSON.stringify(log.metadata_json)}
+                      >
                         {JSON.stringify(log.metadata_json)}
                       </div>
                     )}
@@ -216,6 +239,7 @@ export function AuditLogPage() {
               size="icon"
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
+              aria-label={t("common.previous")}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -224,6 +248,7 @@ export function AuditLogPage() {
               size="icon"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
+              aria-label={t("common.next")}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>

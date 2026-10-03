@@ -37,6 +37,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { useQueries } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
@@ -56,32 +57,39 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { api } from "@/lib/api";
+import { academicKeys } from "@/lib/api/academic";
+import { studentKeys } from "@/lib/api/students";
+import type { Paginated } from "@/lib/api/types";
 import { logout } from "@/lib/auth-api";
 import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/stores/auth";
-import { useDepartments, useDirections, useFaculties, useGroups } from "@/lib/api/academic";
-import { useStudents } from "@/lib/api/students";
+import { useAuthStore, type User } from "@/stores/auth";
 
-export type NavChild = {
+type NavChild = {
   to: string;
   labelKey: string;
   icon: LucideIcon;
   end?: boolean;
   superAdminOnly?: boolean;
-  badge?: number;
+  /** Admin uchun: ro'yxatdagi ruxsatlardan BIRI yetarli (router `Protected` bilan bir xil) */
+  permissions?: string[];
 };
 
-export type NavItemConfig = {
+type NavItemConfig = {
   id: string;
   labelKey: string;
   icon: LucideIcon;
   to?: string;
   end?: boolean;
   superAdminOnly?: boolean;
+  permissions?: string[];
   children?: NavChild[];
 };
 
-export const ADMIN_NAV_CONFIG: NavItemConfig[] = [
+const PRACTICE = ["practice"];
+const CONTRACTS = ["contracts", "practice"];
+
+const ADMIN_NAV_CONFIG: NavItemConfig[] = [
   // 1. Bosh sahifa
   {
     id: "dashboard",
@@ -91,11 +99,12 @@ export const ADMIN_NAV_CONFIG: NavItemConfig[] = [
     end: true,
   },
 
-  // 2. Tuzilma (Akademik tuzilma) — alohida sahifalar
+  // 2. Tuzilma (akademik tuzilma)
   {
     id: "structure",
     labelKey: "adminAdminSidebar.nav.structure",
     icon: School,
+    permissions: ["structure"],
     children: [
       { to: "/admin/structure/faculties", labelKey: "adminAdminSidebar.nav.faculties", icon: Building, end: true },
       { to: "/admin/structure/departments", labelKey: "adminAdminSidebar.nav.departments", icon: Layers, end: true },
@@ -106,22 +115,22 @@ export const ADMIN_NAV_CONFIG: NavItemConfig[] = [
     ],
   },
 
-  // 3. Amaliyot (Lifecycle-based practice core)
+  // 3. Amaliyot. Obyektlar bu yerda emas — /admin/objects "partners" ruxsatini talab qiladi
   {
     id: "practice",
     labelKey: "adminAdminSidebar.nav.practice",
     icon: GraduationCap,
+    permissions: CONTRACTS,
     children: [
-      { to: "/admin/practice-types", labelKey: "adminAdminSidebar.nav.practiceTypes", icon: BookOpen },
-      { to: "/admin/objects", labelKey: "adminAdminSidebar.nav.objects", icon: Building2 },
-      { to: "/admin/assignments", labelKey: "adminAdminSidebar.nav.assignments", icon: ClipboardList },
-      { to: "/admin/applications", labelKey: "adminAdminSidebar.nav.applications", icon: ClipboardEdit },
-      { to: "/admin/contracts", labelKey: "adminAdminSidebar.nav.contracts", icon: FileCheck2 },
-      { to: "/admin/attendance", labelKey: "adminAdminSidebar.nav.attendance", icon: CalendarCheck },
-      { to: "/admin/task-templates", labelKey: "adminAdminSidebar.nav.taskTemplates", icon: LibraryBig },
-      { to: "/admin/documents", labelKey: "adminAdminSidebar.nav.documents", icon: FileText },
-      { to: "/admin/reports", labelKey: "adminAdminSidebar.nav.reports", icon: Award },
-      { to: "/admin/records", labelKey: "adminAdminSidebar.nav.records", icon: ClipboardCheck },
+      { to: "/admin/practice-types", labelKey: "adminAdminSidebar.nav.practiceTypes", icon: BookOpen, permissions: PRACTICE },
+      { to: "/admin/assignments", labelKey: "adminAdminSidebar.nav.assignments", icon: ClipboardList, permissions: PRACTICE },
+      { to: "/admin/applications", labelKey: "adminAdminSidebar.nav.applications", icon: ClipboardEdit, permissions: CONTRACTS },
+      { to: "/admin/contracts", labelKey: "adminAdminSidebar.nav.contracts", icon: FileCheck2, permissions: CONTRACTS },
+      { to: "/admin/attendance", labelKey: "adminAdminSidebar.nav.attendance", icon: CalendarCheck, permissions: PRACTICE },
+      { to: "/admin/task-templates", labelKey: "adminAdminSidebar.nav.taskTemplates", icon: LibraryBig, permissions: PRACTICE },
+      { to: "/admin/documents", labelKey: "adminAdminSidebar.nav.documents", icon: FileText, permissions: PRACTICE },
+      { to: "/admin/reports", labelKey: "adminAdminSidebar.nav.reports", icon: Award, permissions: PRACTICE },
+      { to: "/admin/records", labelKey: "adminAdminSidebar.nav.records", icon: ClipboardCheck, permissions: PRACTICE },
     ],
   },
 
@@ -131,16 +140,17 @@ export const ADMIN_NAV_CONFIG: NavItemConfig[] = [
     to: "/admin/supervisors",
     labelKey: "adminAdminSidebar.nav.supervisors",
     icon: UserCog,
+    permissions: ["supervisors"],
   },
 
-  // 5. Hamkorlar
+  // 5. Hamkorlar — /admin/objects ikki tabli sahifa (tashkilotlar / hududlar)
   {
     id: "partners",
     labelKey: "adminAdminSidebar.nav.partners",
     icon: Building,
+    permissions: ["partners"],
     children: [
-      { to: "/admin/objects?tab=organizations", labelKey: "adminAdminSidebar.nav.organizations", icon: Building },
-      { to: "/admin/objects", labelKey: "adminAdminSidebar.nav.objects", icon: Building2 },
+      { to: "/admin/objects?tab=organizations", labelKey: "adminAdminSidebar.nav.organizations", icon: Building2 },
       { to: "/admin/objects?tab=areas", labelKey: "adminAdminSidebar.nav.areas", icon: MapPin },
     ],
   },
@@ -150,6 +160,7 @@ export const ADMIN_NAV_CONFIG: NavItemConfig[] = [
     id: "monitoring",
     labelKey: "adminAdminSidebar.nav.monitoring",
     icon: BarChart3,
+    permissions: ["monitoring"],
     children: [
       { to: "/admin/monitoring", labelKey: "adminAdminSidebar.nav.monitoringOverview", icon: Activity, end: true },
       { to: "/admin/monitoring/practices", labelKey: "adminAdminSidebar.nav.monitoringPractices", icon: BookOpen },
@@ -169,6 +180,7 @@ export const ADMIN_NAV_CONFIG: NavItemConfig[] = [
     to: "/admin/inquiries",
     labelKey: "adminAdminSidebar.nav.inquiries",
     icon: MessageSquare,
+    permissions: ["inquiries"],
   },
 
   // 8. Tizim
@@ -179,10 +191,57 @@ export const ADMIN_NAV_CONFIG: NavItemConfig[] = [
     children: [
       { to: "/admin/admins", labelKey: "adminAdminSidebar.nav.admins", icon: ShieldCheck, superAdminOnly: true },
       { to: "/admin/audit-log", labelKey: "adminAdminSidebar.nav.auditLog", icon: Shield, superAdminOnly: true },
-      { to: "/admin/integrations", labelKey: "adminAdminSidebar.nav.integrations", icon: Database },
+      { to: "/admin/integrations", labelKey: "adminAdminSidebar.nav.integrations", icon: Database, permissions: ["system"] },
       { to: "/admin/contract-templates", labelKey: "adminAdminSidebar.nav.contractTemplates", icon: FileText, superAdminOnly: true },
       { to: "/admin/system-settings", labelKey: "adminAdminSidebar.nav.settings", icon: Sliders, superAdminOnly: true },
     ],
+  },
+];
+
+/**
+ * Menyu bandi ko'rinadimi — router `Protected` va backend `require_permission` bilan bir xil:
+ * super_admin hammasini ko'radi; admin — ruxsatlaridan biri mos kelsa
+ * ("contracts" sahifalari "practice" ruxsati bilan ham ochiladi).
+ */
+function isAllowed(
+  user: User | null,
+  rule: { superAdminOnly?: boolean; permissions?: string[] },
+): boolean {
+  if (!user) return false;
+  if (user.role === "super_admin") return true;
+  if (rule.superAdminOnly) return false;
+  if (!rule.permissions || rule.permissions.length === 0) return true;
+  const perms = user.permissions ?? [];
+  return rule.permissions.some(
+    (p) => perms.includes(p) || (p === "contracts" && perms.includes("practice")),
+  );
+}
+
+const STRUCTURE_COUNT_URLS: { to: string; url: string; key: readonly unknown[] }[] = [
+  {
+    to: "/admin/structure/faculties",
+    url: "v1/academic/faculties?page=1&page_size=1",
+    key: [...academicKeys.faculties(), 1, 1],
+  },
+  {
+    to: "/admin/structure/departments",
+    url: "v1/academic/departments?page=1&page_size=1",
+    key: [...academicKeys.departments(undefined), 1, 1],
+  },
+  {
+    to: "/admin/structure/directions",
+    url: "v1/academic/directions?page=1&page_size=1",
+    key: [...academicKeys.directions(undefined), 1, 1],
+  },
+  {
+    to: "/admin/structure/groups",
+    url: "v1/academic/groups?page=1&page_size=1",
+    key: [...academicKeys.groups({}), 1, 1],
+  },
+  {
+    to: "/admin/structure/students",
+    url: "v1/students?page=1&page_size=1",
+    key: studentKeys.list({}, 1, 1),
   },
 ];
 
@@ -199,10 +258,6 @@ function isChildActive(child: NavChild, pathname: string, search: string): boole
       return false;
     }
     return true;
-  }
-  // /admin/objects exact match
-  if (child.to === "/admin/objects") {
-    return pathname === "/admin/objects" && (!search || search === "" || search.includes("tab=objects"));
   }
   // end: true = exact match
   if (child.end) {
@@ -239,26 +294,9 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
 
   const collapsed = inSheet ? false : collapsedPref;
 
-  // Structure statistics badges
-  const { data: facultiesData } = useFaculties(1, 1);
-  const { data: departmentsData } = useDepartments(undefined, 1, 1);
-  const { data: directionsData } = useDirections(undefined, 1, 1);
-  const { data: groupsData } = useGroups({}, 1, 1);
-  const { data: studentsData } = useStudents({}, 1, 1);
-
-  // Badge counts mapped to structure child URLs
-  const structureBadges: Record<string, number | undefined> = useMemo(() => ({
-    "/admin/structure/faculties": facultiesData?.total,
-    "/admin/structure/departments": departmentsData?.total,
-    "/admin/structure/directions": directionsData?.total,
-    "/admin/structure/groups": groupsData?.total,
-    "/admin/structure/students": studentsData?.total,
-  }), [facultiesData, departmentsData, directionsData, groupsData, studentsData]);
-
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, collapsedPref ? "1" : "0");
   }, [collapsedPref]);
-
 
   // Find active parent ID from current route
   const activeParentId = useMemo(() => {
@@ -270,15 +308,34 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
     return null;
   }, [location.pathname, location.search]);
 
-  // Accordion state: only one parent open at a time
+  // Akkordeon: bir vaqtda bitta bo'lim ochiq. Sahifa almashganda shu sahifa bo'limi ochiladi
+  // (render vaqtida holatni moslash — effect + qo'shimcha render shart emas).
   const [openParentId, setOpenParentId] = useState<string | null>(() => activeParentId);
+  const [syncedParentId, setSyncedParentId] = useState<string | null>(activeParentId);
+  if (activeParentId !== syncedParentId) {
+    setSyncedParentId(activeParentId);
+    if (activeParentId) setOpenParentId(activeParentId);
+  }
 
-  // Sync accordion open state when user navigates directly to a page
-  useEffect(() => {
-    if (activeParentId && activeParentId !== openParentId) {
-      setOpenParentId(activeParentId);
-    }
-  }, [activeParentId]);
+  // Tuzilma bo'limidagi sonlar — faqat bo'lim ko'rinadigan va ochiq bo'lganda so'raladi
+  // (ruxsati yo'q admin uchun 403 so'rovlari va har sahifada 5 ta COUNT so'rovi bo'lmasin).
+  const structureVisible = isAllowed(user, { permissions: ["structure"] });
+  const countsEnabled = structureVisible && !collapsed && openParentId === "structure";
+  const structureBadges = useQueries({
+    queries: STRUCTURE_COUNT_URLS.map((item) => ({
+      queryKey: item.key,
+      queryFn: () => api.get(item.url).json<Paginated<unknown>>(),
+      enabled: countsEnabled,
+      staleTime: 5 * 60_000,
+    })),
+    combine: (results) => {
+      const map: Record<string, number | undefined> = {};
+      STRUCTURE_COUNT_URLS.forEach((item, i) => {
+        map[item.to] = results[i]?.data?.total;
+      });
+      return map;
+    },
+  });
 
   const toggleParent = (id: string) => {
     setOpenParentId((curr) => (curr === id ? null : id));
@@ -294,7 +351,7 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
       <aside
         className={cn(
           "h-screen flex-col border-r border-slate-200 bg-white text-slate-800 transition-[width] duration-200 select-none dark:border-slate-800 dark:bg-[#0f172a] dark:text-slate-200",
-          inSheet ? "flex w-[260px] border-r-0" : "hidden md:flex",
+          inSheet ? "flex w-full border-r-0" : "hidden md:flex",
           !inSheet && (collapsed ? "w-16" : "w-[260px]"),
         )}
       >
@@ -309,10 +366,10 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="truncate font-extrabold text-[13px] tracking-tight text-slate-900 dark:text-white">
-                CHDPU AMALIYOT
+                {t("adminAdminSidebar.brandTitle")}
               </span>
               <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 tracking-wider uppercase">
-                Admin Panel
+                {t("adminAdminSidebar.brandSubtitle")}
               </span>
             </div>
           )}
@@ -322,6 +379,7 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
         {!collapsed && (
           <div className="border-b border-slate-200 px-3 py-2.5 dark:border-slate-800/80">
             <button
+              type="button"
               onClick={() => {
                 window.dispatchEvent(
                   new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }),
@@ -330,7 +388,7 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
               className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
             >
               <Search className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span className="flex-1 text-left">{t("adminAdminSidebar.searchHint", "Qidiruv...")}</span>
+              <span className="flex-1 text-left">{t("adminAdminSidebar.searchHint")}</span>
               <kbd className="hidden rounded border border-slate-300 bg-white px-1 py-0.5 font-mono text-[10px] text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:inline">
                 ⌘K
               </kbd>
@@ -341,41 +399,11 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
         {/* Navigation list */}
         <nav className={cn("flex-1 overflow-y-auto space-y-1 custom-scrollbar", collapsed ? "p-2" : "p-3")}>
           {ADMIN_NAV_CONFIG.map((item) => {
-            const isSuperOnly = item.superAdminOnly && user?.role !== "super_admin";
-            if (isSuperOnly) return null;
+            if (!isAllowed(user, item)) return null;
 
-            // Permission scoping for admin role
-            if (user?.role === "admin") {
-              if (item.id !== "dashboard") {
-                const userPerms = user.permissions ?? [];
-                const hasModulePerm = userPerms.includes(item.id);
-                const hasContractPerm = userPerms.includes("contracts");
-                if (item.id === "practice" && !hasModulePerm && !hasContractPerm) {
-                  return null;
-                }
-                if (item.id !== "practice" && !hasModulePerm) {
-                  return null;
-                }
-              }
-            }
+            const visibleChildren = item.children?.filter((c) => isAllowed(user, c));
 
-            let visibleChildren = item.children?.filter(
-              (c) => !c.superAdminOnly || user?.role === "super_admin",
-            );
-
-            // Sub-filtering for practice if admin has contracts permission only
-            if (
-              item.id === "practice" &&
-              user?.role === "admin" &&
-              !user.permissions?.includes("practice") &&
-              user.permissions?.includes("contracts")
-            ) {
-              visibleChildren = visibleChildren?.filter(
-                (c) => c.to === "/admin/contracts" || c.to === "/admin/applications",
-              );
-            }
-
-            // Filter out parent if it has children but none are visible
+            // Bolalari bor, lekin birortasi ham ko'rinmasa — bo'lim yashiriladi
             if (item.children && (!visibleChildren || visibleChildren.length === 0)) {
               return null;
             }
@@ -394,6 +422,8 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
                 <Link
                   key={item.id}
                   to={item.to}
+                  aria-label={collapsed ? t(item.labelKey) : undefined}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex items-center rounded-lg text-sm font-medium transition-all group",
                     collapsed ? "h-10 w-10 justify-center" : "gap-3 px-3 py-2",
@@ -429,6 +459,8 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
                 <DropdownMenu key={item.id}>
                   <DropdownMenuTrigger asChild>
                     <button
+                      type="button"
+                      aria-label={t(item.labelKey)}
                       className={cn(
                         "flex h-10 w-10 items-center justify-center rounded-lg text-sm transition-all group",
                         isCurrentParentActive
@@ -628,10 +660,12 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
                 className="flex-1 overflow-hidden text-left transition-opacity hover:opacity-80"
               >
                 <div className="truncate text-xs font-semibold text-slate-900 dark:text-white">
-                  {user?.full_name ?? "Administrator"}
+                  {user?.full_name ?? t("adminAdminSidebar.roles.admin")}
                 </div>
-                <div className="truncate text-[10px] text-indigo-600 dark:text-indigo-300/80 font-medium capitalize">
-                  {user?.role?.replace("_", " ")}
+                <div className="truncate text-[10px] text-indigo-600 dark:text-indigo-300/80 font-medium">
+                  {user?.role === "super_admin"
+                    ? t("adminAdminSidebar.roles.superAdmin")
+                    : t("adminAdminSidebar.roles.admin")}
                 </div>
               </button>
 

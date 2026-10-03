@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import {
   Award,
   BookOpen,
@@ -19,6 +18,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
+import { FinalizeGradeDialog } from "@/components/admin/assignments/finalize-grade-dialog";
 import { GradePanel } from "@/components/admin/assignments/grade-panel";
 import { TaskGradeDialog } from "@/components/admin/assignments/task-grade-dialog";
 import { TasksAddDialog } from "@/components/admin/assignments/tasks-add-dialog";
@@ -46,8 +46,9 @@ import { Progress } from "@/components/ui/progress";
 import { PromptDialog } from "@/components/ui/prompt-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatTashkentDate } from "@/components/attendance/attendance-date-utils";
 import { dateLocale } from "@/i18n";
-import { useUpdateAssignment } from "@/lib/api/assignments";
+import { useAssignment, useUpdateAssignment } from "@/lib/api/assignments";
 import {
   useApproveJournal,
   useApproveLessonAnalysis,
@@ -60,16 +61,35 @@ import {
   useRejectJournal,
   useRejectLessonAnalysis,
 } from "@/lib/api/tasks";
-import type { PracticeAssignment, Task } from "@/lib/api/types";
+import type { PracticeAssignment, Task, TaskCategory } from "@/lib/api/types";
 
 type Props = {
   assignment: PracticeAssignment | null;
   onClose: () => void;
 };
 
+type DetailTab = "tasks" | "journal" | "analyses" | "grade";
+
 export function AssignmentDetailDialog({ assignment, onClose }: Props) {
+  if (!assignment) return null;
+  // `key` — boshqa biriktirish ochilganda tab, tanlangan topshiriq va dialog holatlari tozalanadi
+  return <AssignmentDetailBody key={assignment.id} initial={assignment} onClose={onClose} />;
+}
+
+function AssignmentDetailBody({
+  initial,
+  onClose,
+}: {
+  initial: PracticeAssignment;
+  onClose: () => void;
+}) {
   const { t } = useTranslation();
-  const assignmentId = assignment?.id ?? null;
+  const assignmentId = initial.id;
+
+  // Ro'yxatdagi nusxa eskirishi mumkin (Boshlash/Bekor qilish/Yakunlashdan keyin) —
+  // sarlavha va amallar har doim serverdagi joriy holatdan chiziladi.
+  const { data: fresh } = useAssignment(assignmentId);
+  const assignment = fresh ?? initial;
 
   const { data: tasks } = useAssignmentTasks(assignmentId);
   const { data: progress } = useAssignmentProgress(assignmentId);
@@ -84,22 +104,20 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
   const approveAnalysis = useApproveLessonAnalysis();
   const rejectAnalysis = useRejectLessonAnalysis();
 
+  const [tab, setTab] = useState<DetailTab>("tasks");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const selectedTask = tasks?.find((t) => t.id === selectedTaskId) ?? null;
+  const selectedTask = tasks?.find((item) => item.id === selectedTaskId) ?? null;
   const [addTasksOpen, setAddTasksOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [journalRejectId, setJournalRejectId] = useState<string | null>(null);
   const [analysisRejectId, setAnalysisRejectId] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<{
-    status: "active" | "completed" | "cancelled";
-    reason?: string;
-  } | null>(null);
-  const [cancelReason, setCancelReason] = useState("");
+  const [startOpen, setStartOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [finishOpen, setFinishOpen] = useState(false);
 
   const tasksByGroup = useMemo(() => {
-    if (!tasks) return new Map<string, Task[]>();
     const m = new Map<string, Task[]>();
-    for (const item of tasks) {
+    for (const item of tasks ?? []) {
       const key = `${item.template_semester}|${item.template_category}`;
       const arr = m.get(key) ?? [];
       arr.push(item);
@@ -108,14 +126,14 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
     return m;
   }, [tasks]);
 
-  if (!assignment) return null;
+  const errorMessage = (e: unknown) => (e instanceof Error ? e.message : t("common.error"));
 
   const handleEnsure = async () => {
     try {
-      const res = await ensureTasks.mutateAsync(assignment.id);
+      const res = await ensureTasks.mutateAsync(assignmentId);
       toast.success(t("assignmentsAssignmentDetailDialog.tasksCreated", { n: res.created }));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(errorMessage(e));
     }
   };
 
@@ -125,8 +143,8 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
       await deleteTask.mutateAsync(taskToDelete.id);
       toast.success(t("common.deleted"));
       setTaskToDelete(null);
-    } catch (err) {
-      toast.error(err instanceof HTTPError ? err.message : t("common.error"));
+    } catch (e) {
+      toast.error(errorMessage(e));
     }
   };
 
@@ -135,7 +153,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
       await approveJournal.mutateAsync(id);
       toast.success(t("assignmentsAssignmentDetailDialog.journalApproved"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(errorMessage(e));
     }
   };
 
@@ -149,7 +167,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
       toast.success(t("assignmentsAssignmentDetailDialog.rejectedToast"));
       setJournalRejectId(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(errorMessage(e));
     }
   };
 
@@ -158,36 +176,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
       await approveAnalysis.mutateAsync(id);
       toast.success(t("assignmentsAssignmentDetailDialog.analysisApproved"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
-    }
-  };
-
-  const handleStatusChange = async () => {
-    if (!confirmAction || !assignment) return;
-    try {
-      await updateAssignment.mutateAsync({
-        id: assignment.id,
-        data: {
-          status: confirmAction.status,
-          ...(confirmAction.status === "cancelled"
-            ? {
-                cancelled_reason:
-                  cancelReason.trim() ||
-                  t("assignmentsAssignmentDetailDialog.cancelledDefault"),
-              }
-            : {}),
-        },
-      });
-      const toastKeys = {
-        active: "assignmentsAssignmentDetailDialog.toastStarted",
-        completed: "assignmentsAssignmentDetailDialog.toastCompleted",
-        cancelled: "assignmentsAssignmentDetailDialog.toastCancelled",
-      };
-      toast.success(t(toastKeys[confirmAction.status]));
-      setConfirmAction(null);
-      setCancelReason("");
-    } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(errorMessage(e));
     }
   };
 
@@ -201,7 +190,32 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
       toast.success(t("assignmentsAssignmentDetailDialog.rejectedToast"));
       setAnalysisRejectId(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(errorMessage(e));
+    }
+  };
+
+  const handleStart = async () => {
+    try {
+      await updateAssignment.mutateAsync({ id: assignmentId, data: { status: "active" } });
+      toast.success(t("assignmentsAssignmentDetailDialog.toastStarted"));
+      setStartOpen(false);
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
+  };
+
+  // Sabab argument sifatida keladi — state orqali o'tkazilsa, setState asinxronligi
+  // tufayli eski (bo'sh) qiymat yuborilardi.
+  const handleCancel = async (reason: string) => {
+    try {
+      await updateAssignment.mutateAsync({
+        id: assignmentId,
+        data: { status: "cancelled", cancelled_reason: reason },
+      });
+      toast.success(t("assignmentsAssignmentDetailDialog.toastCancelled"));
+      setCancelOpen(false);
+    } catch (e) {
+      toast.error(errorMessage(e));
     }
   };
 
@@ -212,16 +226,16 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
 
   return (
     <>
-      <Dialog open={!!assignment} onOpenChange={(o) => !o && onClose()}>
+      <Dialog open onOpenChange={(o) => !o && onClose()}>
         <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <DialogTitle className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                 <ClipboardList className="h-5 w-5 text-primary" />
               </div>
-              <div className="flex-1">
-                <div>{assignment.student_full_name}</div>
-                <div className="mt-0.5 text-xs font-normal text-muted-foreground">
+              <div className="min-w-0 flex-1">
+                <div className="break-words">{assignment.student_full_name}</div>
+                <div className="mt-0.5 break-words text-xs font-normal text-muted-foreground">
                   {assignment.practice_type_name} ·{" "}
                   {assignment.organization_name ?? assignment.area_name ?? "—"}
                 </div>
@@ -232,8 +246,8 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
               ID: {assignment.student_hemis_id}
               {assignment.student_group_name && ` · ${assignment.student_group_name}`}
               {" · "}
-              {new Date(assignment.start_date).toLocaleDateString(dateLocale())} —{" "}
-              {new Date(assignment.end_date).toLocaleDateString(dateLocale())}
+              {formatTashkentDate(assignment.start_date, dateLocale())} —{" "}
+              {formatTashkentDate(assignment.end_date, dateLocale())}
             </DialogDescription>
           </DialogHeader>
 
@@ -242,7 +256,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
             {assignment.status === "draft" && (
               <Button
                 size="sm"
-                onClick={() => setConfirmAction({ status: "active" })}
+                onClick={() => setStartOpen(true)}
                 disabled={updateAssignment.isPending}
               >
                 <Play className="h-3.5 w-3.5" />
@@ -250,12 +264,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
               </Button>
             )}
             {assignment.status === "active" && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setConfirmAction({ status: "completed" })}
-                disabled={updateAssignment.isPending}
-              >
+              <Button size="sm" variant="outline" onClick={() => setFinishOpen(true)}>
                 <CircleCheck className="h-3.5 w-3.5" />
                 {t("assignmentsAssignmentDetailDialog.finish")}
               </Button>
@@ -265,7 +274,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                 size="sm"
                 variant="ghost"
                 className="text-destructive hover:bg-destructive/10"
-                onClick={() => setConfirmAction({ status: "cancelled" })}
+                onClick={() => setCancelOpen(true)}
                 disabled={updateAssignment.isPending}
               >
                 <XCircle className="h-3.5 w-3.5" />
@@ -329,8 +338,8 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
             </div>
           )}
 
-          <Tabs defaultValue="tasks">
-            <TabsList>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as DetailTab)}>
+            <TabsList className="h-auto flex-wrap">
               <TabsTrigger value="tasks">
                 <BookOpen className="h-3.5 w-3.5" />
                 {t("assignmentsAssignmentDetailDialog.tabs.tasks")}
@@ -353,7 +362,10 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
 
             {/* BAHOLASH */}
             <TabsContent value="grade">
-              <GradePanel assignmentId={assignment.id} />
+              <GradePanel
+                assignmentId={assignmentId}
+                readOnly={assignment.status === "cancelled"}
+              />
             </TabsContent>
 
             {/* TASKS */}
@@ -394,11 +406,10 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                       {t("assignmentsAssignmentDetailDialog.addTask")}
                     </Button>
                   </div>
-                  {Array.from(tasksByGroup.keys())
-                    .sort()
-                    .map((key) => {
+                  {Array.from(tasksByGroup.entries())
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([key, items]) => {
                       const [sem, cat] = key.split("|");
-                      const items = tasksByGroup.get(key)!;
                       return (
                         <div key={key} className="rounded-md border border-border">
                           <div className="flex items-center gap-2 border-b border-border px-3 py-2 text-sm">
@@ -408,7 +419,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                                 ? t("common.semesterFall")
                                 : t("common.semesterSpring")}
                             </span>
-                            <TaskCategoryBadge category={cat as "spiritual" | "academic" | "report"} />
+                            <TaskCategoryBadge category={cat as TaskCategory} />
                           </div>
                           <div>
                             {items.map((task) => (
@@ -417,10 +428,11 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                                 className="flex items-start gap-3 border-b border-border last:border-0 hover:bg-muted/30"
                               >
                                 <button
+                                  type="button"
                                   onClick={() => setSelectedTaskId(task.id)}
-                                  className="flex flex-1 items-start gap-3 p-3 text-left"
+                                  className="flex min-w-0 flex-1 items-start gap-3 p-3 text-left"
                                 >
-                                  <div className="flex-1 min-w-0">
+                                  <div className="min-w-0 flex-1">
                                     <div className="font-medium leading-snug">{task.template_title}</div>
                                     <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
                                       <TaskTypeLabel type={task.template_type} />
@@ -452,6 +464,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                                     }}
                                     disabled={deleteTask.isPending}
                                     title={t("common.delete")}
+                                    aria-label={t("common.delete")}
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
@@ -475,9 +488,9 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
               )}
               {journal?.map((j) => (
                 <div key={j.id} className="rounded-md border border-border p-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="font-mono text-xs text-muted-foreground">
-                      {new Date(j.date).toLocaleDateString(dateLocale())}
+                      {formatTashkentDate(j.date, dateLocale())}
                     </div>
                     <JournalStatusBadge status={j.status} />
                     {j.approved_by_name && (
@@ -492,6 +505,9 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                             size="sm"
                             variant="ghost"
                             onClick={() => handleJournalApprove(j.id)}
+                            disabled={approveJournal.isPending}
+                            title={t("common.approve")}
+                            aria-label={t("common.approve")}
                           >
                             <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                           </Button>
@@ -499,6 +515,8 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                             size="sm"
                             variant="ghost"
                             onClick={() => setJournalRejectId(j.id)}
+                            title={t("common.reject")}
+                            aria-label={t("common.reject")}
                           >
                             <XCircle className="h-3.5 w-3.5 text-destructive" />
                           </Button>
@@ -506,7 +524,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                       )}
                     </div>
                   </div>
-                  <div className="mt-2 whitespace-pre-wrap text-sm">{j.content_md}</div>
+                  <div className="mt-2 whitespace-pre-wrap break-words text-sm">{j.content_md}</div>
                   {j.rejection_reason && (
                     <div className="mt-2 rounded-md bg-destructive/5 px-2 py-1 text-xs text-destructive">
                       {t("assignmentsAssignmentDetailDialog.reasonLabel", {
@@ -527,7 +545,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
               )}
               {analyses?.map((a) => (
                 <div key={a.id} className="rounded-md border border-border p-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="font-medium">{a.subject}</div>
                     <span className="text-xs text-muted-foreground">
                       · {a.teacher_name}
@@ -548,6 +566,9 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                             size="sm"
                             variant="ghost"
                             onClick={() => handleAnalysisApprove(a.id)}
+                            disabled={approveAnalysis.isPending}
+                            title={t("common.approve")}
+                            aria-label={t("common.approve")}
                           >
                             <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                           </Button>
@@ -555,6 +576,8 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                             size="sm"
                             variant="ghost"
                             onClick={() => setAnalysisRejectId(a.id)}
+                            title={t("common.reject")}
+                            aria-label={t("common.reject")}
                           >
                             <XCircle className="h-3.5 w-3.5 text-destructive" />
                           </Button>
@@ -563,9 +586,9 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
                     </div>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {new Date(a.date).toLocaleDateString(dateLocale())}
+                    {formatTashkentDate(a.date, dateLocale())}
                   </div>
-                  <div className="mt-2 whitespace-pre-wrap text-sm">{a.analysis_md}</div>
+                  <div className="mt-2 whitespace-pre-wrap break-words text-sm">{a.analysis_md}</div>
                   {a.rejection_reason && (
                     <div className="mt-2 rounded-md bg-destructive/5 px-2 py-1 text-xs text-destructive">
                       {t("assignmentsAssignmentDetailDialog.reasonLabel", {
@@ -584,7 +607,7 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t("assignmentsAssignmentDetailDialog.archiveTitle")}
             </div>
-            <ArchiveCard assignmentId={assignment.id} compact />
+            <ArchiveCard assignmentId={assignmentId} compact />
           </div>
 
           <Separator />
@@ -652,32 +675,29 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
         onClose={() => setAnalysisRejectId(null)}
       />
 
-      {confirmAction && confirmAction.status !== "cancelled" && (
-        <ConfirmDialog
-          open={true}
-          title={
-            confirmAction.status === "active"
-              ? t("assignmentsAssignmentDetailDialog.startConfirmTitle")
-              : t("assignmentsAssignmentDetailDialog.finishConfirmTitle")
-          }
-          description={
-            confirmAction.status === "active"
-              ? t("assignmentsAssignmentDetailDialog.startConfirmDesc")
-              : t("assignmentsAssignmentDetailDialog.finishConfirmDesc")
-          }
-          confirmText={
-            confirmAction.status === "active"
-              ? t("assignmentsAssignmentDetailDialog.start")
-              : t("assignmentsAssignmentDetailDialog.finish")
-          }
-          isPending={updateAssignment.isPending}
-          onConfirm={handleStatusChange}
-          onClose={() => setConfirmAction(null)}
-        />
-      )}
+      <ConfirmDialog
+        open={startOpen}
+        title={t("assignmentsAssignmentDetailDialog.startConfirmTitle")}
+        description={t("assignmentsAssignmentDetailDialog.startConfirmDescription")}
+        confirmText={t("assignmentsAssignmentDetailDialog.start")}
+        isPending={updateAssignment.isPending}
+        onConfirm={handleStart}
+        onClose={() => setStartOpen(false)}
+      />
+
+      {/* Yakunlash — faqat baholash orqali: yakuniy ball va kredit qaydnomaga yoziladi */}
+      <FinalizeGradeDialog
+        assignmentId={assignmentId}
+        open={finishOpen}
+        onClose={() => setFinishOpen(false)}
+        onGoToGrading={() => {
+          setFinishOpen(false);
+          setTab("grade");
+        }}
+      />
 
       <PromptDialog
-        open={confirmAction?.status === "cancelled"}
+        open={cancelOpen}
         title={t("assignmentsAssignmentDetailDialog.cancelPromptTitle")}
         description={t("assignmentsAssignmentDetailDialog.cancelPromptDesc")}
         label={t("assignmentsAssignmentDetailDialog.reasonShort")}
@@ -685,14 +705,8 @@ export function AssignmentDetailDialog({ assignment, onClose }: Props) {
         confirmText={t("assignmentsAssignmentDetailDialog.cancelAction")}
         variant="destructive"
         isPending={updateAssignment.isPending}
-        onConfirm={(reason) => {
-          setCancelReason(reason);
-          handleStatusChange();
-        }}
-        onClose={() => {
-          setConfirmAction(null);
-          setCancelReason("");
-        }}
+        onConfirm={handleCancel}
+        onClose={() => setCancelOpen(false)}
       />
     </>
   );

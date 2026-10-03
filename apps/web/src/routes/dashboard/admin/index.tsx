@@ -17,11 +17,12 @@ import {
   UserX,
 } from "lucide-react";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
+import { formatTashkentDateTime } from "@/components/attendance/attendance-date-utils";
 import { StatCard } from "@/components/admin/stat-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -34,46 +35,47 @@ import {
 } from "@/components/ui/loading-skeletons";
 import { Progress } from "@/components/ui/progress";
 import { dateLocale } from "@/i18n";
-import {
-  downloadStatsPdfReport,
-  useAdminStats,
-  useSuperAdminStats,
-} from "@/lib/api/stats";
-import { useAuthStore } from "@/stores/auth";
+import { downloadStatsPdfReport, useRoleStats } from "@/lib/api/stats";
+import { useAuthStore, type User } from "@/stores/auth";
+
+/** Admin modul ruxsati — `Protected` / backend `require_permission` bilan bir xil qoida. */
+function canAccess(user: User | null, permission: string): boolean {
+  if (!user) return false;
+  if (user.role === "super_admin") return true;
+  const perms = user.permissions ?? [];
+  return perms.includes(permission) || (permission === "contracts" && perms.includes("practice"));
+}
 
 export function AdminHome() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === "super_admin";
 
-  const admin = useAdminStats();
-  const superAdmin = useSuperAdminStats();
-  const stats = isSuperAdmin ? superAdmin.data : admin.data;
-  const isPending = isSuperAdmin ? superAdmin.isPending : admin.isPending;
-  const error = isSuperAdmin ? superAdmin.error : admin.error;
+  // Faqat rolga mos endpoint (admin uchun /stats/super-admin 403 qaytarardi)
+  const { stats, superAdminStats, isPending, error } = useRoleStats(isSuperAdmin);
 
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
     try {
-      setIsDownloadingPdf(true);
       await downloadStatsPdfReport();
-      toast.success(
-        t("adminIndex.downloadedPdfToast", "Statistika hisoboti (PDF) saqlandi")
-      );
-    } catch (err: any) {
-      toast.error(err?.message || t("adminIndex.pdfDownloadError"));
+      toast.success(t("adminIndex.downloadedPdfToast"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("adminIndex.pdfDownloadError"));
     } finally {
       setIsDownloadingPdf(false);
     }
   };
 
+  const unassigned = stats?.students?.unassigned ?? 0;
+
   return (
     <div className="container max-w-7xl py-8">
-      {/* Evolve Dash Welcome Banner */}
+      {/* Welcome banner */}
       <section className="dash-welcome mb-0">
-        <div>
-          <span>{isSuperAdmin ? "CHDPU SUPERADMINISTRATOR" : "CHDPU ADMINISTRATOR"}</span>
+        <div className="min-w-0">
+          <span>{isSuperAdmin ? t("adminIndex.kickerSuper") : t("adminIndex.kickerAdmin")}</span>
           <h2>
             {isSuperAdmin
               ? t("adminIndex.superAdminTitle")
@@ -85,14 +87,11 @@ export function AdminHome() {
           </p>
         </div>
         <div className="progress-score">
-          <strong>
-            {stats ? (stats.students?.total ?? 0) : 0}
-            <small> ta</small>
-          </strong>
-          <span>FAOL TALABA</span>
+          <strong>{stats?.students?.total ?? 0}</strong>
+          <span>{t("adminIndex.totalStudentsCounter")}</span>
         </div>
       </section>
-      <div className="dash-progress mb-6 rounded-full overflow-hidden">
+      <div className="dash-progress mb-6 overflow-hidden rounded-full">
         <i style={{ width: "100%" }} />
       </div>
 
@@ -111,41 +110,64 @@ export function AdminHome() {
 
       {stats && (
         <div className="space-y-6">
-          {/* Biriktirilmagan talabalar bo'yicha ogohlantirish (Widget) */}
-          {((stats.students?.unassigned ?? 0) > 0) && (
-            <div className="relative overflow-hidden rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start sm:items-center gap-3.5">
+          {/* Biriktirilmagan talabalar */}
+          {unassigned > 0 && (
+            <div className="relative overflow-hidden rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 shadow-sm sm:p-5">
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div className="flex items-start gap-3.5 sm:items-center">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400">
                     <AlertTriangle className="h-6 w-6" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-base font-bold text-foreground">
-                        Amaliyotga biriktirilmagan talabalar mavjud!
+                        {t("adminMonitoring.unassigned.title")}
                       </h3>
-                      <Badge variant="outline" className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold text-xs">
-                        {stats.students.unassigned} nafar
+                      <Badge
+                        variant="outline"
+                        className="border-amber-500/30 bg-amber-500/15 text-xs font-bold text-amber-700 dark:text-amber-300"
+                      >
+                        {t("adminMonitoring.unassigned.count", { count: unassigned })}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground">
-                      Tizimdagi jami <b>{stats.students.total}</b> nafar talabadan <b className="text-amber-600 dark:text-amber-400">{stats.students.unassigned} nafari</b> hali birorta ham amaliyot o'tash joyiga biriktirilmagan.
+                    <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
+                      <Trans
+                        i18nKey="adminMonitoring.unassigned.body"
+                        values={{ total: stats.students.total, count: unassigned }}
+                        components={[
+                          <b key="0" />,
+                          <b key="1" className="text-amber-600 dark:text-amber-400" />,
+                        ]}
+                      />
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs gap-1.5 shadow-sm">
-                    <Link to="/admin/assignments">
-                      <UserPlus className="h-3.5 w-3.5" />
-                      <span>Talabalarni biriktirish</span>
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline" className="border-amber-500/30 text-xs gap-1.5">
-                    <Link to="/admin/structure/students?has_assignment=false">
-                      <span>Ro'yxatni ko'rish</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {canAccess(user, "practice") && (
+                    <Button
+                      asChild
+                      size="sm"
+                      className="gap-1.5 bg-amber-600 text-xs font-semibold text-white shadow-sm hover:bg-amber-700"
+                    >
+                      <Link to="/admin/assignments?new=1">
+                        <UserPlus className="h-3.5 w-3.5" />
+                        <span>{t("adminMonitoring.unassigned.assign")}</span>
+                      </Link>
+                    </Button>
+                  )}
+                  {canAccess(user, "structure") && (
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 border-amber-500/30 text-xs"
+                    >
+                      <Link to="/admin/structure/students?has_assignment=false">
+                        <span>{t("adminMonitoring.unassigned.viewList")}</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -209,8 +231,8 @@ export function AdminHome() {
                           <UserCog className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium">{a.name}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="break-words font-medium">{a.name}</div>
                         <div className="text-xs text-muted-foreground">
                           {a.kind === "organization"
                             ? t("common.organization")
@@ -225,8 +247,8 @@ export function AdminHome() {
                       <div
                         className={
                           a.severity === "full"
-                            ? "rounded-md bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive"
-                            : "rounded-md bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400"
+                            ? "shrink-0 rounded-md bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive"
+                            : "shrink-0 rounded-md bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-600 dark:text-amber-400"
                         }
                       >
                         {a.percent}%
@@ -250,11 +272,15 @@ export function AdminHome() {
               })}
             />
             <StatCard
-              label="Biriktirilmagan"
-              value={stats.students.unassigned ?? 0}
+              label={t("adminMonitoring.kpi.unassigned")}
+              value={unassigned}
               icon={UserX}
-              accent={(stats.students.unassigned ?? 0) > 0 ? "warning" : "success"}
-              hint={(stats.students.unassigned ?? 0) > 0 ? "Amaliyotga biriktirilmagan" : "Barchasi biriktirilgan"}
+              accent={unassigned > 0 ? "warning" : "success"}
+              hint={
+                unassigned > 0
+                  ? t("adminMonitoring.kpi.unassignedHint")
+                  : t("adminMonitoring.kpi.allAssigned")
+              }
             />
             <StatCard
               label={t("adminIndex.assignments")}
@@ -320,27 +346,27 @@ export function AdminHome() {
                 submitted: stats.tasks.by_status.submitted,
               })}
             />
-            {isSuperAdmin && superAdmin.data && (
+            {superAdminStats && (
               <StatCard
                 label={t("adminIndex.users")}
-                value={superAdmin.data.users_total}
+                value={superAdminStats.users_total}
                 icon={Users}
                 accent="primary"
               />
             )}
           </div>
 
-          {/* Amaliyot Turlari Bo'yicha Statistika Card */}
+          {/* Amaliyot turlari bo'yicha statistika */}
           <Card className="overflow-hidden border border-border shadow-sm">
             <CardHeader className="bg-muted/30 pb-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                  <BookOpen className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  <BookOpen className="h-5 w-5 text-primary" />
                   {t("adminIndex.practiceTypesTitle")}
                 </CardTitle>
                 {stats.practice_types && stats.practice_types.length > 0 && (
-                  <Badge variant="outline" className="font-normal text-xs">
-                    {stats.practice_types.length} ta amaliyot turi
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {t("adminIndex.practiceTypeCount", { count: stats.practice_types.length })}
                   </Badge>
                 )}
               </div>
@@ -350,7 +376,7 @@ export function AdminHome() {
                 <EmptyState
                   icon={BookOpen}
                   title={t("adminIndex.noPracticeTypes")}
-                  description="Tizimda amaliyot turlari hali kiritilmagan"
+                  description={t("adminIndex.noPracticeTypesDesc")}
                   accent="muted"
                   compact
                 />
@@ -368,16 +394,16 @@ export function AdminHome() {
                         <div>
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <h4 className="font-semibold text-sm leading-tight truncate">
+                              <h4 className="truncate text-sm font-semibold leading-tight">
                                 {pt.name}
                               </h4>
-                              <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                              <p className="mt-0.5 font-mono text-xs text-muted-foreground">
                                 {pt.code}
                               </p>
                             </div>
                             <Badge
                               variant="secondary"
-                              className="shrink-0 text-[10px] px-2 py-0.5"
+                              className="shrink-0 px-2 py-0.5 text-[10px]"
                             >
                               {pt.min_weeks}–{pt.max_weeks} {t("adminIndex.weeks")}
                             </Badge>
@@ -393,13 +419,13 @@ export function AdminHome() {
                           </div>
 
                           <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
-                            <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-medium">
+                            <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                               {t("adminIndex.activeStudents")}: {pt.active}
                             </span>
-                            <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 font-medium">
+                            <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
                               {t("adminIndex.completedStudents")}: {pt.completed}
                             </span>
-                            <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-slate-700 dark:bg-slate-800 dark:text-slate-300 font-medium">
+                            <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                               {t("adminIndex.draftStudents")}: {pt.draft}
                             </span>
                           </div>
@@ -408,7 +434,7 @@ export function AdminHome() {
                         {totalAsn > 0 && (
                           <div className="mt-4 pt-2">
                             <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
-                              <span>Aktivlik foizi</span>
+                              <span>{t("adminIndex.activityPct")}</span>
                               <span className="font-semibold">{activePct}%</span>
                             </div>
                             <Progress value={activePct} className="h-1.5" />
@@ -465,7 +491,7 @@ export function AdminHome() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-1 gap-2 text-center sm:grid-cols-3">
                 <div className="rounded-md bg-success/10 p-3">
                   <div className="text-xs text-muted-foreground">
                     {t("adminIndex.green")}
@@ -500,7 +526,7 @@ export function AdminHome() {
             </CardContent>
           </Card>
 
-          {isSuperAdmin && superAdmin.data && (
+          {superAdminStats && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -509,7 +535,7 @@ export function AdminHome() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {superAdmin.data.recent_overrides.length === 0 ? (
+                {superAdminStats.recent_overrides.length === 0 ? (
                   <EmptyState
                     icon={History}
                     title={t("adminIndex.noOverridesTitle")}
@@ -519,19 +545,19 @@ export function AdminHome() {
                   />
                 ) : (
                   <div className="space-y-2">
-                    {superAdmin.data.recent_overrides.map((ov) => (
+                    {superAdminStats.recent_overrides.map((ov) => (
                       <div
                         key={ov.id}
-                        className="flex items-start gap-3 rounded-md border border-border p-3 text-sm"
+                        className="flex flex-wrap items-start gap-3 rounded-md border border-border p-3 text-sm"
                       >
                         <AttendanceStatusBadge status={ov.previous_status} />
                         <span className="text-muted-foreground">→</span>
                         <AttendanceStatusBadge status={ov.new_status} />
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="truncate">{ov.reason}</div>
                           <div className="text-xs text-muted-foreground">
                             {ov.admin_name} ·{" "}
-                            {new Date(ov.created_at).toLocaleString(dateLocale())}
+                            {formatTashkentDateTime(ov.created_at, dateLocale())}
                           </div>
                         </div>
                       </div>
@@ -542,18 +568,18 @@ export function AdminHome() {
             </Card>
           )}
 
-          {/* PDF Hisobot Yuklab Olish Tugmasi Banner */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 via-indigo-50/50 to-primary/10 p-6 dark:from-primary/10 dark:via-slate-900 dark:to-indigo-950/40 shadow-sm">
+          {/* PDF hisobot */}
+          <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm sm:flex-row">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <FileText className="h-6 w-6" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-foreground">
-                  Statistika Hisobotini Yuklab Olish (PDF)
+                  {t("adminIndex.pdfBannerTitle")}
                 </h3>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Joriy dashboarddagi barcha ko'rsatkichlar va amaliyot turlari bo'yicha to'liq statistik hisobotni PDF formatida yuklab oling
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {t("adminIndex.pdfBannerDesc")}
                 </p>
               </div>
             </div>
@@ -561,7 +587,7 @@ export function AdminHome() {
               onClick={handleDownloadPdf}
               disabled={isDownloadingPdf}
               size="lg"
-              className="shrink-0 gap-2 shadow-md hover:shadow-lg transition-all"
+              className="shrink-0 gap-2 shadow-md transition-all hover:shadow-lg"
             >
               {isDownloadingPdf ? (
                 <Loader2 className="h-5 w-5 animate-spin" />

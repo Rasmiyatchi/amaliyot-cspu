@@ -37,7 +37,25 @@ import {
   Check,
 } from "lucide-react";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { PromptDialog } from "@/components/ui/prompt-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { api } from "@/lib/api";
+import { useEditor, EditorContent, Extension, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TiptapUnderline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
@@ -48,13 +66,47 @@ import TableHeader from "@tiptap/extension-table-header";
 import TiptapLink from "@tiptap/extension-link";
 import TiptapImage from "@tiptap/extension-image";
 import { TextStyle } from "@tiptap/extension-text-style";
-import { Extension } from "@tiptap/react";
 import Placeholder from "@tiptap/extension-placeholder";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 
+// Maxsus buyruqlar TipTap'ning `Commands` interfeysiga qo'shiladi — `editor.chain()`
+// ularni tipli taniydi (tip o'chirish shart emas). @tiptap/react core'ni qayta eksport qiladi.
+declare module "@tiptap/react" {
+  interface Commands<ReturnType> {
+    lineHeight: {
+      setLineHeight: (lineHeight: string) => ReturnType;
+      unsetLineHeight: () => ReturnType;
+    };
+    paragraphSpacing: {
+      setMarginTop: (marginTop: string | null) => ReturnType;
+      setMarginBottom: (marginBottom: string | null) => ReturnType;
+    };
+    textIndent: {
+      setTextIndent: (textIndent: string) => ReturnType;
+      unsetTextIndent: () => ReturnType;
+    };
+  }
+}
+
+type BlockAttrs = Record<string, unknown>;
+
+/** Xat boshi (abzas) chekinishi — rasmiy hujjatlardagi standart */
+const FIRST_LINE_INDENT = "1.25cm";
+
+/** Havola/rasm manzili — faqat xavfsiz sxemalar (javascript: va h.k. emas) */
+const LINK_URL_RE = /^(https?:\/\/|mailto:)/i;
+const IMAGE_URL_RE = /^(https?:\/\/|data:image\/)/i;
+
+/** Inline `style` qiymati — faqat qator (string) bo'lsa */
+function styleValue(value: unknown): string | null {
+  return typeof value === "string" && value ? value : null;
+}
+
 // ─── Custom Line Height Extension ──────────────────────
-const LineHeight = Extension.create({
+type LineHeightOptions = { types: string[]; defaultLineHeight: string };
+
+const LineHeight = Extension.create<LineHeightOptions>({
   name: "lineHeight",
   addOptions() {
     return {
@@ -70,9 +122,9 @@ const LineHeight = Extension.create({
           lineHeight: {
             default: null,
             parseHTML: (element: HTMLElement) => element.style.lineHeight || null,
-            renderHTML: (attributes: Record<string, any>) => {
-              if (!attributes.lineHeight) return {};
-              return { style: `line-height: ${attributes.lineHeight}` };
+            renderHTML: (attributes: BlockAttrs) => {
+              const value = styleValue(attributes.lineHeight);
+              return value ? { style: `line-height: ${value}` } : {};
             },
           },
         },
@@ -81,18 +133,22 @@ const LineHeight = Extension.create({
   },
   addCommands() {
     return {
-      setLineHeight: (lineHeight: string) => ({ commands }: any) => {
-        return this.options.types.some((type: string) => commands.updateAttributes(type, { lineHeight }));
-      },
-      unsetLineHeight: () => ({ commands }: any) => {
-        return this.options.types.some((type: string) => commands.resetAttributes(type, "lineHeight"));
-      },
-    } as any;
+      setLineHeight:
+        (lineHeight) =>
+        ({ commands }) =>
+          this.options.types.some((type) => commands.updateAttributes(type, { lineHeight })),
+      unsetLineHeight:
+        () =>
+        ({ commands }) =>
+          this.options.types.some((type) => commands.resetAttributes(type, "lineHeight")),
+    };
   },
 });
 
 // ─── Custom Paragraph Spacing Extension ──────────────────────
-const ParagraphSpacing = Extension.create({
+type ParagraphSpacingOptions = { types: string[] };
+
+const ParagraphSpacing = Extension.create<ParagraphSpacingOptions>({
   name: "paragraphSpacing",
   addOptions() {
     return {
@@ -107,17 +163,17 @@ const ParagraphSpacing = Extension.create({
           marginTop: {
             default: null,
             parseHTML: (element: HTMLElement) => element.style.marginTop || null,
-            renderHTML: (attributes: Record<string, any>) => {
-              if (!attributes.marginTop) return {};
-              return { style: `margin-top: ${attributes.marginTop}` };
+            renderHTML: (attributes: BlockAttrs) => {
+              const value = styleValue(attributes.marginTop);
+              return value ? { style: `margin-top: ${value}` } : {};
             },
           },
           marginBottom: {
             default: null,
             parseHTML: (element: HTMLElement) => element.style.marginBottom || null,
-            renderHTML: (attributes: Record<string, any>) => {
-              if (!attributes.marginBottom) return {};
-              return { style: `margin-bottom: ${attributes.marginBottom}` };
+            renderHTML: (attributes: BlockAttrs) => {
+              const value = styleValue(attributes.marginBottom);
+              return value ? { style: `margin-bottom: ${value}` } : {};
             },
           },
         },
@@ -126,18 +182,22 @@ const ParagraphSpacing = Extension.create({
   },
   addCommands() {
     return {
-      setMarginTop: (marginTop: string | null) => ({ commands }: any) => {
-        return this.options.types.some((type: string) => commands.updateAttributes(type, { marginTop }));
-      },
-      setMarginBottom: (marginBottom: string | null) => ({ commands }: any) => {
-        return this.options.types.some((type: string) => commands.updateAttributes(type, { marginBottom }));
-      },
-    } as any;
+      setMarginTop:
+        (marginTop) =>
+        ({ commands }) =>
+          this.options.types.some((type) => commands.updateAttributes(type, { marginTop })),
+      setMarginBottom:
+        (marginBottom) =>
+        ({ commands }) =>
+          this.options.types.some((type) => commands.updateAttributes(type, { marginBottom })),
+    };
   },
 });
 
 // ─── Custom Text Indent Extension ──────────────────────
-const TextIndent = Extension.create({
+type TextIndentOptions = { types: string[]; defaultIndent: string };
+
+const TextIndent = Extension.create<TextIndentOptions>({
   name: "textIndent",
   addOptions() {
     return {
@@ -152,10 +212,12 @@ const TextIndent = Extension.create({
         attributes: {
           textIndent: {
             default: this.options.defaultIndent,
-            parseHTML: (element: HTMLElement) => element.style.textIndent || this.options.defaultIndent,
-            renderHTML: (attributes: Record<string, any>) => {
-              if (attributes.textIndent === this.options.defaultIndent) return {};
-              return { style: `text-indent: ${attributes.textIndent}` };
+            parseHTML: (element: HTMLElement) =>
+              element.style.textIndent || this.options.defaultIndent,
+            renderHTML: (attributes: BlockAttrs) => {
+              const value = styleValue(attributes.textIndent);
+              if (!value || value === this.options.defaultIndent) return {};
+              return { style: `text-indent: ${value}` };
             },
           },
         },
@@ -164,32 +226,18 @@ const TextIndent = Extension.create({
   },
   addCommands() {
     return {
-      setTextIndent: (textIndent: string) => ({ commands }: any) => {
-        return this.options.types.some((type: string) => commands.updateAttributes(type, { textIndent }));
-      },
-      unsetTextIndent: () => ({ commands }: any) => {
-        return this.options.types.some((type: string) => commands.resetAttributes(type, "textIndent"));
-      },
-    } as any;
+      setTextIndent:
+        (textIndent) =>
+        ({ commands }) =>
+          this.options.types.some((type) => commands.updateAttributes(type, { textIndent })),
+      unsetTextIndent:
+        () =>
+        ({ commands }) =>
+          this.options.types.some((type) => commands.resetAttributes(type, "textIndent")),
+    };
   },
 });
 
-import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 // ─── API Helpers ─────────────────────────────────────────
 interface TemplateData {
@@ -231,14 +279,23 @@ export function ContractTemplateEditorPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [templateName, setTemplateName] = useState("");
-  const [, setInitialHtml] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [urlDialog, setUrlDialog] = useState<"link" | "image" | null>(null);
 
   // Fetch existing template
-  const { data, isLoading } = useQuery({
+  // Muharrir har doim serverdagi eng so'nggi nusxani ochadi: keshdagi eski HTML ustidan
+  // saqlash yangi versiyani jimgina o'chirib yuborardi.
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error: loadError,
+  } = useQuery({
     queryKey: ["contract-template", id],
-    queryFn: () => fetchTemplate(id!),
+    queryFn: () => fetchTemplate(id ?? ""),
     enabled: !isNew && !!id,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   // Tiptap editor
@@ -278,14 +335,12 @@ export function ContractTemplateEditorPage() {
 
   // Load data into editor
   useEffect(() => {
-    if (data && editor && !loaded) {
+    if (data && editor && !loaded && !isFetching) {
       setTemplateName(data.name);
-      const content = data.html_content || "";
-      setInitialHtml(content);
-      editor.commands.setContent(content);
+      editor.commands.setContent(data.html_content || "");
       setLoaded(true);
     }
-  }, [data, editor, loaded]);
+  }, [data, editor, loaded, isFetching]);
 
   // Save mutation
   const saveMutation = useMutation({
@@ -298,13 +353,22 @@ export function ContractTemplateEditorPage() {
         throw new Error(t("adminContractEditor.emptyContent"));
       }
 
+      const name = templateName.trim();
       if (isNew) {
-        return createHtmlTemplate({ name: templateName.trim(), html_content: html });
+        await createHtmlTemplate({ name, html_content: html });
+      } else {
+        await updateTemplate(id ?? "", { name, html_content: html });
       }
-      return updateTemplate(id!, { name: templateName.trim(), html_content: html });
+      return { name, html };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contract-templates"] });
+    onSuccess: (saved) => {
+      void queryClient.invalidateQueries({ queryKey: ["contract-templates"] });
+      // Qayta ochilganda saqlangan matn ko'rinsin (eski kesh emas)
+      if (!isNew) {
+        queryClient.setQueryData<TemplateData>(["contract-template", id], (old) =>
+          old ? { ...old, name: saved.name, html_content: saved.html } : old,
+        );
+      }
       toast.success(t("adminContractEditor.saved"));
       if (isNew) navigate("/admin/contract-templates");
     },
@@ -332,13 +396,9 @@ export function ContractTemplateEditorPage() {
             setTemplateName(file.name.replace(/\.(docx?)$/i, ""));
           }
           toast.success(t("adminContractEditor.wordLoaded"));
-          if (result.messages.length > 0) {
-            console.warn("Mammoth warnings:", result.messages);
-          }
         }
-      } catch (err) {
+      } catch {
         toast.error(t("adminContractEditor.wordReadError"));
-        console.error(err);
       }
       // reset input
       e.target.value = "";
@@ -356,10 +416,39 @@ export function ContractTemplateEditorPage() {
     [editor]
   );
 
-  if (isLoading) {
+  const handleUrlConfirm = (value: string) => {
+    if (!editor || !urlDialog) return;
+    const url = value.trim();
+    const allowed = urlDialog === "link" ? LINK_URL_RE.test(url) : IMAGE_URL_RE.test(url);
+    if (!allowed) {
+      toast.error(t("adminContractEditor.invalidUrl"));
+      return;
+    }
+    if (urlDialog === "link") editor.chain().focus().setLink({ href: url }).run();
+    else editor.chain().focus().setImage({ src: url }).run();
+    setUrlDialog(null);
+  };
+
+  // Server nusxasi muharrirga yuklanguncha (yangilanish so'rovi ham) — yozish boshlanmasin
+  if (isLoading || (!isNew && !loaded && !loadError)) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Shablon topilmasa/yuklanmasa — bo'sh tahrirlovchi ko'rsatilmaydi (saqlash xato PATCH yuborardi)
+  if (loadError) {
+    return (
+      <div className="container max-w-xl space-y-4 py-10">
+        <Alert variant="destructive">
+          <AlertDescription>{loadError.message}</AlertDescription>
+        </Alert>
+        <Button variant="outline" onClick={() => navigate("/admin/contract-templates")}>
+          <ArrowLeft className="h-4 w-4" />
+          {t("common.back")}
+        </Button>
       </div>
     );
   }
@@ -368,16 +457,23 @@ export function ContractTemplateEditorPage() {
     <TooltipProvider delayDuration={300}>
       <div className="flex min-h-screen flex-col bg-muted/30">
         {/* ─── Top Bar ─── */}
-        <div className="sticky top-0 z-50 flex items-center justify-between gap-4 border-b bg-background px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin/contract-templates")}>
+        <div className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-3 shadow-sm">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/admin/contract-templates")}
+              aria-label={t("common.back")}
+              title={t("common.back")}
+            >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <Input
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
               placeholder={t("adminContractEditor.namePlaceholder")}
-              className="w-[300px] text-lg font-semibold border-dashed"
+              aria-label={t("adminContractEditor.namePlaceholder")}
+              className="min-w-0 max-w-[300px] flex-1 border-dashed text-lg font-semibold"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -516,14 +612,13 @@ export function ContractTemplateEditorPage() {
             />
             <ToolbarButton
               icon={<Indent className="h-4 w-4" />}
-              tooltip="Abzas (Xat boshi)"
-              active={editor.getAttributes("paragraph").textIndent === "1.25cm"}
+              tooltip={t("adminContractEditor.indent")}
+              active={editor.getAttributes("paragraph").textIndent === FIRST_LINE_INDENT}
               onClick={() => {
-                const currentIndent = editor.getAttributes("paragraph").textIndent;
-                if (currentIndent === "1.25cm") {
-                  (editor.chain().focus() as any).unsetTextIndent().run();
+                if (editor.getAttributes("paragraph").textIndent === FIRST_LINE_INDENT) {
+                  editor.chain().focus().unsetTextIndent().run();
                 } else {
-                  (editor.chain().focus() as any).setTextIndent("1.25cm").run();
+                  editor.chain().focus().setTextIndent(FIRST_LINE_INDENT).run();
                 }
               }}
             />
@@ -549,7 +644,13 @@ export function ContractTemplateEditorPage() {
             {/* Table */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 px-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2"
+                  aria-label={t("adminContractEditor.table")}
+                  title={t("adminContractEditor.table")}
+                >
                   <TableIcon className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -607,20 +708,14 @@ export function ContractTemplateEditorPage() {
               icon={<LinkIcon className="h-4 w-4" />}
               tooltip={t("adminContractEditor.link")}
               active={editor.isActive("link")}
-              onClick={() => {
-                const url = window.prompt(t("adminContractEditor.linkUrlPrompt"));
-                if (url) editor.chain().focus().setLink({ href: url }).run();
-              }}
+              onClick={() => setUrlDialog("link")}
             />
 
             {/* Image */}
             <ToolbarButton
               icon={<ImageIcon className="h-4 w-4" />}
               tooltip={t("adminContractEditor.image")}
-              onClick={() => {
-                const url = window.prompt(t("adminContractEditor.imageUrlPrompt"));
-                if (url) editor.chain().focus().setImage({ src: url }).run();
-              }}
+              onClick={() => setUrlDialog("image")}
             />
 
             <ToolbarDivider />
@@ -669,6 +764,24 @@ export function ContractTemplateEditorPage() {
           </div>
         </div>
       </div>
+
+      <PromptDialog
+        open={urlDialog !== null}
+        title={urlDialog === "image" ? t("adminContractEditor.image") : t("adminContractEditor.link")}
+        label={
+          urlDialog === "image"
+            ? t("adminContractEditor.imageUrlPrompt")
+            : t("adminContractEditor.linkUrlPrompt")
+        }
+        placeholder="https://"
+        rows={2}
+        // Rasm uchun data:image/... URL juda uzun bo'ladi (backend tashqi URL'larni taqiqlaydi,
+        // shuning uchun muhr/logotip faqat shunday qo'shiladi) — 2000 belgida kesilmasin
+        maxLength={urlDialog === "image" ? 5_000_000 : 2000}
+        confirmText={t("common.add")}
+        onConfirm={handleUrlConfirm}
+        onClose={() => setUrlDialog(null)}
+      />
     </TooltipProvider>
   );
 }
@@ -714,15 +827,18 @@ function ToolbarDivider() {
 
 // ─── Line Spacing & Paragraph Spacing Dropdown ─────────
 
-function LineSpacingDropdown({ editor }: { editor: any }) {
+function LineSpacingDropdown({ editor }: { editor: Editor }) {
   const { t } = useTranslation();
 
-  const paragraphAttrs = editor.getAttributes("paragraph") || {};
-  const headingAttrs = editor.getAttributes("heading") || {};
+  const paragraphAttrs: BlockAttrs = editor.getAttributes("paragraph");
+  const headingAttrs: BlockAttrs = editor.getAttributes("heading");
 
-  const currentLineHeight = paragraphAttrs.lineHeight || headingAttrs.lineHeight || "1.15";
-  const currentMarginTop = paragraphAttrs.marginTop || headingAttrs.marginTop;
-  const currentMarginBottom = paragraphAttrs.marginBottom || headingAttrs.marginBottom;
+  const currentLineHeight =
+    styleValue(paragraphAttrs.lineHeight) ?? styleValue(headingAttrs.lineHeight) ?? "1.15";
+  const currentMarginTop =
+    styleValue(paragraphAttrs.marginTop) ?? styleValue(headingAttrs.marginTop);
+  const currentMarginBottom =
+    styleValue(paragraphAttrs.marginBottom) ?? styleValue(headingAttrs.marginBottom);
 
   const hasSpaceBefore = Boolean(currentMarginTop && currentMarginTop !== "0px" && currentMarginTop !== "0");
   const hasSpaceAfter = Boolean(
@@ -732,17 +848,15 @@ function LineSpacingDropdown({ editor }: { editor: any }) {
   );
 
   const setLineHeight = (val: string) => {
-    (editor.chain().focus() as any).setLineHeight(val).run();
+    editor.chain().focus().setLineHeight(val).run();
   };
 
   const toggleSpaceBefore = () => {
-    const newVal = hasSpaceBefore ? "0px" : "10px";
-    (editor.chain().focus() as any).setMarginTop(newVal).run();
+    editor.chain().focus().setMarginTop(hasSpaceBefore ? "0px" : "10px").run();
   };
 
   const toggleSpaceAfter = () => {
-    const newVal = hasSpaceAfter ? "0px" : "10px";
-    (editor.chain().focus() as any).setMarginBottom(newVal).run();
+    editor.chain().focus().setMarginBottom(hasSpaceAfter ? "0px" : "10px").run();
   };
 
   const lineHeights = ["1.0", "1.15", "1.5", "2.0", "2.5", "3.0"];

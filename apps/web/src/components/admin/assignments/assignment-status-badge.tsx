@@ -1,11 +1,13 @@
+import { useTranslation } from "react-i18next";
+
 import { Badge } from "@/components/ui/badge";
 import type { AssignmentStatus } from "@/lib/api/types";
 
-const STATUS_LABEL: Record<AssignmentStatus, string> = {
-  draft: "Qoralama",
-  active: "Aktiv",
-  completed: "Tugagan",
-  cancelled: "Bekor qilingan",
+const STATUS_LABEL_KEY: Record<AssignmentStatus, string> = {
+  draft: "assignmentsAssignmentStatusBadge.draft",
+  active: "assignmentsAssignmentStatusBadge.active",
+  completed: "assignmentsAssignmentStatusBadge.completed",
+  cancelled: "assignmentsAssignmentStatusBadge.cancelled",
 };
 
 const STATUS_VARIANT: Record<
@@ -19,5 +21,6 @@ const STATUS_VARIANT: Record<
 };
 
 export function AssignmentStatusBadge({ status }: { status: AssignmentStatus }) {
-  return <Badge variant={STATUS_VARIANT[status]}>{STATUS_LABEL[status]}</Badge>;
+  const { t } = useTranslation();
+  return <Badge variant={STATUS_VARIANT[status]}>{t(STATUS_LABEL_KEY[status])}</Badge>;
 }
