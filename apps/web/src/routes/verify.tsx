@@ -158,11 +158,25 @@ export function VerifyPage() {
                   )}
                 </dl>
 
-                {data.revoked_reason && (
+                {data.is_expired && !data.revoked_at && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>{t("verify.expiredTitle")}</AlertTitle>
+                    <AlertDescription>
+                      {t("verify.expiredDesc", {
+                        date: new Date(data.end_date).toLocaleDateString(dateLocale()),
+                      })}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {(data.revoked_at || data.status === "revoked") && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>{t("verify.revokedTitle")}</AlertTitle>
-                    <AlertDescription>{data.revoked_reason}</AlertDescription>
+                    <AlertDescription>
+                      {data.revoked_reason || t("verify.revokedDesc")}
+                    </AlertDescription>
                   </Alert>
                 )}
 

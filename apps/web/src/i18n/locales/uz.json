@@ -2592,7 +2592,10 @@
     "openFullscreen": "To'liq ekranda ochish",
     "officialCopy": "Rasmiy hujjat nusxasi (PDF)",
     "checkFailedTitle": "Tekshirib bo'lmadi",
-    "retry": "Qayta urinish"
+    "retry": "Qayta urinish",
+    "expiredTitle": "Shartnoma muddati tugagan",
+    "expiredDesc": "Amaliyot muddati {{date}} da tugagan — shartnoma endi amal qilmaydi.",
+    "revokedDesc": "Shartnoma universitet tomonidan bekor qilingan va amal qilmaydi."
   },
   "inAppBrowser": {
     "title": "Siz {{app}} ichidagi brauzerdan kirmoqdasiz",
