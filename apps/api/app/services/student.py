@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 from app.models.academic import Direction, Faculty, Group
 from app.models.enums import AssignmentStatus, StudentStatus, UserRole
 from app.models.practice_assignment import PracticeAssignment
@@ -36,6 +36,7 @@ def _student_base_select() -> Any:
             User.device_id,
             User.device_label,
             User.device_bound_at,
+            User.device_info,
             Student.gender,
             Student.region,
             Student.district,
@@ -115,15 +116,16 @@ async def list_students(
                 .where(
                     PracticeAssignment.student_id == Student.id,
                     PracticeAssignment.status.in_(
-                        [AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE, AssignmentStatus.COMPLETED]
+                        [
+                            AssignmentStatus.DRAFT,
+                            AssignmentStatus.ACTIVE,
+                            AssignmentStatus.COMPLETED,
+                        ]
                     ),
                 )
                 .exists()
             )
-            if has_assignment:
-                stmt = stmt.where(asn_subq)
-            else:
-                stmt = stmt.where(~asn_subq)
+            stmt = stmt.where(asn_subq) if has_assignment else stmt.where(~asn_subq)
         if search:
             clean_search = (
                 search.replace("'", "")
@@ -140,23 +142,19 @@ async def list_students(
                 return func.replace(
                     func.replace(
                         func.replace(
-                            func.replace(
-                                func.replace(func.lower(col), "'", ""),
-                                "’", ""
-                            ),
-                            "‘", ""
+                            func.replace(func.replace(func.lower(col), "'", ""), "’", ""), "‘", ""
                         ),
-                        "ʻ", ""
+                        "ʻ",
+                        "",
                     ),
-                    "`", ""
+                    "`",
+                    "",
                 )
 
             full_name_last_first = _clean_sql(
                 User.last_name + " " + User.first_name + " " + func.coalesce(User.middle_name, "")
             )
-            full_name_first_last = _clean_sql(
-                User.first_name + " " + User.last_name
-            )
+            full_name_first_last = _clean_sql(User.first_name + " " + User.last_name)
 
             stmt = stmt.where(
                 full_name_last_first.like(like)
@@ -191,9 +189,7 @@ async def get_student(db: AsyncSession, id_: UUID) -> dict[str, Any]:
     return _row_to_dict(dict(row))
 
 
-async def update_credentials(
-    db: AsyncSession, id_: UUID, data: BaseModel
-) -> dict[str, Any]:
+async def update_credentials(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[str, Any]:
     """Admin orqali talaba login/parolini yangilash.
 
     Agar parol o'zgartirilsa — `must_change_password=True` flag qo'yiladi
@@ -219,16 +215,18 @@ async def update_credentials(
     if new_username and new_username != user.username:
         user.username = new_username
     if new_password:
-        user.password_hash = hash_password(new_password)
+        user.password_hash = await hash_password_async(new_password, temporary=True)
         user.must_change_password = True  # admin reset → talaba o'zgartirsin
+        # Eski parol bilan ochilgan sessiyalar yopiladi
+        from app.services.auth import revoke_all_refresh_tokens
+
+        await revoke_all_refresh_tokens(db, user.id)
 
     try:
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, "Bu username allaqachon band"
-        ) from e
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bu username allaqachon band") from e
 
     return await get_student(db, id_)
 
@@ -262,9 +260,7 @@ async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
         await db.execute(select(Student).where(Student.hemis_id == hemis_id))
     ).scalar_one_or_none()
     if existing_hemis:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, f"Bu Talaba ID allaqachon mavjud: {hemis_id}"
-        )
+        raise HTTPException(status.HTTP_409_CONFLICT, f"Bu Talaba ID allaqachon mavjud: {hemis_id}")
 
     # Avto-generatsiya: 2500 + 8 raqam. login=parol.
     prefix = app_settings.LOGIN_YEAR_PREFIX
@@ -287,7 +283,7 @@ async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
 
     user = User(
         username=username,
-        password_hash=hash_password(password),
+        password_hash=await hash_password_async(password, temporary=True),
         role=UserRole.STUDENT,
         is_active=True,
         first_name=first_name,
@@ -308,6 +304,7 @@ async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
         district=payload.get("district"),
         group_id=group_id,
         current_semester=payload.get("current_semester"),
+        enrollment_year=payload.get("enrollment_year"),
         is_graduating=payload.get("is_graduating", False),
         education_language=payload.get("education_language"),
         education_form=payload.get("education_form"),
@@ -319,16 +316,12 @@ async def create_student(db: AsyncSession, data: BaseModel) -> dict[str, Any]:
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, "Username yoki Talaba ID band"
-        ) from e
+        raise HTTPException(status.HTTP_409_CONFLICT, "Username yoki Talaba ID band") from e
 
     return await get_student(db, student.id)
 
 
-async def update_student(
-    db: AsyncSession, id_: UUID, data: BaseModel
-) -> dict[str, Any]:
+async def update_student(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[str, Any]:
     """Admin orqali talaba ma'lumotlarini tahrirlash."""
     student = await db.get(Student, id_)
     if not student:
@@ -349,9 +342,15 @@ async def update_student(
         "hemis_id",
         "enrollment_year",
         "gender",
-        "region", "district", "group_id", "current_semester",
-        "is_graduating", "education_language", "education_form",
-        "degree_type", "status",
+        "region",
+        "district",
+        "group_id",
+        "current_semester",
+        "is_graduating",
+        "education_language",
+        "education_form",
+        "degree_type",
+        "status",
     )
     group_changed = "group_id" in payload and payload["group_id"] != student.group_id
     for key in student_keys:
@@ -363,19 +362,13 @@ async def update_student(
     # o'tkazish hech qachon eski yil tarixini qayta yozmaydi. Yakunlangan/bekor
     # qilingan biriktirishlar muzlagan qoladi.
     if group_changed:
-        new_group = (
-            await db.get(Group, payload["group_id"]) if payload["group_id"] else None
-        )
+        new_group = await db.get(Group, payload["group_id"]) if payload["group_id"] else None
         stmt = select(PracticeAssignment).where(
             PracticeAssignment.student_id == student.id,
-            PracticeAssignment.status.in_(
-                [AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE]
-            ),
+            PracticeAssignment.status.in_([AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE]),
         )
         if new_group:
-            stmt = stmt.where(
-                PracticeAssignment.academic_year_id == new_group.academic_year_id
-            )
+            stmt = stmt.where(PracticeAssignment.academic_year_id == new_group.academic_year_id)
         for asn in (await db.execute(stmt)).scalars():
             asn.group_id = new_group.id if new_group else None
             asn.course = new_group.course if new_group else None
@@ -405,15 +398,42 @@ async def reset_device(db: AsyncSession, id_: UUID) -> dict[str, Any]:
         user.device_id = None
         user.device_label = None
         user.device_bound_at = None
+        user.device_info = None
+        # Eski qurilmadagi sessiya ham yopiladi — faqat yangi qurilma bog'lanadi
+        from app.services.auth import revoke_all_refresh_tokens
+
+        await revoke_all_refresh_tokens(db, user.id)
         await db.commit()
     return await get_student(db, id_)
 
 
 async def delete_student(db: AsyncSession, id_: UUID) -> None:
-    """Admin: talaba va u bilan bog'liq User'ni o'chirish."""
+    """Admin: talaba va u bilan bog'liq User'ni o'chirish.
+
+    `practice_assignments.student_id` ON DELETE CASCADE — o'chirilsa amaliyot tarixi (davomat,
+    topshiriqlar, yakuniy baho, arizalar) ham jim yo'qolardi. Shuning uchun amaliyot yoki arizasi
+    bor talaba o'chirilmaydi: statusini "haydalgan/bitirgan" qilish kerak.
+    """
+    from app.models.practice_application import PracticeApplication
+
     student = await db.get(Student, id_)
     if not student:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Talaba topilmadi: {id_}")
+    has_history = (
+        await db.execute(
+            select(PracticeAssignment.id).where(PracticeAssignment.student_id == id_).limit(1)
+        )
+    ).scalar_one_or_none() or (
+        await db.execute(
+            select(PracticeApplication.id).where(PracticeApplication.student_id == id_).limit(1)
+        )
+    ).scalar_one_or_none()
+    if has_history:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Talabaning amaliyot yoki ariza tarixi bor — o'chirib bo'lmaydi. "
+            "O'rniga talaba statusini o'zgartiring (bitirgan / haydalgan).",
+        )
     user_id = student.user_id
     await db.delete(student)
     user = await db.get(User, user_id)

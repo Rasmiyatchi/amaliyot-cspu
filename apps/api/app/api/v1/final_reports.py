@@ -4,9 +4,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, status
 
-from app.api.deps import CurrentUser, RequireAdmin, RequireSupervisorOrAdmin
+from app.api.deps import CurrentUser, RequirePractice, RequireSupervisorOrAdmin
 from app.db.session import SessionDep
 from app.models.enums import FinalReportStatus
+from app.models.final_report import FinalReport
 from app.schemas.final_report import (
     FinalReportRead,
     FinalReportReviewRequest,
@@ -14,6 +15,11 @@ from app.schemas.final_report import (
 )
 from app.services import audit_log as audit
 from app.services import final_report as svc
+from app.services.scoping import (
+    assert_assignment_access,
+    assert_child_assignment_access,
+    effective_faculty_id,
+)
 
 router = APIRouter(prefix="/final-reports", tags=["final-reports"])
 
@@ -38,7 +44,7 @@ async def list_reports(
         academic_year_id=academic_year_id,
         group_id=group_id,
         direction_id=direction_id,
-        faculty_id=faculty_id,
+        faculty_id=effective_faculty_id(user, faculty_id),
         course=course,
         search=search,
     )
@@ -47,8 +53,9 @@ async def list_reports(
 
 @router.get("/by-assignment/{assignment_id}", response_model=FinalReportRead | None)
 async def get_for_assignment(
-    assignment_id: UUID, db: SessionDep, _: CurrentUser
+    assignment_id: UUID, db: SessionDep, user: CurrentUser
 ) -> FinalReportRead | None:
+    await assert_assignment_access(db, user, assignment_id)
     item = await svc.get_report_for_assignment(db, assignment_id)
     if not item:
         return None
@@ -112,8 +119,9 @@ async def revert(
     report_id: UUID,
     request: Request,
     db: SessionDep,
-    user: RequireAdmin,
+    user: RequirePractice,
 ) -> FinalReportRead:
+    await assert_child_assignment_access(db, user, FinalReport, report_id, "Hisobot topilmadi")
     item = await svc.revert_report(db, user, report_id)
     await audit.log(
         db,

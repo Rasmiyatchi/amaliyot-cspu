@@ -1,6 +1,7 @@
 """Student schemas — admin barcha maydonlarni ko'radi, hech narsa yashirilmaydi."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -30,6 +31,7 @@ class StudentRead(BaseModel):
     device_id: str | None = None
     device_label: str | None = None
     device_bound_at: datetime | None = None
+    device_info: dict[str, Any] | None = None
 
     # Shaxsiy
     gender: Gender | None
@@ -83,6 +85,7 @@ class StudentCreate(BaseModel):
 
     group_id: UUID
     current_semester: int | None = Field(None, ge=1, le=8)
+    enrollment_year: int | None = Field(None, ge=2000, le=2100)
     is_graduating: bool = False
     education_language: str | None = Field(None, max_length=20)
     education_form: EducationForm | None = None

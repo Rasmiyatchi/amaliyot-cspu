@@ -1,20 +1,35 @@
-import { Award, Check, Loader2, Lock, FileText, Download } from "lucide-react";
+import {
+  Award,
+  Check,
+  CheckCircle2,
+  Download,
+  FileText,
+  Loader2,
+  Lock,
+  XCircle,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { FinalizeGradeDialog } from "@/components/admin/assignments/finalize-grade-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { PromptDialog } from "@/components/ui/prompt-dialog";
 import {
-  useFinalizeGrade,
+  useFinalReportForAssignment,
+  useReviewFinalReport,
+  type FinalReport,
+  type FinalReportStatus,
+} from "@/lib/api/final-reports";
+import {
   useGradeBreakdown,
   useSetCriterionScore,
   type CriterionScore,
 } from "@/lib/api/grading";
-import { useFinalReportForAssignment } from "@/lib/api/final-reports";
 import type { UUID } from "@/lib/api/types";
 import { downloadAttachment } from "@/lib/api/uploads";
 import { cn } from "@/lib/utils";
@@ -28,8 +43,8 @@ type Props = {
 export function GradePanel({ assignmentId, readOnly = false }: Props) {
   const { t } = useTranslation();
   const { data, isPending, error } = useGradeBreakdown(assignmentId);
-  const finalize = useFinalizeGrade(assignmentId);
   const { data: finalReport } = useFinalReportForAssignment(assignmentId);
+  const [finalizeOpen, setFinalizeOpen] = useState(false);
 
   if (isPending) {
     return (
@@ -50,24 +65,6 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
   const finalized = data.status === "completed" && data.final_grade !== null;
   const locked = readOnly || finalized;
 
-  const handleFinalize = async () => {
-    if (!confirm(t("assignmentsGradePanel.finalizeConfirm"))) return;
-    try {
-      const res = await finalize.mutateAsync();
-      toast.success(
-        t("assignmentsGradePanel.finalizedToast", {
-          grade: res.final_grade,
-          max: res.max_total,
-          credit: res.credit_earned
-            ? t("assignmentsGradePanel.creditEarned")
-            : t("assignmentsGradePanel.creditNotEarned"),
-        }),
-      );
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("assignmentsGradePanel.finalizeError"));
-    }
-  };
-
   return (
     <div className="space-y-3">
       <div className="space-y-2">
@@ -81,24 +78,7 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
         ))}
       </div>
 
-      {finalReport && (
-        <div className="rounded-lg border border-border p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" />
-            <span className="font-medium">{t("reports.title", { defaultValue: "Yakuniy hisobot" })}</span>
-            <Badge variant="outline">{finalReport.status}</Badge>
-          </div>
-          <div className="text-sm">{finalReport.title}</div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => downloadAttachment(finalReport.file_attachment)}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {t("common.download")}
-          </Button>
-        </div>
-      )}
+      {finalReport && <FinalReportBlock report={finalReport} canReview={!readOnly} />}
 
       {/* Jami */}
       <div className="rounded-lg border border-border bg-muted/40 p-3">
@@ -121,10 +101,15 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
         {data.min_total > 0 && (
           <p className="mt-2 text-xs text-muted-foreground">
             {t("assignmentsGradePanel.minPointsInfo", { min: data.min_total })}{" "}
-            {data.passed ? (
+            {!data.complete && !finalized ? (
+              // Baholash tugamaguncha jami qisman — "yetmaydi" deyish erta
+              <span className="font-medium">{t("assignmentsGradePanel.incomplete")}</span>
+            ) : data.passed ? (
               <span className="font-medium text-success">{t("assignmentsGradePanel.enough")}</span>
             ) : (
-              <span className="font-medium text-destructive">{t("assignmentsGradePanel.notEnough")}</span>
+              <span className="font-medium text-destructive">
+                {t("assignmentsGradePanel.notEnough")}
+              </span>
             )}
           </p>
         )}
@@ -153,15 +138,123 @@ export function GradePanel({ assignmentId, readOnly = false }: Props) {
             )}
             <Button
               className="ml-auto"
-              disabled={!data.complete || finalize.isPending}
-              onClick={handleFinalize}
+              disabled={!data.complete}
+              onClick={() => setFinalizeOpen(true)}
             >
-              {finalize.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               {t("assignmentsGradePanel.finalizeButton")}
             </Button>
           </div>
         )
       )}
+
+      <FinalizeGradeDialog
+        assignmentId={assignmentId}
+        open={finalizeOpen}
+        onClose={() => setFinalizeOpen(false)}
+      />
+    </div>
+  );
+}
+
+const REPORT_STATUS_VARIANT: Record<FinalReportStatus, "secondary" | "success" | "destructive"> = {
+  draft: "secondary",
+  submitted: "secondary",
+  approved: "success",
+  rejected: "destructive",
+};
+
+/** Yakuniy hisobot — biriktirilgan amaliyot rahbari (yoki admin) shu yerda ko'rib chiqadi. */
+function FinalReportBlock({ report, canReview }: { report: FinalReport; canReview: boolean }) {
+  const { t } = useTranslation();
+  const review = useReviewFinalReport();
+  const [rejectOpen, setRejectOpen] = useState(false);
+
+  // Backend faqat "submitted" yoki "rejected" holatdagi hisobotni ko'rib chiqishga ruxsat beradi
+  const reviewable = canReview && (report.status === "submitted" || report.status === "rejected");
+
+  const handleReview = async (approve: boolean, note: string | null) => {
+    try {
+      await review.mutateAsync({ id: report.id, data: { approve, note } });
+      toast.success(
+        approve
+          ? t("assignmentsGradePanel.reportApprovedToast")
+          : t("assignmentsGradePanel.reportRejectedToast"),
+      );
+      setRejectOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.error"));
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      await downloadAttachment(report.file_attachment);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.downloadError"));
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-lg border border-border p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <FileText className="h-4 w-4 text-primary" />
+        <span className="font-medium">{t("assignmentsGradePanel.finalReportTitle")}</span>
+        <Badge variant={REPORT_STATUS_VARIANT[report.status]}>
+          {t(`adminReports.status.${report.status}`)}
+        </Badge>
+      </div>
+      <div className="break-words text-sm">{report.title}</div>
+      {report.reviewer_note && (
+        <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+          <span className="font-medium">{t("common.note")}:</span> {report.reviewer_note}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={handleDownload}>
+          <Download className="h-4 w-4" />
+          {t("common.download")}
+        </Button>
+        {reviewable && (
+          <>
+            {report.status === "submitted" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setRejectOpen(true)}
+                disabled={review.isPending}
+              >
+                <XCircle className="h-4 w-4" />
+                {t("common.reject")}
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={() => handleReview(true, null)}
+              disabled={review.isPending}
+            >
+              {review.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
+              {t("common.approve")}
+            </Button>
+          </>
+        )}
+      </div>
+
+      <PromptDialog
+        open={rejectOpen}
+        title={t("assignmentsGradePanel.reportRejectTitle")}
+        description={t("assignmentsGradePanel.reportRejectDescription")}
+        label={t("assignmentsAssignmentDetailDialog.rejectReasonLabel")}
+        confirmText={t("common.reject")}
+        variant="destructive"
+        isPending={review.isPending}
+        onConfirm={(reason) => handleReview(false, reason)}
+        onClose={() => setRejectOpen(false)}
+      />
     </div>
   );
 }
@@ -238,8 +331,10 @@ function CriterionRow({
         ) : (
           <Input
             type="number"
+            inputMode="numeric"
             min={0}
             max={criterion.max}
+            step={1}
             value={draft}
             disabled={setScore.isPending}
             onChange={(e) => setDraft(e.target.value)}
@@ -247,6 +342,10 @@ function CriterionRow({
             onKeyDown={(e) => {
               if (e.key === "Enter") e.currentTarget.blur();
             }}
+            aria-label={t("assignmentsGradePanel.scoreFor", {
+              name: criterion.name,
+              max: criterion.max,
+            })}
             className="h-9 w-20 text-right tabular-nums"
             placeholder="—"
           />

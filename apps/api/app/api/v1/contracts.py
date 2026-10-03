@@ -1,13 +1,13 @@
 """Contracts endpoints + public verify."""
 
-from datetime import date
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse
 
 from app.api.deps import CurrentUser, RequireContracts
+from app.core.clock import today_uzb
 from app.db.session import SessionDep
 from app.models.enums import ContractStatus
 from app.schemas.common import Paginated
@@ -27,8 +27,10 @@ ALLOWED_SCAN_MIME = {
     "image/jpeg",
     "image/jpg",
     "image/png",
+    # ba'zi telefonlar PDF'ni shunday yuboradi — quyida magic-byte tekshiriladi
     "application/octet-stream",
 }
+_SCAN_MAGIC = (b"%PDF-", b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n")
 MAX_SCAN_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
@@ -69,81 +71,164 @@ async def get_contract(id_: UUID, db: SessionDep, _: RequireContracts) -> Contra
 
 
 @router.post("", response_model=ContractRead, status_code=status.HTTP_201_CREATED)
-async def create_contract(data: ContractCreate, db: SessionDep, user: CurrentUser) -> ContractRead:
-    return ContractRead.model_validate(await svc.create_contract(db, data, user.id))
+async def create_contract(
+    data: ContractCreate, request: Request, db: SessionDep, user: RequireContracts
+) -> ContractRead:
+    from app.services import audit_log as audit
+
+    result = await svc.create_contract(db, data, user.id)
+    await audit.log(
+        db,
+        actor=user,
+        action="create",
+        entity_type="contract",
+        entity_id=result["id"],
+        summary=f"Shartnoma yaratildi: {result.get('number')}",
+        metadata={"students": len(result.get("students") or [])},
+        request=request,
+    )
+    await db.commit()
+    return ContractRead.model_validate(result)
+
+
+async def _audit(
+    db: SessionDep,
+    user: CurrentUser,
+    request: Request,
+    action: str,
+    contract_id: UUID,
+    summary: str,
+    metadata: dict | None = None,
+) -> None:
+    """Shartnoma amallari audit jurnaliga (kim, qachon, qaysi shartnoma)."""
+    from app.services import audit_log as audit
+
+    await audit.log(
+        db,
+        actor=user,
+        action=action,
+        entity_type="contract",
+        entity_id=contract_id,
+        summary=summary,
+        metadata=metadata,
+        request=request,
+    )
+    await db.commit()
 
 
 @router.patch("/{id_}", response_model=ContractRead)
 async def update_contract(
-    id_: UUID, data: ContractUpdate, db: SessionDep, _: RequireContracts
+    id_: UUID, data: ContractUpdate, request: Request, db: SessionDep, user: RequireContracts
 ) -> ContractRead:
-    return ContractRead.model_validate(await svc.update_contract(db, id_, data))
+    result = ContractRead.model_validate(await svc.update_contract(db, id_, data))
+    await _audit(
+        db,
+        user,
+        request,
+        "update",
+        id_,
+        f"Shartnoma tahrirlandi: {result.number}",
+        data.model_dump(exclude_unset=True, mode="json"),
+    )
+    return result
 
 
 @router.post("/{id_}/generate", response_model=ContractRead)
-async def generate_pdf(id_: UUID, db: SessionDep, _: RequireContracts) -> ContractRead:
+async def generate_pdf(
+    id_: UUID, request: Request, db: SessionDep, user: RequireContracts
+) -> ContractRead:
     """PDF + QR generatsiya. Status DRAFT → GENERATED."""
-    return ContractRead.model_validate(await svc.generate_pdf(db, id_))
+    result = ContractRead.model_validate(await svc.generate_pdf(db, id_))
+    await _audit(db, user, request, "update", id_, f"Shartnoma PDF yaratildi: {result.number}")
+    return result
 
 
 async def _check_contract_access(db: SessionDep, contract_id: UUID, user: CurrentUser) -> None:
+    """Admin — hammasi; talaba — faqat o'zi kiritilgan shartnoma (students snapshot orqali)."""
+    from sqlalchemy import select
+
+    from app.models.contract import Contract
     from app.models.enums import UserRole
+    from app.models.practice_assignment import PracticeAssignment
+    from app.models.student import Student
+
     if user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
         return
     if user.role == UserRole.STUDENT:
-        from sqlalchemy import select
-        from app.models.practice_assignment import PracticeAssignment
-        from app.models.student import Student
-        student_id = (await db.execute(select(Student.id).where(Student.user_id == user.id))).scalar_one_or_none()
-        if student_id:
-            assign = (await db.execute(
-                select(PracticeAssignment.id).where(
-                    PracticeAssignment.contract_id == contract_id,
-                    PracticeAssignment.student_id == student_id,
+        student_id = (
+            await db.execute(select(Student.id).where(Student.user_id == user.id))
+        ).scalar_one_or_none()
+        snapshot = (
+            await db.execute(select(Contract.students).where(Contract.id == contract_id))
+        ).scalar_one_or_none()
+        assignment_ids: list[UUID] = []
+        for item in snapshot or []:
+            raw = item.get("assignment_id") if isinstance(item, dict) else None
+            try:
+                if raw:
+                    assignment_ids.append(UUID(str(raw)))
+            except ValueError:
+                continue
+        if student_id and assignment_ids:
+            owned = (
+                await db.execute(
+                    select(PracticeAssignment.id)
+                    .where(
+                        PracticeAssignment.id.in_(assignment_ids),
+                        PracticeAssignment.student_id == student_id,
+                    )
+                    .limit(1)
                 )
-            )).scalar_one_or_none()
-            if assign:
+            ).scalar_one_or_none()
+            if owned:
                 return
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Ruxsat yo'q")
 
 
-@router.get("/{id_}/pdf")
-async def download_pdf(id_: UUID, db: SessionDep, user: CurrentUser) -> FileResponse:
-    """Saqlangan PDF faylini yuklab olish yoki ko'rish."""
-    await _check_contract_access(db, id_, user)
-    contract = await svc.get_contract(db, id_)
-    if not contract["pdf_path"]:
-        contract = await svc.generate_pdf(db, id_)
-
-    base = Path(__file__).parent.parent.parent.parent
-    clean_rel = str(contract["pdf_path"] or "").replace("\\", "/").lstrip("/")
-    candidates = [
+def _find_contract_file(rel_path: str | None) -> Path | None:
+    """Saqlangan nisbiy yo'ldan faylni topadi (faqat storage/ ichida)."""
+    if not rel_path:
+        return None
+    base = Path(__file__).resolve().parent.parent.parent.parent  # apps/api
+    storage = (base / "storage").resolve()
+    clean_rel = str(rel_path).replace("\\", "/").lstrip("/")
+    candidates = (
         base / clean_rel,
         base / "storage" / clean_rel,
         base / "storage" / "contracts" / clean_rel,
-        Path(contract["pdf_path"] or ""),
-    ]
-    abs_path = None
+    )
     for cand in candidates:
-        if cand.exists() and cand.is_file():
-            abs_path = cand
-            break
+        try:
+            resolved = cand.resolve()
+        except OSError:
+            continue
+        if str(resolved).startswith(str(storage)) and resolved.is_file():
+            return resolved
+    return None
 
-    if not abs_path:
+
+@router.get("/{id_}/pdf")
+async def download_pdf(id_: UUID, db: SessionDep, user: CurrentUser) -> FileResponse:
+    """Saqlangan PDF faylini yuklab olish yoki ko'rish.
+
+    Fayl yo'q bo'lsa faqat admin uchun va faqat DRAFT/GENERATED holatda qayta yaratiladi;
+    imzolangan/bekor qilingan shartnoma hech qachon qayta generatsiya qilinmaydi.
+    """
+    from app.models.enums import UserRole
+
+    await _check_contract_access(db, id_, user)
+    contract = await svc.get_contract(db, id_)
+    abs_path = _find_contract_file(contract["pdf_path"])
+
+    can_regenerate = user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN) and contract["status"] in (
+        ContractStatus.DRAFT,
+        ContractStatus.GENERATED,
+    )
+    if abs_path is None and can_regenerate:
         contract = await svc.generate_pdf(db, id_)
-        clean_rel = str(contract["pdf_path"] or "").replace("\\", "/").lstrip("/")
-        candidates = [
-            base / clean_rel,
-            base / "storage" / clean_rel,
-            base / "storage" / "contracts" / clean_rel,
-            Path(contract["pdf_path"] or ""),
-        ]
-        for cand in candidates:
-            if cand.exists() and cand.is_file():
-                abs_path = cand
-                break
+        abs_path = _find_contract_file(contract["pdf_path"])
 
-    if not abs_path:
+    if abs_path is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "PDF fayli topilmadi")
 
     return FileResponse(
@@ -157,8 +242,9 @@ async def download_pdf(id_: UUID, db: SessionDep, user: CurrentUser) -> FileResp
 @router.post("/{id_}/upload-scan", response_model=ContractRead)
 async def upload_scan(
     id_: UUID,
+    request: Request,
     db: SessionDep,
-    _: RequireContracts,
+    user: RequireContracts,
     file: UploadFile = File(...),  # noqa: B008
 ) -> ContractRead:
     """Imzolangan skan yuklash. Status GENERATED → ACTIVE."""
@@ -168,14 +254,21 @@ async def upload_scan(
             f"Qo'llab-quvvatlanmaydigan format: {file.content_type}",
         )
     content = await file.read()
+    if not content.startswith(_SCAN_MAGIC):
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Fayl PDF, JPG yoki PNG emas",
+        )
     if len(content) > MAX_SCAN_SIZE:
         raise HTTPException(
             status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             f"Fayl juda katta (max {MAX_SCAN_SIZE // 1024 // 1024} MB)",
         )
-    return ContractRead.model_validate(
+    result = ContractRead.model_validate(
         await svc.upload_scan(db, id_, content, file.filename or "scan.pdf")
     )
+    await _audit(db, user, request, "approve", id_, f"Imzolangan skan yuklandi: {result.number}")
+    return result
 
 
 @router.get("/{id_}/scan")
@@ -184,23 +277,7 @@ async def download_scan(id_: UUID, db: SessionDep, user: CurrentUser) -> FileRes
     contract = await svc.get_contract(db, id_)
     if not contract["scan_path"]:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Skan yuklanmagan")
-    from app.services.pdf import STORAGE_DIR
-
-    clean_scan = str(contract["scan_path"]).replace("\\", "/").lstrip("/")
-    base_dir = STORAGE_DIR.parent.parent
-    candidates = [
-        base_dir / clean_scan,
-        base_dir / "storage" / clean_scan,
-        base_dir / "storage" / "contracts" / clean_scan,
-        STORAGE_DIR / clean_scan,
-        Path(contract["scan_path"]),
-    ]
-    abs_path = None
-    for cand in candidates:
-        if cand.exists() and cand.is_file():
-            abs_path = cand
-            break
-
+    abs_path = _find_contract_file(contract["scan_path"])
     if not abs_path:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Skan fayli topilmadi")
 
@@ -221,30 +298,48 @@ async def download_scan(id_: UUID, db: SessionDep, user: CurrentUser) -> FileRes
 
 @router.post("/{id_}/revoke", response_model=ContractRead)
 async def revoke_contract(
-    id_: UUID, data: ContractRevoke, db: SessionDep, _: RequireContracts
+    id_: UUID, data: ContractRevoke, request: Request, db: SessionDep, user: RequireContracts
 ) -> ContractRead:
-    return ContractRead.model_validate(await svc.revoke_contract(db, id_, data))
+    result = ContractRead.model_validate(await svc.revoke_contract(db, id_, data))
+    await _audit(
+        db,
+        user,
+        request,
+        "reject",
+        id_,
+        f"Shartnoma bekor qilindi: {result.number}",
+        data.model_dump(mode="json"),
+    )
+    return result
 
 
 @router.post("/{id_}/archive", response_model=ContractRead)
 async def archive_contract(
-    id_: UUID, db: SessionDep, _: RequireContracts
+    id_: UUID, request: Request, db: SessionDep, user: RequireContracts
 ) -> ContractRead:
     """Shartnomani arxivga o'tkazish (status -> EXPIRED)."""
-    return ContractRead.model_validate(await svc.archive_contract(db, id_))
+    result = ContractRead.model_validate(await svc.archive_contract(db, id_))
+    await _audit(db, user, request, "update", id_, f"Shartnoma arxivlandi: {result.number}")
+    return result
 
 
 @router.post("/{id_}/unarchive", response_model=ContractRead)
 async def unarchive_contract(
-    id_: UUID, db: SessionDep, _: RequireContracts
+    id_: UUID, request: Request, db: SessionDep, user: RequireContracts
 ) -> ContractRead:
     """Shartnomani arxivdan chiqarish (status -> ACTIVE/GENERATED/DRAFT)."""
-    return ContractRead.model_validate(await svc.unarchive_contract(db, id_))
+    result = ContractRead.model_validate(await svc.unarchive_contract(db, id_))
+    await _audit(db, user, request, "update", id_, f"Shartnoma arxivdan tiklandi: {result.number}")
+    return result
 
 
 @router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_contract(id_: UUID, db: SessionDep, _: RequireContracts) -> None:
+async def delete_contract(
+    id_: UUID, request: Request, db: SessionDep, user: RequireContracts
+) -> None:
+    number = (await svc.get_contract(db, id_))["number"]
     await svc.delete_contract(db, id_)
+    await _audit(db, user, request, "delete", id_, f"Shartnoma o'chirildi: {number}")
 
 
 # ─── Public verification (NO AUTH) ────────────────────────
@@ -261,10 +356,15 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
 
         status_ = data["status"]
 
-        # Shartnoma bekor qilingan (revoked) bo'lsa yoki revoked_at bo'lsa yaroqsiz (is_valid = False).
-        # Barcha imzolangan/faol shartnomalar rasmiy va yaroqli (is_valid = True).
+        # Yaroqli = universitet chiqargan (PDF+QR) yoki imzolangan, bekor qilinmagan va muddati
+        # tugamagan. Ilgari qoralama va muddati o'tgan shartnomalar ham "yaroqli" ko'rinardi.
         is_revoked = status_ == ContractStatus.REVOKED or data.get("revoked_at") is not None
-        is_valid = not is_revoked
+        is_expired = status_ == ContractStatus.EXPIRED or data["end_date"] < today_uzb()
+        is_valid = (
+            status_ in (ContractStatus.GENERATED, ContractStatus.ACTIVE)
+            and not is_revoked
+            and not is_expired
+        )
 
         return ContractVerifyResponse(
             number=data["number"],
@@ -277,10 +377,12 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
             students_count=len(data["students"] or []),
             generated_at=data["generated_at"],
             signed_at_org=data["signed_at_org"],
-            revoked_reason=data["revoked_reason"],
+            # Bekor qilish sababi ichki izoh (talabaning shaxsiy holati bo'lishi mumkin) —
+            # ommaviy sahifada ko'rsatilmaydi, faqat "bekor qilingan" holati
+            revoked_reason=None,
             revoked_at=data["revoked_at"],
             is_valid=is_valid,
-            is_expired=False,
+            is_expired=is_expired,
             pdf_url=pdf_url,
         )
     except HTTPException:
@@ -326,5 +428,3 @@ async def get_verified_contract_pdf(qr_token: str, db: SessionDep) -> FileRespon
         raise
     except Exception as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi") from e
-
-

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import type {
@@ -46,6 +46,22 @@ export const taskKeys = {
     [...taskKeys.all, "analyses", assignmentId, quarter] as const,
   overdue: () => [...taskKeys.all, "overdue"] as const,
 };
+
+/** Statistika (KPI) kalitlari prefiksi — stats.ts'dagi barcha `["stats", ...]` so'rovlari. */
+const STATS_KEY = ["stats"] as const;
+/** Baholash jadvali (grading.ts `gradingKeys.all`) — tasdiqlangan ballar "O'quv topshiriqlar"ga kiradi. */
+const GRADING_KEY = ["grading"] as const;
+
+/**
+ * Topshiriq/kundalik/tahlil holati o'zgarganda: ro'yxatlar (`["tasks", ...]`), dashboard
+ * KPI'lari (kutilayotgan tekshiruvlar, ballar) va baholash jadvali darhol yangilansin —
+ * 30 s polling yoki sahifani qayta ochish kutilmasin.
+ */
+function invalidateTaskData(qc: QueryClient): void {
+  void qc.invalidateQueries({ queryKey: taskKeys.all });
+  void qc.invalidateQueries({ queryKey: STATS_KEY });
+  void qc.invalidateQueries({ queryKey: GRADING_KEY });
+}
 
 export function useOverdueTasks(enabled = true) {
   return useQuery({
@@ -106,8 +122,9 @@ export function useEnsureTasks() {
         .post(`v1/assignments/${assignmentId}/tasks/ensure`)
         .json<{ assignment_id: UUID; created: number }>(),
     onSuccess: (_, assignmentId) => {
-      qc.invalidateQueries({ queryKey: taskKeys.assignmentTasks(assignmentId) });
-      qc.invalidateQueries({ queryKey: taskKeys.progress(assignmentId) });
+      void qc.invalidateQueries({ queryKey: taskKeys.assignmentTasks(assignmentId) });
+      void qc.invalidateQueries({ queryKey: taskKeys.progress(assignmentId) });
+      void qc.invalidateQueries({ queryKey: STATS_KEY });
     },
   });
 }
@@ -146,7 +163,7 @@ export function useAddTasks() {
           json: { items },
         })
         .json<{ assignment_id: UUID; created: number; task_ids: UUID[] }>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -154,7 +171,7 @@ export function useDeleteTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: UUID) => api.delete(`v1/tasks/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -163,7 +180,7 @@ export function useSubmitTask() {
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: TaskSubmitRequest }) =>
       api.post(`v1/tasks/${id}/submit`, { json: data }).json<Task>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -172,7 +189,7 @@ export function useApproveTask() {
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: TaskGradeRequest }) =>
       api.post(`v1/tasks/${id}/approve`, { json: data }).json<Task>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -181,7 +198,7 @@ export function useRejectTask() {
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: TaskRejectRequest }) =>
       api.post(`v1/tasks/${id}/reject`, { json: data }).json<Task>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -209,7 +226,7 @@ export function useCreateJournal() {
       api
         .post(`v1/assignments/${assignmentId}/journal`, { json: data })
         .json<JournalEntry>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -218,7 +235,7 @@ export function useUpdateJournal() {
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: JournalUpdateRequest }) =>
       api.patch(`v1/journal/${id}`, { json: data }).json<JournalEntry>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -227,7 +244,7 @@ export function useApproveJournal() {
   return useMutation({
     mutationFn: (id: UUID) =>
       api.post(`v1/journal/${id}/approve`).json<JournalEntry>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -236,7 +253,7 @@ export function useRejectJournal() {
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: JournalRejectRequest }) =>
       api.post(`v1/journal/${id}/reject`, { json: data }).json<JournalEntry>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -269,7 +286,7 @@ export function useCreateLessonAnalysis() {
       api
         .post(`v1/assignments/${assignmentId}/lesson-analyses`, { json: data })
         .json<LessonAnalysis>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -278,7 +295,7 @@ export function useUpdateLessonAnalysis() {
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: LessonAnalysisUpdateRequest }) =>
       api.patch(`v1/lesson-analyses/${id}`, { json: data }).json<LessonAnalysis>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -287,7 +304,7 @@ export function useApproveLessonAnalysis() {
   return useMutation({
     mutationFn: (id: UUID) =>
       api.post(`v1/lesson-analyses/${id}/approve`).json<LessonAnalysis>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -298,7 +315,7 @@ export function useRejectLessonAnalysis() {
       api
         .post(`v1/lesson-analyses/${id}/reject`, { json: data })
         .json<LessonAnalysis>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -349,7 +366,7 @@ export function useRevertTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: UUID) => api.post(`v1/tasks/${id}/revert`).json<Task>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -357,7 +374,7 @@ export function useRevertJournal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: UUID) => api.post(`v1/journal/${id}/revert`).json<JournalEntry>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }
 
@@ -365,6 +382,6 @@ export function useRevertLessonAnalysis() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: UUID) => api.post(`v1/lesson-analyses/${id}/revert`).json<LessonAnalysis>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
+    onSuccess: () => invalidateTaskData(qc),
   });
 }

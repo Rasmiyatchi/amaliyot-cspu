@@ -1,138 +1,56 @@
-import { useState } from "react";
 import {
-  CalendarDays,
+  CalendarCheck,
+  ClipboardCheck,
+  FileCheck2,
   MapPin,
-  Search,
-  SlidersHorizontal,
+  type LucideIcon,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { PrivateState } from "@/components/PrivateState";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
-import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/stores/auth";
 
-interface Practice {
-  id: string;
-  school_name: string;
-  district: string;
-  practice_type: string;
-  start_date: string | null;
-  end_date: string | null;
-  status: string;
-  progress: number;
-}
+const SECTIONS: Array<{ key: string; icon: LucideIcon }> = [
+  { key: "placement", icon: MapPin },
+  { key: "attendance", icon: CalendarCheck },
+  { key: "tasks", icon: ClipboardCheck },
+  { key: "documents", icon: FileCheck2 },
+];
 
+/**
+ * "Amaliyot" sahifasi. Amaliyot yozuvlari shaxsiy ma'lumot bo'lgani uchun ochiq qidiruv
+ * yo'q — sahifa ma'lumotlar qayerda ekanini tushuntiradi va kabinetga yo'naltiradi.
+ */
 export function AmaliyotPage() {
-  const [searchParams] = useSearchParams();
-  const initialQuery = searchParams.get("q") ?? "";
-
-  const user = useAuthStore((s) => s.user);
-  const [query, setQuery] = useState(initialQuery);
-  const [district, setDistrict] = useState("");
-  const [school, setSchool] = useState("");
-  const [rows] = useState<Practice[]>([]);
-  const [searched, setSearched] = useState(Boolean(initialQuery));
-
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setSearched(true);
-  }
+  const { t } = useTranslation();
 
   return (
     <>
       <SiteHeader />
       <main className="inner-page">
         <section className="page-intro container mx-auto px-4">
-          <span className="section-index">AMALIYOT REYESTRI</span>
+          <span className="section-index">{t("amaliyotPage.index")}</span>
           <h1>
-            Amaliyotingizni
+            {t("amaliyotPage.titleLine1")}
             <br />
-            <em>toping.</em>
+            <em>{t("amaliyotPage.titleLine2")}</em>
           </h1>
-          <p>
-            Shaxsiy amaliyot yozuvlari va jarayon holatini ushbu bo'lim orqali
-            xavfsiz qidirishingiz mumkin.
-          </p>
+          <p>{t("amaliyotPage.description")}</p>
         </section>
 
-        <section className="container mx-auto px-4 search-workspace">
-          <form onSubmit={handleSearch}>
-            <div className="workspace-search">
-              <Search />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="F.I.Sh. yoki amaliyot ID raqami"
-                aria-label="F.I.Sh. yoki amaliyot ID"
-              />
-              <Button type="submit">Qidirish</Button>
-            </div>
-            <div className="filters">
-              <span>
-                <SlidersHorizontal /> FILTERLAR
-              </span>
-              <label>
-                Tuman
-                <input
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
-                  placeholder="Masalan, Chirchiq"
-                />
-              </label>
-              <label>
-                Maktab
-                <input
-                  value={school}
-                  onChange={(e) => setSchool(e.target.value)}
-                  placeholder="Maktab nomi yoki raqami"
-                />
-              </label>
-            </div>
-          </form>
+        <section className="container mx-auto px-4 guide-grid">
+          {SECTIONS.map(({ key, icon: Icon }, i) => (
+            <article key={key}>
+              <span>0{i + 1}</span>
+              <Icon aria-hidden="true" />
+              <h2>{t(`amaliyotPage.sections.${key}.title`)}</h2>
+              <p>{t(`amaliyotPage.sections.${key}.desc`)}</p>
+            </article>
+          ))}
         </section>
 
         <section className="container mx-auto px-4 result-area">
-          {!user ? (
-            <PrivateState type="login" />
-          ) : rows.length ? (
-            <div className="result-list">
-              {rows.map((r) => (
-                <article key={r.id}>
-                  <div>
-                    <small>{r.practice_type}</small>
-                    <h2>{r.school_name}</h2>
-                    <p>
-                      <MapPin />
-                      {r.district}
-                    </p>
-                  </div>
-                  <div>
-                    <small>JARAYON</small>
-                    <strong>{r.progress}%</strong>
-                    <div className="result-progress">
-                      <i style={{ width: `${r.progress}%` }} />
-                    </div>
-                  </div>
-                  <div>
-                    <small>HOLATI</small>
-                    <span className="result-status">{r.status}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : searched ? (
-            <PrivateState type="empty" />
-          ) : (
-            <div className="result-prompt">
-              <CalendarDays />
-              <h2>Qidiruvga tayyor</h2>
-              <p>
-                Ma’lumotlarni ko‘rish uchun filtrlarni kiriting hamda “Qidirish”
-                tugmasini bosing.
-              </p>
-            </div>
-          )}
+          <PrivateState />
         </section>
       </main>
       <SiteFooter />

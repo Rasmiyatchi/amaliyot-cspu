@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import CurrentUser
 from app.core.config import settings
-from app.core.security import hash_password, verify_password
+from app.core.security import hash_password_async, verify_password_async
 from app.db.session import SessionDep
 from app.models.enums import UserRole
 from app.schemas.auth import (
@@ -32,6 +32,7 @@ from app.services.auth import (
     enforce_device_binding,
     issue_tokens_for,
     refresh_tokens,
+    revoke_all_refresh_tokens,
 )
 from app.services.auth import (
     logout as logout_service,
@@ -66,8 +67,14 @@ async def login(
     response: Response,
     db: SessionDep,
 ) -> TokenResponse:
-    user = await authenticate(db, data.username, data.password)
-    await enforce_device_binding(db, user, data.device_id, request)
+    user = await authenticate(db, data.username, data.password, request)
+    await enforce_device_binding(
+        db,
+        user,
+        data.device_id,
+        request,
+        data.device_info.model_dump() if data.device_info else None,
+    )
     access, refresh, ttl = await issue_tokens_for(db, user, request)
     _set_refresh_cookie(response, refresh)
     return TokenResponse(
@@ -114,9 +121,7 @@ async def me(user: CurrentUser) -> CurrentUser:
     response_model=UserMeResponse,
     summary="O'z profilini tahrirlash (ism, email, telefon)",
 )
-async def update_me(
-    data: ProfileUpdateRequest, db: SessionDep, user: CurrentUser
-) -> CurrentUser:
+async def update_me(data: ProfileUpdateRequest, db: SessionDep, user: CurrentUser) -> CurrentUser:
     payload = data.model_dump(exclude_unset=True)
     if user.role == UserRole.STUDENT:
         # Talaba familiya, ism va otasining ismini o'zgartira olmaydi — faqat email va telefon
@@ -139,14 +144,21 @@ async def update_me(
     summary="O'z parolini o'zgartirish",
 )
 async def change_my_password(
-    data: ChangePasswordRequest, db: SessionDep, user: CurrentUser
+    data: ChangePasswordRequest,
+    db: SessionDep,
+    user: CurrentUser,
+    rt: Annotated[str | None, Cookie()] = None,
 ) -> None:
-    if not verify_password(data.current_password, user.password_hash):
+    if not await verify_password_async(data.current_password, user.password_hash):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Joriy parol noto'g'ri")
+    if data.new_password == user.username:
         raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, "Joriy parol noto'g'ri"
+            status.HTTP_400_BAD_REQUEST, "Yangi parol login bilan bir xil bo'lmasin"
         )
-    user.password_hash = hash_password(data.new_password)
+    user.password_hash = await hash_password_async(data.new_password)
     user.must_change_password = False
+    # Boshqa qurilma/brauzerlardagi sessiyalar yopiladi; joriy brauzer saqlanadi
+    await revoke_all_refresh_tokens(db, user.id, keep_token=rt)
     await db.commit()
 
 
@@ -156,15 +168,23 @@ async def change_my_password(
     summary="Birinchi kirishda majburiy parol almashtirish (joriy parolsiz)",
 )
 async def force_change_my_password(
-    data: ForceChangePasswordRequest, db: SessionDep, user: CurrentUser
+    data: ForceChangePasswordRequest,
+    db: SessionDep,
+    user: CurrentUser,
+    rt: Annotated[str | None, Cookie()] = None,
 ) -> None:
     if not user.must_change_password:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "Sizdan parol almashtirish talab qilinmaydi — oddiy /me/change-password ishlatilsin",
         )
-    user.password_hash = hash_password(data.new_password)
+    if data.new_password == user.username:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Yangi parol login bilan bir xil bo'lmasin"
+        )
+    user.password_hash = await hash_password_async(data.new_password)
     user.must_change_password = False
+    await revoke_all_refresh_tokens(db, user.id, keep_token=rt)
     await db.commit()
 
 

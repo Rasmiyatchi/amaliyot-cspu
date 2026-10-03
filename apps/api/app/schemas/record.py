@@ -26,4 +26,6 @@ class RecordRow(BaseModel):
     korxona_grade_max: int | None = None
     qaydnoma_grade: int | None = None
     credit_earned: bool | None = None
+    #: draft | active | completed — UI o'chirish tugmasini faqat draft uchun ko'rsatadi
+    status: str | None = None
     is_archived: bool = False

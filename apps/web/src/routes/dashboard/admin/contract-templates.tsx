@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,7 @@ export function ContractTemplatesPage() {
   const del = useDeleteContractTemplate();
   const update = useUpdateContractTemplate();
   const [creating, setCreating] = useState(false);
+  const [toDelete, setToDelete] = useState<ContractTemplateDoc | null>(null);
 
   const ptName = (id: string | null) =>
     id ? (practiceTypes.data ?? []).find((p) => p.id === id)?.name : null;
@@ -63,14 +65,22 @@ export function ContractTemplatesPage() {
     }
   };
 
-  const handleDelete = async (tpl: ContractTemplateDoc) => {
-    if (!confirm(t("adminContractTemplates.deleteConfirm", { name: tpl.name }))) return;
+  const handleDelete = async () => {
+    if (!toDelete) return;
     try {
-      await del.mutateAsync(tpl.id);
+      await del.mutateAsync(toDelete.id);
       toast.success(t("common.deleted"));
+      setToDelete(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
+  };
+
+  const handleDownload = (tpl: ContractTemplateDoc) => {
+    if (!tpl.file_attachment) return;
+    downloadContractTemplate(tpl.id, tpl.file_attachment.name).catch((e: unknown) =>
+      toast.error(e instanceof Error ? e.message : t("common.error")),
+    );
   };
 
   return (
@@ -87,7 +97,7 @@ export function ContractTemplatesPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => setCreating(true)}>
             <Upload className="mr-1 h-4 w-4" />
             {t("adminContractTemplates.uploadDocx")}
@@ -125,12 +135,12 @@ export function ContractTemplatesPage() {
           {data.map((tpl) => (
             <div
               key={tpl.id}
-              className="flex items-start justify-between gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-muted/30"
+              className="flex flex-col gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/30 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
             >
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <FileText className="h-4 w-4 text-primary shrink-0" />
-                  <span className="font-medium">{tpl.name}</span>
+                  <span className="break-words font-medium">{tpl.name}</span>
                   {tpl.status === "active" ? (
                     <Badge variant="success">{t("adminContractTemplates.statusActive")}</Badge>
                   ) : tpl.status === "draft" ? (
@@ -174,7 +184,7 @@ export function ContractTemplatesPage() {
                   </div>
                 )}
               </div>
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="flex shrink-0 flex-wrap items-center gap-1">
                 <Button
                   size="sm"
                   variant={tpl.status === "active" ? "outline" : "success"}
@@ -208,11 +218,8 @@ export function ContractTemplatesPage() {
                     size="icon"
                     variant="ghost"
                     title={t("common.download")}
-                    onClick={() =>
-                      downloadContractTemplate(tpl.id, tpl.file_attachment!.name).catch((e) =>
-                        toast.error(e instanceof Error ? e.message : t("common.error")),
-                      )
-                    }
+                    aria-label={t("common.download")}
+                    onClick={() => handleDownload(tpl)}
                   >
                     <Download className="h-4 w-4" />
                   </Button>
@@ -221,8 +228,9 @@ export function ContractTemplatesPage() {
                   size="icon"
                   variant="ghost"
                   title={t("common.delete")}
+                  aria-label={t("common.delete")}
                   className="text-destructive"
-                  onClick={() => handleDelete(tpl)}
+                  onClick={() => setToDelete(tpl)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -233,6 +241,19 @@ export function ContractTemplatesPage() {
       )}
 
       <UploadDialog open={creating} onClose={() => setCreating(false)} />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title={t("common.delete")}
+        description={
+          toDelete ? t("adminContractTemplates.deleteConfirm", { name: toDelete.name }) : undefined
+        }
+        confirmText={t("common.delete")}
+        variant="destructive"
+        isPending={del.isPending}
+        onConfirm={handleDelete}
+        onClose={() => setToDelete(null)}
+      />
     </div>
   );
 }
@@ -311,7 +332,12 @@ function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void })
               <div className="flex items-center justify-center gap-2 text-sm">
                 <FileText className="h-4 w-4 text-success" />
                 {file.name}
-                <Button variant="ghost" size="icon" onClick={() => setFile(null)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setFile(null)}
+                  aria-label={t("common.clear")}
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -335,17 +361,27 @@ function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void })
             )}
           </div>
           <div>
-            <Label>{t("adminContractTemplates.nameLabel")} *</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Label htmlFor="template-upload-name">{t("adminContractTemplates.nameLabel")} *</Label>
+            <Input
+              id="template-upload-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
           <div>
-            <Label>{t("common.note")}</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Label htmlFor="template-upload-note">{t("common.note")}</Label>
+            <Input
+              id="template-upload-note"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
           <div>
-            <Label>{t("adminContractTemplates.practiceTypeOptional")}</Label>
+            <Label htmlFor="template-upload-type">
+              {t("adminContractTemplates.practiceTypeOptional")}
+            </Label>
             <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
-              <SelectTrigger>
+              <SelectTrigger id="template-upload-type">
                 <SelectValue placeholder={t("adminContractTemplates.selectPlaceholder")} />
               </SelectTrigger>
               <SelectContent>

@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import { FileText, Loader2, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -47,6 +46,10 @@ const KIND_LABEL: Record<DocumentKind, string> = {
   program: "documentsDocumentFormDialog.kind.program",
 };
 
+/** Ixtiyoriy maydonlar uchun "ko'rsatilmagan" qiymati (Radix Select bo'sh qiymatni qabul qilmaydi) */
+const NONE = "__none__";
+const COURSES = [1, 2, 3, 4, 5];
+
 const EDU_FORMS = [
   { value: "daytime", labelKey: "studentsStudentFormDialog.eduForm.daytime" },
   { value: "evening", labelKey: "studentsStudentFormDialog.eduForm.evening" },
@@ -61,9 +64,9 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
   const [practiceTypeId, setPracticeTypeId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [course, setCourse] = useState("");
-  const [educationForm, setEducationForm] = useState("");
-  const [directionId, setDirectionId] = useState("");
+  const [course, setCourse] = useState(NONE);
+  const [educationForm, setEducationForm] = useState(NONE);
+  const [directionId, setDirectionId] = useState(NONE);
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -80,18 +83,18 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
       setPracticeTypeId(document.practice_type_id ?? "");
       setTitle(document.title);
       setDescription(document.description ?? "");
-      setCourse(document.course ? String(document.course) : "");
-      setEducationForm(document.education_form ?? "");
-      setDirectionId(document.direction_id ?? "");
+      setCourse(document.course ? String(document.course) : NONE);
+      setEducationForm(document.education_form ?? NONE);
+      setDirectionId(document.direction_id ?? NONE);
       setAttachment(document.file_attachment);
     } else {
       setKind(defaultKind ?? "regulation");
       setPracticeTypeId("");
       setTitle("");
       setDescription("");
-      setCourse("");
-      setEducationForm("");
-      setDirectionId("");
+      setCourse(NONE);
+      setEducationForm(NONE);
+      setDirectionId(NONE);
       setAttachment(null);
     }
   }, [open, document, defaultKind]);
@@ -125,15 +128,19 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
       return;
     }
 
+    const optional = {
+      course: course !== NONE ? Number(course) : null,
+      education_form: educationForm !== NONE ? educationForm : null,
+      direction_id: directionId !== NONE ? (directionId as UUID) : null,
+    };
+
     try {
       if (isEdit && document) {
         await update.mutateAsync({
           id: document.id,
           data: {
             practice_type_id: practiceTypeId ? (practiceTypeId as UUID) : null,
-            course: course ? Number(course) : null,
-            education_form: educationForm || null,
-            direction_id: directionId ? (directionId as UUID) : null,
+            ...optional,
             title: title.trim(),
             description: description.trim() || null,
             file_attachment: attachment,
@@ -144,9 +151,7 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
         await create.mutateAsync({
           kind,
           practice_type_id: practiceTypeId ? (practiceTypeId as UUID) : null,
-          course: course ? Number(course) : null,
-          education_form: educationForm || null,
-          direction_id: directionId ? (directionId as UUID) : null,
+          ...optional,
           title: title.trim(),
           description: description.trim() || null,
           file_attachment: attachment,
@@ -155,7 +160,7 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -177,13 +182,13 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
 
         <div className="grid gap-4">
           <div>
-            <Label>{t("documentsDocumentFormDialog.kindLabel")} *</Label>
+            <Label htmlFor="doc-kind">{t("documentsDocumentFormDialog.kindLabel")} *</Label>
             <Select
               value={kind}
               onValueChange={(v) => setKind(v as DocumentKind)}
               disabled={isEdit}
             >
-              <SelectTrigger>
+              <SelectTrigger id="doc-kind">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -196,9 +201,9 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
           {kind === "program" && (
             <>
               <div>
-                <Label>{t("common.practiceType")} *</Label>
+                <Label htmlFor="doc-practice-type">{t("common.practiceType")} *</Label>
                 <Select value={practiceTypeId} onValueChange={setPracticeTypeId}>
-                  <SelectTrigger>
+                  <SelectTrigger id="doc-practice-type">
                     <SelectValue
                       placeholder={t("documentsDocumentFormDialog.selectPlaceholder")}
                     />
@@ -213,29 +218,33 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label>{t("common.course")}</Label>
+                  <Label htmlFor="doc-course">{t("common.course")}</Label>
                   <Select value={course} onValueChange={setCourse}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("documentsDocumentFormDialog.selectPlaceholder")} />
+                    <SelectTrigger id="doc-course">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">1</SelectItem>
-                      <SelectItem value="2">2</SelectItem>
-                      <SelectItem value="3">3</SelectItem>
-                      <SelectItem value="4">4</SelectItem>
-                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value={NONE}>{t("documentsDocumentFormDialog.anyOption")}</SelectItem>
+                      {COURSES.map((c) => (
+                        <SelectItem key={c} value={String(c)}>
+                          {t("common.courseN", { n: c })}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>{t("studentsStudentFormDialog.educationFormLabel")}</Label>
+                  <Label htmlFor="doc-edu-form">
+                    {t("studentsStudentFormDialog.educationFormLabel")}
+                  </Label>
                   <Select value={educationForm} onValueChange={setEducationForm}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("documentsDocumentFormDialog.selectPlaceholder")} />
+                    <SelectTrigger id="doc-edu-form">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value={NONE}>{t("documentsDocumentFormDialog.anyOption")}</SelectItem>
                       {EDU_FORMS.map((f) => (
                         <SelectItem key={f.value} value={f.value}>
                           {t(f.labelKey)}
@@ -247,12 +256,13 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
               </div>
 
               <div>
-                <Label>{t("common.direction")}</Label>
+                <Label htmlFor="doc-direction">{t("common.direction")}</Label>
                 <Select value={directionId} onValueChange={setDirectionId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("documentsDocumentFormDialog.selectPlaceholder")} />
+                  <SelectTrigger id="doc-direction">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value={NONE}>{t("documentsDocumentFormDialog.anyOption")}</SelectItem>
                     {(directionsQ.data?.items ?? []).map((d) => (
                       <SelectItem key={d.id} value={d.id}>
                         {d.code} · {d.name}
@@ -265,8 +275,9 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
           )}
 
           <div>
-            <Label>{t("documentsDocumentFormDialog.titleLabel")} *</Label>
+            <Label htmlFor="doc-title">{t("documentsDocumentFormDialog.titleLabel")} *</Label>
             <Input
+              id="doc-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t("documentsDocumentFormDialog.titlePlaceholder")}
@@ -275,8 +286,11 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
           </div>
 
           <div>
-            <Label>{t("documentsDocumentFormDialog.descriptionLabel")}</Label>
+            <Label htmlFor="doc-description">
+              {t("documentsDocumentFormDialog.descriptionLabel")}
+            </Label>
             <Textarea
+              id="doc-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("documentsDocumentFormDialog.descriptionPlaceholder")}
@@ -291,6 +305,7 @@ export function DocumentFormDialog({ open, document, defaultKind, onClose }: Pro
               ref={fileInputRef}
               type="file"
               className="hidden"
+              aria-label={t("documentsDocumentFormDialog.fileLabel")}
               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
               onChange={(e) => {
                 const f = e.target.files?.[0];

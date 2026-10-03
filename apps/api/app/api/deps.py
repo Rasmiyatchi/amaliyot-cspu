@@ -4,7 +4,7 @@ from collections.abc import Callable, Coroutine
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy import select
@@ -16,8 +16,21 @@ from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=True)
 
+# must_change_password=True bo'lgan foydalanuvchi parolni almashtirmaguncha faqat shu
+# yo'llarga kira oladi (frontend ham /change-password ga yo'naltiradi — bu server tomondagi qulf).
+MUST_CHANGE_PASSWORD_ALLOWED_PATHS: frozenset[str] = frozenset(
+    {
+        "/api/v1/auth/me",
+        "/api/v1/auth/me/change-password",
+        "/api/v1/auth/me/force-change-password",
+        "/api/v1/auth/logout",
+        "/api/v1/auth/refresh",
+    }
+)
+
 
 async def get_current_user(
+    request: Request,
     token: Annotated[str, Depends(oauth2_scheme)],
     db: SessionDep,
 ) -> User:
@@ -45,6 +58,16 @@ async def get_current_user(
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if not user or not user.is_active:
         raise credentials_exc
+
+    if (
+        user.must_change_password
+        and request.url.path.rstrip("/") not in MUST_CHANGE_PASSWORD_ALLOWED_PATHS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Avval parolni o'zgartirishingiz kerak",
+            headers={"X-Must-Change-Password": "1"},
+        )
 
     return user
 
@@ -119,9 +142,38 @@ def require_permission(
     return _checker
 
 
+def require_any_permission(
+    *permissions: str,
+) -> Callable[[User], Coroutine[Any, Any, User]]:
+    """Bir nechta moduldan birortasi yetarli.
+
+    Masalan, shartnoma formasi biriktirishlar ro'yxatini o'qiydi.
+    """
+
+    async def _checker(user: CurrentUser) -> User:
+        if user.role == UserRole.SUPER_ADMIN:
+            return user
+        if user.role != UserRole.ADMIN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Ushbu amal faqat administratorlar uchun",
+            )
+        if set(user.permissions or []) & set(permissions):
+            return user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Sizda ushbu modulga kirish huquqi yo'q ({'/'.join(permissions)})",
+        )
+
+    return _checker
+
+
 RequireStructure = Annotated[User, Depends(require_permission("structure"))]
 RequirePractice = Annotated[User, Depends(require_permission("practice"))]
 RequireContracts = Annotated[User, Depends(require_permission("contracts"))]
+RequirePracticeOrContracts = Annotated[
+    User, Depends(require_any_permission("practice", "contracts"))
+]
 RequireSupervisors = Annotated[User, Depends(require_permission("supervisors"))]
 RequirePartners = Annotated[User, Depends(require_permission("partners"))]
 RequireMonitoring = Annotated[User, Depends(require_permission("monitoring"))]

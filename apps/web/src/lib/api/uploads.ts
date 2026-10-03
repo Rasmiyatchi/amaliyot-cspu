@@ -1,7 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import i18n from "@/i18n";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
-import { useAuthStore } from "@/stores/auth";
+import i18n from "@/i18n";
+import { api, authFetch, readErrorDetail, saveBlob } from "@/lib/api";
+import { taskKeys } from "@/lib/api/tasks";
 import type { UUID } from "@/lib/api/types";
 
 export type AttachmentKind = "task" | "journal" | "analysis";
@@ -16,43 +17,42 @@ export type Attachment = {
   uploaded_by_id: string;
 };
 
+/** Entity'lardagi (topshiriq/kundalik/tahlil) biriktirma — eski yozuvlarda ba'zi maydonlar yo'q. */
+export type AttachmentLike = Pick<Attachment, "name" | "path"> & Partial<Attachment>;
+
+export const uploadKeys = {
+  all: ["uploads"] as const,
+  assignment: (assignmentId: UUID) => [...uploadKeys.all, "assignment", assignmentId] as const,
+};
+
+/** Storage yo'lini URL'ga xavfsiz qo'shish (bo'shliq, #, ? va h.k. segment ichida qoladi). */
+function fileUrl(path: string): string {
+  return `/api/v1/uploads/file/${path.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+/** Biriktirma o'zgarganda: topshiriq/kundalik/tahlil ro'yxatlari (hammasi `["tasks", ...]`)
+ *  va talabaning "Hujjatlar" kartasi (`["uploads", "assignment", id]`) yangilansin. */
+function invalidateAttachmentQueries(qc: QueryClient): void {
+  void qc.invalidateQueries({ queryKey: taskKeys.all });
+  void qc.invalidateQueries({ queryKey: uploadKeys.all });
+}
+
 async function postFile(
   url: string,
   file: File,
 ): Promise<{ attachment: Attachment; all: Attachment[] }> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
   const fd = new FormData();
   fd.append("file", file);
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: fd,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    let msg = `Yuklashda xato (${res.status})`;
-    try {
-      const j = JSON.parse(text);
-      if (j.detail) msg = j.detail;
-    } catch {
-      if (text) msg = text;
-    }
-    throw new Error(msg);
-  }
-  return res.json();
+  const res = await authFetch(url, { method: "POST", body: fd });
+  if (!res.ok) throw new Error(await readErrorDetail(res, i18n.t("apiFiles.uploadFailed")));
+  return (await res.json()) as { attachment: Attachment; all: Attachment[] };
 }
 
 export function useUploadAttachment(kind: AttachmentKind, entityId: UUID) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) =>
-      postFile(`/api/v1/uploads/entity/${kind}/${entityId}`, file),
-    onSuccess: () => {
-      if (kind === "task") qc.invalidateQueries({ queryKey: ["tasks"] });
-      else if (kind === "journal") qc.invalidateQueries({ queryKey: ["journal"] });
-      else if (kind === "analysis") qc.invalidateQueries({ queryKey: ["analyses"] });
-    },
+    mutationFn: (file: File) => postFile(`/api/v1/uploads/entity/${kind}/${entityId}`, file),
+    onSuccess: () => invalidateAttachmentQueries(qc),
   });
 }
 
@@ -60,21 +60,13 @@ export function useDeleteAttachment(kind: AttachmentKind, entityId: UUID) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (attachmentId: string) => {
-      const token = useAuthStore.getState().accessToken;
-      const res = await fetch(
-        `/api/v1/uploads/entity/${kind}/${entityId}/${attachmentId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
+      const res = await authFetch(
+        `/api/v1/uploads/entity/${kind}/${entityId}/${encodeURIComponent(attachmentId)}`,
+        { method: "DELETE" },
       );
-      if (!res.ok) throw new Error(i18n.t("common.deleteError"));
+      if (!res.ok) throw new Error(await readErrorDetail(res, i18n.t("common.deleteError")));
     },
-    onSuccess: () => {
-      if (kind === "task") qc.invalidateQueries({ queryKey: ["tasks"] });
-      else if (kind === "journal") qc.invalidateQueries({ queryKey: ["journal"] });
-      else if (kind === "analysis") qc.invalidateQueries({ queryKey: ["analyses"] });
-    },
+    onSuccess: () => invalidateAttachmentQueries(qc),
   });
 }
 
@@ -85,38 +77,26 @@ export type AttachmentWithSource = Attachment & {
 
 export function useAssignmentAttachments(assignmentId: UUID | null) {
   return useQuery({
-    queryKey: assignmentId
-      ? (["uploads", "assignment", assignmentId] as const)
-      : [],
+    queryKey: assignmentId ? uploadKeys.assignment(assignmentId) : [],
     enabled: !!assignmentId,
-    queryFn: async () => {
-      const token = useAuthStore.getState().accessToken;
-      const res = await fetch(
-        `/api/v1/uploads/assignments/${assignmentId}/all`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!res.ok) throw new Error(i18n.t("common.downloadFailed"));
-      return res.json() as Promise<AttachmentWithSource[]>;
-    },
+    queryFn: () =>
+      api.get(`v1/uploads/assignments/${assignmentId}/all`).json<AttachmentWithSource[]>(),
   });
 }
 
-/** Auth bilan faylni yuklab olish va browser'da saqlash. */
-export async function downloadAttachment(
-  att: Pick<Attachment, "name" | "path">,
-): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  const res = await fetch(`/api/v1/uploads/file/${att.path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error(i18n.t("common.downloadError"));
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = att.name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+/** Fayl tarkibini (token + 401→refresh bilan) Blob sifatida olish — ko'rish oynasi uchun. */
+export async function fetchAttachmentBlob(att: Pick<Attachment, "path">): Promise<Blob> {
+  const res = await authFetch(fileUrl(att.path));
+  if (!res.ok) throw new Error(await readErrorDetail(res, i18n.t("filePreviewModal.loadFailed")));
+  return res.blob();
+}
+
+/**
+ * Faylni yuklab olish. Server diskdagi (tasodifiy) nomni qaytaradi, shuning uchun saqlashda
+ * foydalanuvchi yuklagan asl nom (`att.name`) ishlatiladi.
+ */
+export async function downloadAttachment(att: Pick<Attachment, "name" | "path">): Promise<void> {
+  const res = await authFetch(fileUrl(att.path));
+  if (!res.ok) throw new Error(await readErrorDetail(res, i18n.t("common.downloadError")));
+  saveBlob(await res.blob(), att.name);
 }

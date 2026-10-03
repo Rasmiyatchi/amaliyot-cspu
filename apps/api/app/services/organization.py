@@ -5,13 +5,14 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import AssignmentStatus, OrganizationKind
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
+from app.services.search_utils import like_pattern, normalized_col
 
 ACTIVE_STATUSES = (AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE)
 
@@ -45,17 +46,24 @@ async def list_organizations(
 
     def apply(stmt):  # type: ignore[no-untyped-def]
         if search:
-            terms = [t.strip().lower() for t in search.split() if t.strip()]
-            for term in terms:
-                like = f"%{term}%"
+            # Har bir so'z alohida; apostroflar farqsiz ("Bog'ot" = "Bogʻot")
+            for term in search.split():
+                pattern = like_pattern(term)
                 stmt = stmt.where(
-                    func.lower(Organization.name).like(like)
-                    | func.lower(func.coalesce(Organization.director_full_name, "")).like(like)
-                    | func.lower(func.coalesce(Organization.region, "")).like(like)
-                    | func.lower(func.coalesce(Organization.district, "")).like(like)
-                    | func.lower(func.coalesce(Organization.address_line, "")).like(like)
-                    | func.lower(func.coalesce(Organization.inn, "")).like(like)
-                    | func.lower(func.coalesce(Organization.phone, "")).like(like)
+                    or_(
+                        *(
+                            normalized_col(func.coalesce(col, "")).like(pattern, escape="\\")
+                            for col in (
+                                Organization.name,
+                                Organization.director_full_name,
+                                Organization.region,
+                                Organization.district,
+                                Organization.address_line,
+                                Organization.inn,
+                                Organization.phone,
+                            )
+                        )
+                    )
                 )
         if kind:
             stmt = stmt.where(Organization.kind == kind)
@@ -73,10 +81,7 @@ async def list_organizations(
     count_stmt = apply(count_stmt)  # type: ignore[no-untyped-call]
 
     total = (await db.execute(count_stmt)).scalar_one()
-    rows = (
-        (await db.execute(base.order_by(Organization.name).offset(offset).limit(limit)))
-        .all()
-    )
+    rows = (await db.execute(base.order_by(Organization.name).offset(offset).limit(limit))).all()
     items: list[Organization] = []
     for org, count in rows:
         org.assigned_students_count = int(count or 0)

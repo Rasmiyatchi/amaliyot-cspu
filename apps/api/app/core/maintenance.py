@@ -38,6 +38,8 @@ EXACT_ALLOWED: frozenset[str] = frozenset(
 
 PREFIX_ALLOWED: tuple[str, ...] = (
     "/api/v1/auth/",
+    # Ommaviy QR tekshiruv texnik ishlar paytida ham ishlashi kerak (tashqi tekshiruvchilar)
+    "/api/v1/verify/",
     "/verify/",
 )
 

@@ -13,10 +13,11 @@ from fastapi import (
     UploadFile,
     status,
 )
+from loguru import logger
 
-from app.api.deps import RequireSupervisor, RequireSupervisors
+from app.api.deps import RequireAdmin, RequireSupervisor, RequireSupervisors
 from app.db.session import SessionDep
-from app.models.enums import UserRole
+from app.models.enums import Semester, UserRole
 from app.schemas.common import CredentialsUpdate, Paginated
 from app.schemas.supervisor import (
     SupervisorBulkDeleteError,
@@ -32,6 +33,12 @@ from app.services import supervisor as svc
 from app.services import supervisor_import as import_svc
 from app.services import supervisor_report as report_svc
 from app.services.import_templates import build_supervisors_template
+from app.services.scoping import (
+    assert_faculty_scope,
+    assert_supervisor_in_scope,
+    effective_faculty_id,
+    is_faculty_scoped,
+)
 
 router = APIRouter(prefix="/supervisors", tags=["supervisors"])
 
@@ -52,9 +59,7 @@ async def supervisors_import_template(_: RequireSupervisors) -> Response:
     return Response(
         content=build_supervisors_template(),
         media_type=_XLSX_MIME,
-        headers={
-            "Content-Disposition": 'attachment; filename="oqituvchilar_import_shablon.xlsx"'
-        },
+        headers={"Content-Disposition": 'attachment; filename="oqituvchilar_import_shablon.xlsx"'},
     )
 
 
@@ -91,7 +96,9 @@ async def import_supervisors(
         )
     if not content:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fayl bo'sh")
-    result = await import_svc.import_supervisors(db, content)
+    result = await import_svc.import_supervisors(
+        db, content, scope_faculty_id=effective_faculty_id(user)
+    )
     await audit.log(
         db,
         actor=user,
@@ -119,9 +126,23 @@ async def import_supervisors(
     summary="Supervizor: o'z talabalari bo'yicha yakuniy hisobot PDF",
 )
 async def my_report_pdf(
-    db: SessionDep, user: RequireSupervisor, academic_year_id: UUID | None = None
+    db: SessionDep,
+    user: RequireSupervisor,
+    academic_year_id: str | None = Query(None, description="UUID yoki 'all'"),
+    semester: Semester | None = None,
 ) -> Response:
-    pdf_bytes = await report_svc.render_pdf(db, user, academic_year_id)
+    all_years = (academic_year_id or "").lower() == "all"
+    year_uuid: UUID | None = None
+    if academic_year_id and not all_years:
+        try:
+            year_uuid = UUID(academic_year_id)
+        except ValueError as e:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "academic_year_id noto'g'ri"
+            ) from e
+    pdf_bytes = await report_svc.render_pdf(
+        db, user, year_uuid, all_years=all_years, semester=semester
+    )
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"amaliyot_hisoboti_{ts}.pdf"
     return Response(
@@ -134,7 +155,7 @@ async def my_report_pdf(
 @router.get("", response_model=Paginated[SupervisorRead])
 async def list_supervisors(
     db: SessionDep,
-    user: RequireSupervisors,
+    user: RequireAdmin,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
     organization_id: UUID | None = None,
@@ -168,7 +189,8 @@ async def list_supervisors(
 
 
 @router.get("/{id_}", response_model=SupervisorRead)
-async def get_supervisor(id_: UUID, db: SessionDep, _: RequireSupervisors) -> SupervisorRead:
+async def get_supervisor(id_: UUID, db: SessionDep, user: RequireAdmin) -> SupervisorRead:
+    await assert_supervisor_in_scope(db, user, id_)
     return SupervisorRead.model_validate(await svc.get_supervisor(db, id_))
 
 
@@ -176,6 +198,11 @@ async def get_supervisor(id_: UUID, db: SessionDep, _: RequireSupervisors) -> Su
 async def create_supervisor(
     data: SupervisorCreate, request: Request, db: SessionDep, user: RequireSupervisors
 ) -> SupervisorRead:
+    # Fakultet admini: fakultet ko'rsatilmasa — o'z fakulteti; boshqa fakultet — taqiqlanadi
+    if is_faculty_scoped(user):
+        if data.faculty_id is None:
+            data.faculty_id = user.faculty_id
+        assert_faculty_scope(user, data.faculty_id)
     result = await svc.create_supervisor(db, data)
     await audit.log(
         db,
@@ -198,6 +225,9 @@ async def update_supervisor(
     db: SessionDep,
     user: RequireSupervisors,
 ) -> SupervisorRead:
+    await assert_supervisor_in_scope(db, user, id_)
+    if data.faculty_id is not None:
+        assert_faculty_scope(user, data.faculty_id)
     result = await svc.update_supervisor(db, id_, data)
     await audit.log(
         db,
@@ -225,6 +255,7 @@ async def update_supervisor_credentials(
     db: SessionDep,
     user: RequireSupervisors,
 ) -> SupervisorRead:
+    await assert_supervisor_in_scope(db, user, id_)
     result = await svc.update_credentials(db, id_, data)
     await audit.log(
         db,
@@ -256,6 +287,7 @@ async def bulk_delete_supervisors(
     for sid in payload.ids:
         full_name: str | None = None
         try:
+            await assert_supervisor_in_scope(db, user, sid)
             supervisor = await svc.get_supervisor(db, sid)
             full_name = supervisor.get("full_name")
             await svc.delete_supervisor(db, sid)
@@ -275,21 +307,21 @@ async def bulk_delete_supervisors(
             failed.append(
                 SupervisorBulkDeleteError(id=sid, full_name=full_name, error=str(e.detail))
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             await db.rollback()
+            logger.exception(f"Supervizorni o'chirishda kutilmagan xato: {sid}")
             failed.append(
-                SupervisorBulkDeleteError(id=sid, full_name=full_name, error=str(e))
+                SupervisorBulkDeleteError(id=sid, full_name=full_name, error="Kutilmagan xatolik")
             )
 
-    return SupervisorBulkDeleteResult(
-        requested=len(payload.ids), deleted=deleted, failed=failed
-    )
+    return SupervisorBulkDeleteResult(requested=len(payload.ids), deleted=deleted, failed=failed)
 
 
 @router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_supervisor(
     id_: UUID, request: Request, db: SessionDep, user: RequireSupervisors
 ) -> None:
+    await assert_supervisor_in_scope(db, user, id_)
     snapshot = await svc.get_supervisor(db, id_)
     await svc.delete_supervisor(db, id_)
     await audit.log(

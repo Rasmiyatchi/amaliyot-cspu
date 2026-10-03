@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # ─── Faculty ──────────────────────────────────────────────
@@ -78,6 +78,12 @@ class AcademicYearCreate(BaseModel):
     start_date: date
     end_date: date
     is_active: bool = False
+
+    @model_validator(mode="after")
+    def _dates_in_order(self) -> "AcademicYearCreate":
+        if self.end_date < self.start_date:
+            raise ValueError("Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas")
+        return self
 
 
 class AcademicYearUpdate(BaseModel):

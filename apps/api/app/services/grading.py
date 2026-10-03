@@ -20,6 +20,7 @@ DIQQAT: sillabusda 80-90% oralig'i ko'rsatilmagan — 0.7 (10 ballik mezonda 7)
 qilib olindi, monoton bo'lishi uchun.
 """
 
+import math
 from typing import Any
 from uuid import UUID
 
@@ -27,6 +28,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.clock import today_uzb
 from app.models.attendance import AttendanceDay
 from app.models.enums import (
     AssignmentStatus,
@@ -71,16 +73,24 @@ def _criteria_of(pt: PracticeType) -> list[dict[str, Any]]:
     return [c for c in criteria if isinstance(c, dict) and c.get("key")]
 
 
-def _min_total(pt: PracticeType) -> int:
-    return int((pt.grading_rules or {}).get("min_total") or 0)
+#: Universitet qoidasi: kredit uchun kamida 60% (100 ballikda 60 ball).
+DEFAULT_PASS_SHARE = 0.6
+
+
+def _min_total(pt: PracticeType, max_total: int) -> int:
+    """Kredit chegarasi. Turda belgilanmagan (0/None) bo'lsa — maksimumning 60%.
+
+    Ilgari belgilanmagan turda `finalize` hech qachon kredit bermasdi.
+    """
+    configured = int((pt.grading_rules or {}).get("min_total") or 0)
+    if configured > 0:
+        return configured
+    return math.ceil(max_total * DEFAULT_PASS_SHARE) if max_total > 0 else 0
 
 
 def is_auto(criterion: dict[str, Any]) -> bool:
     key = str(criterion.get("key", ""))
-    return (
-        criterion.get("grader") == "system"
-        or key in TASK_CRITERION_KEYS
-    )
+    return criterion.get("grader") == "system" or key in TASK_CRITERION_KEYS
 
 
 async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, Any]:
@@ -92,11 +102,13 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
     if not pt:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Amaliyot turi topilmadi")
 
-    # Davomat
+    # Davomat — faqat bugungacha (Toshkent) bo'lgan kunlar: oldindan yashil qilingan KELAJAK
+    # kunlar bahoni oshirmasin; maxraj ham bugungacha.
+    today = today_uzb()
     att_rows = (
         await db.execute(
             select(AttendanceDay.status, func.count(AttendanceDay.id))
-            .where(AttendanceDay.assignment_id == assignment_id)
+            .where(AttendanceDay.assignment_id == assignment_id, AttendanceDay.date <= today)
             .group_by(AttendanceDay.status)
         )
     ).all()
@@ -109,6 +121,7 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
         start=asn.start_date,
         end=asn.end_date,
         weekdays=asn.required_weekdays,
+        upto=today,
     )
 
     # O'quv topshiriqlar ballari (category != SPIRITUAL va status == APPROVED)
@@ -127,16 +140,13 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
         )
     ).first()
     task_earned = int(academic_task_row[0]) if academic_task_row else 0
-    task_max = int(academic_task_row[1]) if academic_task_row else 0
 
     # Ma'naviy topshiriqlar ballari (category == SPIRITUAL va status == APPROVED)
     spiritual_task_row = (
         await db.execute(
             select(
                 func.coalesce(
-                    func.sum(
-                        func.coalesce(Task.points_earned, TaskTemplate.points)
-                    ),
+                    func.sum(func.coalesce(Task.points_earned, TaskTemplate.points)),
                     0,
                 )
             )
@@ -184,14 +194,15 @@ async def compute_breakdown(db: AsyncSession, assignment_id: UUID) -> dict[str, 
 
     missing = [c["key"] for c in out if c["score"] is None]
     total = sum(c["score"] or 0 for c in out)
-    min_total = _min_total(pt)
+    max_total = sum(c["max"] for c in out)
+    min_total = _min_total(pt, max_total)
 
     return {
         "assignment_id": str(assignment_id),
         "practice_type_name": pt.name,
         "criteria": out,
         "total": total,
-        "max_total": sum(c["max"] for c in out),
+        "max_total": max_total,
         "min_total": min_total,
         "passed": total >= min_total if min_total else None,
         "missing_criteria": missing,
@@ -208,7 +219,14 @@ async def authorize(db: AsyncSession, assignment_id: UUID, user: User) -> Practi
     asn = await db.get(PracticeAssignment, assignment_id)
     if not asn:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Biriktirish topilmadi: {assignment_id}")
-    if user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+    if user.role == UserRole.SUPER_ADMIN:
+        return asn
+    if user.role == UserRole.ADMIN:
+        if "practice" not in (user.permissions or []):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Baholashga ruxsat yo'q")
+        from app.services.scoping import assert_assignment_access
+
+        await assert_assignment_access(db, user, assignment_id)
         return asn
     if user.role != UserRole.SUPERVISOR:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Baholashga ruxsat yo'q")
@@ -220,9 +238,7 @@ async def authorize(db: AsyncSession, assignment_id: UUID, user: User) -> Practi
         )
     ).scalar_one_or_none()
     if not owns:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN, "Bu talaba sizga biriktirilmagan"
-        )
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Bu talaba sizga biriktirilmagan")
     return asn
 
 
@@ -231,6 +247,9 @@ async def set_criterion_score(
 ) -> dict[str, Any]:
     """Qo'lda baholanadigan mezonga ball qo'yadi."""
     asn = await authorize(db, assignment_id, user)
+    if asn.status == AssignmentStatus.CANCELLED:
+        # finalize ham rad etadi — bekor qilingan amaliyotga ball yig'ilib qolmasin
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bekor qilingan amaliyotni baholab bo'lmaydi")
     pt = await db.get(PracticeType, asn.practice_type_id)
     if not pt:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Amaliyot turi topilmadi")

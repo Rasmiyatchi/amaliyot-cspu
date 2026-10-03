@@ -17,8 +17,9 @@ export type AdminFilters = {
 
 export const adminKeys = {
   all: ["admins"] as const,
+  lists: () => [...adminKeys.all, "list"] as const,
   list: (f: AdminFilters, page: number) =>
-    [...adminKeys.all, "list", f, page] as const,
+    [...adminKeys.lists(), f, page] as const,
   detail: (id: UUID) => [...adminKeys.all, "detail", id] as const,
 };
 
@@ -40,30 +41,47 @@ export function useAdmins(filters: AdminFilters = {}, page = 1, pageSize = 50) {
   });
 }
 
-export function useCreateAdmin() {
+export function useAdmin(id: UUID | null) {
+  return useQuery({
+    queryKey: adminKeys.detail(id ?? ""),
+    queryFn: () => api.get(`v1/admins/${id}`).json<Admin>(),
+    enabled: !!id,
+  });
+}
+
+/** Saqlangandan keyin: detal keshi server javobi bilan yangilanadi, ro'yxatlar qayta so'raladi. */
+function useAdminSaved() {
   const qc = useQueryClient();
+  return (admin: Admin) => {
+    qc.setQueryData(adminKeys.detail(admin.id), admin);
+    return qc.invalidateQueries({ queryKey: adminKeys.lists() });
+  };
+}
+
+export function useCreateAdmin() {
+  const onSaved = useAdminSaved();
   return useMutation({
     mutationFn: (data: AdminCreate) =>
       api.post("v1/admins", { json: data }).json<Admin>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: onSaved,
   });
 }
 
 export function useUpdateAdmin() {
-  const qc = useQueryClient();
+  const onSaved = useAdminSaved();
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: AdminUpdate }) =>
       api.patch(`v1/admins/${id}`, { json: data }).json<Admin>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: onSaved,
   });
 }
 
 export function useUpdateAdminCredentials() {
-  const qc = useQueryClient();
+  const onSaved = useAdminSaved();
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: CredentialsUpdate }) =>
       api.patch(`v1/admins/${id}/credentials`, { json: data }).json<Admin>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: onSaved,
   });
 }
 
@@ -71,6 +89,9 @@ export function useDeleteAdmin() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: UUID) => api.delete(`v1/admins/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
+    onSuccess: (_res, id) => {
+      qc.removeQueries({ queryKey: adminKeys.detail(id), exact: true });
+      return qc.invalidateQueries({ queryKey: adminKeys.lists() });
+    },
   });
 }

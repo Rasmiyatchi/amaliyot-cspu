@@ -4,6 +4,7 @@
  * Kelajakda `openapi-typescript` bilan avtomatik generatsiya qilamiz.
  * Hozircha qo'lda — bizda kamroq model bor.
  */
+import type { DeviceInfo } from "@/lib/device-id";
 
 export type UUID = string;
 export type ISODate = string; // YYYY-MM-DD
@@ -145,6 +146,7 @@ export type Student = {
   device_id: string | null;
   device_label: string | null;
   device_bound_at: ISODateTime | null;
+  device_info?: DeviceInfo | null;
 
   gender: Gender | null;
 
@@ -745,6 +747,84 @@ export type CheckInRequest = {
   wifi_ssid?: string | null;
   device_id?: string | null;
   note?: string | null;
+};
+
+/** GET /attendance/summary — talaba-markazli jamlanma (bir qator = bir biriktirish). */
+export type AttendanceSummaryRow = {
+  assignment_id: UUID;
+  student_id: UUID;
+  student_full_name: string;
+  student_hemis_id: string | null;
+  student_username: string | null;
+  group_name: string | null;
+  course: number | null;
+  direction_name: string | null;
+  faculty_name: string | null;
+  practice_type_name: string | null;
+  organization_name: string | null;
+  area_name: string | null;
+  supervisor_full_name: string | null;
+  start_date: ISODate;
+  end_date: ISODate;
+  /** ISO hafta kunlari 1=Dush..7=Yak; null → Dush–Shan standart */
+  required_weekdays: number[] | null;
+  assignment_status: AssignmentStatus;
+  semester: Semester | null;
+  /** Boshlanishdan min(bugun, tugash) gacha talab qilingan kunlar; hafta kunlari yo'q bo'lsa null */
+  expected_days_to_date: number | null;
+  green_count: number;
+  red_count: number;
+  pending_count: number;
+  total_records: number;
+  /** 0..100; hisoblab bo'lmasa null */
+  attendance_percent: number | null;
+  last_check_in_at: ISODateTime | null;
+};
+
+/** PUT /attendance/assignments/{id}/days/{day} va PATCH /attendance/days/{id} tanasi. */
+export type AttendanceDaySetRequest = {
+  status: AttendanceDayStatus;
+  /** yo'q = o'zgarmaydi; null = tozalanadi */
+  check_in_at?: ISODateTime | null;
+  /** yo'q = o'zgarmaydi; null = tozalanadi; check_in_at dan katta bo'lishi kerak */
+  check_out_at?: ISODateTime | null;
+  /** yo'q = o'zgarmaydi */
+  note?: string | null;
+  /** majburiy, 3..2000 belgi — AttendanceOverride'ga yoziladi */
+  reason: string;
+};
+
+export type AttendanceRangeSetMode = "fill" | "overwrite";
+
+/** POST /attendance/assignments/{id}/days/bulk-set tanasi. */
+export type AttendanceRangeSetRequest = {
+  date_from: ISODate;
+  /** inklyuziv; ikkalasi ham biriktirish oralig'iga qirqiladi */
+  date_to: ISODate;
+  status: "green" | "red";
+  reason: string;
+  /** default true: required_weekdays'ga kirmagan kunlar o'tkazib yuboriladi */
+  only_required_weekdays?: boolean;
+  /** default "fill": faqat yozuvsiz yoki pending kunlar; "overwrite": barchasi */
+  mode?: AttendanceRangeSetMode;
+};
+
+export type AttendanceRangeSetResult = {
+  created: number;
+  updated: number;
+  skipped: number;
+  total_days: number;
+  date_from: ISODate;
+  date_to: ISODate;
+};
+
+/** POST /attendance/bulk-set-range javobi (ko'p biriktirish uchun). */
+export type AttendanceBulkRangeSetResult = {
+  assignments: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: { assignment_id: UUID; error: string }[];
 };
 
 export type ContractVerifyResponse = {

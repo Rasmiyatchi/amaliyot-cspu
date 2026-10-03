@@ -14,6 +14,8 @@ Kunlari belgilanmagan eski biriktirishlar uchun eski xatti-harakat saqlanadi
 
 from datetime import date, timedelta
 
+from app.core.clock import today_uzb
+
 __all__ = ["expected_days", "compute_percent"]
 
 
@@ -35,7 +37,7 @@ def expected_days(
         return None
 
     first = max(start, since) if since else start
-    last = min(end, upto or date.today())
+    last = min(end, upto or today_uzb())
     if last < first:
         return 0
 

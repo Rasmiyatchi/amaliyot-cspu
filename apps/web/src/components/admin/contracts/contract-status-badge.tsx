@@ -1,12 +1,14 @@
+import { useTranslation } from "react-i18next";
+
 import { Badge } from "@/components/ui/badge";
 import type { ContractStatus } from "@/lib/api/types";
 
-const LABEL: Record<ContractStatus, string> = {
-  draft: "Yangi",
-  generated: "PDF tayyor",
-  active: "Faol",
-  expired: "Arxiv",
-  revoked: "Rad etilgan",
+const LABEL_KEY: Record<ContractStatus, string> = {
+  draft: "contractsContractStatusBadge.draft",
+  generated: "contractsContractStatusBadge.generated",
+  active: "contractsContractStatusBadge.active",
+  expired: "contractsContractStatusBadge.expired",
+  revoked: "contractsContractStatusBadge.revoked",
 };
 
 const VARIANT: Record<
@@ -21,5 +23,6 @@ const VARIANT: Record<
 };
 
 export function ContractStatusBadge({ status }: { status: ContractStatus }) {
-  return <Badge variant={VARIANT[status]}>{LABEL[status]}</Badge>;
+  const { t } = useTranslation();
+  return <Badge variant={VARIANT[status]}>{t(LABEL_KEY[status])}</Badge>;
 }

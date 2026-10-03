@@ -1,5 +1,6 @@
 import { HTTPError } from "ky";
 import { Pencil, Smartphone, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -21,10 +22,12 @@ import { Separator } from "@/components/ui/separator";
 import {
   useDeleteStudent,
   useResetStudentDevice,
+  useStudent,
   useUpdateStudentCredentials,
 } from "@/lib/api/students";
 import { dateLocale } from "@/i18n";
 import type { Student } from "@/lib/api/types";
+import type { DeviceInfo } from "@/lib/device-id";
 
 const EDUCATION_FORM_LABEL = {
   daytime: "studentsStudentDetailDialog.educationForm.daytime",
@@ -44,7 +47,7 @@ const GENDER_LABEL = {
   female: "studentsStudentDetailDialog.gender.female",
 };
 
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
+function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] gap-1 sm:gap-2 text-sm min-w-0">
       <dt className="text-muted-foreground min-w-0 shrink-0">{label}</dt>
@@ -53,7 +56,7 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-2 min-w-0">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -64,25 +67,151 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-type Props = {
-  student: Student | null;
-  onClose: () => void;
+/** Backend `device_info`ni JSON sifatida qaytaradi — maydonlar yo'q bo'lishi mumkin. */
+function str(v: unknown): string | null {
+  if (typeof v === "string") return v.trim() || null;
+  if (typeof v === "number") return String(v);
+  return null;
+}
+
+function joinParts(...parts: Array<string | null>): string | null {
+  const filtered = parts.filter((p): p is string => !!p);
+  return filtered.length ? filtered.join(" ") : null;
+}
+
+type DeviceFact = { key: string; label: string; value: string };
+
+function deviceFacts(info: Partial<DeviceInfo>, t: (key: string, opts?: Record<string, unknown>) => string): DeviceFact[] {
+  const facts: Array<[string, string, string | null]> = [
+    [
+      "platform",
+      t("studentsStudentDetailDialog.device.platform", { defaultValue: "Platforma" }),
+      joinParts(str(info.platform), str(info.platform_version)),
+    ],
+    [
+      "model",
+      t("studentsStudentDetailDialog.device.model", { defaultValue: "Model" }),
+      str(info.model),
+    ],
+    [
+      "browser",
+      t("studentsStudentDetailDialog.device.browser", { defaultValue: "Brauzer" }),
+      joinParts(str(info.browser) ?? str(info.brand), str(info.browser_version)),
+    ],
+    [
+      "screen",
+      t("studentsStudentDetailDialog.device.screen", { defaultValue: "Ekran" }),
+      str(info.screen),
+    ],
+    [
+      "timezone",
+      t("studentsStudentDetailDialog.device.timezone", { defaultValue: "Vaqt mintaqasi" }),
+      str(info.timezone),
+    ],
+    [
+      "language",
+      t("studentsStudentDetailDialog.device.language", { defaultValue: "Til" }),
+      str(info.language),
+    ],
+  ];
+  return facts
+    .filter((f): f is [string, string, string] => f[2] !== null)
+    .map(([key, label, value]) => ({ key, label, value }));
+}
+
+type DeviceCardProps = {
+  student: Student;
+  isPending: boolean;
+  onReset: () => void;
 };
 
-export function StudentDetailDialog({ student, onClose }: Props) {
+function DeviceCard({ student, isPending, onReset }: DeviceCardProps) {
   const { t } = useTranslation();
+  const info = student.device_info ?? null;
+  const facts = info ? deviceFacts(info, t) : [];
+  const label =
+    student.device_label?.trim() ||
+    joinParts(str(info?.platform), str(info?.model), str(info?.browser)) ||
+    t("studentsStudentDetailDialog.unknownDevice");
+
+  return (
+    <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3 min-w-0">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Smartphone className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-medium break-words [overflow-wrap:anywhere] text-sm">{label}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {t("studentsStudentDetailDialog.boundAt")}{" "}
+              {student.device_bound_at
+                ? new Date(student.device_bound_at).toLocaleString(dateLocale())
+                : "—"}
+            </div>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="shrink-0 text-destructive hover:bg-destructive/10 self-start"
+          onClick={onReset}
+          disabled={isPending}
+        >
+          <Trash2 className="h-4 w-4" />
+          {t("studentsStudentDetailDialog.resetDevice")}
+        </Button>
+      </div>
+
+      {facts.length > 0 && (
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs border-t border-border/60 pt-3 min-w-0">
+          {facts.map((f) => (
+            <div key={f.key} className="flex items-baseline justify-between gap-3 min-w-0">
+              <dt className="text-muted-foreground shrink-0">{f.label}</dt>
+              <dd className="text-right font-medium break-words [overflow-wrap:anywhere] min-w-0">
+                {f.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {student.device_id && (
+        <div className="text-[11px] text-muted-foreground break-all">
+          ID: <span className="font-mono">{student.device_id}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type Props = {
+  /** Ro'yxatdagi qator — darhol ko'rsatish uchun; keyin serverdan yangi ma'lumot olinadi */
+  student: Student | null;
+  onClose: () => void;
+  /** O'chirilgandan keyin — ro'yxat sahifasi tanlovdan chiqarib qo'yishi uchun */
+  onDeleted?: (id: string) => void;
+};
+
+export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props) {
+  const { t } = useTranslation();
+  // Tahrirlash / login / qurilma o'zgargach dialog eski qatorni emas, yangi holatni ko'rsatsin:
+  // mutatsiyalar detal keshini server javobi bilan yangilaydi.
+  const detail = useStudent(row?.id ?? null);
+  const student = row ? (detail.data ?? row) : null;
   const updateCreds = useUpdateStudentCredentials();
   const deleteStudent = useDeleteStudent();
   const resetDevice = useResetStudentDevice();
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const handleResetDevice = async () => {
     if (!student) return;
-    if (!confirm(t("studentsStudentDetailDialog.resetDeviceConfirm"))) return;
     try {
       await resetDevice.mutateAsync(student.id);
       toast.success(t("studentsStudentDetailDialog.deviceReset"));
+      setConfirmReset(false);
     } catch (e) {
       toast.error(e instanceof HTTPError ? e.message : t("common.error"));
     }
@@ -94,9 +223,16 @@ export function StudentDetailDialog({ student, onClose }: Props) {
       await deleteStudent.mutateAsync(student.id);
       toast.success(t("studentsStudentDetailDialog.studentDeleted"));
       setConfirmDelete(false);
+      onDeleted?.(student.id);
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      if (e instanceof HTTPError) {
+        // 409: amaliyot/ariza tarixi bor — server sababini va yechimini (statusni o'zgartirish) aytadi
+        if (e.response.status === 409) setConfirmDelete(false);
+        toast.error(e.message, { duration: 10_000 });
+      } else {
+        toast.error(t("common.error"));
+      }
     }
   };
 
@@ -213,6 +349,7 @@ export function StudentDetailDialog({ student, onClose }: Props) {
             <Separator />
 
             <CredentialsSection
+              key={student.id}
               currentUsername={student.username}
               isPending={updateCreds.isPending}
               onSave={(payload) =>
@@ -229,29 +366,11 @@ export function StudentDetailDialog({ student, onClose }: Props) {
                 {t("studentsStudentDetailDialog.boundDevice")}
               </h3>
               {student.device_id ? (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-md border border-border bg-muted/30 p-3 min-w-0">
-                  <div className="min-w-0 text-sm flex-1">
-                    <div className="font-medium break-words [overflow-wrap:anywhere] text-xs sm:text-sm">
-                      {student.device_label ?? t("studentsStudentDetailDialog.unknownDevice")}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {t("studentsStudentDetailDialog.boundAt")}{" "}
-                      {student.device_bound_at
-                        ? new Date(student.device_bound_at).toLocaleString(dateLocale())
-                        : "—"}
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 text-destructive hover:bg-destructive/10 self-start sm:self-auto"
-                    onClick={handleResetDevice}
-                    disabled={resetDevice.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {t("studentsStudentDetailDialog.resetDevice")}
-                  </Button>
-                </div>
+                <DeviceCard
+                  student={student}
+                  isPending={resetDevice.isPending}
+                  onReset={() => setConfirmReset(true)}
+                />
               ) : (
                 <div className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
                   {t("studentsStudentDetailDialog.noDevice")}
@@ -293,6 +412,18 @@ export function StudentDetailDialog({ student, onClose }: Props) {
             onConfirm={handleDelete}
             onClose={() => setConfirmDelete(false)}
             isPending={deleteStudent.isPending}
+          />
+          <ConfirmDialog
+            open={confirmReset}
+            title={t("studentsStudentDetailDialog.device.resetTitle", {
+              defaultValue: "Qurilmani o'chirish",
+            })}
+            description={t("studentsStudentDetailDialog.resetDeviceConfirm")}
+            confirmText={t("studentsStudentDetailDialog.resetDevice")}
+            variant="destructive"
+            onConfirm={handleResetDevice}
+            onClose={() => setConfirmReset(false)}
+            isPending={resetDevice.isPending}
           />
         </>
       )}

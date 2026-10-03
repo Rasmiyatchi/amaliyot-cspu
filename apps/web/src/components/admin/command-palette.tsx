@@ -5,6 +5,7 @@ import {
   Building2,
   Calendar,
   CalendarCheck,
+  ClipboardCheck,
   ClipboardEdit,
   ClipboardList,
   Cog,
@@ -14,15 +15,15 @@ import {
   Layers,
   LayoutDashboard,
   LibraryBig,
+  MapPin,
   MessageSquare,
   Search,
-  School,
   ShieldCheck,
   UserCog,
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -34,7 +35,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore, type User } from "@/stores/auth";
+
+type CmdGroup = "adminCommandPalette.groups.pages" | "adminCommandPalette.groups.quickActions";
 
 type Cmd = {
   id: string;
@@ -43,45 +46,63 @@ type Cmd = {
   icon: LucideIcon;
   keywords?: string[];
   superAdminOnly?: boolean;
-  group: "adminCommandPalette.groups.pages" | "adminCommandPalette.groups.quickActions";
+  /** Admin uchun: ro'yxatdagi ruxsatlardan BIRI yetarli (router `Protected` bilan bir xil) */
+  permissions?: string[];
+  group: CmdGroup;
 };
 
-const COMMANDS: Cmd[] = [
-  { id: "home", labelKey: "adminCommandPalette.pages.home", to: "/admin", icon: LayoutDashboard, keywords: ["dashboard", "asosiy"], group: "adminCommandPalette.groups.pages" },
-  { id: "structure", labelKey: "adminAdminSidebar.nav.structure", to: "/admin/academic", icon: School, keywords: ["tuzilma", "fakultet", "kafedra", "yo'nalish", "guruh"], group: "adminCommandPalette.groups.pages" },
-  { id: "faculties", labelKey: "adminAdminSidebar.nav.faculties", to: "/admin/academic?tab=faculties", icon: Building, keywords: ["fakultet", "faculty"], group: "adminCommandPalette.groups.pages" },
-  { id: "departments", labelKey: "adminAdminSidebar.nav.departments", to: "/admin/academic?tab=departments", icon: Layers, keywords: ["kafedra", "department"], group: "adminCommandPalette.groups.pages" },
-  { id: "directions", labelKey: "adminAdminSidebar.nav.directions", to: "/admin/academic?tab=directions", icon: Compass, keywords: ["yo'nalish", "mutaxassislik"], group: "adminCommandPalette.groups.pages" },
-  { id: "groups", labelKey: "adminAdminSidebar.nav.groups", to: "/admin/academic?tab=groups", icon: Users, keywords: ["guruh", "group"], group: "adminCommandPalette.groups.pages" },
-  { id: "academic-years", labelKey: "adminAdminSidebar.nav.academicYears", to: "/admin/academic?tab=academic-years", icon: Calendar, keywords: ["o'quv yili", "academic year"], group: "adminCommandPalette.groups.pages" },
-  { id: "students", labelKey: "common.students", to: "/admin/students", icon: Users, keywords: ["student", "talaba", "hemis"], group: "adminCommandPalette.groups.pages" },
-  { id: "ptype", labelKey: "adminCommandPalette.pages.practiceTypes", to: "/admin/practice-types", icon: BookOpen, keywords: ["practice", "tur"], group: "adminCommandPalette.groups.pages" },
-  { id: "objects", labelKey: "adminCommandPalette.pages.objects", to: "/admin/objects", icon: Building2, keywords: ["tashkilot", "hudud", "maktab"], group: "adminCommandPalette.groups.pages" },
-  { id: "supervisors", labelKey: "adminCommandPalette.pages.supervisors", to: "/admin/supervisors", icon: UserCog, keywords: ["supervisor"], group: "adminCommandPalette.groups.pages" },
-  { id: "students", labelKey: "common.students", to: "/admin/students", icon: Users, keywords: ["student", "hemis"], group: "adminCommandPalette.groups.pages" },
-  { id: "assignments", labelKey: "adminCommandPalette.pages.assignments", to: "/admin/assignments", icon: ClipboardList, keywords: ["assignment", "amaliyot"], group: "adminCommandPalette.groups.pages" },
-  { id: "applications", labelKey: "adminAdminSidebar.nav.applications", to: "/admin/applications", icon: ClipboardEdit, keywords: ["ariza", "application"], group: "adminCommandPalette.groups.pages" },
-  { id: "contracts", labelKey: "adminCommandPalette.pages.contracts", to: "/admin/contracts", icon: FileCheck2, keywords: ["qr", "contract"], group: "adminCommandPalette.groups.pages" },
-  { id: "attendance", labelKey: "adminCommandPalette.pages.attendance", to: "/admin/attendance", icon: CalendarCheck, keywords: ["kelish", "ketish"], group: "adminCommandPalette.groups.pages" },
-  { id: "tasks", labelKey: "adminCommandPalette.pages.tasks", to: "/admin/task-templates", icon: LibraryBig, keywords: ["task", "shablon"], group: "adminCommandPalette.groups.pages" },
-  { id: "documents", labelKey: "adminCommandPalette.pages.documents", to: "/admin/documents", icon: BookOpen, keywords: ["normativ", "dastur", "regulation", "program", "pdf"], group: "adminCommandPalette.groups.pages" },
-  { id: "reports", labelKey: "adminCommandPalette.pages.reports", to: "/admin/reports", icon: FileCheck2, keywords: ["report", "yakuniy", "tasdiq"], group: "adminCommandPalette.groups.pages" },
-  { id: "monitoring", labelKey: "adminAdminSidebar.nav.monitoring", to: "/admin/monitoring", icon: BarChart3, keywords: ["monitoring", "tahlil", "xarita", "statistika"], group: "adminCommandPalette.groups.pages" },
-  { id: "inquiries", labelKey: "adminAdminSidebar.nav.inquiries", to: "/admin/inquiries", icon: MessageSquare, keywords: ["murojaat", "inquiry"], group: "adminCommandPalette.groups.pages" },
-  { id: "integrations", labelKey: "adminAdminSidebar.nav.integrations", to: "/admin/integrations", icon: Database, keywords: ["hemis", "integratsiya", "api"], group: "adminCommandPalette.groups.pages" },
-  { id: "admins", labelKey: "adminCommandPalette.pages.admins", to: "/admin/admins", icon: ShieldCheck, superAdminOnly: true, group: "adminCommandPalette.groups.pages" },
-  { id: "settings", labelKey: "adminCommandPalette.pages.settings", to: "/admin/system-settings", icon: Cog, superAdminOnly: true, keywords: ["maintenance", "profilaktika"], group: "adminCommandPalette.groups.pages" },
+const PAGES: CmdGroup = "adminCommandPalette.groups.pages";
+const QUICK: CmdGroup = "adminCommandPalette.groups.quickActions";
+const STRUCTURE = ["structure"];
+const PRACTICE = ["practice"];
+const CONTRACTS = ["contracts", "practice"];
 
-  // Quick actions
-  { id: "qa-new-student", labelKey: "adminCommandPalette.quickActions.newStudent", to: "/admin/students?new=1", icon: Users, group: "adminCommandPalette.groups.quickActions" },
-  { id: "qa-new-supervisor", labelKey: "adminCommandPalette.quickActions.newSupervisor", to: "/admin/supervisors?new=1", icon: UserCog, group: "adminCommandPalette.groups.quickActions" },
-  { id: "qa-new-assign", labelKey: "adminCommandPalette.quickActions.newAssignment", to: "/admin/assignments?new=1", icon: ClipboardList, group: "adminCommandPalette.groups.quickActions" },
+const COMMANDS: Cmd[] = [
+  { id: "home", labelKey: "adminCommandPalette.pages.home", to: "/admin", icon: LayoutDashboard, keywords: ["dashboard", "asosiy", "главная"], group: PAGES },
+  { id: "faculties", labelKey: "adminAdminSidebar.nav.faculties", to: "/admin/structure/faculties", icon: Building, keywords: ["fakultet", "faculty", "tuzilma"], permissions: STRUCTURE, group: PAGES },
+  { id: "departments", labelKey: "adminAdminSidebar.nav.departments", to: "/admin/structure/departments", icon: Layers, keywords: ["kafedra", "department"], permissions: STRUCTURE, group: PAGES },
+  { id: "directions", labelKey: "adminAdminSidebar.nav.directions", to: "/admin/structure/directions", icon: Compass, keywords: ["yo'nalish", "mutaxassislik", "direction"], permissions: STRUCTURE, group: PAGES },
+  { id: "groups", labelKey: "adminAdminSidebar.nav.groups", to: "/admin/structure/groups", icon: Users, keywords: ["guruh", "group"], permissions: STRUCTURE, group: PAGES },
+  { id: "academic-years", labelKey: "adminAdminSidebar.nav.academicYears", to: "/admin/structure/academic-years", icon: Calendar, keywords: ["o'quv yili", "academic year"], permissions: STRUCTURE, group: PAGES },
+  { id: "students", labelKey: "common.students", to: "/admin/structure/students", icon: Users, keywords: ["student", "talaba", "hemis"], permissions: STRUCTURE, group: PAGES },
+  { id: "practice-types", labelKey: "adminCommandPalette.pages.practiceTypes", to: "/admin/practice-types", icon: BookOpen, keywords: ["practice", "tur"], permissions: PRACTICE, group: PAGES },
+  { id: "assignments", labelKey: "adminCommandPalette.pages.assignments", to: "/admin/assignments", icon: ClipboardList, keywords: ["assignment", "amaliyot", "biriktirish"], permissions: PRACTICE, group: PAGES },
+  { id: "applications", labelKey: "adminAdminSidebar.nav.applications", to: "/admin/applications", icon: ClipboardEdit, keywords: ["ariza", "application"], permissions: CONTRACTS, group: PAGES },
+  { id: "contracts", labelKey: "adminCommandPalette.pages.contracts", to: "/admin/contracts", icon: FileCheck2, keywords: ["qr", "contract", "shartnoma"], permissions: CONTRACTS, group: PAGES },
+  { id: "attendance", labelKey: "adminCommandPalette.pages.attendance", to: "/admin/attendance", icon: CalendarCheck, keywords: ["kelish", "ketish", "davomat"], permissions: PRACTICE, group: PAGES },
+  { id: "task-templates", labelKey: "adminCommandPalette.pages.tasks", to: "/admin/task-templates", icon: LibraryBig, keywords: ["task", "shablon", "topshiriq"], permissions: PRACTICE, group: PAGES },
+  { id: "documents", labelKey: "adminCommandPalette.pages.documents", to: "/admin/documents", icon: BookOpen, keywords: ["normativ", "dastur", "regulation", "program", "pdf"], permissions: PRACTICE, group: PAGES },
+  { id: "reports", labelKey: "adminCommandPalette.pages.reports", to: "/admin/reports", icon: FileCheck2, keywords: ["report", "yakuniy", "hisobot"], permissions: PRACTICE, group: PAGES },
+  { id: "records", labelKey: "adminAdminSidebar.nav.records", to: "/admin/records", icon: ClipboardCheck, keywords: ["qaydnoma", "baho", "ведомость"], permissions: PRACTICE, group: PAGES },
+  { id: "supervisors", labelKey: "adminCommandPalette.pages.supervisors", to: "/admin/supervisors", icon: UserCog, keywords: ["supervisor", "rahbar"], permissions: ["supervisors"], group: PAGES },
+  { id: "organizations", labelKey: "adminAdminSidebar.nav.organizations", to: "/admin/objects?tab=organizations", icon: Building2, keywords: ["tashkilot", "maktab", "obyekt"], permissions: ["partners"], group: PAGES },
+  { id: "areas", labelKey: "adminAdminSidebar.nav.areas", to: "/admin/objects?tab=areas", icon: MapPin, keywords: ["hudud", "area", "obyekt"], permissions: ["partners"], group: PAGES },
+  { id: "monitoring", labelKey: "adminAdminSidebar.nav.monitoring", to: "/admin/monitoring", icon: BarChart3, keywords: ["monitoring", "tahlil", "xarita", "statistika"], permissions: ["monitoring"], group: PAGES },
+  { id: "inquiries", labelKey: "adminAdminSidebar.nav.inquiries", to: "/admin/inquiries", icon: MessageSquare, keywords: ["murojaat", "inquiry"], permissions: ["inquiries"], group: PAGES },
+  { id: "integrations", labelKey: "adminAdminSidebar.nav.integrations", to: "/admin/integrations", icon: Database, keywords: ["hemis", "integratsiya", "api"], permissions: ["system"], group: PAGES },
+  { id: "admins", labelKey: "adminCommandPalette.pages.admins", to: "/admin/admins", icon: ShieldCheck, superAdminOnly: true, group: PAGES },
+  { id: "settings", labelKey: "adminCommandPalette.pages.settings", to: "/admin/system-settings", icon: Cog, superAdminOnly: true, keywords: ["maintenance", "profilaktika"], group: PAGES },
+
+  // Tezkor amallar
+  { id: "qa-new-student", labelKey: "adminCommandPalette.quickActions.newStudent", to: "/admin/structure/students?new=1", icon: Users, permissions: STRUCTURE, group: QUICK },
+  { id: "qa-new-supervisor", labelKey: "adminCommandPalette.quickActions.newSupervisor", to: "/admin/supervisors?new=1", icon: UserCog, permissions: ["supervisors"], group: QUICK },
+  { id: "qa-new-assign", labelKey: "adminCommandPalette.quickActions.newAssignment", to: "/admin/assignments?new=1", icon: ClipboardList, permissions: PRACTICE, group: QUICK },
 ];
 
-function fuzzyMatch(text: string, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return text.toLowerCase().includes(q);
+/** Router `Protected` va backend `require_permission` bilan bir xil qoida. */
+function isAllowed(user: User | null, cmd: Cmd): boolean {
+  if (!user) return false;
+  if (user.role === "super_admin") return true;
+  if (cmd.superAdminOnly) return false;
+  if (!cmd.permissions || cmd.permissions.length === 0) return true;
+  const perms = user.permissions ?? [];
+  return cmd.permissions.some(
+    (p) => perms.includes(p) || (p === "contracts" && perms.includes("practice")),
+  );
+}
+
+function normalize(text: string): string {
+  return text.toLowerCase().replace(/['’‘ʻʼ`]/g, "");
 }
 
 export function CommandPalette() {
@@ -113,45 +134,43 @@ export function CommandPalette() {
     }
   }, [open]);
 
-  const filtered = useMemo(() => {
-    return COMMANDS.filter((c) => {
-      if (c.superAdminOnly && user?.role !== "super_admin") return false;
-      if (!query) return true;
-      const haystack = [t(c.labelKey), ...(c.keywords ?? [])].join(" ");
-      return fuzzyMatch(haystack, query);
-    });
-  }, [query, user?.role, t]);
-
+  // Guruh tartibida tekis ro'yxat — klaviatura indeksi ko'rinish tartibiga mos keladi
   const groups = useMemo(() => {
-    const map = new Map<string, Cmd[]>();
-    for (const c of filtered) {
+    const q = normalize(query.trim());
+    const map = new Map<CmdGroup, Cmd[]>();
+    for (const c of COMMANDS) {
+      if (!isAllowed(user, c)) continue;
+      if (q) {
+        const haystack = normalize([t(c.labelKey), ...(c.keywords ?? [])].join(" "));
+        if (!haystack.includes(q)) continue;
+      }
       const arr = map.get(c.group) ?? [];
       arr.push(c);
       map.set(c.group, arr);
     }
     return Array.from(map.entries());
-  }, [filtered]);
+  }, [query, user, t]);
+
+  const flat = useMemo(() => groups.flatMap(([, items]) => items), [groups]);
 
   function execute(c: Cmd) {
     setOpen(false);
     navigate(c.to);
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function onKeyDown(e: ReactKeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIdx((i) => Math.min(filtered.length - 1, i + 1));
+      setActiveIdx((i) => Math.min(flat.length - 1, i + 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIdx((i) => Math.max(0, i - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const c = filtered[activeIdx];
+      const c = flat[activeIdx];
       if (c) execute(c);
     }
   }
-
-  let runningIdx = -1;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -175,6 +194,7 @@ export function CommandPalette() {
             }}
             onKeyDown={onKeyDown}
             placeholder={t("adminCommandPalette.searchPlaceholder")}
+            aria-label={t("adminCommandPalette.searchPlaceholder")}
             className="h-12 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <kbd className="hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground sm:inline">
@@ -195,13 +215,14 @@ export function CommandPalette() {
                 {t(group)}
               </div>
               {items.map((c) => {
-                runningIdx++;
-                const isActive = runningIdx === activeIdx;
+                const index = flat.indexOf(c);
+                const isActive = index === activeIdx;
                 return (
                   <button
                     key={c.id}
+                    type="button"
                     onClick={() => execute(c)}
-                    onMouseEnter={() => setActiveIdx(runningIdx)}
+                    onMouseEnter={() => setActiveIdx(index)}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors",
                       isActive ? "bg-primary/10 text-foreground" : "text-muted-foreground hover:bg-muted",
@@ -227,7 +248,7 @@ export function CommandPalette() {
               {t("adminCommandPalette.footerOpen")}
             </span>
           </div>
-          <span className="hidden sm:inline">Cmd+K</span>
+          <span className="hidden sm:inline">⌘K / Ctrl+K</span>
         </div>
       </DialogContent>
     </Dialog>

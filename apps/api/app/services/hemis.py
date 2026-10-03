@@ -13,11 +13,12 @@ import string
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from openpyxl import load_workbook
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 from app.models.academic import AcademicYear, Direction, Group
 from app.models.enums import DegreeType, EducationForm, Gender, StudentStatus, UserRole
 from app.models.student import Student
@@ -225,7 +226,10 @@ def _parse_excel(
     return rows, errors
 
 
-async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportResponse:
+async def import_students(
+    db: AsyncSession, file_bytes: bytes, *, scope_faculty_id: UUID | None = None
+) -> HemisImportResponse:
+    """`scope_faculty_id` — fakultet admini: faqat o'z fakulteti yo'nalishlari qabul qilinadi."""
     rows, parse_errors = _parse_excel(file_bytes)
     if parse_errors:
         return HemisImportResponse(
@@ -248,7 +252,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
     from app.core.config import settings as app_settings
 
     # Kesh — ORM obyekt EMAS, ID saqlaymiz (per-row commit'da eskirmaydi).
-    direction_cache: dict[str, UUID | None] = {}
+    direction_cache: dict[str, tuple[UUID, UUID] | None] = {}
     group_cache: dict[tuple[str, str], UUID] = {}
 
     errors: list[HemisImportError] = []
@@ -285,22 +289,28 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                         direction_code = direction_code[:-2]
                 if direction_code not in direction_cache:
                     # Kod unikal EMAS (bir kodda bir nechta yo'nalish bo'lishi mumkin) —
-                    # birinchisini olamiz (shablonda faqat kod bo'lgani uchun).
-                    direction_cache[direction_code] = (
-                        (
-                            await db.execute(
-                                select(Direction.id).where(Direction.code == direction_code)
-                            )
-                        )
-                        .scalars()
-                        .first()
+                    # birinchisini olamiz (shablonda faqat kod bo'lgani uchun). Fakultet admini
+                    # uchun avval o'z fakultetidagisi qidiriladi.
+                    dir_stmt = select(Direction.id, Direction.faculty_id).where(
+                        Direction.code == direction_code
                     )
-                dir_id = direction_cache[direction_code]
-                if not dir_id:
+                    if scope_faculty_id is not None:
+                        dir_stmt = dir_stmt.order_by(
+                            (Direction.faculty_id == scope_faculty_id).desc()
+                        )
+                    found = (await db.execute(dir_stmt.limit(1))).first()
+                    direction_cache[direction_code] = (
+                        (found.id, found.faculty_id) if found else None
+                    )
+                cached = direction_cache[direction_code]
+                if not cached:
                     shown = direction_code or "(bo'sh)"
                     raise ValueError(
                         f"Yo'nalish topilmadi — bu shifr (kod) akademik tuzilmada yo'q: {shown}"
                     )
+                dir_id, dir_faculty_id = cached
+                if scope_faculty_id is not None and dir_faculty_id != scope_faculty_id:
+                    raise ValueError("Bu amal faqat o'z fakultetingiz doirasida mumkin")
 
                 course = _parse_course(rec.get("course"))
 
@@ -363,7 +373,7 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
 
                 user = User(
                     username=generated_login,
-                    password_hash=hash_password(password),
+                    password_hash=await hash_password_async(password, temporary=True),
                     role=UserRole.STUDENT,
                     is_active=True,
                     first_name=first_name,
@@ -409,9 +419,18 @@ async def import_students(db: AsyncSession, file_bytes: bytes) -> HemisImportRes
                 )
                 created += 1
 
-        except Exception as e:  # noqa: BLE001
+        except ValueError as e:
             # Faqat shu qatorni bekor qilamiz (oldingi qatorlar allaqachon savepoint qilingan).
             errors.append(HemisImportError(row=row_idx, amaliyot_id=incoming_id, message=str(e)))
+            continue
+        except Exception as e:  # noqa: BLE001
+            # Xom xato (SQL, parametrlar) adminga ko'rsatilmaydi — logga yoziladi
+            logger.warning(f"HEMIS import xato (qator {row_idx}): {e}")
+            errors.append(
+                HemisImportError(
+                    row=row_idx, amaliyot_id=incoming_id, message="Qatorni saqlab bo'lmadi"
+                )
+            )
             continue
 
     await db.commit()

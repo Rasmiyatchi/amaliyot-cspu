@@ -9,12 +9,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useBootstrap } from "@/hooks/use-bootstrap";
 import { api } from "@/lib/api";
+import { PASSWORD_MIN_LENGTH } from "@/lib/api/profile";
 import { landingPathFor } from "@/lib/routing";
 import { useAuthStore } from "@/stores/auth";
 
 export function ChangePasswordPage() {
   const { t } = useTranslation();
+  // Sahifa RootLayout/Protected'dan tashqarida — reload'da sessiyani o'zi tiklashi kerak,
+  // aks holda bootstrap tugamasdan login'ga otib yuborardi.
+  const { isReady } = useBootstrap();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const navigate = useNavigate();
@@ -23,12 +28,22 @@ export function ChangePasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  if (!isReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2
+          className="h-6 w-6 animate-spin text-muted-foreground"
+          aria-label={t("common.loading")}
+        />
+      </div>
+    );
+  }
   if (!user) return <Navigate to="/login" replace />;
   if (!user.must_change_password) return <Navigate to={landingPathFor(user.role)} replace />;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 6) {
+    if (newPassword.length < PASSWORD_MIN_LENGTH) {
       toast.error(t("changePassword.tooShort"));
       return;
     }
@@ -107,7 +122,9 @@ export function ChangePasswordPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={PASSWORD_MIN_LENGTH}
+                maxLength={128}
+                autoComplete="new-password"
                 disabled={loading}
                 placeholder={t("changePassword.newPasswordPlaceholder")}
                 className="h-11 border-white/10 bg-white/5 pl-10 pr-10 text-white placeholder:text-slate-500"
@@ -115,6 +132,8 @@ export function ChangePasswordPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? t("auth.login.hide") : t("auth.login.show")}
+                aria-pressed={showPassword}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -134,7 +153,9 @@ export function ChangePasswordPage() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
-                minLength={6}
+                minLength={PASSWORD_MIN_LENGTH}
+                maxLength={128}
+                autoComplete="new-password"
                 disabled={loading}
                 placeholder={t("changePassword.confirmPlaceholder")}
                 className="h-11 border-white/10 bg-white/5 pl-10 text-white placeholder:text-slate-500"

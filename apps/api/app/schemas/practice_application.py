@@ -4,9 +4,33 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.enums import ApplicationStatus, OrganizationKind
+
+_MAX_VARIABLES = 60
+_MAX_VALUE_LEN = 1000
+
+
+def _bounded_values(v: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Talaba kiritgan shablon qiymatlari: faqat oddiy qiymatlar va cheklangan hajm
+    (bir maydonga megabaytlab matn yozib PDF generatsiyasini to'xtatib bo'lmasin)."""
+    if v is None:
+        return v
+    if len(v) > _MAX_VARIABLES:
+        raise ValueError("Maydonlar soni juda ko'p")
+    out: dict[str, Any] = {}
+    for key, value in v.items():
+        if not isinstance(key, str) or len(key) > 64:
+            raise ValueError("Noto'g'ri maydon nomi")
+        if value is None or isinstance(value, bool | int | float):
+            out[key] = value
+            continue
+        text = str(value)
+        if len(text) > _MAX_VALUE_LEN:
+            raise ValueError(f"'{key}' maydoni juda uzun (max {_MAX_VALUE_LEN} belgi)")
+        out[key] = text
+    return out
 
 
 class ApplicationCreate(BaseModel):
@@ -21,6 +45,8 @@ class ApplicationCreate(BaseModel):
     contract_template_id: UUID
     variable_values: dict[str, Any] | None = None
 
+    _values = field_validator("variable_values")(_bounded_values)
+
     # Backward compatibility — eski oqim uchun
     organization_type: OrganizationKind | None = Field(default=None)
     organization_name: str | None = Field(None, max_length=500)
@@ -33,6 +59,8 @@ class ApplicationResubmit(BaseModel):
     """Tuzatilgan arizani qayta yuborish — yangilangan maydon qiymatlari bilan."""
 
     variable_values: dict[str, Any] | None = None
+
+    _values = field_validator("variable_values")(_bounded_values)
 
 
 class ApplicationReview(BaseModel):

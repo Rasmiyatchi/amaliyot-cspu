@@ -16,6 +16,19 @@ import type {
   UUID,
 } from "@/lib/api/types";
 
+export type GroupFilters = {
+  directionId?: UUID;
+  academicYearId?: UUID;
+  course?: number;
+};
+
+/** Ro'yxat so'rovlari uchun qo'shimcha sozlamalar (mavjud chaqiruvlar uchun ixtiyoriy). */
+export type ListQueryOptions = {
+  enabled?: boolean;
+  /** Sahifa/filtr almashganda yangi javob kelguncha eski ma'lumot ko'rinib tursin */
+  keepPrevious?: boolean;
+};
+
 // ─── Keys ─────────────────────────────────────────────────
 export const academicKeys = {
   all: ["academic"] as const,
@@ -24,12 +37,62 @@ export const academicKeys = {
   departments: (facultyId?: UUID) =>
     [...academicKeys.all, "departments", facultyId ?? "all"] as const,
   academicYears: () => [...academicKeys.all, "academic-years"] as const,
-  groups: (filters?: {
-    directionId?: UUID;
-    academicYearId?: UUID;
-    course?: number;
-  }) => [...academicKeys.all, "groups", filters ?? {}] as const,
+  groups: (filters?: GroupFilters) => [...academicKeys.all, "groups", filters ?? {}] as const,
 };
+
+/** Backend `page_size` yuqori chegaralari (le=...) — undan kattasi 422 qaytaradi. */
+const MAX_PAGE_SIZE = {
+  faculties: 100,
+  directions: 200,
+  departments: 200,
+  groups: 200,
+} as const;
+
+/** "Barcha sahifalar" so'rovlari kalitining oxirgi qismi. */
+const COMPLETE = "complete";
+
+function buildQuery(params: Record<string, string | undefined>, page: number, pageSize: number) {
+  const qs = new URLSearchParams();
+  qs.set("page", String(page));
+  qs.set("page_size", String(pageSize));
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "") qs.set(key, value);
+  }
+  return qs.toString();
+}
+
+/**
+ * Ro'yxatni to'liq yuklaydi: birinchi sahifadan `total`ni bilib, qolgan sahifalarni
+ * parallel so'raydi. Tanlash ro'yxatlari (picker) jim qirqilib qolmasligi uchun.
+ */
+async function fetchAllPages<T extends { id: UUID }>(
+  path: string,
+  params: Record<string, string | undefined>,
+  pageSize: number,
+): Promise<T[]> {
+  const first = await api.get(`${path}?${buildQuery(params, 1, pageSize)}`).json<Paginated<T>>();
+  const pageCount = Math.ceil(first.total / pageSize);
+  if (pageCount <= 1) return first.items;
+  const rest = await Promise.all(
+    Array.from({ length: pageCount - 1 }, (_, i) =>
+      api.get(`${path}?${buildQuery(params, i + 2, pageSize)}`).json<Paginated<T>>(),
+    ),
+  );
+  // Sahifalar orasida yozuv qo'shilsa takror chiqmasin
+  const byId = new Map<UUID, T>();
+  for (const page of [first, ...rest]) {
+    for (const item of page.items) byId.set(item.id, item);
+  }
+  return [...byId.values()];
+}
+
+function groupParams(filters: GroupFilters): Record<string, string | undefined> {
+  return {
+    direction_id: filters.directionId,
+    academic_year_id: filters.academicYearId,
+    course: filters.course !== undefined ? String(filters.course) : undefined,
+  };
+}
 
 // ─── Faculties ────────────────────────────────────────────
 export function useFaculties(page = 1, pageSize = 50) {
@@ -37,8 +100,16 @@ export function useFaculties(page = 1, pageSize = 50) {
     queryKey: [...academicKeys.faculties(), page, pageSize],
     queryFn: () =>
       api
-        .get(`v1/academic/faculties?page=${page}&page_size=${pageSize}`)
+        .get(`v1/academic/faculties?${buildQuery({}, page, pageSize)}`)
         .json<Paginated<Faculty>>(),
+  });
+}
+
+/** Barcha fakultetlar (sahifalab to'liq yuklanadi). */
+export function useAllFaculties() {
+  return useQuery({
+    queryKey: [...academicKeys.faculties(), COMPLETE],
+    queryFn: () => fetchAllPages<Faculty>("v1/academic/faculties", {}, MAX_PAGE_SIZE.faculties),
   });
 }
 
@@ -69,14 +140,35 @@ export function useDeleteFaculty() {
 }
 
 // ─── Directions ───────────────────────────────────────────
-export function useDirections(facultyId?: UUID, page = 1, pageSize = 100) {
-  const qs = new URLSearchParams();
-  qs.set("page", String(page));
-  qs.set("page_size", String(pageSize));
-  if (facultyId) qs.set("faculty_id", facultyId);
+export function useDirections(
+  facultyId?: UUID,
+  page = 1,
+  pageSize = 100,
+  options: ListQueryOptions = {},
+) {
   return useQuery({
     queryKey: [...academicKeys.directions(facultyId), page, pageSize],
-    queryFn: () => api.get(`v1/academic/directions?${qs}`).json<Paginated<Direction>>(),
+    queryFn: () =>
+      api
+        .get(`v1/academic/directions?${buildQuery({ faculty_id: facultyId }, page, pageSize)}`)
+        .json<Paginated<Direction>>(),
+    enabled: options.enabled ?? true,
+    placeholderData: options.keepPrevious ? (prev) => prev : undefined,
+  });
+}
+
+/** Fakultet (yoki barcha) yo'nalishlari — to'liq ro'yxat. */
+export function useAllDirections(facultyId?: UUID, options: ListQueryOptions = {}) {
+  return useQuery({
+    queryKey: [...academicKeys.directions(facultyId), COMPLETE],
+    queryFn: () =>
+      fetchAllPages<Direction>(
+        "v1/academic/directions",
+        { faculty_id: facultyId },
+        MAX_PAGE_SIZE.directions,
+      ),
+    enabled: options.enabled ?? true,
+    placeholderData: options.keepPrevious ? (prev) => prev : undefined,
   });
 }
 
@@ -107,14 +199,34 @@ export function useDeleteDirection() {
 }
 
 // ─── Departments (Kafedra) ────────────────────────────────
-export function useDepartments(facultyId?: UUID, page = 1, pageSize = 100) {
-  const qs = new URLSearchParams();
-  qs.set("page", String(page));
-  qs.set("page_size", String(pageSize));
-  if (facultyId) qs.set("faculty_id", facultyId);
+export function useDepartments(
+  facultyId?: UUID,
+  page = 1,
+  pageSize = 100,
+  options: ListQueryOptions = {},
+) {
   return useQuery({
     queryKey: [...academicKeys.departments(facultyId), page, pageSize],
-    queryFn: () => api.get(`v1/academic/departments?${qs}`).json<Paginated<Department>>(),
+    queryFn: () =>
+      api
+        .get(`v1/academic/departments?${buildQuery({ faculty_id: facultyId }, page, pageSize)}`)
+        .json<Paginated<Department>>(),
+    enabled: options.enabled ?? true,
+    placeholderData: options.keepPrevious ? (prev) => prev : undefined,
+  });
+}
+
+/** Fakultet (yoki barcha) kafedralari — to'liq ro'yxat. */
+export function useAllDepartments(facultyId?: UUID, options: ListQueryOptions = {}) {
+  return useQuery({
+    queryKey: [...academicKeys.departments(facultyId), COMPLETE],
+    queryFn: () =>
+      fetchAllPages<Department>(
+        "v1/academic/departments",
+        { faculty_id: facultyId },
+        MAX_PAGE_SIZE.departments,
+      ),
+    enabled: options.enabled ?? true,
   });
 }
 
@@ -180,19 +292,30 @@ export function useDeleteAcademicYear() {
 
 // ─── Groups ───────────────────────────────────────────────
 export function useGroups(
-  filters: { directionId?: UUID; academicYearId?: UUID; course?: number } = {},
+  filters: GroupFilters = {},
   page = 1,
   pageSize = 100,
+  options: ListQueryOptions = {},
 ) {
-  const qs = new URLSearchParams();
-  qs.set("page", String(page));
-  qs.set("page_size", String(pageSize));
-  if (filters.directionId) qs.set("direction_id", filters.directionId);
-  if (filters.academicYearId) qs.set("academic_year_id", filters.academicYearId);
-  if (filters.course !== undefined) qs.set("course", String(filters.course));
   return useQuery({
     queryKey: [...academicKeys.groups(filters), page, pageSize],
-    queryFn: () => api.get(`v1/academic/groups?${qs}`).json<Paginated<Group>>(),
+    queryFn: () =>
+      api
+        .get(`v1/academic/groups?${buildQuery(groupParams(filters), page, pageSize)}`)
+        .json<Paginated<Group>>(),
+    enabled: options.enabled ?? true,
+    placeholderData: options.keepPrevious ? (prev) => prev : undefined,
+  });
+}
+
+/** Filtrga mos barcha guruhlar — to'liq ro'yxat (tanlash ro'yxatlari va qidiruv uchun). */
+export function useAllGroups(filters: GroupFilters = {}, options: ListQueryOptions = {}) {
+  return useQuery({
+    queryKey: [...academicKeys.groups(filters), COMPLETE],
+    queryFn: () =>
+      fetchAllPages<Group>("v1/academic/groups", groupParams(filters), MAX_PAGE_SIZE.groups),
+    enabled: options.enabled ?? true,
+    placeholderData: options.keepPrevious ? (prev) => prev : undefined,
   });
 }
 

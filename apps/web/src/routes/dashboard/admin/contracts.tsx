@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatTashkentDate } from "@/components/attendance/attendance-date-utils";
 import { dateLocale } from "@/i18n";
 import {
   downloadContractPdf,
@@ -56,8 +57,11 @@ import type { Contract, ContractStatus, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
 
+/** "Barchasi" — arxivdagilardan (expired) tashqari; boshlang'ich filtr ham shu */
+const ALL_STATUSES: ContractStatus[] = ["draft", "generated", "active", "revoked"];
+
 const STATUS_TABS: { value: string; labelKey: string; statuses?: ContractStatus[] }[] = [
-  { value: ALL, labelKey: "common.all", statuses: ["draft", "generated", "active", "revoked"] },
+  { value: ALL, labelKey: "common.all", statuses: ALL_STATUSES },
   { value: "yangi", labelKey: "adminContracts.tabs.new", statuses: ["draft", "generated"] },
   { value: "imzolangan", labelKey: "adminContracts.tabs.signed", statuses: ["active"] },
   { value: "rad", labelKey: "adminContracts.tabs.rejected", statuses: ["revoked"] },
@@ -74,7 +78,8 @@ const APP_STATUS_TABS: { value: string; labelKey: string; statuses?: Application
 
 export function ContractsPage() {
   const { t } = useTranslation();
-  const [filters, setFilters] = useState<ContractFilters>({});
+  // Boshlang'ich holat "Barchasi" tabiga mos (avval filtr bo'sh edi va arxiv ham chiqardi)
+  const [filters, setFilters] = useState<ContractFilters>({ status: ALL_STATUSES });
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
   const [page, setPage] = useState(1);
@@ -186,7 +191,7 @@ export function ContractsPage() {
 
       {/* Manba tab: rasmiy vs ariza */}
       <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as "official" | "application")} className="mb-6">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="official" className="gap-2">
             <FileCheck2 className="h-4 w-4" />
             {t("adminContracts.sourceOfficial")}
@@ -207,9 +212,10 @@ export function ContractsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
           placeholder={t("adminContracts.searchPlaceholder")}
+          aria-label={t("adminContracts.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="min-w-[280px] flex-1 max-w-md"
+          className="w-full sm:min-w-[280px] sm:max-w-md sm:flex-1"
         />
       </div>
 
@@ -273,7 +279,14 @@ export function ContractsPage() {
                       <TableRow
                         key={c.id}
                         onClick={() => setSelected(c)}
-                        className="cursor-pointer"
+                        onKeyDown={(e) => {
+                          if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                            e.preventDefault();
+                            setSelected(c);
+                          }
+                        }}
+                        tabIndex={0}
+                        className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <TableCell className="text-sm text-muted-foreground">
                           {(page - 1) * pageSize + i + 1}
@@ -283,12 +296,12 @@ export function ContractsPage() {
                         <TableCell className="text-xs">
                           <div className="font-medium">{c.academic_year_name}</div>
                           <div className="text-muted-foreground">
-                            {new Date(c.start_date).toLocaleDateString(dateLocale())} —{" "}
-                            {new Date(c.end_date).toLocaleDateString(dateLocale())}
+                            {formatTashkentDate(c.start_date, dateLocale())} —{" "}
+                            {formatTashkentDate(c.end_date, dateLocale())}
                           </div>
                         </TableCell>
                         <TableCell className="text-xs">
-                          {new Date(c.created_at).toLocaleDateString(dateLocale())}
+                          {formatTashkentDate(c.created_at, dateLocale())}
                         </TableCell>
                         <TableCell>
                           {c.pdf_path ? (
@@ -424,7 +437,7 @@ export function ContractsPage() {
             }}
             className="mb-4"
           >
-            <TabsList>
+            <TabsList className="h-auto flex-wrap">
               {APP_STATUS_TABS.map((tab) => (
                 <TabsTrigger key={tab.value} value={tab.value}>
                   {t(tab.labelKey)}
@@ -492,7 +505,7 @@ export function ContractsPage() {
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {a.reviewed_at
-                          ? new Date(a.reviewed_at).toLocaleDateString(dateLocale())
+                          ? formatTashkentDate(a.reviewed_at, dateLocale())
                           : "—"}
                       </TableCell>
                       <TableCell>

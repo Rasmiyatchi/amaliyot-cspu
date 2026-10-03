@@ -210,8 +210,7 @@ async def _validate_and_resolve(
     # Course check (agar talaba guruhga biriktirilgan bo'lsa)
     if pt.allowed_courses and group and group.course not in pt.allowed_courses:
         raise ValidationError(
-            f"{group.course}-kurs '{pt.name}' uchun ruxsat etilmagan "
-            f"(ruxsat: {pt.allowed_courses})"
+            f"{group.course}-kurs '{pt.name}' uchun ruxsat etilmagan (ruxsat: {pt.allowed_courses})"
         )
 
     # Takroriy biriktirish yo'qligi. Semestr ham kalitning bir qismi: 4+2 da bir o'quv
@@ -398,19 +397,28 @@ async def sync_assignments_to_contracts(db: AsyncSession, assignment_ids: list[U
     from app.models.enums import ApplicationStatus, ContractStatus
     from app.models.practice_application import PracticeApplication
     from app.services import practice_application as pa_svc
-    from app.services.contract import _snapshot_students
+    from app.services.contract import refresh_contract_students
 
     str_ids = {str(aid) for aid in assignment_ids}
 
-    # 1. Rasmiy shartnomalar (Contract) ni yangilash
+    # 1. Rasmiy shartnomalar (Contract) ni yangilash — faqat IMZOLANMAGAN (DRAFT/GENERATED):
+    # imzolangan (ACTIVE) hujjat keyin o'zgarmasligi kerak. Faqat shu biriktirishni o'z ichiga
+    # olgan shartnomalar JSONB bo'yicha olinadi (ilgari HAMMA shartnoma yuklanardi).
+    from sqlalchemy import or_
+
     try:
         contracts = (
-            await db.execute(
-                select(Contract).where(
-                    Contract.status.in_([ContractStatus.DRAFT, ContractStatus.GENERATED, ContractStatus.ACTIVE])
+            (
+                await db.execute(
+                    select(Contract).where(
+                        Contract.status.in_([ContractStatus.DRAFT, ContractStatus.GENERATED]),
+                        or_(*[Contract.students.contains([{"assignment_id": i}]) for i in str_ids]),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         for contract in contracts:
             c_students = contract.students or []
@@ -419,45 +427,47 @@ async def sync_assignments_to_contracts(db: AsyncSession, assignment_ids: list[U
                 for st in c_students
             )
             if has_match:
-                all_c_assign_ids = []
-                for st in c_students:
-                    if isinstance(st, dict) and st.get("assignment_id"):
-                        try:
-                            all_c_assign_ids.append(UUID(str(st["assignment_id"])))
-                        except (ValueError, TypeError):
-                            pass
-                if all_c_assign_ids:
-                    try:
-                        refreshed = await _snapshot_students(db, all_c_assign_ids, contract.organization_id)
-                        contract.students = refreshed
-                        if contract.pdf_path or contract.status in (ContractStatus.GENERATED, ContractStatus.ACTIVE):
-                            await pa_svc.generate_official_contract_pdf(db, contract.id)
-                    except Exception as e:
-                        logger.warning(f"Shartnoma {contract.id} snapshotini yangilashda xatolik: {e}")
+                try:
+                    contract.students = await refresh_contract_students(db, contract)
+                    if contract.pdf_path or contract.status == ContractStatus.GENERATED:
+                        await pa_svc.generate_official_contract_pdf(db, contract.id)
+                except Exception as e:
+                    logger.warning(f"Shartnoma {contract.id} snapshotini yangilashda xatolik: {e}")
     except Exception as e:
         logger.warning(f"Official contracts sync xatoligi: {e}")
 
     # 2. Talaba arizalari (PracticeApplication) shartnomalarini yangilash
     try:
         assignments = (
-            await db.execute(
-                select(PracticeAssignment).where(PracticeAssignment.id.in_(assignment_ids))
+            (
+                await db.execute(
+                    select(PracticeAssignment).where(PracticeAssignment.id.in_(assignment_ids))
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         student_ids = {a.student_id for a in assignments if a.student_id}
 
         if student_ids:
             apps = (
-                await db.execute(
-                    select(PracticeApplication).where(
-                        PracticeApplication.student_id.in_(student_ids),
-                        PracticeApplication.status.in_([ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE]),
+                (
+                    await db.execute(
+                        select(PracticeApplication).where(
+                            PracticeApplication.student_id.in_(student_ids),
+                            # ACTIVE = skan tasdiqlangan (imzolangan) — qayta yaratilmaydi
+                            PracticeApplication.status == ApplicationStatus.APPROVED,
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
             for app_obj in apps:
-                if app_obj.contract_template_id and (app_obj.contract_file or app_obj.contract_number):
+                if app_obj.contract_template_id and (
+                    app_obj.contract_file or app_obj.contract_number
+                ):
                     try:
                         await pa_svc._generate_contract(db, app_obj)
                     except Exception as e:
@@ -484,7 +494,7 @@ async def create_assignment(db: AsyncSession, data: BaseModel) -> dict[str, Any]
     db.add(assignment)
     await db.commit()
     await db.refresh(assignment)
-    await sync_assignments_to_contracts(db, [assignment.id])
+    # Yangi biriktirish hali hech qaysi shartnomada yo'q — shartnoma sinxronizatsiyasi shart emas
     return await get_assignment(db, assignment.id)
 
 
@@ -514,18 +524,18 @@ async def bulk_create_assignments(db: AsyncSession, data: BaseModel) -> BulkAssi
                 "course": group.course if group else None,
             }
         )
-        db.add(assignment)
         try:
-            await db.flush()
+            # Har talaba alohida savepoint'da — bittasining xatosi oldingilarni bekor qilmasin
+            async with db.begin_nested():
+                db.add(assignment)
+                await db.flush()
             created_ids.append(assignment.id)
         except Exception as e:  # noqa: BLE001
-            await db.rollback()
             errors.append(BulkAssignmentError(student_id=student_id, error=str(e)))
             continue
 
     if created_ids:
         await db.commit()
-        await sync_assignments_to_contracts(db, created_ids)
     logger.info(
         f"Bulk assignment: requested={len(student_ids)} created={len(created_ids)} "
         f"failed={len(errors)}"
@@ -538,12 +548,45 @@ async def bulk_create_assignments(db: AsyncSession, data: BaseModel) -> BulkAssi
     )
 
 
+# Ruxsat etilgan holat o'tishlari. COMPLETED odatda baholash (grading finalize) orqali
+# qo'yiladi — PATCH bilan faqat yakuniy ball mavjud bo'lsa.
+_STATUS_TRANSITIONS: dict[AssignmentStatus, set[AssignmentStatus]] = {
+    AssignmentStatus.DRAFT: {AssignmentStatus.ACTIVE, AssignmentStatus.CANCELLED},
+    AssignmentStatus.ACTIVE: {
+        AssignmentStatus.DRAFT,
+        AssignmentStatus.COMPLETED,
+        AssignmentStatus.CANCELLED,
+    },
+    AssignmentStatus.COMPLETED: {AssignmentStatus.ACTIVE},
+    AssignmentStatus.CANCELLED: {AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE},
+}
+
+
+def _check_status_transition(assignment: PracticeAssignment, payload: dict[str, Any]) -> None:
+    new_status = payload.get("status")
+    if new_status is None or new_status == assignment.status:
+        return
+    if new_status not in _STATUS_TRANSITIONS.get(assignment.status, set()):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Biriktirish holatini bunday o'zgartirib bo'lmaydi"
+        )
+    if (
+        new_status == AssignmentStatus.COMPLETED
+        and payload.get("final_grade", assignment.final_grade) is None
+    ):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Amaliyotni yakunlash uchun avval baholang (Baholash → Yakunlash)",
+        )
+
+
 async def update_assignment(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[str, Any]:
     assignment = await db.get(PracticeAssignment, id_)
     if not assignment:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Biriktirish topilmadi: {id_}")
 
     payload = data.model_dump(exclude_unset=True)
+    _check_status_transition(assignment, payload)
 
     # Agar obyekt yoki sana o'zgarsa — revalidate
     revalidate_fields = {
@@ -579,12 +622,24 @@ async def update_assignment(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
         and assignment.status != AssignmentStatus.CANCELLED
     ):
         assignment.cancelled_at = datetime.now(UTC)
+    # Bekor qilingan biriktirish tiklanganda eski bekor qilish izlari tozalanadi
+    if assignment.status == AssignmentStatus.CANCELLED and payload.get("status") not in (
+        None,
+        AssignmentStatus.CANCELLED,
+    ):
+        assignment.cancelled_at = None
+        payload.setdefault("cancelled_reason", None)
 
+    contract_fields = {"organization_id", "area_id", "supervisor_id", "start_date", "end_date"}
+    contract_relevant = any(
+        k in payload and getattr(assignment, k) != payload[k] for k in contract_fields
+    )
     for key, value in payload.items():
         setattr(assignment, key, value)
 
     await db.commit()
-    await sync_assignments_to_contracts(db, [assignment.id])
+    if contract_relevant:
+        await sync_assignments_to_contracts(db, [assignment.id])
     return await get_assignment(db, assignment.id)
 
 
@@ -611,9 +666,9 @@ async def list_my_assignments(
     if user.role == UserRole.STUDENT:
         stmt = stmt.where(Student.user_id == user.id)
     elif user.role == UserRole.SUPERVISOR:
-        stmt = stmt.join(
-            Supervisor, Supervisor.id == PracticeAssignment.supervisor_id
-        ).where(Supervisor.user_id == user.id)
+        stmt = stmt.join(Supervisor, Supervisor.id == PracticeAssignment.supervisor_id).where(
+            Supervisor.user_id == user.id
+        )
     else:
         return []
 
@@ -621,9 +676,12 @@ async def list_my_assignments(
     if academic_year_id and academic_year_id.lower() != "all":
         try:
             ay_uuid = UUID(academic_year_id)
-            stmt = stmt.where(PracticeAssignment.academic_year_id == ay_uuid)
-        except ValueError:
-            pass
+        except ValueError as e:
+            # Ilgari jim o'tkazib yuborilib, barcha yillar ko'rsatilardi
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "academic_year_id noto'g'ri"
+            ) from e
+        stmt = stmt.where(PracticeAssignment.academic_year_id == ay_uuid)
     elif not academic_year_id and user.role == UserRole.SUPERVISOR:
         # Default active academic year
         active_ay_id = (
@@ -638,11 +696,7 @@ async def list_my_assignments(
     if semester:
         stmt = stmt.where(PracticeAssignment.semester == semester)
 
-    rows = (
-        (await db.execute(stmt.order_by(PracticeAssignment.start_date.desc())))
-        .mappings()
-        .all()
-    )
+    rows = (await db.execute(stmt.order_by(PracticeAssignment.start_date.desc()))).mappings().all()
     items = [dict(r) for r in rows]
     return await _hydrate_reads(db, items)
 

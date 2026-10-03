@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import secrets
 from datetime import UTC, datetime
@@ -12,10 +13,11 @@ from uuid import UUID
 import qrcode
 from fastapi import HTTPException, status
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.core.clock import UZB_TZ, today_uzb
 from app.core.config import settings
 from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.contract_template import ContractTemplateDoc
@@ -32,6 +34,7 @@ from app.models.supervisor import Supervisor
 from app.models.user import User
 from app.schemas.practice_application import ApplicationCreate
 from app.services import contract_template as ct_svc
+from app.services.search_utils import like_pattern, normalized_col
 
 _EDU_FORM_LABEL = {
     EducationForm.DAYTIME: "Kunduzgi",
@@ -63,14 +66,34 @@ def _qr_png(url: str) -> bytes:
     return buf.getvalue()
 
 
+_UZ_MONTHS = (
+    "yanvar",
+    "fevral",
+    "mart",
+    "aprel",
+    "may",
+    "iyun",
+    "iyul",
+    "avgust",
+    "sentyabr",
+    "oktyabr",
+    "noyabr",
+    "dekabr",
+)
+
+
 async def get_next_shared_contract_number(db: AsyncSession, year: int | None = None) -> str:
     """Bazada mavjud faol/arxivdagi shartnomalar ichidan eng katta shartnoma raqamini (MAX) topadi va MAX + 1 beradi.
 
     Agar shartnoma bazadan o'chirilsa, MAX qiymat kamayadi va yangi raqam o'chirilgan o'rinni egallaydi.
     """
     if year is None:
-        year = datetime.now(UTC).year
+        year = today_uzb().year  # 1-yanvar 00:00–05:00 da ham yangi yil prefiksi
     prefix = f"{year % 100:02d}"
+
+    # Bir vaqtda ikki admin tasdiqlasa/yaratsa ikkalasi bir xil MAX+1 ni olmasin: tranzaksiya
+    # tugaguncha (commit/rollback) raqam berish ketma-ket bajariladi.
+    await db.execute(text("SELECT pg_advisory_xact_lock(726001)"))
 
     # PracticeApplication (talaba arizalari) va Contract (rasmiy shartnomalar) jadvalidagi raqamlar
     stmt_app = select(PracticeApplication.contract_number).where(
@@ -195,9 +218,9 @@ async def create_for_student(
 ) -> dict[str, Any]:
     student = await _student_for_user(db, user)
 
-    # Template validation
+    # Template validation — faqat FAOL shablon (qoralama/arxivdagisi bilan ariza berib bo'lmaydi)
     tpl = await db.get(ContractTemplateDoc, data.contract_template_id)
-    if not tpl:
+    if not tpl or tpl.status != ContractTemplateStatus.ACTIVE:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Shablon topilmadi")
 
     # Bir talabada bir vaqtda faqat bitta faol ariza bo'lsin
@@ -294,17 +317,23 @@ async def list_all(
     if region:
         stmt = stmt.where(PracticeApplication.region == region)
     if search:
-        like = f"%{search.lower()}%"
+        # Apostroflar farqsiz ("Bog'ot" = "Bogʻot")
+        pattern = like_pattern(search)
         stmt = stmt.where(
-            func.lower(User.last_name).like(like)
-            | func.lower(User.first_name).like(like)
-            | func.lower(func.coalesce(User.middle_name, "")).like(like)
-            | func.lower(User.last_name + " " + User.first_name).like(like)
-            | func.lower(User.first_name + " " + User.last_name).like(like)
-            | func.lower(PracticeApplication.organization_name).like(like)
-            | func.lower(func.coalesce(PracticeApplication.contract_number, "")).like(like)
-            | func.lower(func.coalesce(Direction.name, "")).like(like)
-            | func.lower(func.coalesce(Group.name, "")).like(like)
+            or_(
+                *(
+                    normalized_col(func.coalesce(col, "")).like(pattern, escape="\\")
+                    for col in (
+                        User.last_name + " " + User.first_name,
+                        User.first_name + " " + User.last_name,
+                        User.middle_name,
+                        PracticeApplication.organization_name,
+                        PracticeApplication.contract_number,
+                        Direction.name,
+                        Group.name,
+                    )
+                )
+            )
         )
     rows = (await db.execute(stmt.order_by(PracticeApplication.created_at.desc()))).all()
     return [_to_read(r) for r in rows]
@@ -314,6 +343,12 @@ async def return_application(
     db: AsyncSession, id_: UUID, user: User, reason: str
 ) -> dict[str, Any]:
     obj = await _get_obj(db, id_)
+    # Faqat ko'rib chiqilayotgan arizani qaytarish mumkin: tasdiqlangan (raqamli, imzolangan)
+    # shartnomani qaytarib, uni shu raqam bilan qayta generatsiya qilib bo'lmasin
+    if obj.status not in _REVIEWABLE:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Bu holatdagi arizani tuzatishga qaytarib bo'lmaydi"
+        )
     obj.status = ApplicationStatus.REVISION_REQUIRED
     obj.reviewed_by_id = user.id
     obj.reviewed_at = datetime.now(UTC)
@@ -394,17 +429,19 @@ async def unarchive_application(db: AsyncSession, id_: UUID, user: User) -> dict
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Faqat arxivdagi arizalarni arxivdan chiqarish mumkin"
         )
-    if obj.scan_file:
-        obj.status = ApplicationStatus.ACTIVE
+    if obj.qr_token and obj.reviewed_at:
+        # Avval tasdiqlangan ariza — skan bo'lsa faol, bo'lmasa tasdiqlangan holatga qaytadi
+        obj.status = ApplicationStatus.ACTIVE if obj.scan_file else ApplicationStatus.APPROVED
     else:
-        obj.status = ApplicationStatus.APPROVED
+        # Hech qachon tasdiqlanmagan ariza ko'rib chiqishsiz "tasdiqlangan" bo'lib qolmasin
+        obj.status = ApplicationStatus.SUBMITTED
     await db.commit()
     return await get_one(db, id_)
 
 
 def _remove_application_files(app_obj: PracticeApplication) -> None:
     """Arizaga bog'langan PDF/DOCX va skan fayllarni diskdan o'chirish."""
-    base_dir = Path(__file__).parent.parent.parent.parent
+    base_dir = Path(__file__).resolve().parent.parent.parent  # apps/api
     paths = []
     if app_obj.contract_file and isinstance(app_obj.contract_file, dict):
         if app_obj.contract_file.get("path"):
@@ -489,7 +526,7 @@ async def _build_contract_context(
         )
     ).first()
 
-    now = datetime.now(UTC)
+    now = datetime.now(UZB_TZ)  # hujjat sanasi — Toshkent vaqti
     fish = ""
     edu_form = ""
     ctx: dict[str, Any] = {
@@ -497,9 +534,12 @@ async def _build_contract_context(
         "contract_number": "PREVIEW",
         "day": now.strftime("%d"),
         "contract_day": now.strftime("%d"),
-        "month": now.strftime("%m"),
+        # Rasmiy shablonlar: "202{year} y. \"{day}\" {month}" → 2026 y. "05" sentyabr
+        "month": _UZ_MONTHS[now.month - 1],
         "contract_month": now.strftime("%m"),
-        "year": str(now.year)[-2:],
+        "month_number": now.strftime("%m"),
+        "year": str(now.year)[-1],
+        "year_short": str(now.year)[-2:],
         "contract_year": str(now.year),
         "contract_date": now.strftime("%d.%m.%Y"),
         "obyekt": obj.object_name or "",
@@ -612,7 +652,8 @@ async def preview_contract_pdf(db: AsyncSession, id_: UUID) -> bytes:
                 "end_date": ctx.get("practice_end_date") or ctx.get("end_date") or "",
             }
         ]
-        return render_student_contract_pdf(
+        return await asyncio.to_thread(
+            render_student_contract_pdf,
             tpl.html_content,
             str_ctx,
             "",
@@ -630,7 +671,7 @@ async def _generate_contract(db: AsyncSession, obj: PracticeApplication) -> None
     if not tpl:
         return  # shablon o'chirilgan bo'lsa — generatsiya qilinmaydi
 
-    now = datetime.now(UTC)
+    now = datetime.now(UZB_TZ)  # hujjat sanasi — Toshkent vaqti
     number = obj.contract_number or (await _next_contract_number(db, now.year))
 
     # Build common context
@@ -657,7 +698,8 @@ async def _generate_contract(db: AsyncSession, obj: PracticeApplication) -> None
                 "end_date": ctx.get("practice_end_date") or ctx.get("end_date") or "",
             }
         ]
-        pdf_bytes = render_student_contract_pdf(
+        pdf_bytes = await asyncio.to_thread(
+            render_student_contract_pdf,
             tpl.html_content,
             str_ctx,
             obj.qr_token or "",
@@ -697,10 +739,28 @@ async def _generate_contract(db: AsyncSession, obj: PracticeApplication) -> None
     obj.contract_file = attachment
 
 
+_REVIEWABLE = (
+    ApplicationStatus.SUBMITTED,
+    ApplicationStatus.RESUBMITTED,
+    ApplicationStatus.UNDER_REVIEW,
+    ApplicationStatus.REVISION_REQUIRED,
+)
+
+
 async def approve(db: AsyncSession, id_: UUID, user: User) -> dict[str, Any]:
     obj = await _get_obj(db, id_)
     if obj.status == ApplicationStatus.APPROVED:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ariza allaqachon tasdiqlangan")
+    if obj.status not in _REVIEWABLE:
+        # ACTIVE (skan tasdiqlangan) ariza qayta "tasdiqlangan"ga tushib, skan yuklash
+        # qayta ochilib qolmasin; rad etilgan/arxivdagi ariza ko'rib chiqishsiz tasdiqlanmasin
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Bu holatdagi arizani tasdiqlab bo'lmaydi",
+        )
+    # Qayta topshirilgan (tuzatilgan) ariza — shartnoma yangi ma'lumotlar bilan qayta yaratiladi
+    if obj.status == ApplicationStatus.RESUBMITTED and obj.contract_file:
+        obj.contract_file = None
     obj.status = ApplicationStatus.APPROVED
     obj.qr_token = obj.qr_token or secrets.token_urlsafe(12)
     obj.reviewed_by_id = user.id
@@ -740,6 +800,11 @@ async def approve(db: AsyncSession, id_: UUID, user: User) -> dict[str, Any]:
 
 async def reject(db: AsyncSession, id_: UUID, user: User, note: str | None) -> dict[str, Any]:
     obj = await _get_obj(db, id_)
+    if obj.status not in (*_REVIEWABLE, ApplicationStatus.APPROVED):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Bu holatdagi arizani rad etib bo'lmaydi",
+        )
     obj.status = ApplicationStatus.REJECTED
     obj.reviewed_by_id = user.id
     obj.reviewed_at = datetime.now(UTC)
@@ -777,8 +842,8 @@ async def list_contract_types(db: AsyncSession) -> list[dict[str, Any]]:
 
 async def contract_file_path(db: AsyncSession, user: User, id_: UUID):
     """Generatsiya qilingan shartnoma faylining yo'li (kirish tekshiruvi bilan)."""
-    from app.models.enums import UserRole
     from app.models.contract_template import ContractTemplateDoc
+    from app.models.enums import UserRole
 
     obj = await _get_obj(db, id_)
     if user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
@@ -944,16 +1009,10 @@ async def appendix_by_region(db: AsyncSession) -> list[dict[str, Any]]:
 async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
     from sqlalchemy import or_
 
-    # UUID yoki token yoki shartnoma raqami orqali qidirish
-    conds = [
-        PracticeApplication.qr_token == qr_token,
-        PracticeApplication.contract_number == qr_token,
-    ]
-    try:
-        parsed_uuid = UUID(qr_token)
-        conds.append(PracticeApplication.id == parsed_uuid)
-    except (ValueError, TypeError, AttributeError):
-        pass
+    # Faqat QR token bo'yicha (raqam/UUID bilan ochiq qidirish — ma'lumot sizib chiqishi)
+    if not qr_token or len(qr_token) < 12:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ariza topilmadi")
+    conds = [PracticeApplication.qr_token == qr_token]
 
     row = (
         await db.execute(
@@ -975,8 +1034,6 @@ async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
     ).first()
 
     if not row:
-        from fastapi import HTTPException, status
-
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Ariza topilmadi")
 
     var_vals = row.variable_values or {}
@@ -1032,6 +1089,22 @@ async def generate_official_contract_pdf(
     if not contract.qr_token:
         contract.qr_token = secrets.token_urlsafe(16)
 
+    # Qayta generatsiyada yaratilgandagi shablon va qiymatlar ishlatiladi (matn/taraflar o'zgarmasin);
+    # yangi qiymatlar berilsa — saqlab qo'yiladi.
+    if template_id is not None:
+        try:
+            contract.contract_template_id = (
+                template_id if isinstance(template_id, UUID) else UUID(str(template_id))
+            )
+        except (ValueError, TypeError, AttributeError):
+            pass
+    else:
+        template_id = contract.contract_template_id
+    if variable_values is not None:
+        contract.variable_values = variable_values or None
+    else:
+        variable_values = contract.variable_values
+
     # Shablonni qidiramiz
     tpl = None
     if template_id:
@@ -1062,7 +1135,7 @@ async def generate_official_contract_pdf(
             )
         ).scalars().first()
 
-    now = datetime.now(UTC)
+    now = datetime.now(UZB_TZ)  # hujjat sanasi — Toshkent vaqti
     start_d = contract.start_date or now.date()
     end_d = contract.end_date or now.date()
 
@@ -1078,9 +1151,12 @@ async def generate_official_contract_pdf(
         "contract_number": contract.number,
         "day": start_d.strftime("%d"),
         "contract_day": start_d.strftime("%d"),
-        "month": start_d.strftime("%m"),
+        # Rasmiy shablonlar: "202{year} y. \"{day}\" {month}" → 2026 y. "05" sentyabr
+        "month": _UZ_MONTHS[start_d.month - 1],
         "contract_month": start_d.strftime("%m"),
-        "year": str(start_d.year)[-2:],
+        "month_number": start_d.strftime("%m"),
+        "year": str(start_d.year)[-1],
+        "year_short": str(start_d.year)[-2:],
         "contract_year": str(start_d.year),
         "contract_date": start_d.strftime("%d.%m.%Y"),
         "practice_start_date": start_d.strftime("%d.%m.%Y"),
@@ -1104,19 +1180,12 @@ async def generate_official_contract_pdf(
     }
 
     students = contract.students or []
-    # Eng so'nggi biriktirish (rahbar va muddat) ma'lumotlarini olish uchun snapshot'ni yangilaymiz
-    assignment_ids = []
-    for s in students:
-        if isinstance(s, dict) and s.get("assignment_id"):
-            try:
-                assignment_ids.append(UUID(str(s["assignment_id"])))
-            except (ValueError, TypeError):
-                pass
+    # Eng so'nggi biriktirish (rahbar va muddat) ma'lumotlari — biriktirishlarga tegilmaydi
+    if any(isinstance(s, dict) and s.get("assignment_id") for s in students):
+        from app.services.contract import refresh_contract_students
 
-    if assignment_ids:
-        from app.services.contract import _snapshot_students
         try:
-            refreshed = await _snapshot_students(db, assignment_ids, contract.organization_id)
+            refreshed = await refresh_contract_students(db, contract)
             contract.students = refreshed
             students = refreshed
         except Exception as e:
@@ -1164,7 +1233,8 @@ async def generate_official_contract_pdf(
         from app.services.pdf import render_student_contract_pdf
 
         str_ctx = {k: str(v) for k, v in ctx.items()}
-        pdf_bytes = render_student_contract_pdf(
+        pdf_bytes = await asyncio.to_thread(
+            render_student_contract_pdf,
             tpl.html_content,
             str_ctx,
             contract.qr_token,
@@ -1173,7 +1243,7 @@ async def generate_official_contract_pdf(
             contract_date=ctx["contract_date"],
         )
     else:
-        pdf_bytes = pdf_svc.render_contract_pdf(contract, organization)
+        pdf_bytes = await asyncio.to_thread(pdf_svc.render_contract_pdf, contract, organization)
 
     PDF_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     filename = f"{contract.number.replace('/', '_')}.pdf"
@@ -1182,7 +1252,12 @@ async def generate_official_contract_pdf(
 
     rel_path = f"storage/contracts/{filename}"
     contract.pdf_path = rel_path
-    contract.status = ContractStatus.GENERATED
+    # Faqat qoralama → generatsiya qilingan; imzolangan/bekor qilingan holat O'ZGARMAYDI
+    if contract.status == ContractStatus.DRAFT:
+        contract.status = ContractStatus.GENERATED
+    if contract.contract_template_id is None and tpl is not None:
+        # Eski shartnoma: birinchi qayta generatsiyada tanlangan shablon muzlatiladi
+        contract.contract_template_id = tpl.id
     contract.generated_at = now
     await db.commit()
 
@@ -1190,75 +1265,48 @@ async def generate_official_contract_pdf(
 
 
 async def get_public_contract_pdf_path(db: AsyncSession, qr_token: str) -> tuple[Path, str]:
-    """QR token, shartnoma raqami yoki ID orqali ochiq (public) PDF faylini topish."""
-    from sqlalchemy import or_
+    """QR token orqali ochiq (public) PDF faylini topish — FAQAT o'qish.
 
-    conds = [
-        PracticeApplication.qr_token == qr_token,
-        PracticeApplication.contract_number == qr_token,
-    ]
-    try:
-        parsed_uuid = UUID(qr_token)
-        conds.append(PracticeApplication.id == parsed_uuid)
-    except (ValueError, TypeError, AttributeError):
-        pass
-
-    obj = (await db.execute(select(PracticeApplication).where(or_(*conds)))).scalar_one_or_none()
-
-    if obj:
-        if not obj.contract_file and obj.contract_template_id and obj.status in (ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE):
-            await _generate_contract(db, obj)
-            await db.commit()
-
-        if obj.contract_file:
-            base = Path(__file__).parent.parent.parent
-            rel = str(obj.contract_file.get("path", "")).lstrip("/\\")
-            if rel.startswith("storage/") or rel.startswith("storage\\"):
-                file_path = base / rel
-            else:
-                file_path = base / "storage" / "contracts" / rel
-
-            if not file_path.exists() and obj.contract_template_id:
-                await _generate_contract(db, obj)
-                await db.commit()
-                rel = str(obj.contract_file.get("path", "")).lstrip("/\\")
-                file_path = (base / rel) if (rel.startswith("storage/") or rel.startswith("storage\\")) else (base / "storage" / "contracts" / rel)
-
-            if file_path.exists():
-                return file_path, obj.contract_number or str(obj.id)
-
-    # Contract modelidan qidiramiz
+    Ommaviy endpoint hech narsa yaratmaydi va statusni o'zgartirmaydi: ilgari fayl topilmasa PDF
+    qayta generatsiya qilinib, bekor qilingan shartnoma GENERATED holatiga qaytib qolardi va
+    biriktirishlar qayta yozilardi. Fayl yo'q bo'lsa — 404 (admin paneldan qayta yaratiladi).
+    """
     from app.models.contract import Contract
 
-    c_conds = [
-        Contract.qr_token == qr_token,
-        Contract.number == qr_token,
-    ]
-    try:
-        parsed_uuid = UUID(qr_token)
-        c_conds.append(Contract.id == parsed_uuid)
-    except (ValueError, TypeError, AttributeError):
-        pass
+    if not qr_token or len(qr_token) < 12:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi")
 
-    contract = (await db.execute(select(Contract).where(or_(*c_conds)))).scalar_one_or_none()
-    if contract:
-        if not contract.pdf_path:
-            await generate_official_contract_pdf(db, contract.id)
-            await db.refresh(contract)
+    base = Path(__file__).resolve().parent.parent.parent  # apps/api
 
-        if contract.pdf_path:
-            base = Path(__file__).parent.parent.parent
-            rel = contract.pdf_path.lstrip("/\\")
-            file_path = (base / rel) if (rel.startswith("storage/") or rel.startswith("storage\\")) else (base / "storage" / "contracts" / rel)
+    def _resolve(rel_path: str) -> Path:
+        rel = str(rel_path or "").replace("\\", "/").lstrip("/")
+        if rel.startswith("storage/"):
+            file_path = base / rel
+        else:
+            file_path = base / "storage" / "contracts" / rel
+        resolved = file_path.resolve()
+        if not str(resolved).startswith(str((base / "storage").resolve())):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi")
+        return resolved
 
-            if not file_path.exists():
-                await generate_official_contract_pdf(db, contract.id)
-                await db.refresh(contract)
-                rel = contract.pdf_path.lstrip("/\\")
-                file_path = (base / rel) if (rel.startswith("storage/") or rel.startswith("storage\\")) else (base / "storage" / "contracts" / rel)
+    obj = (
+        await db.execute(
+            select(PracticeApplication).where(PracticeApplication.qr_token == qr_token)
+        )
+    ).scalar_one_or_none()
+    is_live = obj is not None and obj.status in (ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE)
+    if obj and obj.contract_file and is_live:
+        file_path = _resolve(str(obj.contract_file.get("path", "")))
+        if file_path.exists() and file_path.suffix.lower() == ".pdf":
+            return file_path, obj.contract_number or str(obj.id)
 
-            if file_path.exists():
-                return file_path, contract.number or str(contract.id)
+    contract = (
+        await db.execute(select(Contract).where(Contract.qr_token == qr_token))
+    ).scalar_one_or_none()
+    if contract and contract.pdf_path:
+        file_path = _resolve(contract.pdf_path)
+        if file_path.exists():
+            return file_path, contract.number or str(contract.id)
 
     raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi")
 

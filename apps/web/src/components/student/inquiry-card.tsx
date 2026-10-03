@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { describeRequestError } from "@/components/attendance/request-error";
 import { InquiryThread } from "@/components/inquiry-thread";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,15 +43,14 @@ export function StudentInquiryCard() {
       <CardContent className="space-y-2">
         {isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         {data && data.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            {t("studentInquiryCard.emptyHint")}
-          </p>
+          <p className="text-sm text-muted-foreground">{t("studentInquiryCard.emptyHint")}</p>
         )}
         {data?.map((q) => (
           <button
             key={q.id}
+            type="button"
             onClick={() => setOpenId(q.id)}
-            className="flex w-full items-center justify-between rounded-lg border border-border p-3 text-left hover:bg-muted/50"
+            className="flex w-full items-center justify-between gap-2 rounded-lg border border-border p-3 text-left hover:bg-muted/50"
           >
             <div className="min-w-0">
               <div className="truncate font-medium">{q.subject}</div>
@@ -59,9 +59,7 @@ export function StudentInquiryCard() {
               </div>
             </div>
             <Badge variant={q.is_resolved ? "secondary" : "success"}>
-              {q.is_resolved
-                ? t("studentInquiryCard.closed")
-                : t("studentInquiryCard.open")}
+              {q.is_resolved ? t("studentInquiryCard.closed") : t("studentInquiryCard.open")}
             </Badge>
           </button>
         ))}
@@ -99,7 +97,7 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
       setBody("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("common.error"));
+      toast.error(describeRequestError(e, t));
     }
   };
 
@@ -108,18 +106,26 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{t("studentInquiryCard.newInquiry")}</DialogTitle>
-          <DialogDescription>
-            {t("studentInquiryCard.createDescription")}
-          </DialogDescription>
+          <DialogDescription>{t("studentInquiryCard.createDescription")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label>{t("studentInquiryCard.subjectLabel")} *</Label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+            <Label htmlFor="inquiry-subject">{t("studentInquiryCard.subjectLabel")} *</Label>
+            <Input
+              id="inquiry-subject"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              maxLength={200}
+            />
           </div>
           <div>
-            <Label>{t("studentInquiryCard.bodyLabel")} *</Label>
-            <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} />
+            <Label htmlFor="inquiry-body">{t("studentInquiryCard.bodyLabel")} *</Label>
+            <Textarea
+              id="inquiry-body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={4}
+            />
           </div>
         </div>
         <DialogFooter>

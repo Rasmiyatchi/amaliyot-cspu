@@ -15,7 +15,7 @@ from sqlalchemy.orm import aliased
 
 from app.models.academic import AcademicYear, Direction, Faculty, Group
 from app.models.contract import Contract
-from app.models.enums import AssignmentStatus, ContractStatus, ContractTemplate
+from app.models.enums import AssignmentStatus, ContractStatus, ContractTemplate, StudentStatus
 from app.models.organization import Organization
 from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
@@ -143,10 +143,24 @@ async def get_contract(db: AsyncSession, id_: UUID) -> dict[str, Any]:
     return _row_to_dict(dict(row))
 
 
+_EDITABLE_ASSIGNMENT = (AssignmentStatus.DRAFT, AssignmentStatus.ACTIVE)
+
+
 async def _snapshot_students(
-    db: AsyncSession, assignment_ids: list[UUID], organization_id: UUID
+    db: AsyncSession,
+    assignment_ids: list[UUID],
+    organization_id: UUID,
+    *,
+    align_org: bool = False,
 ) -> list[dict[str, Any]]:
-    """Assignment'lardan talaba snapshot'ini olish + tashkilot mos kelishini tekshirish."""
+    """Biriktirishlardan talaba snapshot'i.
+
+    align_org=True — faqat admin shartnomani YARATAYOTGANDA: tanlangan (hali tugamagan)
+    biriktirishlar shu tashkilotga o'tkaziladi. Qayta generatsiya va sinxronlashda
+    (align_org=False) biriktirishga tegilmaydi: boshqa tashkilotga ko'chirilgan talaba bu
+    shartnomadan chiqadi. Ilgari har bir qayta generatsiya admin o'zgartirgan tashkilotni
+    jimgina eski holiga qaytarardi.
+    """
     if not assignment_ids:
         return []
     sup_user = aliased(User)
@@ -178,12 +192,19 @@ async def _snapshot_students(
     )
     rows = (await db.execute(stmt)).mappings().all()
 
+    kept = []
     for r in rows:
         if r["organization_id"] != organization_id:
+            if not align_org:
+                continue  # talaba boshqa tashkilotga o'tkazilgan — bu shartnomaga tegishli emas
             assign = await db.get(PracticeAssignment, r["id"])
-            if assign:
+            if assign and assign.status in _EDITABLE_ASSIGNMENT:
                 assign.organization_id = organization_id
                 assign.area_id = None
+            elif assign:
+                continue  # yakunlangan/bekor qilingan biriktirish tarixini o'zgartirmaymiz
+        kept.append(r)
+    rows = kept
 
     return [
         {
@@ -217,9 +238,12 @@ async def _snapshot_direct_students(
     if group_ids:
         grp_student_ids = (
             await db.execute(
-                select(Student.id).where(
+                select(Student.id)
+                .join(User, User.id == Student.user_id)
+                .where(
                     Student.group_id.in_(group_ids),
-                    Student.is_active.is_(True),
+                    Student.status == StudentStatus.STUDYING,
+                    User.is_active.is_(True),
                 )
             )
         ).scalars().all()
@@ -269,10 +293,12 @@ async def _snapshot_direct_students(
             existing_assign = (await db.execute(assign_stmt)).scalars().first()
 
             if existing_assign:
-                existing_assign.organization_id = organization_id
-                existing_assign.area_id = None
-                existing_assign.start_date = start_date
-                existing_assign.end_date = end_date
+                # Yakunlangan amaliyot (baho, davomat tarixi) shartnoma bilan o'zgartirilmaydi
+                if existing_assign.status in _EDITABLE_ASSIGNMENT:
+                    existing_assign.organization_id = organization_id
+                    existing_assign.area_id = None
+                    existing_assign.start_date = start_date
+                    existing_assign.end_date = end_date
                 assignment_id_str = str(existing_assign.id)
             else:
                 new_assign = PracticeAssignment(
@@ -307,6 +333,28 @@ async def _snapshot_direct_students(
     return result_snapshots
 
 
+async def refresh_contract_students(db: AsyncSession, contract: Any) -> list[dict[str, Any]]:
+    """Shartnoma talabalari ro'yxatini biriktirishlarning joriy holatidan yangilaydi.
+
+    Biriktirishga tegilmaydi (read-only). Biriktirishsiz yozuvlar (to'g'ridan-to'g'ri
+    qo'shilgan talabalar) saqlanadi — ilgari qayta generatsiyada ular yo'qolib qolardi.
+    """
+    students = [s for s in (contract.students or []) if isinstance(s, dict)]
+    ids: list[UUID] = []
+    passthrough: list[dict[str, Any]] = []
+    for s in students:
+        raw = s.get("assignment_id")
+        if not raw:
+            passthrough.append(s)
+            continue
+        try:
+            ids.append(UUID(str(raw)))
+        except (ValueError, TypeError):
+            passthrough.append(s)
+    refreshed = await _snapshot_students(db, ids, contract.organization_id) if ids else []
+    return refreshed + passthrough
+
+
 async def create_contract(db: AsyncSession, data: BaseModel, created_by: UUID) -> dict[str, Any]:
     try:
         payload = data.model_dump()
@@ -328,7 +376,9 @@ async def create_contract(db: AsyncSession, data: BaseModel, created_by: UUID) -
         students_snapshot: list[dict[str, Any]] = []
         if assignment_ids:
             students_snapshot.extend(
-                await _snapshot_students(db, assignment_ids, payload["organization_id"])
+                await _snapshot_students(
+                    db, assignment_ids, payload["organization_id"], align_org=True
+                )
             )
         if student_ids or group_ids:
             students_snapshot.extend(
@@ -371,6 +421,8 @@ async def create_contract(db: AsyncSession, data: BaseModel, created_by: UUID) -
             status=ContractStatus.DRAFT,
             qr_token=qr_token,
             notes=payload.get("notes"),
+            contract_template_id=tpl_id,
+            variable_values=var_vals or None,
         )
         db.add(contract)
         await db.commit()
@@ -393,7 +445,8 @@ async def create_contract(db: AsyncSession, data: BaseModel, created_by: UUID) -
         logger.exception(f"Contract creation error: {e}")
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            f"Shartnoma yaratishda xatolik yuz berdi: {e}",
+            "Shartnoma yaratishda kutilmagan xatolik yuz berdi. "
+            "Ma'lumotlarni tekshirib qayta urinib ko'ring.",
         ) from e
 
 
@@ -401,10 +454,12 @@ async def update_contract(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[
     contract = await db.get(Contract, id_)
     if not contract:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Shartnoma topilmadi: {id_}")
-    if contract.status != ContractStatus.DRAFT:
+    # Shartnoma yaratilishi bilan PDF chiqadi (GENERATED) — imzolanmaguncha (skan yo'q)
+    # sanalar/izohni tuzatish mumkin, PDF o'sha shablon va qiymatlar bilan qayta yaratiladi.
+    if contract.status not in (ContractStatus.DRAFT, ContractStatus.GENERATED):
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            "Faqat DRAFT shartnomani tahrirlash mumkin. Boshqasini bekor qiling.",
+            "Imzolangan yoki bekor qilingan shartnomani tahrirlab bo'lmaydi",
         )
 
     payload = data.model_dump(exclude_unset=True)
@@ -418,7 +473,13 @@ async def update_contract(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[
             status.HTTP_400_BAD_REQUEST, "end_date start_date dan oldin bo'lolmaydi"
         )
 
+    was_generated = contract.status == ContractStatus.GENERATED
     await db.commit()
+    if was_generated:
+        from app.services import practice_application as pa_svc
+
+        # Yangi sanalar bilan PDF — saqlangan shablon va qiymatlar asosida
+        await pa_svc.generate_official_contract_pdf(db, contract.id)
     return await get_contract(db, contract.id)
 
 
@@ -456,7 +517,10 @@ async def unarchive_contract(db: AsyncSession, id_: UUID) -> dict[str, Any]:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Faqat arxivdagi shartnomalarni arxivdan chiqarish mumkin"
         )
-    if contract.scan_path:
+    if contract.revoked_at is not None:
+        # Bekor qilingan shartnoma arxivdan chiqqanda ham bekorligicha qoladi
+        contract.status = ContractStatus.REVOKED
+    elif contract.scan_path:
         contract.status = ContractStatus.ACTIVE
     elif contract.pdf_path:
         contract.status = ContractStatus.GENERATED
@@ -484,9 +548,10 @@ async def generate_pdf(db: AsyncSession, id_: UUID) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001
+        logger.exception(f"Contract PDF generation error ({contract.id}): {e}")
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-            f"PDF generatsiya xatoligi: {e}",
+            "PDF generatsiya qilishda xatolik yuz berdi",
         ) from e
 
     return await get_contract(db, contract.id)
@@ -517,18 +582,15 @@ async def upload_scan(db: AsyncSession, id_: UUID, content: bytes, filename: str
 
 
 async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
-    """Public QR verification — auth talab qilmaydi, minimal ma'lumot."""
-    from uuid import UUID as PyUUID
+    """Public QR verification — auth talab qilmaydi, minimal ma'lumot.
 
-    conds = [
-        Contract.qr_token == qr_token,
-        Contract.number == qr_token,
-    ]
-    try:
-        parsed_uuid = PyUUID(qr_token)
-        conds.append(Contract.id == parsed_uuid)
-    except (ValueError, TypeError, AttributeError):
-        pass
+    Faqat QR ichidagi tasodifiy `qr_token` bo'yicha qidiriladi. Ketma-ket shartnoma raqami yoki
+    UUID bilan ochiq qidirish ATAYLAB yo'q — aks holda 26000001, 26000002 ... raqamlarini
+    terib chiqib barcha shartnomalar (talabalar ro'yxati bilan) anonim ko'rib chiqilardi.
+    """
+    if not qr_token or len(qr_token) < 12:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Shartnoma topilmadi")
+    conds = [Contract.qr_token == qr_token]
 
     row = (
         (
@@ -564,7 +626,7 @@ async def verify_by_token(db: AsyncSession, qr_token: str) -> dict[str, Any]:
 
 def _remove_contract_files(contract: Contract) -> None:
     """Shartnomaga bog'langan PDF va skan fayllarni diskdan o'chirish."""
-    base_dir = Path(__file__).parent.parent.parent.parent
+    base_dir = Path(__file__).resolve().parent.parent.parent  # apps/api
     paths_to_check = []
     if contract.pdf_path:
         paths_to_check.append(contract.pdf_path)

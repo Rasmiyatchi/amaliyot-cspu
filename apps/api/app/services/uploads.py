@@ -1,7 +1,10 @@
 """Uploads service — fayl saqlash + JSONB attachments boshqaruvi.
 
 Faylar `apps/api/storage/uploads/` ostiga saqlanadi:
-  uploads/{YYYY}/{MM}/{ulid_random}.{ext}
+  uploads/u/{user_id}/{YYYY}/{MM}/{random}.{ext}   (2026-10 dan; avval uploads/{YYYY}/{MM}/...)
+
+Yo'ldagi `u/{user_id}` — fayl egasi. Klient yuborgan biriktirma faqat o'z papkasidagi fayl
+bo'lsa qabul qilinadi; diskdan o'chirish ham faqat shu nom maydonida bajariladi.
 
 Validatsiya:
 - size <= system_settings.max_file_size_mb * 1024 * 1024
@@ -81,7 +84,8 @@ async def save_file(
     size, _ext = await _validate_file(db, file, content)
 
     now = datetime.now(UTC)
-    rel_dir = Path("uploads") / f"{now.year:04d}" / f"{now.month:02d}"
+    # Egasi yo'lda: boshqa foydalanuvchi bu faylni o'z yozuviga "biriktira" olmaydi
+    rel_dir = Path("uploads") / "u" / str(user.id) / f"{now.year:04d}" / f"{now.month:02d}"
     abs_dir = STORAGE_ROOT.parent / rel_dir
     abs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -118,6 +122,83 @@ def absolute_path(rel_path: str) -> Path:
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Noto'g'ri yo'l") from e
     return candidate
+
+
+def uploads_path(rel_path: str) -> Path:
+    """Faqat `storage/uploads/` ichidagi faylga yo'l (shartnomalar, shablonlar va h.k. emas).
+
+    `/uploads/file/...` ommaviy (auth'li) xizmati va biriktirma o'chirish shu orqali ishlaydi —
+    shartnoma PDF/skanlari (ketma-ket raqamli nomlar) faqat o'z endpoint'lari orqali beriladi.
+    """
+    candidate = absolute_path(rel_path)
+    try:
+        candidate.relative_to(STORAGE_ROOT.resolve())
+    except ValueError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Fayl topilmadi") from e
+    return candidate
+
+
+_ATTACHMENT_KEYS = ("id", "name", "path", "mime", "size", "uploaded_at", "uploaded_by_id")
+OWNED_PREFIX = "uploads/u/"
+
+
+def _relative_storage_path(path: Path) -> str:
+    return path.relative_to(STORAGE_ROOT.parent.resolve()).as_posix()
+
+
+def is_owned_by(rel_path: str, user_id: UUID | str) -> bool:
+    """Fayl shu foydalanuvchi yuklagan (server bergan `uploads/u/{user_id}/` yo'l)."""
+    try:
+        rel = _relative_storage_path(uploads_path(rel_path))
+    except HTTPException:
+        return False
+    return rel.startswith(f"{OWNED_PREFIX}{user_id}/")
+
+
+def clean_client_attachments(
+    raw: list[Any] | None,
+    *,
+    user_id: UUID,
+    existing: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Klient yuborgan biriktirmalar ro'yxatini tekshiradi.
+
+    Ruxsat: (a) yozuvda allaqachon bor biriktirma (id bo'yicha, bazadagi nusxasi olinadi) yoki
+    (b) shu foydalanuvchi o'zi yuklagan fayl — server bergan `uploads/u/{user_id}/` yo'lda va
+    diskda mavjud. Klient yuborgan `uploaded_by_id` ga ishonilmaydi: aks holda talaba begona
+    fayl (masalan, normativ hujjat) yo'lini o'z topshirig'iga qo'shib, keyin "biriktirmani
+    o'chirish" orqali uni diskdan o'chirib yuborardi.
+    """
+    existing_by_id = {str(a.get("id")): a for a in (existing or []) if isinstance(a, dict)}
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in raw or []:
+        if not isinstance(item, dict):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Noto'g'ri biriktirma")
+        att_id = str(item.get("id") or "")
+        if att_id and att_id in seen:
+            continue
+        if att_id and att_id in existing_by_id:
+            out.append(existing_by_id[att_id])
+            seen.add(att_id)
+            continue
+        raw_path = str(item.get("path") or "")
+        if not is_owned_by(raw_path, user_id):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Biriktirma sizga tegishli emas")
+        path = uploads_path(raw_path)
+        if not path.is_file():
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Biriktirma fayli topilmadi")
+        clean = {k: item.get(k) for k in _ATTACHMENT_KEYS}
+        clean["path"] = _relative_storage_path(path)
+        clean["uploaded_by_id"] = str(user_id)
+        try:
+            clean["size"] = int(path.stat().st_size)
+        except OSError:
+            clean["size"] = None
+        clean["name"] = str(clean.get("name") or path.name)[:255]
+        out.append(clean)
+        seen.add(att_id)
+    return out
 
 
 # ─── Entity attachment management ────────────────────────
@@ -213,10 +294,13 @@ async def detach_from_entity(
     entity.attachments = current
     await db.commit()
 
-    # Faylni diskdan ham o'chiramiz (best effort)
+    # Faylni diskdan ham o'chiramiz (best effort) — faqat yuklagan foydalanuvchining papkasida.
+    # Eski (2026-10 gacha) yo'llar umumiy bo'lishi mumkin — ular diskda qoldiriladi.
     with contextlib.suppress(Exception):
-        path = absolute_path(removed.get("path", ""))
-        if path.exists():
-            path.unlink()
+        owner = str(removed.get("uploaded_by_id") or "")
+        if owner and is_owned_by(str(removed.get("path", "")), owner):
+            path = uploads_path(removed.get("path", ""))
+            if path.exists():
+                path.unlink()
 
     return current

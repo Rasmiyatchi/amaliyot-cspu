@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Outlet, useLocation } from "react-router-dom";
 
 import { MaintenanceGuard } from "@/components/maintenance-guard";
+import { NavigationProgress } from "@/components/route-loading";
 import { RouteTransition } from "@/components/route-transition";
 import { SupervisorSidebar } from "@/components/supervisor/supervisor-sidebar";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ export function SupervisorLayout() {
 
   return (
     <MaintenanceGuard>
+      <NavigationProgress />
       <div className="flex h-dvh bg-background">
         {/* Desktop sidebar — mobilda `hidden md:flex` */}
         <SupervisorSidebar />

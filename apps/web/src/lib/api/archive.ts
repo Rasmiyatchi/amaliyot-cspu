@@ -1,5 +1,5 @@
-import { useAuthStore } from "@/stores/auth";
 import i18n from "@/i18n";
+import { downloadFile } from "@/lib/api";
 import type { UUID } from "@/lib/api/types";
 
 type ArchiveVariant = "zip" | "cover" | "journal" | "analyses" | "tasks";
@@ -12,43 +12,19 @@ const PATHS: Record<ArchiveVariant, string> = {
   tasks: "archive/tasks.pdf",
 };
 
-/** Auth bilan fayl olib, browser'da download triggerlash. */
-export async function downloadArchive(
-  assignmentId: UUID,
-  variant: ArchiveVariant = "zip",
-): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) {
-    throw new Error(i18n.t("common.noAccessToken"));
-  }
-  const res = await fetch(
+const FALLBACK_NAMES: Record<ArchiveVariant, string> = {
+  zip: "yigma-jild.zip",
+  cover: "hisobot.pdf",
+  journal: "kundalik.pdf",
+  analyses: "dars-tahlillari.pdf",
+  tasks: "topshiriqlar.pdf",
+};
+
+/** Yig'ma jild (ZIP) yoki uning alohida PDF qismlarini yuklab olish (token + 401→refresh). */
+export function downloadArchive(assignmentId: UUID, variant: ArchiveVariant = "zip"): Promise<void> {
+  return downloadFile(
     `/api/v1/assignments/${assignmentId}/${PATHS[variant]}`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    FALLBACK_NAMES[variant],
+    i18n.t("apiFiles.archiveFailed"),
   );
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Yuklab olishda xato (${res.status}): ${text || res.statusText}`);
-  }
-
-  // Content-Disposition'dan filename
-  const disposition = res.headers.get("content-disposition") ?? "";
-  const match = disposition.match(/filename="?([^";]+)"?/);
-  const fallback = {
-    zip: "yigma-jild.zip",
-    cover: "hisobot.pdf",
-    journal: "kundalik.pdf",
-    analyses: "dars-tahlillari.pdf",
-    tasks: "topshiriqlar.pdf",
-  }[variant];
-  const filename = match?.[1] ?? fallback;
-
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }

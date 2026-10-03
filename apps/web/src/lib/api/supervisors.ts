@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
+import { bulkDeleteInBatches } from "@/lib/api/bulk-delete";
 import type { CredentialsUpdate } from "@/lib/api/students";
 import type { Paginated, Supervisor, SupervisorCreate, UUID } from "@/lib/api/types";
 
@@ -13,10 +14,16 @@ export type SupervisorFilters = {
   include_unassigned?: boolean;
 };
 
+export type SupervisorUpdate = Partial<Omit<SupervisorCreate, "username" | "password">> & {
+  is_active?: boolean;
+};
+
 export const supervisorKeys = {
   all: ["supervisors"] as const,
+  lists: () => [...supervisorKeys.all, "list"] as const,
   list: (f: SupervisorFilters, page: number, pageSize: number) =>
-    [...supervisorKeys.all, "list", f, page, pageSize] as const,
+    [...supervisorKeys.lists(), f, page, pageSize] as const,
+  detail: (id: UUID) => [...supervisorKeys.all, "detail", id] as const,
 };
 
 function qs(filters: SupervisorFilters, page: number, pageSize: number): string {
@@ -42,36 +49,45 @@ export function useSupervisors(filters: SupervisorFilters = {}, page = 1, pageSi
 
 export function useSupervisor(id: UUID | null) {
   return useQuery({
-    queryKey: ["supervisors", "detail", id],
-    queryFn: () => (id ? api.get(`v1/supervisors/${id}`).json<Supervisor>() : null),
+    queryKey: supervisorKeys.detail(id ?? ""),
+    queryFn: () => api.get(`v1/supervisors/${id}`).json<Supervisor>(),
     enabled: !!id,
   });
 }
 
-export function useCreateSupervisor() {
+/** Saqlangandan keyin: detal keshi server javobi bilan yangilanadi, ro'yxatlar qayta so'raladi. */
+function useSupervisorSaved() {
   const qc = useQueryClient();
+  return (supervisor: Supervisor) => {
+    qc.setQueryData(supervisorKeys.detail(supervisor.id), supervisor);
+    return qc.invalidateQueries({ queryKey: supervisorKeys.lists() });
+  };
+}
+
+export function useCreateSupervisor() {
+  const onSaved = useSupervisorSaved();
   return useMutation({
     mutationFn: (data: SupervisorCreate) =>
       api.post("v1/supervisors", { json: data }).json<Supervisor>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
+    onSuccess: onSaved,
   });
 }
 
 export function useUpdateSupervisor() {
-  const qc = useQueryClient();
+  const onSaved = useSupervisorSaved();
   return useMutation({
-    mutationFn: ({ id, data }: { id: UUID; data: Partial<SupervisorCreate> & { is_active?: boolean } }) =>
+    mutationFn: ({ id, data }: { id: UUID; data: SupervisorUpdate }) =>
       api.patch(`v1/supervisors/${id}`, { json: data }).json<Supervisor>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
+    onSuccess: onSaved,
   });
 }
 
 export function useUpdateSupervisorCredentials() {
-  const qc = useQueryClient();
+  const onSaved = useSupervisorSaved();
   return useMutation({
     mutationFn: ({ id, data }: { id: UUID; data: CredentialsUpdate }) =>
       api.patch(`v1/supervisors/${id}/credentials`, { json: data }).json<Supervisor>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
+    onSuccess: onSaved,
   });
 }
 
@@ -79,7 +95,10 @@ export function useDeleteSupervisor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: UUID) => api.delete(`v1/supervisors/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
+    onSuccess: (_res, id) => {
+      qc.removeQueries({ queryKey: supervisorKeys.detail(id), exact: true });
+      return qc.invalidateQueries({ queryKey: supervisorKeys.lists() });
+    },
   });
 }
 
@@ -89,14 +108,22 @@ export type SupervisorBulkDeleteResult = {
   failed: { id: UUID; full_name: string | null; error: string }[];
 };
 
+
+
+/** Backend chegarasi: bir so'rovda 100 ta (SupervisorBulkDeleteRequest). */
+const SUPERVISOR_BULK_MAX = 100;
+
 export function useBulkDeleteSupervisors() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (ids: UUID[]) =>
-      api
-        .post("v1/supervisors/bulk-delete", { json: { ids }, timeout: 120_000 })
-        .json<SupervisorBulkDeleteResult>(),
-    onSuccess: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
+      bulkDeleteInBatches(ids, SUPERVISOR_BULK_MAX, (chunk) =>
+        api
+          .post("v1/supervisors/bulk-delete", { json: { ids: chunk }, timeout: 120_000 })
+          .json<SupervisorBulkDeleteResult>(),
+      ),
+    // Qisman bajarilgan bo'lsa ham ro'yxat yangilansin
+    onSettled: () => qc.invalidateQueries({ queryKey: supervisorKeys.all }),
   });
 }
 

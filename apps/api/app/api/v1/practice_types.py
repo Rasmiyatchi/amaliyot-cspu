@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import RequirePractice, RequireSuperAdmin
+from app.api.deps import RequireAdmin, RequireSuperAdmin
 from app.db.session import SessionDep
 from app.schemas.practice_type import (
     PracticeTypeCreate,
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/practice-types", tags=["practice-types"])
 @router.get("", response_model=list[PracticeTypeRead])
 async def list_practice_types(
     db: SessionDep,
-    _: RequirePractice,
+    _: RequireAdmin,
     include_inactive: bool = Query(False, description="Deaktiv turlarni ham qaytaradi"),
 ) -> list[PracticeTypeRead]:
     items = await svc.list_practice_types(db, include_inactive)
@@ -31,7 +31,7 @@ async def list_practice_types(
 
 
 @router.get("/{id_}", response_model=PracticeTypeRead)
-async def get_practice_type(id_: UUID, db: SessionDep, _: RequirePractice) -> PracticeTypeRead:
+async def get_practice_type(id_: UUID, db: SessionDep, _: RequireAdmin) -> PracticeTypeRead:
     return PracticeTypeRead.model_validate(await svc.get_practice_type(db, id_))
 
 

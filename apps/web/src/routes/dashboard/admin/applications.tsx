@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useDebounce } from "@/hooks/use-debounce";
+import { dateLocale } from "@/i18n";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { PromptDialog } from "@/components/ui/prompt-dialog";
 import {
   Select,
   SelectContent,
@@ -102,22 +104,16 @@ const REVIEWABLE: ApplicationStatus[] = ["submitted", "revision_required", "resu
 
 function formatDate(dateStr: string) {
   if (!dateStr) return "—";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("uz-UZ", { day: "2-digit", month: "2-digit", year: "numeric" });
-  } catch {
-    return dateStr;
-  }
+  return new Date(dateStr).toLocaleDateString(dateLocale(), {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 function formatTime(dateStr: string) {
   if (!dateStr) return "";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
-  } catch {
-    return "";
-  }
+  return new Date(dateStr).toLocaleTimeString(dateLocale(), { hour: "2-digit", minute: "2-digit" });
 }
 
 export function ApplicationsPage() {
@@ -150,8 +146,9 @@ export function ApplicationsPage() {
   const deleteApp = useDeleteApplication();
 
   const [detailApp, setDetailApp] = useState<PracticeApplication | null>(null);
-  const [returnDialog, setReturnDialog] = useState<{ open: boolean; app: PracticeApplication | null }>({ open: false, app: null });
-  const [returnReason, setReturnReason] = useState("");
+  const [returnTarget, setReturnTarget] = useState<PracticeApplication | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<PracticeApplication | null>(null);
+  const [scanTarget, setScanTarget] = useState<PracticeApplication | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<{
     action: "archive" | "unarchive" | "delete";
     app: PracticeApplication;
@@ -219,12 +216,17 @@ export function ApplicationsPage() {
     }
   };
 
-  const handleReject = async (a: PracticeApplication) => {
-    const note = prompt(t("adminApplications.rejectReasonPrompt")) ?? undefined;
+  const openRejectDialog = (a: PracticeApplication) => {
+    setDetailApp(null);
+    setRejectTarget(a);
+  };
+
+  const handleReject = async (reason: string) => {
+    if (!rejectTarget) return;
     try {
-      await reject.mutateAsync({ id: a.id, review_note: note || undefined });
+      await reject.mutateAsync({ id: rejectTarget.id, review_note: reason });
       toast.success(t("adminApplications.toastRejected"));
-      setDetailApp(null);
+      setRejectTarget(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
@@ -232,30 +234,31 @@ export function ApplicationsPage() {
 
   const openReturnDialog = (a: PracticeApplication) => {
     setDetailApp(null);
-    setReturnDialog({ open: true, app: a });
+    setReturnTarget(a);
   };
 
-  const handleReturn = async () => {
-    if (!returnReason.trim() || !returnDialog.app) {
-        toast.error(t("adminApplications.returnReasonRequired"));
-        return;
-    }
+  const handleReturn = async (reason: string) => {
+    if (!returnTarget) return;
     try {
-        await returnApp.mutateAsync({ id: returnDialog.app.id, return_reason: returnReason.trim() });
-        toast.success(t("adminApplications.toastReturned"));
-        setReturnDialog({ open: false, app: null });
-        setReturnReason("");
+      await returnApp.mutateAsync({ id: returnTarget.id, return_reason: reason });
+      toast.success(t("adminApplications.toastReturned"));
+      setReturnTarget(null);
     } catch (e) {
-        toast.error(e instanceof Error ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
-  const handleConfirmScan = async (a: PracticeApplication) => {
-    if (!confirm(t("adminApplications.confirmScanPrompt"))) return;
+  const openConfirmScan = (a: PracticeApplication) => {
+    setDetailApp(null);
+    setScanTarget(a);
+  };
+
+  const handleConfirmScan = async () => {
+    if (!scanTarget) return;
     try {
-      await confirmScan.mutateAsync(a.id);
+      await confirmScan.mutateAsync(scanTarget.id);
       toast.success(t("adminApplications.toastScanConfirmed"));
-      setDetailApp(null);
+      setScanTarget(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
@@ -322,12 +325,15 @@ export function ApplicationsPage() {
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Talaba ismi, familiyasi, tashkilot yoki yo'nalish bo'yicha..."
+                placeholder={t("adminApplications.searchPlaceholder")}
+                aria-label={t("adminApplications.searchPlaceholder")}
                 className="pl-9 pr-8 text-sm"
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery("")}
+                  aria-label={t("common.clear")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-4 w-4" />
@@ -376,7 +382,7 @@ export function ApplicationsPage() {
                     <TableHead>{t("adminApplications.colDirectionCourse")}</TableHead>
                     <TableHead>{t("common.organization")}</TableHead>
                     <TableHead>{t("adminApplications.colStudentResidence")}</TableHead>
-                    <TableHead>Ariza sanasi</TableHead>
+                    <TableHead>{t("adminApplications.colSubmittedAt")}</TableHead>
                     <TableHead>{t("common.status")}</TableHead>
                     <TableHead className="w-[150px]">{t("adminApplications.colAction")}</TableHead>
                   </TableRow>
@@ -390,7 +396,7 @@ export function ApplicationsPage() {
                           title={t("adminApplications.emptyTitle")}
                           description={
                             searchQuery
-                              ? "Qidiruv bo'yicha hech qanday ariza topilmadi"
+                              ? t("adminApplications.emptySearch")
                               : t("adminApplications.emptyDescription")
                           }
                           compact
@@ -443,7 +449,9 @@ export function ApplicationsPage() {
                             </span>
                             {a.has_contract_file && (
                               <button
+                                type="button"
                                 title={t("adminApplications.contractDocx")}
+                                aria-label={t("adminApplications.contractDocx")}
                                 className="text-primary hover:underline"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -457,7 +465,9 @@ export function ApplicationsPage() {
                             )}
                             {a.has_scan_file && (
                               <button
+                                type="button"
                                 title={t("adminApplications.scanCopy")}
+                                aria-label={t("adminApplications.scanCopy")}
                                 className="text-primary hover:underline ml-1"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -478,6 +488,7 @@ export function ApplicationsPage() {
                             size="icon"
                             variant="ghost"
                             title={t("adminApplications.openDetail")}
+                            aria-label={t("adminApplications.openDetail")}
                             onClick={(e) => {
                               e.stopPropagation();
                               setDetailApp(a);
@@ -492,6 +503,7 @@ export function ApplicationsPage() {
                                 variant="ghost"
                                 className="text-success"
                                 title={t("adminApplications.approveWithQr")}
+                            aria-label={t("adminApplications.approveWithQr")}
                                 disabled={approve.isPending}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -505,6 +517,7 @@ export function ApplicationsPage() {
                                 variant="ghost"
                                 className="text-warning"
                                 title={t("adminApplications.returnForRevision")}
+                            aria-label={t("adminApplications.returnForRevision")}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openReturnDialog(a);
@@ -517,10 +530,11 @@ export function ApplicationsPage() {
                                 variant="ghost"
                                 className="text-destructive"
                                 title={t("common.reject")}
+                            aria-label={t("common.reject")}
                                 disabled={reject.isPending}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleReject(a);
+                                  openRejectDialog(a);
                                 }}
                               >
                                 <X className="h-4 w-4" />
@@ -533,10 +547,11 @@ export function ApplicationsPage() {
                               variant="ghost"
                               className="text-success"
                               title={t("adminApplications.confirmScan")}
+                            aria-label={t("adminApplications.confirmScan")}
                               disabled={confirmScan.isPending}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleConfirmScan(a);
+                                openConfirmScan(a);
                               }}
                             >
                               <FileCheck className="h-4 w-4" />
@@ -549,6 +564,7 @@ export function ApplicationsPage() {
                                 variant="ghost"
                                 className="text-primary hover:text-primary hover:bg-primary/10"
                                 title={t("adminContracts.unarchiveButton")}
+                            aria-label={t("adminContracts.unarchiveButton")}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setArchiveTarget({ action: "unarchive", app: a });
@@ -561,6 +577,7 @@ export function ApplicationsPage() {
                                 variant="ghost"
                                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                 title={t("adminContracts.deleteButton")}
+                            aria-label={t("adminContracts.deleteButton")}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setArchiveTarget({ action: "delete", app: a });
@@ -575,6 +592,7 @@ export function ApplicationsPage() {
                               variant="ghost"
                               className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                               title={t("adminContracts.archiveButton")}
+                            aria-label={t("adminContracts.archiveButton")}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setArchiveTarget({ action: "archive", app: a });
@@ -596,7 +614,7 @@ export function ApplicationsPage() {
           {!isPending && filteredData.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-2">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Ko'rsatish:</span>
+                <span>{t("adminApplications.perPage")}</span>
                 <Select
                   value={String(pageSize)}
                   onValueChange={(val) => {
@@ -604,7 +622,7 @@ export function ApplicationsPage() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[70px] text-xs">
+                  <SelectTrigger className="h-8 w-[70px] text-xs" aria-label={t("adminApplications.perPage")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -615,8 +633,11 @@ export function ApplicationsPage() {
                   </SelectContent>
                 </Select>
                 <span>
-                  {Math.min((currentPage - 1) * pageSize + 1, filteredData.length)}-
-                  {Math.min(currentPage * pageSize, filteredData.length)} / {filteredData.length} ta
+                  {t("adminApplications.range", {
+                    from: Math.min((currentPage - 1) * pageSize + 1, filteredData.length),
+                    to: Math.min(currentPage * pageSize, filteredData.length),
+                    total: filteredData.length,
+                  })}
                 </span>
               </div>
 
@@ -629,7 +650,7 @@ export function ApplicationsPage() {
                   className="h-8 px-2.5 text-xs"
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
-                  Oldingi
+                  {t("common.previous")}
                 </Button>
                 <span className="text-xs px-2 font-medium">
                   {currentPage} / {totalPages}
@@ -641,7 +662,7 @@ export function ApplicationsPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   className="h-8 px-2.5 text-xs"
                 >
-                  Keyingi
+                  {t("common.next")}
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
@@ -706,38 +727,47 @@ export function ApplicationsPage() {
         isSuperAdmin={isSuperAdmin}
         onApprove={handleApprove}
         onReturn={openReturnDialog}
-        onReject={handleReject}
-        onConfirmScan={handleConfirmScan}
+        onReject={openRejectDialog}
+        onConfirmScan={openConfirmScan}
         approvePending={approve.isPending}
         rejectPending={reject.isPending}
         confirmScanPending={confirmScan.isPending}
       />
 
-      {/* Return Dialog */}
-      <Dialog open={returnDialog.open} onOpenChange={(o) => !o && setReturnDialog({ open: false, app: null })}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>{t("adminApplications.returnDialogTitle")}</DialogTitle>
-                <DialogDescription>
-                    {t("adminApplications.returnDialogDescription")}
-                </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-                <Input
-                    value={returnReason}
-                    onChange={e => setReturnReason(e.target.value)}
-                    placeholder={t("adminApplications.returnReasonPlaceholder")}
-                />
-            </div>
-            <DialogFooter>
-                <Button variant="ghost" onClick={() => setReturnDialog({ open: false, app: null })}>{t("common.cancel")}</Button>
-                <Button onClick={handleReturn} disabled={returnApp.isPending}>
-                    {returnApp.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    {t("adminApplications.returnSubmit")}
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PromptDialog
+        open={!!returnTarget}
+        title={t("adminApplications.returnDialogTitle")}
+        description={t("adminApplications.returnDialogDescription")}
+        placeholder={t("adminApplications.returnReasonPlaceholder")}
+        confirmText={t("adminApplications.returnSubmit")}
+        maxLength={500} // backend ApplicationReview.return_reason
+        isPending={returnApp.isPending}
+        onConfirm={handleReturn}
+        onClose={() => setReturnTarget(null)}
+      />
+
+      <PromptDialog
+        open={!!rejectTarget}
+        title={t("adminApplications.rejectDialogTitle")}
+        description={t("adminApplications.rejectDialogDescription")}
+        confirmText={t("common.reject")}
+        variant="destructive"
+        maxLength={500} // backend ApplicationReview.review_note
+        isPending={reject.isPending}
+        onConfirm={handleReject}
+        onClose={() => setRejectTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!scanTarget}
+        title={t("adminApplications.confirmScan")}
+        description={t("adminApplications.confirmScanPrompt")}
+        confirmText={t("adminApplications.confirmScan")}
+        isPending={confirmScan.isPending}
+        onConfirm={handleConfirmScan}
+        onClose={() => setScanTarget(null)}
+      />
+
       <ConfirmDialog
         open={!!archiveTarget}
         title={
@@ -784,7 +814,13 @@ type DetailProps = {
   confirmScanPending: boolean;
 };
 
-function ApplicationDetailDialog({
+function ApplicationDetailDialog(props: DetailProps) {
+  if (!props.app) return null;
+  // `key` — boshqa ariza ochilganda PDF ko'rinish holati tozalanadi
+  return <ApplicationDetailBody key={props.app.id} {...props} app={props.app} />;
+}
+
+function ApplicationDetailBody({
   app,
   onClose,
   isSuperAdmin,
@@ -795,36 +831,33 @@ function ApplicationDetailDialog({
   approvePending,
   rejectPending,
   confirmScanPending,
-}: DetailProps) {
+}: DetailProps & { app: PracticeApplication }) {
   const { t } = useTranslation();
   const archive = useArchiveApplication();
   const unarchive = useUnarchiveApplication();
-  const { data: formFields } = useTemplateFormFields(app?.contract_template_id);
+  const { data: formFields } = useTemplateFormFields(app.contract_template_id);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(!!app.contract_template_id);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   const handleArchive = async () => {
-    if (!app) return;
     try {
       await archive.mutateAsync(app.id);
-      toast.success(t("adminApplications.status.archived") + " qilindi");
+      toast.success(t("adminContracts.archivedSuccess"));
       onClose();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
-  // PDF preview — hujjat mazmunini tasdiqlashdan OLDIN ko'rish
+  // PDF ko'rinish — hujjat mazmunini tasdiqlashdan OLDIN ko'rish
+  const appId = app.id;
+  const hasTemplate = !!app.contract_template_id;
   useEffect(() => {
-    setPdfUrl(null);
-    setPdfError(null);
-    if (!app || !app.contract_template_id) return;
-
+    if (!hasTemplate) return;
     let active = true;
     let urlToRevoke: string | null = null;
-    setPdfLoading(true);
-    previewContractPdf(app.id)
+    previewContractPdf(appId)
       .then((url) => {
         if (!active) {
           URL.revokeObjectURL(url);
@@ -833,8 +866,8 @@ function ApplicationDetailDialog({
         urlToRevoke = url;
         setPdfUrl(url);
       })
-      .catch((e) => {
-        if (active) setPdfError(e instanceof Error ? e.message : t("common.error"));
+      .catch((e: unknown) => {
+        if (active) setPdfError(e instanceof Error ? e.message : String(e));
       })
       .finally(() => {
         if (active) setPdfLoading(false);
@@ -844,10 +877,7 @@ function ApplicationDetailDialog({
       active = false;
       if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [app?.id]);
-
-  if (!app) return null;
+  }, [appId, hasTemplate]);
 
   const labelFor = (key: string) =>
     formFields?.fields.find((f) => f.key === key)?.label ?? key;
@@ -855,7 +885,7 @@ function ApplicationDetailDialog({
   const badge = STATUS_BADGE[app.status];
 
   return (
-    <Dialog open={!!app} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="flex max-h-[92vh] max-w-4xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="shrink-0 border-b border-border bg-muted/20 p-4">
           <div className="flex items-center justify-between gap-3 pr-8">
@@ -871,7 +901,9 @@ function ApplicationDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        {/* DialogContent bolalariga shrink-0 beradi — aylantiriladigan tana siqila olishi shart,
+            aks holda uzun PDF ko'rinishida pastki tugmalar (Tasdiqlash/Rad etish) kesilib qoladi */}
+        <div className="min-h-0 flex-1 !shrink space-y-4 overflow-y-auto p-4">
           {/* Talaba ma'lumotlari */}
           <div className="grid gap-x-6 gap-y-2 rounded-lg border border-border p-3 text-sm sm:grid-cols-2">
             <InfoRow label={t("common.student")} value={app.student_name} />
@@ -888,8 +920,10 @@ function ApplicationDetailDialog({
               value={[app.region, app.district].filter(Boolean).join(", ") || null}
             />
             <InfoRow
-              label="Ariza sanasi"
-              value={app.created_at ? `${formatDate(app.created_at)}, ${formatTime(app.created_at)}` : null}
+              label={t("adminApplications.colSubmittedAt")}
+              value={
+                app.created_at ? `${formatDate(app.created_at)}, ${formatTime(app.created_at)}` : null
+              }
             />
             <InfoRow label={t("common.note")} value={app.note} />
             {app.contract_number && (

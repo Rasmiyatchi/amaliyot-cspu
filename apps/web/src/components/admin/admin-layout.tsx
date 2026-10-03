@@ -6,6 +6,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { CommandPalette } from "@/components/admin/command-palette";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
+import { NavigationProgress } from "@/components/route-loading";
 import { RouteTransition } from "@/components/route-transition";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -22,6 +23,7 @@ export function AdminLayout() {
 
   return (
     <MaintenanceGuard>
+      <NavigationProgress />
       <div className="flex h-dvh bg-background">
         {/* Desktop sidebar — mobilda `hidden md:flex` */}
         <AdminSidebar />
@@ -47,7 +49,7 @@ export function AdminLayout() {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="font-semibold">CHDPU Amaliyot</span>
+            <span className="font-semibold">{t("adminAdminLayout.brand")}</span>
           </header>
 
           <main className="flex-1 overflow-auto">

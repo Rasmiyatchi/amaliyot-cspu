@@ -3,9 +3,19 @@ import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
+import { GradePanel } from "@/components/admin/assignments/grade-panel";
+import { formatTashkentDate } from "@/components/attendance/attendance-date-utils";
+import { FinalReportStatusBadge } from "@/components/supervisor/final-report-status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,20 +33,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GradePanel } from "@/components/admin/assignments/grade-panel";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { dateLocale } from "@/i18n";
 import { useAcademicYears } from "@/lib/api/academic";
 import { useMyAssignments } from "@/lib/api/assignments";
-import type { AssignmentStatus, PracticeAssignment } from "@/lib/api/types";
+import { useFinalReports, type FinalReport } from "@/lib/api/final-reports";
+import type { AssignmentStatus, PracticeAssignment, Semester, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
+/** O'quv yili filtri: faol yil (server default) | `all` (backend'ning hujjatlashtirilgan sentineli) | UUID */
+const ACTIVE_YEAR = "active";
+const ALL_YEARS = "all";
+
 const STATUSES: { value: string; labelKey: string }[] = [
   { value: ALL, labelKey: "supervisorStudents.statuses.all" },
   { value: "active", labelKey: "supervisorStudents.statuses.active" },
@@ -45,32 +52,57 @@ const STATUSES: { value: string; labelKey: string }[] = [
   { value: "cancelled", labelKey: "supervisorStudents.statuses.cancelled" },
 ];
 
+/** Qidiruv uchun: kichik harf, apostrof turlari farqsiz. */
+function normalize(text: string): string {
+  return text
+    .toLocaleLowerCase()
+    .replace(/['`ʻʼ‘’"]/g, "")
+    .trim();
+}
+
 /** Supervizorning "Talabalarim" sahifasi — guruh bo'yicha tartiblangan ro'yxat. */
 export function SupervisorStudentsPage() {
   const { t } = useTranslation();
   const { data: academicYears } = useAcademicYears();
-  const [academicYearId, setAcademicYearId] = useState<string>("active");
+  const [academicYearId, setAcademicYearId] = useState<string>(ACTIVE_YEAR);
   const [semester, setSemester] = useState<string>(ALL);
+
+  const semesterFilter: Semester | undefined =
+    semester === "fall" || semester === "spring" ? semester : undefined;
 
   const assignmentFilters = useMemo(
     () => ({
-      academic_year_id: academicYearId === "active" ? undefined : academicYearId,
-      semester: semester === ALL ? undefined : semester,
+      // "active" — parametr yuborilmaydi (server faol yilni oladi); "all" — barcha yillar
+      academic_year_id: academicYearId === ACTIVE_YEAR ? undefined : academicYearId,
+      semester: semesterFilter,
     }),
-    [academicYearId, semester],
+    [academicYearId, semesterFilter],
   );
 
   const { data, isPending, error } = useMyAssignments(assignmentFilters);
+  // Yakuniy hisobot holati (server supervizorning o'z talabalari bilan cheklaydi)
+  const { data: reports } = useFinalReports(undefined, {
+    academic_year_id:
+      academicYearId === ACTIVE_YEAR || academicYearId === ALL_YEARS ? undefined : academicYearId,
+  });
+  const reportByAssignment = useMemo(() => {
+    const map = new Map<UUID, FinalReport>();
+    for (const r of reports ?? []) map.set(r.assignment_id, r);
+    return map;
+  }, [reports]);
+
   const [search, setSearch] = useState("");
   const [grading, setGrading] = useState<PracticeAssignment | null>(null);
   const [status, setStatus] = useState(ALL);
 
   const rows = useMemo(() => {
+    const q = normalize(search);
     const items = (data ?? []).filter((a) => {
       if (status !== ALL && a.status !== (status as AssignmentStatus)) return false;
-      if (search.trim()) {
-        const q = search.trim().toLowerCase();
-        const hay = `${a.student_full_name ?? ""} ${a.student_group_name ?? ""}`.toLowerCase();
+      if (q) {
+        const hay = normalize(
+          `${a.student_full_name ?? ""} ${a.student_hemis_id ?? ""} ${a.student_group_name ?? ""}`,
+        );
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -97,14 +129,18 @@ export function SupervisorStudentsPage() {
     return [...map.entries()];
   }, [rows, t]);
 
+  const locale = dateLocale();
+  // Bekor qilingan amaliyotni baholab bo'lmaydi — faqat ko'rish
+  const gradingReadOnly = grading?.status === "cancelled";
+
   return (
-    <main className="container py-8">
+    <div className="container py-8">
       <div className="mx-auto max-w-5xl space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Users className="h-5 w-5 text-primary" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Users className="h-5 w-5 text-primary" aria-hidden="true" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-2xl font-semibold">{t("supervisorStudents.title")}</h1>
             <p className="text-sm text-muted-foreground">
               {t("supervisorStudents.subtitle")}
@@ -114,9 +150,13 @@ export function SupervisorStudentsPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[200px] flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search
+              className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
+              aria-hidden="true"
+            />
             <Input
-              placeholder={t("supervisorStudents.searchPlaceholder")}
+              placeholder={t("supervisorStudents.searchPlaceholderWithId")}
+              aria-label={t("supervisorStudents.searchPlaceholderWithId")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -125,17 +165,18 @@ export function SupervisorStudentsPage() {
 
           {/* Academic Year Filter */}
           <Select value={academicYearId} onValueChange={setAcademicYearId}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder={t("supervisorStudents.academicYear", { defaultValue: "O'quv yili" })} />
+            <SelectTrigger className="w-[180px] max-w-full" aria-label={t("supervisorStudents.academicYear")}>
+              <SelectValue placeholder={t("supervisorStudents.academicYear")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">
-                {t("supervisorStudents.currentActiveYear", { defaultValue: "Joriy o'quv yili" })}
+              <SelectItem value={ACTIVE_YEAR}>
+                {t("supervisorStudents.currentActiveYear")}
               </SelectItem>
-              <SelectItem value={ALL}>{t("supervisorStudents.allYears", { defaultValue: "Barcha yillar" })}</SelectItem>
+              <SelectItem value={ALL_YEARS}>{t("supervisorStudents.allYears")}</SelectItem>
               {(academicYears ?? []).map((y) => (
                 <SelectItem key={y.id} value={y.id}>
-                  {y.name} {y.is_active ? `(${t("supervisorStudents.activeSuffix", { defaultValue: "Joriy" })})` : ""}
+                  {y.name}
+                  {y.is_active ? ` (${t("supervisorStudents.activeSuffix")})` : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -143,19 +184,19 @@ export function SupervisorStudentsPage() {
 
           {/* Semester Filter */}
           <Select value={semester} onValueChange={setSemester}>
-            <SelectTrigger className="w-[170px]">
-              <SelectValue placeholder={t("supervisorStudents.semesters.title", { defaultValue: "Semestr" })} />
+            <SelectTrigger className="w-[170px] max-w-full" aria-label={t("supervisorStudents.semesters.title")}>
+              <SelectValue placeholder={t("supervisorStudents.semesters.title")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>{t("supervisorStudents.semesters.all", { defaultValue: "Barcha semestrlar" })}</SelectItem>
-              <SelectItem value="fall">{t("supervisorStudents.semesters.fall", { defaultValue: "1-semestr (Kuzgi)" })}</SelectItem>
-              <SelectItem value="spring">{t("supervisorStudents.semesters.spring", { defaultValue: "2-semestr (Bahorgi)" })}</SelectItem>
+              <SelectItem value={ALL}>{t("supervisorStudents.semesters.all")}</SelectItem>
+              <SelectItem value="fall">{t("supervisorStudents.semesters.fall")}</SelectItem>
+              <SelectItem value="spring">{t("supervisorStudents.semesters.spring")}</SelectItem>
             </SelectContent>
           </Select>
 
           {/* Status Filter */}
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[150px] max-w-full" aria-label={t("common.status")}>
               <SelectValue placeholder={t("common.status")} />
             </SelectTrigger>
             <SelectContent>
@@ -167,13 +208,13 @@ export function SupervisorStudentsPage() {
             </SelectContent>
           </Select>
 
-          {(search || status !== ALL || academicYearId !== "active" || semester !== ALL) && (
+          {(search || status !== ALL || academicYearId !== ACTIVE_YEAR || semester !== ALL) && (
             <Button
               variant="ghost"
               onClick={() => {
                 setSearch("");
                 setStatus(ALL);
-                setAcademicYearId("active");
+                setAcademicYearId(ACTIVE_YEAR);
                 setSemester(ALL);
               }}
             >
@@ -184,7 +225,10 @@ export function SupervisorStudentsPage() {
 
         {isPending && (
           <div className="flex h-24 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Loader2
+              className="h-5 w-5 animate-spin text-muted-foreground"
+              aria-label={t("common.loading")}
+            />
           </div>
         )}
         {error && (
@@ -214,9 +258,9 @@ export function SupervisorStudentsPage() {
             </div>
             {grouped.map(([group, items]) => (
               <div key={group} className="rounded-lg border border-border">
-                <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-2">
-                  <span className="font-medium">{group}</span>
-                  <Badge variant="outline">
+                <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-4 py-2">
+                  <span className="min-w-0 truncate font-medium">{group}</span>
+                  <Badge variant="outline" className="shrink-0">
                     {t("supervisorStudents.countSuffix", { count: items.length })}
                   </Badge>
                 </div>
@@ -231,57 +275,73 @@ export function SupervisorStudentsPage() {
                       <TableHead className="w-[180px]">
                         {t("supervisorStudents.table.period")}
                       </TableHead>
-                      <TableHead className="w-[120px]">{t("common.status")}</TableHead>
+                      <TableHead className="w-[170px]">{t("common.status")}</TableHead>
                       <TableHead className="w-[80px]">
                         {t("supervisorStudents.table.grade")}
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {items.map((a, i) => (
-                      <TableRow
-                        key={a.id}
-                        onClick={() => setGrading(a)}
-                        className="cursor-pointer"
-                        title={t("supervisorStudents.rowClickHint")}
-                      >
-                        <TableCell className="text-sm text-muted-foreground">
-                          {i + 1}
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{a.student_full_name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {a.student_hemis_id}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">{a.student_course ?? "—"}</TableCell>
-                        <TableCell className="text-sm">{a.practice_type_name}</TableCell>
-                        <TableCell className="text-sm">
-                          {a.organization_name ?? a.area_name ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {a.semester && (
-                            <Badge variant="outline" className="mr-1 py-0 px-1 text-[10px]">
-                              {a.semester === "fall" ? "1-sem" : "2-sem"}
-                            </Badge>
-                          )}
-                          {new Date(a.start_date).toLocaleDateString(dateLocale())} —{" "}
-                          {new Date(a.end_date).toLocaleDateString(dateLocale())}
-                        </TableCell>
-                        <TableCell>
-                          <AssignmentStatusBadge status={a.status} />
-                        </TableCell>
-                        <TableCell>
-                          {a.final_grade !== null && a.final_grade !== undefined ? (
-                            <Badge variant={a.credit_earned ? "success" : "secondary"}>
-                              {a.final_grade}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {items.map((a, i) => {
+                      const report = reportByAssignment.get(a.id);
+                      return (
+                        <TableRow
+                          key={a.id}
+                          onClick={() => setGrading(a)}
+                          className="cursor-pointer"
+                          title={t("supervisorStudents.rowClickHint")}
+                        >
+                          <TableCell className="text-sm text-muted-foreground">
+                            {i + 1}
+                          </TableCell>
+                          <TableCell>
+                            {/* Klaviatura bilan ham ochilsin — qator o'zi fokuslanmaydi */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setGrading(a);
+                              }}
+                              className="rounded-sm text-left font-medium hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {a.student_full_name}
+                            </button>
+                            <div className="text-xs text-muted-foreground">
+                              {a.student_hemis_id}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">{a.student_course ?? "—"}</TableCell>
+                          <TableCell className="text-sm">{a.practice_type_name}</TableCell>
+                          <TableCell className="text-sm">
+                            {a.organization_name ?? a.area_name ?? "—"}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {a.semester && (
+                              <Badge variant="outline" className="mr-1 px-1 py-0 text-[10px]">
+                                {t(`supervisorStudents.semesterShort.${a.semester}`)}
+                              </Badge>
+                            )}
+                            {formatTashkentDate(a.start_date, locale)} —{" "}
+                            {formatTashkentDate(a.end_date, locale)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col items-start gap-1">
+                              <AssignmentStatusBadge status={a.status} />
+                              {report && <FinalReportStatusBadge status={report.status} compact />}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {a.final_grade !== null && a.final_grade !== undefined ? (
+                              <Badge variant={a.credit_earned ? "success" : "secondary"}>
+                                {a.final_grade}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -292,17 +352,22 @@ export function SupervisorStudentsPage() {
 
       {/* Baholash — 12.07 qarori: yakuniy bahoni biriktirilgan amaliyot rahbari qo'yadi */}
       <Dialog open={!!grading} onOpenChange={(o) => !o && setGrading(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[92dvh] max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{grading?.student_full_name}</DialogTitle>
+            <DialogTitle className="pr-6">{grading?.student_full_name}</DialogTitle>
             <DialogDescription>
               {grading?.practice_type_name} ·{" "}
               {grading?.organization_name ?? grading?.area_name ?? "—"}
             </DialogDescription>
           </DialogHeader>
-          {grading && <GradePanel assignmentId={grading.id} />}
+          {gradingReadOnly && (
+            <Alert>
+              <AlertDescription>{t("supervisorStudents.cancelledReadOnly")}</AlertDescription>
+            </Alert>
+          )}
+          {grading && <GradePanel assignmentId={grading.id} readOnly={gradingReadOnly} />}
         </DialogContent>
       </Dialog>
-    </main>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import type {
@@ -34,11 +34,50 @@ function qs(filters: OrganizationFilters, page: number, pageSize: number): strin
   return p.toString();
 }
 
+function fetchOrganizations(filters: OrganizationFilters, page: number, pageSize: number) {
+  return api
+    .get(`v1/organizations?${qs(filters, page, pageSize)}`)
+    .json<Paginated<Organization>>();
+}
+
 export function useOrganizations(filters: OrganizationFilters = {}, page = 1, pageSize = 50) {
   return useQuery({
     queryKey: orgKeys.list(filters, page, pageSize),
-    queryFn: () => api.get(`v1/organizations?${qs(filters, page, pageSize)}`).json<Paginated<Organization>>(),
+    queryFn: () => fetchOrganizations(filters, page, pageSize),
     placeholderData: (prev) => prev,
+  });
+}
+
+export type OrganizationKindCounts = {
+  /** Barcha tashkilotlar soni (yuklanmagan bo'lsa undefined) */
+  total: number | undefined;
+  byKind: Partial<Record<OrganizationKind, number>>;
+};
+
+/**
+ * Har bir tur bo'yicha tashkilotlar soni — serverning `total` qiymatidan olinadi
+ * (birinchi N ta yozuvni sanash emas). Har so'rov bitta qator qaytaradi.
+ */
+export function useOrganizationKindCounts(kinds: readonly OrganizationKind[]): OrganizationKindCounts {
+  return useQueries({
+    queries: [
+      {
+        queryKey: orgKeys.list({}, 1, 1),
+        queryFn: () => fetchOrganizations({}, 1, 1),
+      },
+      ...kinds.map((kind) => ({
+        queryKey: orgKeys.list({ kind }, 1, 1),
+        queryFn: () => fetchOrganizations({ kind }, 1, 1),
+      })),
+    ],
+    combine: (results) => {
+      const byKind: Partial<Record<OrganizationKind, number>> = {};
+      kinds.forEach((kind, i) => {
+        const total = results[i + 1]?.data?.total;
+        if (total !== undefined) byKind[kind] = total;
+      });
+      return { total: results[0]?.data?.total, byKind };
+    },
   });
 }
 

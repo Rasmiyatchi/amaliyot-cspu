@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import { Calendar, Check, Loader2, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,6 +7,7 @@ import {
   TaskCategoryBadge,
   TaskTypeLabel,
 } from "@/components/admin/tasks/task-type-badge";
+import { addDays, todayStr } from "@/components/attendance/attendance-date-utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ import {
   useAvailableTemplates,
   type TaskAssignItem,
 } from "@/lib/api/tasks";
-import type { TaskTemplate, UUID } from "@/lib/api/types";
+import type { TaskCategory, TaskTemplate, UUID } from "@/lib/api/types";
 
 type Props = {
   open: boolean;
@@ -41,14 +41,12 @@ type TaskConfig = {
   notes: string;
 };
 
-function todayPlusDays(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
+/** Muddat sanalari Toshkent vaqti bo'yicha (backend `today_uzb()` bilan bir xil) — UTC
+ *  bo'yicha olinsa 00:00–05:00 oralig'ida "bugun" kechagi kun bo'lib qolardi. */
+const DEFAULT_DEADLINE_DAYS = 14;
 
-function todayDate(): string {
-  return new Date().toISOString().slice(0, 10);
+function defaultDeadline(): string {
+  return addDays(todayStr(), DEFAULT_DEADLINE_DAYS);
 }
 
 export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
@@ -82,7 +80,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
         [id]: {
           ...cur,
           selected: !cur.selected,
-          due_date: cur.selected ? cur.due_date : cur.due_date || todayPlusDays(14),
+          due_date: cur.selected ? cur.due_date : cur.due_date || defaultDeadline(),
         },
       };
     });
@@ -105,7 +103,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
         const cur = configs[t.id];
         next[t.id] = {
           selected: true,
-          due_date: cur?.due_date || todayPlusDays(14),
+          due_date: cur?.due_date || defaultDeadline(),
           notes: cur?.notes ?? "",
         };
       }
@@ -134,7 +132,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
     if (!assignmentId) return;
 
     const items: TaskAssignItem[] = [];
-    const today = todayDate();
+    const today = todayStr();
     for (const [id, cfg] of Object.entries(configs)) {
       if (!cfg.selected) continue;
       if (!cfg.due_date) {
@@ -164,7 +162,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
       setBulkDueDate("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -225,7 +223,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
                     type="date"
                     value={bulkDueDate}
                     onChange={(e) => setBulkDueDate(e.target.value)}
-                    min={todayDate()}
+                    min={todayStr()}
                   />
                 </div>
                 <Button size="sm" variant="outline" onClick={applyBulkDueDate}>
@@ -251,9 +249,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
                             ? t("common.semesterFall")
                             : t("common.semesterSpring")}
                         </span>
-                        <TaskCategoryBadge
-                          category={cat as "spiritual" | "academic" | "report"}
-                        />
+                        <TaskCategoryBadge category={cat as TaskCategory} />
                         <span className="ml-auto text-xs text-muted-foreground">
                           {t("assignmentsTasksAddDialog.points", {
                             points: items.reduce((a, x) => a + x.points, 0),
@@ -273,7 +269,9 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
                               }
                             >
                               <button
+                                type="button"
                                 onClick={() => toggle(tpl.id)}
+                                aria-pressed={isChecked}
                                 className="flex w-full items-start gap-3 p-3 text-left transition-colors hover:bg-muted/30"
                               >
                                 <div
@@ -322,7 +320,7 @@ export function TasksAddDialog({ open, assignmentId, onClose }: Props) {
                                     <Input
                                       type="date"
                                       value={cfg.due_date}
-                                      min={todayDate()}
+                                      min={todayStr()}
                                       onChange={(e) =>
                                         updateConfig(tpl.id, { due_date: e.target.value })
                                       }

@@ -21,7 +21,7 @@ export function usePracticeTypes(includeInactive = false) {
 
 export function usePracticeType(id: UUID | null) {
   return useQuery({
-    queryKey: id ? practiceTypeKeys.detail(id) : [],
+    queryKey: practiceTypeKeys.detail(id ?? ""),
     enabled: !!id,
     queryFn: () => api.get(`v1/practice-types/${id}`).json<PracticeType>(),
   });

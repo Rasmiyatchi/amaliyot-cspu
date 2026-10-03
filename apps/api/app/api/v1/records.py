@@ -1,11 +1,12 @@
 """Qaydnomalar (records) endpointlari — agregatsiya + Excel + PDF."""
 
+import asyncio
 from datetime import date, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, Query, Request, Response, status
 
-from app.api.deps import RequireAdmin, RequireSuperAdmin
+from app.api.deps import RequirePractice, RequireSuperAdmin
 from app.core.config import settings
 from app.db.session import SessionDep
 from app.models.enums import AssignmentStatus, DegreeType, EducationForm, UserRole
@@ -13,6 +14,7 @@ from app.schemas.record import RecordRow
 from app.services import pdf as pdf_svc
 from app.services import records as svc
 from app.services.import_templates import build_records_xlsx
+from app.services.scoping import assert_assignment_access
 
 router = APIRouter(prefix="/records", tags=["records"])
 
@@ -54,7 +56,7 @@ def _filters(
 @router.get("", response_model=list[RecordRow], summary="Qaydnomalar ro'yxati")
 async def list_records(
     db: SessionDep,
-    current_user: RequireAdmin,
+    current_user: RequirePractice,
     academic_year_id: UUID | None = None,
     direction_id: UUID | None = None,
     course: int | None = Query(None, ge=1, le=5),
@@ -72,9 +74,19 @@ async def list_records(
     rows = await svc.list_records(
         db,
         **_filters(
-            academic_year_id, direction_id, course, group_id, supervisor_id,
-            education_form, degree_type, start_from, end_to, search, is_archived,
-            faculty_id, status,
+            academic_year_id,
+            direction_id,
+            course,
+            group_id,
+            supervisor_id,
+            education_form,
+            degree_type,
+            start_from,
+            end_to,
+            search,
+            is_archived,
+            faculty_id,
+            status,
         ),
     )
     return [RecordRow.model_validate(r) for r in rows]
@@ -83,7 +95,7 @@ async def list_records(
 @router.get("/export.xlsx", summary="Qaydnomalarni Excel'ga yuklash")
 async def export_xlsx(
     db: SessionDep,
-    current_user: RequireAdmin,
+    current_user: RequirePractice,
     academic_year_id: UUID | None = None,
     direction_id: UUID | None = None,
     course: int | None = Query(None, ge=1, le=5),
@@ -101,9 +113,19 @@ async def export_xlsx(
     rows = await svc.list_records(
         db,
         **_filters(
-            academic_year_id, direction_id, course, group_id, supervisor_id,
-            education_form, degree_type, start_from, end_to, search, is_archived,
-            faculty_id, status,
+            academic_year_id,
+            direction_id,
+            course,
+            group_id,
+            supervisor_id,
+            education_form,
+            degree_type,
+            start_from,
+            end_to,
+            search,
+            is_archived,
+            faculty_id,
+            status,
         ),
     )
     return Response(
@@ -116,7 +138,7 @@ async def export_xlsx(
 @router.get("/baholash-qaydnomasi.pdf", summary="Baholash qaydnomasi PDF")
 async def baholash_qaydnomasi(
     db: SessionDep,
-    current_user: RequireAdmin,
+    current_user: RequirePractice,
     academic_year_id: UUID | None = None,
     direction_id: UUID | None = None,
     course: int | None = Query(None, ge=1, le=5),
@@ -134,17 +156,28 @@ async def baholash_qaydnomasi(
     rows = await svc.list_records(
         db,
         **_filters(
-            academic_year_id, direction_id, course, group_id, supervisor_id,
-            education_form, degree_type, start_from, end_to, search, is_archived,
-            faculty_id, status,
+            academic_year_id,
+            direction_id,
+            course,
+            group_id,
+            supervisor_id,
+            education_form,
+            degree_type,
+            start_from,
+            end_to,
+            search,
+            is_archived,
+            faculty_id,
+            status,
         ),
     )
-    pdf_bytes = pdf_svc.render_records_pdf(
+    pdf_bytes = await asyncio.to_thread(
+        pdf_svc.render_records_pdf,
         {
             "rows": rows,
             "app_name": settings.APP_NAME,
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        }
+        },
     )
     return Response(
         content=pdf_bytes,
@@ -153,31 +186,71 @@ async def baholash_qaydnomasi(
     )
 
 
+async def _set_archived(
+    db: SessionDep, request: Request, user: RequirePractice, id_: UUID, archived: bool
+) -> None:
+    from app.services import audit_log as audit
+
+    # Fakultet admini faqat o'z fakulteti qaydnomasini arxivlaydi; amal auditga yoziladi
+    await assert_assignment_access(db, user, id_)
+    await svc.set_record_archive_status(db, id_, is_archived=archived)
+    await audit.log(
+        db,
+        actor=user,
+        action="update",
+        entity_type="practice_assignment",
+        entity_id=id_,
+        summary="Qaydnoma arxivlandi" if archived else "Qaydnoma arxivdan tiklandi",
+        metadata={"is_archived": archived},
+        request=request,
+    )
+    await db.commit()
+
+
 @router.post("/{id_}/archive", summary="Qaydnomani arxivlash")
 async def archive_record(
     id_: UUID,
+    request: Request,
     db: SessionDep,
-    _: RequireAdmin,
+    user: RequirePractice,
 ) -> dict[str, str]:
-    await svc.set_record_archive_status(db, id_, is_archived=True)
+    await _set_archived(db, request, user, id_, True)
     return {"message": "Qaydnoma arxivlandi"}
 
 
 @router.post("/{id_}/unarchive", summary="Qaydnomani arxivdan chiqarish (tiklash)")
 async def unarchive_record(
     id_: UUID,
+    request: Request,
     db: SessionDep,
-    _: RequireAdmin,
+    user: RequirePractice,
 ) -> dict[str, str]:
-    await svc.set_record_archive_status(db, id_, is_archived=False)
+    await _set_archived(db, request, user, id_, False)
     return {"message": "Qaydnoma tiklandi"}
 
 
-@router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT, summary="Qaydnomani o'chirish (Super Admin)")
+@router.delete(
+    "/{id_}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Qaydnomani o'chirish (Super Admin, faqat qoralama/bekor qilingan)",
+)
 async def delete_record(
     id_: UUID,
+    request: Request,
     db: SessionDep,
-    _: RequireSuperAdmin,
+    user: RequireSuperAdmin,
 ) -> None:
-    await svc.delete_record(db, id_)
+    from app.services import audit_log as audit
 
+    snapshot = await svc.delete_record(db, id_)
+    await audit.log(
+        db,
+        actor=user,
+        action="delete",
+        entity_type="practice_assignment",
+        entity_id=id_,
+        summary="Qaydnoma (biriktirish) o'chirildi",
+        metadata=snapshot,
+        request=request,
+    )
+    await db.commit()

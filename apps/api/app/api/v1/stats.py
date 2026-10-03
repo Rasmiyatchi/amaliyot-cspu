@@ -1,5 +1,6 @@
 """Stats endpoints — role-aware dashboard'lar uchun KPI'lar."""
 
+import asyncio
 from datetime import datetime
 from typing import Any
 
@@ -27,10 +28,8 @@ async def dashboard_stats_pdf(db: SessionDep, user: CurrentUser) -> Response:
         if user.role == UserRole.SUPER_ADMIN
         else await svc.admin_overview(db)
     )
-    admin_name = (
-        f"{user.last_name or ''} {user.first_name or ''}".strip() or user.username
-    )
-    pdf_bytes = render_dashboard_stats_pdf(stats_data, admin_name)
+    admin_name = f"{user.last_name or ''} {user.first_name or ''}".strip() or user.username
+    pdf_bytes = await asyncio.to_thread(render_dashboard_stats_pdf, stats_data, admin_name)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"amaliyot_statistikasi_{ts}.pdf"
     return Response(

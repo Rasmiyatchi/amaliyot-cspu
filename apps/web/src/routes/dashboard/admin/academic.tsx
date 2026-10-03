@@ -1,70 +1,18 @@
-import { School } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 
-import { AcademicYearList } from "@/components/admin/academic/academic-year-list";
-import { DepartmentList } from "@/components/admin/academic/department-list";
-import { DirectionList } from "@/components/admin/academic/direction-list";
-import { FacultyList } from "@/components/admin/academic/faculty-list";
-import { GroupList } from "@/components/admin/academic/group-list";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+const STRUCTURE_TABS = ["faculties", "departments", "directions", "groups", "academic-years"] as const;
+type StructureTab = (typeof STRUCTURE_TABS)[number];
 
-const VALID_TABS = ["faculties", "departments", "directions", "groups", "academic-years"] as const;
-type AcademicTab = typeof VALID_TABS[number];
+function isStructureTab(tab: string | null): tab is StructureTab {
+  return tab !== null && (STRUCTURE_TABS as readonly string[]).includes(tab);
+}
 
+/**
+ * Eski `/admin/academic?tab=...` manzili (buyruqlar palitrasi, eski havolalar) — endi har bir
+ * bo'lim alohida sahifada (`/admin/structure/...`). Takroriy sahifa o'rniga yo'naltiramiz.
+ */
 export function AcademicPage() {
-  const { t } = useTranslation();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = searchParams.get("tab") as AcademicTab | null;
-  const currentTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "faculties";
-
-  const handleTabChange = (value: string) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set("tab", value);
-      return next;
-    }, { replace: true });
-  };
-
-  return (
-    <div className="container max-w-6xl py-8">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <School className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold">{t("adminAcademic.title")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("adminAcademic.subtitle")}
-          </p>
-        </div>
-      </div>
-
-      <Tabs value={currentTab} onValueChange={handleTabChange}>
-        <TabsList>
-          <TabsTrigger value="faculties">{t("adminAcademic.tabs.faculties")}</TabsTrigger>
-          <TabsTrigger value="departments">{t("adminAcademic.tabs.departments")}</TabsTrigger>
-          <TabsTrigger value="directions">{t("adminAcademic.tabs.directions")}</TabsTrigger>
-          <TabsTrigger value="groups">{t("adminAcademic.tabs.groups")}</TabsTrigger>
-          <TabsTrigger value="academic-years">{t("adminAcademic.tabs.academicYears")}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="faculties">
-          <FacultyList />
-        </TabsContent>
-        <TabsContent value="departments">
-          <DepartmentList />
-        </TabsContent>
-        <TabsContent value="directions">
-          <DirectionList />
-        </TabsContent>
-        <TabsContent value="groups">
-          <GroupList />
-        </TabsContent>
-        <TabsContent value="academic-years">
-          <AcademicYearList />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+  const [searchParams] = useSearchParams();
+  const tab = searchParams.get("tab");
+  return <Navigate to={`/admin/structure/${isStructureTab(tab) ? tab : "faculties"}`} replace />;
 }

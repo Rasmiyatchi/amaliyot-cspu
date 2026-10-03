@@ -10,16 +10,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { downloadAttachment, type Attachment } from "@/lib/api/uploads";
-import { useAuthStore } from "@/stores/auth";
+import { downloadAttachment, fetchAttachmentBlob } from "@/lib/api/uploads";
 
-/** Preview uchun minimal fayl ma'lumoti — to'liq Attachment ham mos keladi */
-export type PreviewFile = Pick<Attachment, "name" | "path" | "mime" | "size">;
+/** Preview uchun minimal fayl ma'lumoti — eski yozuvlarda mime/size bo'lmasligi mumkin. */
+export type PreviewFile = {
+  name: string;
+  path: string;
+  mime?: string;
+  size?: number;
+};
 
 type Props = {
   attachment: PreviewFile | null;
   onClose: () => void;
 };
+
+const TEXT_EXTENSIONS = ["txt", "md", "json", "csv", "log", "xml", "py", "js"];
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif", "svg"];
+
+function extensionOf(name: string): string {
+  return name.split(".").pop()?.toLowerCase() || "";
+}
 
 export function FilePreviewModal({ attachment, onClose }: Props) {
   const { t } = useTranslation();
@@ -29,49 +40,33 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!attachment) {
-      setBlobUrl(null);
-      setTextContent(null);
-      setError(null);
-      return;
-    }
+    setBlobUrl(null);
+    setTextContent(null);
+    setError(null);
+    if (!attachment) return;
 
     let active = true;
     let urlToRevoke: string | null = null;
 
-    async function loadFile() {
+    async function loadFile(file: PreviewFile) {
       setLoading(true);
-      setError(null);
       try {
-        const token = useAuthStore.getState().accessToken;
-        const res = await fetch(`/api/v1/uploads/file/${attachment!.path}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          throw new Error(t("filePreviewModal.loadFailed"));
-        }
-
-        const blob = await res.blob();
+        const blob = await fetchAttachmentBlob(file);
         if (!active) return;
 
-        // Ensure PDF blob has correct type for iframe rendering
-        let finalBlob = blob;
-        const ext = attachment!.name.split(".").pop()?.toLowerCase() || "";
-        const isPdf = attachment!.mime === "application/pdf" || ext === "pdf";
-        if (isPdf && blob.type !== "application/pdf") {
-          finalBlob = new Blob([blob], { type: "application/pdf" });
-        }
+        // iframe PDF'ni to'g'ri chizishi uchun turi aniq bo'lsin
+        const ext = extensionOf(file.name);
+        const isPdf = file.mime === "application/pdf" || ext === "pdf";
+        const finalBlob =
+          isPdf && blob.type !== "application/pdf"
+            ? new Blob([blob], { type: "application/pdf" })
+            : blob;
 
         const url = URL.createObjectURL(finalBlob);
         urlToRevoke = url;
         setBlobUrl(url);
 
-        // Agar matnli fayl bo'lsa, string sifatida ham o'qiymiz
-        const isText =
-          attachment!.mime.startsWith("text/") ||
-          ["txt", "md", "json", "csv", "log", "xml", "py", "js"].includes(ext);
-
+        const isText = (file.mime ?? "").startsWith("text/") || TEXT_EXTENSIONS.includes(ext);
         if (isText) {
           const text = await blob.text();
           if (active) setTextContent(text);
@@ -85,35 +80,35 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
       }
     }
 
-    loadFile();
+    void loadFile(attachment);
 
     return () => {
       active = false;
-      if (urlToRevoke) {
-        URL.revokeObjectURL(urlToRevoke);
-      }
+      if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
     };
   }, [attachment, t]);
 
   if (!attachment) return null;
 
-  const ext = attachment.name.split(".").pop()?.toLowerCase() || "";
+  const ext = extensionOf(attachment.name);
   const isPdf = attachment.mime === "application/pdf" || ext === "pdf";
-  const isImage =
-    attachment.mime.startsWith("image/") ||
-    ["jpg", "jpeg", "png", "webp", "gif", "svg"].includes(ext);
+  const isImage = (attachment.mime ?? "").startsWith("image/") || IMAGE_EXTENSIONS.includes(ext);
 
   const handleDownload = async () => {
     try {
       await downloadAttachment(attachment);
-    } catch {
-      toast.error(t("common.downloadError"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("common.downloadError"));
     }
   };
 
   return (
     <Dialog open={!!attachment} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent showClose={false} className="flex flex-col w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-4xl h-[90dvh] max-h-[90dvh] p-0 gap-0 overflow-hidden">
+      <DialogContent
+        showClose={false}
+        aria-describedby={undefined}
+        className="flex flex-col w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:max-w-4xl h-[90dvh] max-h-[90dvh] p-0 gap-0 overflow-hidden"
+      >
         {/* Header */}
         <DialogHeader className="p-3 sm:p-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/20 shrink-0">
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 pr-2">
@@ -125,27 +120,43 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
                 {attachment.name}
               </DialogTitle>
               <div className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1.5">
-                <span>{(attachment.size / 1024 / 1024).toFixed(2)} MB</span>
-                <span>•</span>
+                {attachment.size !== undefined && (
+                  <>
+                    <span>{(attachment.size / 1024 / 1024).toFixed(2)} MB</span>
+                    <span aria-hidden="true">•</span>
+                  </>
+                )}
                 <span className="uppercase">{ext}</span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <Button variant="outline" size="sm" onClick={handleDownload} className="h-8 text-xs gap-1 px-2 sm:px-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownload}
+              className="h-8 text-xs gap-1 px-2 sm:px-3"
+              aria-label={t("common.download")}
+            >
               <Download className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t("common.download")}</span>
             </Button>
 
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8"
+              aria-label={t("common.close")}
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
         </DialogHeader>
 
         {/* Content Viewer Body */}
-        <div className="flex-1 bg-muted/10 relative overflow-auto p-4 flex items-center justify-center">
+        <div className="flex-1 min-h-0 bg-muted/10 relative overflow-auto p-4 flex items-center justify-center">
           {loading && (
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />

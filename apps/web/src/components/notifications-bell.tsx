@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -57,21 +58,25 @@ const ACCENTS: Record<NotificationType, string> = {
   generic: "text-muted-foreground",
 };
 
+/** Menyu elementi — strelka tugmalari bilan ham tanlanadi; tanlash menyuni yopmaydi. */
 function NotificationItem({
   n,
-  onClick,
+  onSelect,
 }: {
   n: Notification;
-  onClick: (id: string) => void;
+  onSelect: (n: Notification) => void;
 }) {
   const Icon = ICONS[n.type] ?? BookOpen;
   const isRead = !!n.read_at;
 
   return (
-    <button
-      onClick={() => onClick(n.id)}
+    <DropdownMenuItem
+      onSelect={(e) => {
+        e.preventDefault();
+        onSelect(n);
+      }}
       className={cn(
-        "flex w-full items-start gap-3 border-b border-border px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-muted/30",
+        "flex w-full cursor-pointer items-start gap-3 rounded-none border-b border-border px-3 py-2.5 text-left last:border-0 focus:bg-muted/40",
         !isRead && "bg-primary/5",
       )}
     >
@@ -99,7 +104,7 @@ function NotificationItem({
           {new Date(n.created_at).toLocaleString(dateLocale())}
         </div>
       </div>
-    </button>
+    </DropdownMenuItem>
   );
 }
 
@@ -131,7 +136,7 @@ export function NotificationsBell() {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-96 max-w-[95vw] p-0">
-        <DropdownMenuLabel className="flex items-center justify-between px-3 py-2">
+        <DropdownMenuLabel className="flex items-center justify-between gap-2 px-3 py-2">
           <span>
             {t("notificationsBell.title")}{" "}
             {unread > 0 && (
@@ -141,15 +146,16 @@ export function NotificationsBell() {
             )}
           </span>
           {unread > 0 && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => markAllRead.mutate()}
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                markAllRead.mutate();
+              }}
               disabled={markAllRead.isPending}
-              className="h-7 text-xs"
+              className="h-7 shrink-0 cursor-pointer px-2 text-xs font-medium"
             >
               {t("notificationsBell.markAllRead")}
-            </Button>
+            </DropdownMenuItem>
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="my-0" />
@@ -165,8 +171,8 @@ export function NotificationsBell() {
               <NotificationItem
                 key={n.id}
                 n={n}
-                onClick={(id) => {
-                  if (!n.read_at) markRead.mutate(id);
+                onSelect={(item) => {
+                  if (!item.read_at) markRead.mutate(item.id);
                 }}
               />
             ))}

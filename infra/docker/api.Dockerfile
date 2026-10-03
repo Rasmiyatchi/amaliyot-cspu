@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # ─── Builder stage ───────────────────────────────────────────────
 FROM python:3.12-slim AS builder
 
@@ -34,6 +35,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY apps/api/app ./app
 COPY apps/api/alembic ./alembic
 COPY apps/api/alembic.ini ./alembic.ini
+COPY apps/api/scripts ./scripts
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
@@ -67,6 +69,7 @@ COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/app ./app
 COPY --from=builder /app/alembic ./alembic
 COPY --from=builder /app/alembic.ini ./alembic.ini
+COPY --from=builder /app/scripts ./scripts
 
 # Storage dir for uploads/PDFs/templates (volume-mountable)
 RUN mkdir -p /app/storage/uploads /app/storage/contracts /app/storage/contract_templates

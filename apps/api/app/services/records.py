@@ -9,9 +9,10 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.clock import today_uzb
 from app.models.academic import Direction, Group
 from app.models.area import Area
 from app.models.attendance import AttendanceDay
@@ -30,6 +31,7 @@ from app.models.supervisor import Supervisor
 from app.models.task import Task, TaskTemplate
 from app.models.user import User
 from app.services.attendance_stats import compute_percent
+from app.services.search_utils import like_pattern, normalized_col
 
 _SEMESTER_LABEL = {"fall": "Kuzgi", "spring": "Bahorgi"}
 
@@ -87,8 +89,14 @@ async def list_records(
         .where(
             PracticeAssignment.is_archived == is_archived,
             PracticeAssignment.status != AssignmentStatus.CANCELLED,
-            User.is_active.is_(True),
-            Student.status == StudentStatus.STUDYING,
+            # Bitirgan / akademik ta'tildagi talabaning bahosi rasmiy qaydnomadan YO'QOLMASLIGI
+            # kerak (bitiruvchilar qaydnomasi aynan shu payt chiqariladi). Haydalgan talaba
+            # faqat baholanmagan bo'lsa chiqariladi — qo'yilgan rasmiy baho qaydnomada qoladi.
+            # Hisob bloklangani bahoni o'chirmaydi.
+            or_(
+                Student.status != StudentStatus.EXPELLED,
+                PracticeAssignment.final_grade.is_not(None),
+            ),
         )
     )
 
@@ -115,9 +123,11 @@ async def list_records(
     if end_to:
         stmt = stmt.where(PracticeAssignment.end_date <= end_to)
     if search:
-        like = f"%{search.lower()}%"
+        # Apostroflar farqsiz, "Familiya Ism" tartibida ham
+        pattern = like_pattern(search)
         stmt = stmt.where(
-            func.lower(User.last_name).like(like) | func.lower(User.first_name).like(like)
+            normalized_col(User.last_name + " " + User.first_name).like(pattern, escape="\\")
+            | normalized_col(User.first_name + " " + User.last_name).like(pattern, escape="\\")
         )
 
     stmt = stmt.order_by(Group.name, User.last_name, User.first_name)
@@ -134,7 +144,11 @@ async def list_records(
                     AttendanceDay.status,
                     func.count(AttendanceDay.id),
                 )
-                .where(AttendanceDay.assignment_id.in_(assignment_ids))
+                .where(
+                    AttendanceDay.assignment_id.in_(assignment_ids),
+                    # oldindan yashil qilingan kelajak kunlar foizni oshirmasin
+                    AttendanceDay.date <= today_uzb(),
+                )
                 .group_by(AttendanceDay.assignment_id, AttendanceDay.status)
             )
         ).all():
@@ -191,14 +205,18 @@ async def list_records(
                 "korxona_grade_max": pts["max"] if pts else None,
                 "qaydnoma_grade": r.final_grade,
                 "credit_earned": r.credit_earned,
+                "status": r.status.value if r.status else None,
                 "is_archived": r.is_archived,
             }
         )
     return rows
 
 
-async def set_record_archive_status(db: AsyncSession, assignment_id: UUID, is_archived: bool) -> None:
+async def set_record_archive_status(
+    db: AsyncSession, assignment_id: UUID, is_archived: bool
+) -> None:
     from fastapi import HTTPException, status
+
     assignment = await db.get(PracticeAssignment, assignment_id)
     if not assignment:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Qaydnoma topilmadi: {assignment_id}")
@@ -206,11 +224,28 @@ async def set_record_archive_status(db: AsyncSession, assignment_id: UUID, is_ar
     await db.commit()
 
 
-async def delete_record(db: AsyncSession, assignment_id: UUID) -> None:
+async def delete_record(db: AsyncSession, assignment_id: UUID) -> dict[str, Any]:
+    """Qaydnoma = biriktirish. O'chirish butun amaliyot tarixini (davomat, topshiriqlar,
+    yakuniy hisobot) ham o'chiradi — shuning uchun faqat QORALAMA yoki BEKOR qilingan
+    biriktirish o'chiriladi. Faol/yakunlangan yozuvlar uchun arxivlash ishlatiladi.
+    """
     from fastapi import HTTPException, status
+
     assignment = await db.get(PracticeAssignment, assignment_id)
     if not assignment:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Qaydnoma topilmadi: {assignment_id}")
+    if assignment.status not in (AssignmentStatus.DRAFT, AssignmentStatus.CANCELLED):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Faol yoki yakunlangan amaliyot qaydnomasini o'chirib bo'lmaydi — "
+            "u bilan birga davomat, topshiriqlar va baholar ham o'chib ketadi. Arxivlang.",
+        )
+    snapshot = {
+        "student_id": str(assignment.student_id),
+        "status": assignment.status.value,
+        "start_date": str(assignment.start_date),
+        "end_date": str(assignment.end_date),
+    }
     await db.delete(assignment)
-    await db.commit()
-
+    await db.flush()
+    return snapshot

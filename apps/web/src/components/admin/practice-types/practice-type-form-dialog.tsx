@@ -1,8 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { TFunction } from "i18next";
-import { HTTPError } from "ky";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -24,33 +23,53 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCreatePracticeType, useUpdatePracticeType } from "@/lib/api/practice-types";
 import type { PracticeType } from "@/lib/api/types";
 
-const makeSchema = (t: TFunction) =>
-  z
+const isIntInRange = (value: string, min: number, max: number) =>
+  /^\d+$/.test(value.trim()) && Number(value) >= min && Number(value) <= max;
+
+// Son maydonlari forma ichida satr sifatida saqlanadi (bo'sh qiymatni ham ifodalash uchun),
+// saqlashda songa aylantiriladi — `z.coerce` va tip o'chirish kerak bo'lmaydi.
+const makeSchema = (t: TFunction) => {
+  const v = "adminValidation"; // umumiy validatsiya matnlari
+  const intField = (min: number, max: number) =>
+    z.string().refine((x) => isIntInRange(x, min, max), {
+      message: t(`${v}.intRange`, { min, max }),
+    });
+  const optionalIntField = (min: number, max: number) =>
+    z.string().refine((x) => x.trim() === "" || isIntInRange(x, min, max), {
+      message: t(`${v}.intRange`, { min, max }),
+    });
+  return z
     .object({
       code: z
         .string()
+        .trim()
         .regex(/^[a-z0-9_]+$/, t("practiceTypesPracticeTypeFormDialog.codeRegex"))
-        .min(2)
-        .max(64),
-      name: z.string().min(2).max(200),
-      description: z.string().max(2000).optional(),
+        .min(2, t(`${v}.minChars`, { n: 2 }))
+        .max(64, t(`${v}.maxChars`, { n: 64 })),
+      name: z
+        .string()
+        .trim()
+        .min(2, t(`${v}.minChars`, { n: 2 }))
+        .max(200, t(`${v}.maxChars`, { n: 200 })),
+      description: z.string().max(2000, t(`${v}.maxChars`, { n: 2000 })),
       object_kind: z.enum(["organization", "area", "any"]),
       requires_contract: z.boolean(),
-      min_weeks: z.coerce.number().int().min(1).max(52),
-      max_weeks: z.coerce.number().int().min(1).max(52),
-      days_per_week: z.coerce.number().int().min(1).max(7).optional(),
-      hours_per_day: z.coerce.number().int().min(1).max(12).optional(),
+      min_weeks: intField(1, 52),
+      max_weeks: intField(1, 52),
+      days_per_week: optionalIntField(1, 7),
+      hours_per_day: optionalIntField(1, 12),
       allowed_courses: z
         .array(z.number())
         .min(1, t("practiceTypesPracticeTypeFormDialog.coursesMin")),
       allowed_education_forms: z.array(z.string()),
-      display_order: z.coerce.number().int().min(0).max(999),
+      display_order: intField(0, 999),
       is_active: z.boolean(),
     })
-    .refine((v) => v.max_weeks >= v.min_weeks, {
+    .refine((x) => Number(x.max_weeks) >= Number(x.min_weeks), {
       message: t("practiceTypesPracticeTypeFormDialog.maxWeeksInvalid"),
       path: ["max_weeks"],
     });
+};
 
 type Values = z.infer<ReturnType<typeof makeSchema>>;
 
@@ -64,60 +83,74 @@ const EDU_FORMS = [
   { value: "distance", labelKey: "practiceTypesPracticeTypeFormDialog.eduForms.distance" },
 ];
 
+const EMPTY: Values = {
+  code: "",
+  name: "",
+  description: "",
+  object_kind: "organization",
+  requires_contract: true,
+  min_weeks: "1",
+  max_weeks: "1",
+  days_per_week: "",
+  hours_per_day: "",
+  allowed_courses: [],
+  allowed_education_forms: [],
+  display_order: "0",
+  is_active: true,
+};
+
+function toFormValues(pt: PracticeType): Values {
+  return {
+    code: pt.code,
+    name: pt.name,
+    description: pt.description ?? "",
+    object_kind: pt.object_kind,
+    requires_contract: pt.requires_contract,
+    min_weeks: String(pt.min_weeks),
+    max_weeks: String(pt.max_weeks),
+    days_per_week: pt.days_per_week != null ? String(pt.days_per_week) : "",
+    hours_per_day: pt.hours_per_day != null ? String(pt.hours_per_day) : "",
+    allowed_courses: pt.allowed_courses,
+    allowed_education_forms: pt.allowed_education_forms ?? [],
+    display_order: String(pt.display_order),
+    is_active: pt.is_active,
+  };
+}
+
+const optionalInt = (value: string) => (value.trim() === "" ? null : Number(value));
+
 export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
   const { t } = useTranslation();
   const create = useCreatePracticeType();
   const update = useUpdatePracticeType();
   const isEdit = !!existing;
 
+  const schema = useMemo(() => makeSchema(t), [t]);
   const form = useForm<Values>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(makeSchema(t)) as any,
-    defaultValues: {
-      code: "",
-      name: "",
-      description: "",
-      object_kind: "organization",
-      requires_contract: true,
-      min_weeks: 1,
-      max_weeks: 1,
-      days_per_week: undefined,
-      hours_per_day: undefined,
-      allowed_courses: [],
-      allowed_education_forms: [],
-      display_order: 0,
-      is_active: true,
-    },
+    resolver: zodResolver(schema),
+    defaultValues: EMPTY,
   });
 
   useEffect(() => {
-    if (open && existing) {
-      form.reset({
-        code: existing.code,
-        name: existing.name,
-        description: existing.description ?? "",
-        object_kind: existing.object_kind,
-        requires_contract: existing.requires_contract,
-        min_weeks: existing.min_weeks,
-        max_weeks: existing.max_weeks,
-        days_per_week: existing.days_per_week ?? undefined,
-        hours_per_day: existing.hours_per_day ?? undefined,
-        allowed_courses: existing.allowed_courses,
-        allowed_education_forms: existing.allowed_education_forms ?? [],
-        display_order: existing.display_order,
-        is_active: existing.is_active,
-      });
-    } else if (open) {
-      form.reset();
-    }
+    if (!open) return;
+    form.reset(existing ? toFormValues(existing) : EMPTY);
   }, [open, existing, form]);
 
   const onSubmit = async (v: Values) => {
-    const payload = {
-      ...v,
-      description: v.description || null,
-      days_per_week: v.days_per_week ?? null,
-      hours_per_day: v.hours_per_day ?? null,
+    const payload: Partial<PracticeType> = {
+      code: v.code,
+      name: v.name,
+      description: v.description.trim() || null,
+      object_kind: v.object_kind,
+      requires_contract: v.requires_contract,
+      min_weeks: Number(v.min_weeks),
+      max_weeks: Number(v.max_weeks),
+      days_per_week: optionalInt(v.days_per_week),
+      hours_per_day: optionalInt(v.hours_per_day),
+      allowed_courses: v.allowed_courses,
+      allowed_education_forms: v.allowed_education_forms,
+      display_order: Number(v.display_order),
+      is_active: v.is_active,
     };
     try {
       if (isEdit && existing) {
@@ -132,14 +165,14 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
   const busy = create.isPending || update.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -268,15 +301,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                   <FormItem>
                     <FormLabel>{t("practiceTypesPracticeTypeFormDialog.daysPerWeekLabel")}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={7}
-                        value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                        }
-                      />
+                      <Input type="number" inputMode="numeric" min={1} max={7} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -289,15 +314,7 @@ export function PracticeTypeFormDialog({ open, existing, onClose }: Props) {
                   <FormItem>
                     <FormLabel>{t("practiceTypesPracticeTypeFormDialog.hoursPerDayLabel")}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={12}
-                        value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
-                        }
-                      />
+                      <Input type="number" inputMode="numeric" min={1} max={12} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

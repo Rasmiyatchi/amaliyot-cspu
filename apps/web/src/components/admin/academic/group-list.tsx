@@ -1,12 +1,20 @@
-import { Loader2, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { HTTPError } from "ky";
+import { Loader2, Pencil, Search, Trash2, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { GroupFormDialog } from "@/components/admin/academic/group-form-dialog";
+import { normalizeSearchText } from "@/components/admin/academic/search-text";
+import {
+  SearchableSelect,
+  type SearchableOption,
+} from "@/components/admin/academic/searchable-select";
+import { ListPagination } from "@/components/admin/students/list-pagination";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,79 +25,121 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
   useAcademicYears,
+  useAllDirections,
+  useAllGroups,
   useDeleteGroup,
-  useDirections,
   useGroups,
 } from "@/lib/api/academic";
 import type { Group, UUID } from "@/lib/api/types";
 
 const ALL = "__all__";
+const PAGE_SIZE = 50;
 
-export function GroupList() {
+type Props = {
+  /** "Yangi guruh" dialogi sahifa sarlavhasidagi tugma bilan boshqariladi */
+  createOpen: boolean;
+  onCreateOpenChange: (open: boolean) => void;
+};
+
+export function GroupList({ createOpen, onCreateOpenChange }: Props) {
   const { t } = useTranslation();
   const [directionId, setDirectionId] = useState<UUID | undefined>(undefined);
   const [academicYearId, setAcademicYearId] = useState<UUID | undefined>(undefined);
   const [course, setCourse] = useState<number | undefined>(undefined);
-  const [search, setSearch] = useState("");
-  const groups = useGroups({ directionId, academicYearId, course });
-  const directions = useDirections();
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebounce(normalizeSearchText(searchInput), 250);
+  const searching = search.length > 0;
+  const [page, setPage] = useState(1);
+
+  const filters = { directionId, academicYearId, course };
+  const filterKey = `${directionId ?? ""}|${academicYearId ?? ""}|${course ?? ""}|${search}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (filterKey !== lastFilterKey) {
+    setLastFilterKey(filterKey);
+    setPage(1);
+  }
+
+  // Qidiruvsiz — server sahifalaydi. Backend guruhni nom bo'yicha qidirmaydi, shuning uchun
+  // qidiruvda filtrga mos BARCHA guruhlar olinib, mahalliy filtrlanadi va sahifalanadi.
+  const paged = useGroups(filters, page, PAGE_SIZE, { enabled: !searching, keepPrevious: true });
+  const complete = useAllGroups(filters, { enabled: searching });
+  const matches = useMemo(() => {
+    if (!searching) return [];
+    return (complete.data ?? [])
+      .filter((g) => normalizeSearchText(g.name).includes(search))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [complete.data, search, searching]);
+
+  const source = searching ? complete : paged;
+  const rows = searching
+    ? matches.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    : (paged.data?.items ?? []);
+  const total = searching ? matches.length : (paged.data?.total ?? 0);
+  const loaded = !!source.data;
+
+  const directions = useAllDirections();
   const academicYears = useAcademicYears();
+  const directionOptions: SearchableOption[] = useMemo(
+    () => (directions.data ?? []).map((d) => ({ value: d.id, label: d.name, hint: d.code })),
+    [directions.data],
+  );
+  const dirById = useMemo(
+    () => new Map((directions.data ?? []).map((d) => [d.id, d])),
+    [directions.data],
+  );
+  const ayById = new Map((academicYears.data ?? []).map((ay) => [ay.id, ay]));
+
   const del = useDeleteGroup();
   const [editing, setEditing] = useState<Group | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<Group | null>(null);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const items = groups.data?.items ?? [];
-    if (!q) return items;
-    return items.filter((g) => g.name.toLowerCase().includes(q));
-  }, [groups.data, search]);
-
-  const handleDelete = async (g: Group) => {
-    if (!confirm(t("academicGroupList.deleteConfirm", { name: g.name }))) return;
+  const handleDelete = async () => {
+    if (!deleting) return;
     try {
-      await del.mutateAsync(g.id);
+      await del.mutateAsync(deleting.id);
       toast.success(t("common.deleted"));
+      setDeleting(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("common.error"));
+      toast.error(e instanceof HTTPError ? e.message : t("common.error"), { duration: 8000 });
     }
   };
 
-  const dirById = new Map((directions.data?.items ?? []).map((d) => [d.id, d]));
-  const ayById = new Map((academicYears.data ?? []).map((ay) => [ay.id, ay]));
+  const hasFilters = searching || !!directionId || !!academicYearId || course !== undefined;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Input
-          placeholder={t("academicGroupList.searchPlaceholder")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="min-w-[180px] max-w-[220px]"
+        <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:max-w-[220px]">
+          <Search
+            className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Input
+            placeholder={t("academicGroupList.searchPlaceholder")}
+            aria-label={t("academicGroupList.searchPlaceholder")}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        <SearchableSelect
+          className="w-full sm:w-[260px]"
+          aria-label={t("common.direction")}
+          value={directionId ?? null}
+          onChange={(v) => setDirectionId(v ?? undefined)}
+          options={directionOptions}
+          loading={directions.isPending}
+          placeholder={t("common.direction")}
+          clearLabel={t("academicGroupList.allDirections")}
         />
         <Select
-          value={directionId ?? ALL}
-          onValueChange={(v) => setDirectionId(v === ALL ? undefined : (v as UUID))}
-        >
-          <SelectTrigger className="w-[240px]">
-            <SelectValue placeholder={t("common.direction")} />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>{t("academicGroupList.allDirections")}</SelectItem>
-            {(directions.data?.items ?? []).map((d) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.code} — {d.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
           value={academicYearId ?? ALL}
-          onValueChange={(v) => setAcademicYearId(v === ALL ? undefined : (v as UUID))}
+          onValueChange={(v) => setAcademicYearId(v === ALL ? undefined : v)}
         >
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]" aria-label={t("common.academicYear")}>
             <SelectValue placeholder={t("common.academicYear")} />
           </SelectTrigger>
           <SelectContent>
@@ -105,7 +155,7 @@ export function GroupList() {
           value={course !== undefined ? String(course) : ALL}
           onValueChange={(v) => setCourse(v === ALL ? undefined : Number(v))}
         >
-          <SelectTrigger className="w-[130px]">
+          <SelectTrigger className="w-full sm:w-[130px]" aria-label={t("common.course")}>
             <SelectValue placeholder={t("common.course")} />
           </SelectTrigger>
           <SelectContent>
@@ -117,30 +167,26 @@ export function GroupList() {
             ))}
           </SelectContent>
         </Select>
-        <Button className="ml-auto" onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" />
-          {t("academicGroupList.newGroup")}
-        </Button>
       </div>
 
-      {groups.isPending && (
+      {source.isPending && (
         <div className="flex h-32 items-center justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       )}
-      {groups.error && (
+      {source.error && (
         <Alert variant="destructive">
-          <AlertDescription>{groups.error.message}</AlertDescription>
+          <AlertDescription>{source.error.message}</AlertDescription>
         </Alert>
       )}
 
-      {groups.data && filtered.length === 0 && (
+      {loaded && rows.length === 0 && (
         <div className="rounded-lg border border-border">
           <EmptyState
             icon={Users}
             title={t("academicGroupList.emptyTitle")}
             description={
-              search || directionId || academicYearId || course !== undefined
+              hasFilters
                 ? t("academicGroupList.emptyFiltered")
                 : t("academicGroupList.emptyDescription")
             }
@@ -148,7 +194,7 @@ export function GroupList() {
         </div>
       )}
 
-      {groups.data && filtered.length > 0 && (
+      {loaded && rows.length > 0 && (
         <div className="rounded-lg border border-border">
           <Table>
             <TableHeader>
@@ -157,19 +203,19 @@ export function GroupList() {
                 <TableHead>{t("common.course")}</TableHead>
                 <TableHead>{t("common.direction")}</TableHead>
                 <TableHead>{t("academicGroupList.academicYearHeader")}</TableHead>
-                <TableHead className="w-[100px]"></TableHead>
+                <TableHead className="w-[100px]">
+                  <span className="sr-only">{t("common.actions")}</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((g) => {
+              {rows.map((g) => {
                 const d = dirById.get(g.direction_id);
                 return (
                   <TableRow key={g.id}>
                     <TableCell className="font-medium">{g.name}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">
-                        {t("common.courseN", { n: g.course })}
-                      </Badge>
+                      <Badge variant="secondary">{t("common.courseN", { n: g.course })}</Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {d ? `${d.code} — ${d.name}` : "—"}
@@ -179,15 +225,21 @@ export function GroupList() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => setEditing(g)} aria-label={t("common.edit")}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setEditing(g)}
+                          aria-label={t("common.edit")}
+                          title={t("common.edit")}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => handleDelete(g)}
+                          onClick={() => setDeleting(g)}
                           aria-label={t("common.delete")}
-                          disabled={del.isPending}
+                          title={t("common.delete")}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -201,13 +253,33 @@ export function GroupList() {
         </div>
       )}
 
+      {loaded && (
+        <ListPagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          total={total}
+          onPageChange={setPage}
+          disabled={source.isFetching}
+        />
+      )}
+
       <GroupFormDialog
-        open={creating || !!editing}
+        open={createOpen || !!editing}
         existing={editing}
         onClose={() => {
-          setCreating(false);
+          onCreateOpenChange(false);
           setEditing(null);
         }}
+      />
+      <ConfirmDialog
+        open={!!deleting}
+        title={t("adminStructure.deleteTitle")}
+        description={deleting ? t("academicGroupList.deleteConfirm", { name: deleting.name }) : ""}
+        confirmText={t("common.delete")}
+        variant="destructive"
+        isPending={del.isPending}
+        onConfirm={handleDelete}
+        onClose={() => setDeleting(null)}
       />
     </div>
   );

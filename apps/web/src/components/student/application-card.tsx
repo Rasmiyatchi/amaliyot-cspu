@@ -1,8 +1,18 @@
-import { CheckCircle2, ClipboardEdit, Download, FileText, Loader2, Pencil, Plus, Upload } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardEdit,
+  Download,
+  FileText,
+  Loader2,
+  Pencil,
+  Plus,
+  Upload,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { describeRequestError } from "@/components/attendance/request-error";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,11 +47,17 @@ import {
   type PracticeApplication,
 } from "@/lib/api/applications";
 
-const STATUS: Record<string, { labelKey: string; variant: "secondary" | "success" | "destructive" | "warning" | "default" }> = {
+const STATUS: Record<
+  string,
+  { labelKey: string; variant: "secondary" | "success" | "destructive" | "warning" | "default" }
+> = {
   draft: { labelKey: "studentApplicationCard.status.draft", variant: "default" },
   submitted: { labelKey: "studentApplicationCard.status.pending", variant: "secondary" },
   under_review: { labelKey: "studentApplicationCard.status.underReview", variant: "warning" },
-  revision_required: { labelKey: "studentApplicationCard.status.revisionRequired", variant: "warning" },
+  revision_required: {
+    labelKey: "studentApplicationCard.status.revisionRequired",
+    variant: "warning",
+  },
   resubmitted: { labelKey: "studentApplicationCard.status.resubmitted", variant: "secondary" },
   approved: { labelKey: "studentApplicationCard.status.approved", variant: "success" },
   active: { labelKey: "studentApplicationCard.status.active", variant: "success" },
@@ -50,22 +66,50 @@ const STATUS: Record<string, { labelKey: string; variant: "secondary" | "success
   archived: { labelKey: "studentApplicationCard.status.archived", variant: "default" },
 };
 
+/** Dialog rejimi: yangi ariza yoki qaytarilgan arizani tuzatish. */
+type DialogMode = { kind: "new" } | { kind: "resubmit"; app: PracticeApplication };
 
 export function StudentApplicationCard() {
   const { t } = useTranslation();
   const { data, isPending } = useMyApplications();
   const uploadScan = useUploadApplicationScan();
-  const [open, setOpen] = useState(false);
-  const [resubmitApp, setResubmitApp] = useState<PracticeApplication | null>(null);
+  const [mode, setMode] = useState<DialogMode | null>(null);
+
+  // Yuklanayotgan skan — faqat shu ariza kartasida spinner (umumiy isPending emas)
+  const uploadingId = uploadScan.isPending ? (uploadScan.variables?.id ?? null) : null;
+
+  const handleDownloadContract = (a: PracticeApplication) =>
+    downloadContract(a.id, a.contract_number).catch((e: unknown) =>
+      toast.error(describeRequestError(e, t, "common.downloadError")),
+    );
+
+  const handleDownloadScan = (a: PracticeApplication) =>
+    downloadApplicationScan(a.id).catch((e: unknown) =>
+      toast.error(describeRequestError(e, t, "common.downloadError")),
+    );
+
+  const handleScanSelected = (a: PracticeApplication, input: HTMLInputElement) => {
+    const file = input.files?.[0];
+    // Xato bo'lsa xuddi shu faylni qayta tanlash mumkin bo'lsin (onChange yana ishlashi uchun)
+    input.value = "";
+    if (!file) return;
+    uploadScan.mutate(
+      { id: a.id, file },
+      {
+        onSuccess: () => toast.success(t("studentApplicationCard.scanUploaded")),
+        onError: (err) => toast.error(describeRequestError(err, t)),
+      },
+    );
+  };
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
         <CardTitle className="flex items-center gap-2 text-base">
           <ClipboardEdit className="h-4 w-4 text-primary" />
           {t("studentApplicationCard.title")}
         </CardTitle>
-        <Button size="sm" onClick={() => setOpen(true)}>
+        <Button size="sm" onClick={() => setMode({ kind: "new" })}>
           <Plus className="h-4 w-4" />
           {t("studentApplicationCard.newApplication")}
         </Button>
@@ -73,221 +117,230 @@ export function StudentApplicationCard() {
       <CardContent className="space-y-2">
         {isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         {data && data.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            {t("studentApplicationCard.empty")}
-          </p>
+          <p className="text-sm text-muted-foreground">{t("studentApplicationCard.empty")}</p>
         )}
-        {data?.map((a) => (
-          <div key={a.id} className="rounded-lg border border-border p-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-medium">
-                {a.contract_template_name ?? a.organization_name}
-              </span>
-              <Badge variant={STATUS[a.status]?.variant ?? "default"}>
-                {STATUS[a.status] ? t(STATUS[a.status]!.labelKey) : a.status}
-              </Badge>
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {a.organization_name} · {a.region} {a.district}
-            </div>
-            {a.status === "rejected" && a.review_note && (
-              <div className="mt-1 text-xs text-destructive">
-                {t("studentApplicationCard.reason", { note: a.review_note })}
+        {data?.map((a) => {
+          const location = [a.region, a.district].filter(Boolean).join(" ");
+          const isUploading = uploadingId === a.id;
+          return (
+            <div key={a.id} className="rounded-lg border border-border p-3">
+              <div className="flex items-start justify-between gap-2">
+                <span className="min-w-0 break-words font-medium">
+                  {a.contract_template_name ?? a.organization_name}
+                </span>
+                <Badge variant={STATUS[a.status]?.variant ?? "default"} className="shrink-0">
+                  {STATUS[a.status] ? t(STATUS[a.status]!.labelKey) : a.status}
+                </Badge>
               </div>
-            )}
-            {a.status === "revision_required" && (
-              <Alert variant="destructive" className="mt-2">
-                <AlertTitle className="text-sm">
-                  {t("studentApplicationCard.returnedTitle")}
-                </AlertTitle>
-                <AlertDescription className="text-xs">
-                  {a.return_reason && (
-                    <p className="mb-2">
-                      {t("studentApplicationCard.reason", { note: a.return_reason })}
-                    </p>
-                  )}
-                  <Button size="sm" variant="outline" onClick={() => setResubmitApp(a)}>
-                    <Pencil className="mr-1 h-3.5 w-3.5" />
-                    {t("studentApplicationCard.resubmitButton")}
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-            {a.status === "active" && (
-              <div className="mt-2 rounded-md border border-success/30 bg-success/10 p-2.5 space-y-2">
-                <div className="flex items-center gap-1.5 text-sm font-medium text-success">
-                  <CheckCircle2 className="h-4 w-4" />
-                  {t("studentApplicationCard.contractClosed")}
+              <div className="mt-1 break-words text-xs text-muted-foreground">
+                {[a.organization_name, location].filter(Boolean).join(" · ")}
+              </div>
+              {a.status === "rejected" && a.review_note && (
+                <div className="mt-1 text-xs text-destructive">
+                  {t("studentApplicationCard.reason", { note: a.review_note })}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("studentApplicationCard.contractClosedDescription")}
-                </p>
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-success/20">
-                  {a.contract_number && (
-                    <span className="text-xs font-semibold text-success">№ {a.contract_number}</span>
-                  )}
-                  <div className="flex flex-wrap gap-2">
+              )}
+              {a.status === "revision_required" && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertTitle className="text-sm">
+                    {t("studentApplicationCard.returnedTitle")}
+                  </AlertTitle>
+                  <AlertDescription className="text-xs">
+                    {a.return_reason && (
+                      <p className="mb-2">
+                        {t("studentApplicationCard.reason", { note: a.return_reason })}
+                      </p>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() =>
-                        downloadContract(a.id, a.contract_number).catch((e) =>
-                          toast.error(e instanceof Error ? e.message : t("common.error")),
-                        )
-                      }
+                      onClick={() => setMode({ kind: "resubmit", app: a })}
+                    >
+                      <Pencil className="mr-1 h-3.5 w-3.5" />
+                      {t("studentApplicationCard.resubmitButton")}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              {a.status === "active" && (
+                <div className="mt-2 space-y-2 rounded-md border border-success/30 bg-success/10 p-2.5">
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-success">
+                    <CheckCircle2 className="h-4 w-4" />
+                    {t("studentApplicationCard.contractClosed")}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t("studentApplicationCard.contractClosedDescription")}
+                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-success/20 pt-1">
+                    {a.contract_number && (
+                      <span className="text-xs font-semibold text-success">
+                        № {a.contract_number}
+                      </span>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void handleDownloadContract(a)}
+                      >
+                        <Download className="h-4 w-4" />
+                        {t("common.download")}
+                      </Button>
+                      {a.has_scan_file && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void handleDownloadScan(a)}
+                        >
+                          <FileText className="h-4 w-4" />
+                          {t("studentApplicationCard.scanFile")}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {a.status === "approved" && (
+                <div className="mt-2 space-y-2 rounded-md border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-success">
+                      {a.contract_number
+                        ? `№ ${a.contract_number}`
+                        : t("studentApplicationCard.status.approved")}
+                    </span>
+                    {a.has_scan_file && (
+                      <Badge
+                        variant="outline"
+                        className="border-emerald-300 bg-emerald-50 text-[11px] text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                      >
+                        {t("studentApplicationCard.scanUploadedBadge")}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void handleDownloadContract(a)}
                     >
                       <Download className="h-4 w-4" />
                       {t("common.download")}
                     </Button>
+
                     {a.has_scan_file && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          downloadApplicationScan(a.id).catch((e) =>
-                            toast.error(e instanceof Error ? e.message : t("common.error")),
-                          )
-                        }
-                      >
+                      <Button size="sm" variant="ghost" onClick={() => void handleDownloadScan(a)}>
                         <FileText className="h-4 w-4" />
-                        Skan fayli
+                        {t("studentApplicationCard.scanFile")}
                       </Button>
                     )}
-                  </div>
-                </div>
-              </div>
-            )}
-            {a.status === "approved" && (
-              <div className="mt-2 rounded-md border border-primary/20 bg-primary/5 p-3 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-success">
-                    {a.contract_number ? `№ ${a.contract_number}` : t("studentApplicationCard.status.approved")}
-                  </span>
-                  {a.has_scan_file && (
-                    <Badge variant="outline" className="text-[11px] bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300">
-                      Skan yuklangan
-                    </Badge>
-                  )}
-                </div>
 
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      downloadContract(a.id, a.contract_number).catch((e) =>
-                        toast.error(e instanceof Error ? e.message : t("common.error")),
-                      )
-                    }
-                  >
-                    <Download className="h-4 w-4" />
-                    {t("common.download")}
-                  </Button>
-
-                  {a.has_scan_file && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        downloadApplicationScan(a.id).catch((e) =>
-                          toast.error(e instanceof Error ? e.message : t("common.error")),
-                        )
+                    {/* Input ko'rinmas, lekin klaviatura bilan fokuslanadi — fokus halqasi label'da */}
+                    <input
+                      id={`scan-upload-${a.id}`}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="peer sr-only"
+                      disabled={isUploading}
+                      onChange={(e) => handleScanSelected(a, e.currentTarget)}
+                    />
+                    <Label
+                      htmlFor={`scan-upload-${a.id}`}
+                      className={
+                        isUploading
+                          ? "inline-flex h-8 cursor-wait items-center justify-center gap-2 whitespace-nowrap rounded-md border border-input bg-background px-3 text-xs font-medium opacity-70"
+                          : "inline-flex h-8 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md border border-input bg-background px-3 text-xs font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
                       }
                     >
-                      <FileText className="h-4 w-4" />
-                      Skan fayli
-                    </Button>
-                  )}
-
-                  <Label
-                    htmlFor={`scan-upload-${a.id}`}
-                    className="inline-flex h-8 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-input bg-background px-3 text-xs font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                  >
-                    {uploadScan.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Upload className="h-4 w-4" />
-                    )}
-                    {a.has_scan_file
-                      ? t("studentApplicationCard.scanUpdate")
-                      : t("studentApplicationCard.scanUpload")}
-                  </Label>
-                  <input
-                    id={`scan-upload-${a.id}`}
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                    disabled={uploadScan.isPending}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        uploadScan.mutate(
-                          { id: a.id, file },
-                          {
-                            onSuccess: () => toast.success(t("studentApplicationCard.scanUploaded")),
-                            onError: (err) => toast.error(err.message || t("common.error")),
-                          }
-                        );
-                      }
-                    }}
-                  />
+                      {isUploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      {a.has_scan_file
+                        ? t("studentApplicationCard.scanUpdate")
+                        : t("studentApplicationCard.scanUpload")}
+                    </Label>
+                  </div>
                 </div>
-              </div>
-            )}
-            {a.status === "approved" && !a.contract_number && a.qr_token && (
-              <div className="mt-1 text-xs text-success">
-                {t("studentApplicationCard.qrToken", { token: a.qr_token })}
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+              {a.status === "approved" && !a.contract_number && a.qr_token && (
+                <div className="mt-1 text-xs text-success">
+                  {t("studentApplicationCard.qrToken", { token: a.qr_token })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </CardContent>
-      <ApplicationDialog
-        open={open || !!resubmitApp}
-        resubmitFor={resubmitApp}
-        onClose={() => {
-          setOpen(false);
-          setResubmitApp(null);
-        }}
-      />
+      {/* Har ochilishda (va rejim almashganda) forma noldan — eski qiymatlar o'tib ketmaydi */}
+      {mode && (
+        <ApplicationDialog
+          key={mode.kind === "resubmit" ? mode.app.id : "new"}
+          resubmitFor={mode.kind === "resubmit" ? mode.app : null}
+          onClose={() => setMode(null)}
+        />
+      )}
     </Card>
   );
 }
 
+function prefilledValues(app: PracticeApplication | null): Record<string, string> {
+  const values: Record<string, string> = {};
+  for (const [k, v] of Object.entries(app?.variable_values ?? {})) {
+    values[k] = String(v ?? "");
+  }
+  return values;
+}
+
 function ApplicationDialog({
-  open,
+  resubmitFor,
   onClose,
-  resubmitFor = null,
 }: {
-  open: boolean;
+  resubmitFor: PracticeApplication | null;
   onClose: () => void;
-  resubmitFor?: PracticeApplication | null;
 }) {
   const { t } = useTranslation();
   const create = useCreateApplication();
   const resubmit = useResubmitApplication();
   const types = useContractTypes();
-  const [contractTypeId, setContractTypeId] = useState("");
   const isResubmit = !!resubmitFor;
   const isBusy = create.isPending || resubmit.isPending;
-  
-  // Dynamic fields for the selected template
-  const { data: formFieldsData, isFetching: isLoadingFields } = useTemplateFormFields(contractTypeId);
-  
-  const [form, setForm] = useState({
-    note: "",
-    variable_values: {} as Record<string, string>,
-  });
 
-  const set = (k: keyof typeof form, v: string | Record<string, string>) =>
-    setForm((p) => ({ ...p, [k]: v }));
-  
-  const reset = () => {
-    setContractTypeId("");
-    setForm({
-      note: "",
-      variable_values: {},
+  // Resubmit rejimida shablon fiksatsiya qilinadi va eski qiymatlar oldindan to'ldiriladi
+  const [contractTypeId, setContractTypeId] = useState(
+    () => resubmitFor?.contract_template_id ?? "",
+  );
+  const [note, setNote] = useState(() => resubmitFor?.note ?? "");
+  const [values, setValues] = useState<Record<string, string>>(() => prefilledValues(resubmitFor));
+
+  // Tanlangan shablonning dinamik maydonlari
+  const { data: formFieldsData, isFetching: isLoadingFields } =
+    useTemplateFormFields(contractTypeId);
+
+  // Maydonlar kelganda bo'sh qolganlariga shablon standart qiymatlari
+  useEffect(() => {
+    const fields = formFieldsData?.fields;
+    if (!fields) return;
+    setValues((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const f of fields) {
+        if (f.defaultValue && !next[f.key]) {
+          next[f.key] = f.defaultValue;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
     });
+  }, [formFieldsData]);
+
+  const setValue = (key: string, value: string) => setValues((prev) => ({ ...prev, [key]: value }));
+
+  const handleTemplateChange = (id: string) => {
+    setContractTypeId(id);
+    // Boshqa shablonning qiymatlari yangi arizaga aralashmasin
+    setValues({});
   };
 
   const handleSubmit = async () => {
@@ -296,79 +349,38 @@ function ApplicationDialog({
       return;
     }
 
-    // Client-side validation for required dynamic fields
-    if (formFieldsData?.fields) {
-      for (const field of formFieldsData.fields) {
-        const value = form.variable_values[field.key];
-        if (field.required && (value == null || String(value).trim() === "")) {
-          toast.error(t("studentApplicationCard.fieldRequired", { label: field.label }));
-          return;
-        }
+    // Majburiy dinamik maydonlar
+    for (const field of formFieldsData?.fields ?? []) {
+      const value = values[field.key];
+      if (field.required && (value == null || String(value).trim() === "")) {
+        toast.error(t("studentApplicationCard.fieldRequired", { label: field.label }));
+        return;
       }
     }
 
     try {
-      if (isResubmit && resubmitFor) {
-        await resubmit.mutateAsync({
-          id: resubmitFor.id,
-          variable_values: form.variable_values,
-        });
+      if (resubmitFor) {
+        await resubmit.mutateAsync({ id: resubmitFor.id, variable_values: values });
         toast.success(t("studentApplicationCard.resubmittedToast"));
       } else {
         await create.mutateAsync({
           contract_template_id: contractTypeId,
-          note: form.note.trim() || undefined,
-          variable_values: form.variable_values,
+          note: note.trim() || undefined,
+          variable_values: values,
         });
         toast.success(t("studentApplicationCard.submitted"));
       }
-      reset();
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("common.error"));
+      toast.error(describeRequestError(e, t));
     }
   };
 
-  // Resubmit rejimida — shablonni fiksatsiya qilib, eski qiymatlarni oldindan to'ldiramiz
-  useEffect(() => {
-    if (resubmitFor) {
-      setContractTypeId(resubmitFor.contract_template_id ?? "");
-      const prefilled: Record<string, string> = {};
-      for (const [k, v] of Object.entries(resubmitFor.variable_values ?? {})) {
-        prefilled[k] = String(v ?? "");
-      }
-      setForm({
-        note: resubmitFor.note ?? "",
-        variable_values: prefilled,
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resubmitFor?.id]);
-
-  // When form fields load, set default values
-  useEffect(() => {
-    if (formFieldsData?.fields) {
-      const newValues = { ...form.variable_values };
-      let changed = false;
-      formFieldsData.fields.forEach(f => {
-        if (f.defaultValue && !newValues[f.key]) {
-          newValues[f.key] = f.defaultValue;
-          changed = true;
-        }
-      });
-      if (changed) {
-        set("variable_values", newValues);
-      }
-    }
-    // Faqat formFieldsData kelganda prefill — form.variable_values deps'da bo'lsa cheksiz sikl
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formFieldsData]);
-
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && !isBusy && onClose()}>
-      <DialogContent className="max-h-[88dvh] sm:max-w-lg overflow-y-auto">
-        <DialogHeader className="pr-6 sm:pr-0 text-left">
-          <DialogTitle className="text-base sm:text-lg font-semibold">
+    <Dialog open onOpenChange={(o) => !o && !isBusy && onClose()}>
+      <DialogContent className="max-h-[88dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader className="pr-6 text-left sm:pr-0">
+          <DialogTitle className="text-base font-semibold sm:text-lg">
             {isResubmit
               ? t("studentApplicationCard.resubmitTitle")
               : t("studentApplicationCard.newApplication")}
@@ -380,25 +392,30 @@ function ApplicationDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          {isResubmit && resubmitFor?.return_reason && (
-            <Alert variant="destructive" className="py-2.5 px-3">
-              <AlertDescription className="text-xs break-words">
+          {resubmitFor?.return_reason && (
+            <Alert variant="destructive" className="px-3 py-2.5">
+              <AlertDescription className="break-words text-xs">
                 {t("studentApplicationCard.reason", { note: resubmitFor.return_reason })}
               </AlertDescription>
             </Alert>
           )}
           <div>
-            <Label className="text-xs sm:text-sm">{t("studentApplicationCard.contractType")}</Label>
-            {isResubmit ? (
+            <Label htmlFor="application-template" className="text-xs sm:text-sm">
+              {t("studentApplicationCard.contractType")}
+            </Label>
+            {resubmitFor ? (
               <Input
-                value={resubmitFor?.contract_template_name ?? resubmitFor?.organization_name ?? ""}
+                id="application-template"
+                value={resubmitFor.contract_template_name ?? resubmitFor.organization_name ?? ""}
                 disabled
                 className="mt-1 text-xs sm:text-sm"
               />
             ) : (
-              <Select value={contractTypeId} onValueChange={setContractTypeId}>
-                <SelectTrigger className="mt-1 text-xs sm:text-sm">
-                  <SelectValue placeholder={t("studentApplicationCard.selectTemplatePlaceholder")} />
+              <Select value={contractTypeId} onValueChange={handleTemplateChange}>
+                <SelectTrigger id="application-template" className="mt-1 text-xs sm:text-sm">
+                  <SelectValue
+                    placeholder={t("studentApplicationCard.selectTemplatePlaceholder")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {(types.data ?? []).length === 0 && (
@@ -415,78 +432,104 @@ function ApplicationDialog({
               </Select>
             )}
           </div>
-          
+
           {isLoadingFields && (
-            <div className="flex py-4 justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           )}
-          
+
           {!isLoadingFields && formFieldsData?.fields && formFieldsData.fields.length > 0 && (
-            <div className="space-y-3 rounded-md border border-border p-3 sm:p-4 bg-muted/20">
-              <h4 className="text-xs sm:text-sm font-medium">{t("studentApplicationCard.contractDetails")}</h4>
+            <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3 sm:p-4">
+              <h4 className="text-xs font-medium sm:text-sm">
+                {t("studentApplicationCard.contractDetails")}
+              </h4>
               <div className="grid gap-3 sm:grid-cols-1">
-                {formFieldsData.fields.map((field) => (
-                  <div key={field.key}>
-                    <Label className="text-xs mb-1 block">
-                      {field.label} {field.required && <span className="text-destructive">*</span>}
-                    </Label>
-                    
-                    {field.type === "select" && field.options ? (
-                      <Select 
-                        value={form.variable_values[field.key] || ""} 
-                        onValueChange={(v) => 
-                          set("variable_values", { ...form.variable_values, [field.key]: v })
-                        }
-                      >
-                        <SelectTrigger className="text-xs sm:text-sm">
-                          <SelectValue placeholder={field.placeholder || t("studentApplicationCard.selectPlaceholder")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {field.options.map((opt) => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : field.type === "textarea" ? (
-                      <Textarea
-                        value={form.variable_values[field.key] || ""}
-                        onChange={(e) =>
-                          set("variable_values", { ...form.variable_values, [field.key]: e.target.value })
-                        }
-                        placeholder={field.placeholder || "..."}
-                        rows={3}
-                        className="text-xs sm:text-sm"
-                      />
-                    ) : (
-                      <Input
-                        type={field.type === "date" ? "date" : field.type === "number" ? "number" : "text"}
-                        value={form.variable_values[field.key] || ""}
-                        onChange={(e) =>
-                          set("variable_values", { ...form.variable_values, [field.key]: e.target.value })
-                        }
-                        placeholder={field.placeholder || "..."}
-                        className="text-xs sm:text-sm"
-                      />
-                    )}
-                  </div>
-                ))}
+                {formFieldsData.fields.map((field) => {
+                  const fieldId = `application-field-${field.key}`;
+                  return (
+                    <div key={field.key}>
+                      <Label htmlFor={fieldId} className="mb-1 block text-xs">
+                        {field.label}{" "}
+                        {field.required && <span className="text-destructive">*</span>}
+                      </Label>
+
+                      {field.type === "select" && field.options ? (
+                        <Select
+                          value={values[field.key] || ""}
+                          onValueChange={(v) => setValue(field.key, v)}
+                        >
+                          <SelectTrigger id={fieldId} className="text-xs sm:text-sm">
+                            <SelectValue
+                              placeholder={
+                                field.placeholder || t("studentApplicationCard.selectPlaceholder")
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {field.options.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : field.type === "textarea" ? (
+                        <Textarea
+                          id={fieldId}
+                          value={values[field.key] || ""}
+                          onChange={(e) => setValue(field.key, e.target.value)}
+                          placeholder={field.placeholder || "..."}
+                          rows={3}
+                          className="text-xs sm:text-sm"
+                        />
+                      ) : (
+                        <Input
+                          id={fieldId}
+                          type={
+                            field.type === "date"
+                              ? "date"
+                              : field.type === "number"
+                                ? "number"
+                                : "text"
+                          }
+                          value={values[field.key] || ""}
+                          onChange={(e) => setValue(field.key, e.target.value)}
+                          placeholder={field.placeholder || "..."}
+                          className="text-xs sm:text-sm"
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
           {!isResubmit && (
             <div>
-              <Label className="text-xs sm:text-sm">{t("studentApplicationCard.noteOptional")}</Label>
-              <Textarea value={form.note} onChange={(e) => set("note", e.target.value)} rows={2} className="mt-1 text-xs sm:text-sm" />
+              <Label htmlFor="application-note" className="text-xs sm:text-sm">
+                {t("studentApplicationCard.noteOptional")}
+              </Label>
+              <Textarea
+                id="application-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
+                className="mt-1 text-xs sm:text-sm"
+              />
             </div>
           )}
         </div>
-        <DialogFooter className="mt-4 flex-col-reverse sm:flex-row gap-2 sm:gap-2">
+        <DialogFooter className="mt-4 flex-col-reverse gap-2 sm:flex-row sm:gap-2">
           <Button variant="ghost" onClick={onClose} disabled={isBusy} className="w-full sm:w-auto">
             {t("common.cancel")}
           </Button>
-          <Button onClick={handleSubmit} disabled={isBusy || !contractTypeId} className="w-full sm:w-auto">
+          <Button
+            onClick={handleSubmit}
+            disabled={isBusy || !contractTypeId}
+            className="w-full sm:w-auto"
+          >
             {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isResubmit
               ? t("studentApplicationCard.resubmitSubmit")

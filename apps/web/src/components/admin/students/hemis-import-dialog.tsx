@@ -48,9 +48,15 @@ export function HemisImportDialog({ open, onClose }: Props) {
   };
 
   const handleClose = () => {
+    // Import ketayotganda yopilmaydi: so'rov serverda davom etadi, natija (bir martalik
+    // parollar, xato qatorlar) esa yo'qolib qolardi
+    if (mut.isPending) return;
     reset();
     onClose();
   };
+
+  /** Overlay/Escape bilan tasodifan yopilmasin: yuklash paytida va natija ko'rinib turganda. */
+  const blockAccidentalClose = mut.isPending || !!result;
 
   const handleFile = (f: File | null) => {
     if (!f) return;
@@ -90,7 +96,19 @@ export function HemisImportDialog({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent
+        className="max-h-[90vh] max-w-2xl overflow-y-auto"
+        showClose={!mut.isPending}
+        onPointerDownOutside={(e) => {
+          if (blockAccidentalClose) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (blockAccidentalClose) e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          if (blockAccidentalClose) e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{t("studentsHemisImportDialog.title")}</DialogTitle>
           <DialogDescription>
@@ -114,7 +132,7 @@ export function HemisImportDialog({ open, onClose }: Props) {
                   <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs">
                     {result.errors.slice(0, 50).map((e, i) => (
                       <li key={i}>
-                        <span className="font-mono">{t("studentsHemisImportDialog.rowN", { row: e.row })}</span>
+                        <span className="font-mono">{t("studentsHemisImportDialog.rowLabel", { row: e.row })}</span>
                         {e.amaliyot_id ? ` · ${e.amaliyot_id}` : ""}: {e.message}
                       </li>
                     ))}
@@ -126,7 +144,7 @@ export function HemisImportDialog({ open, onClose }: Props) {
             {result.credentials.length > 0 && (
               <>
                 <Separator />
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-semibold">{t("studentsHemisImportDialog.credentialsTitle")}</h3>
                     <p className="text-xs text-muted-foreground">
@@ -217,14 +235,14 @@ export function HemisImportDialog({ open, onClose }: Props) {
                   <div className="mb-2 text-sm">
                     {t("studentsHemisImportDialog.dropHint")}
                   </div>
-                  <label>
+                  <label className="rounded-md has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
                     <Button asChild size="sm" variant="outline">
                       <span>{t("studentsHemisImportDialog.chooseFile")}</span>
                     </Button>
                     <input
                       type="file"
                       accept=".xlsx,.xls"
-                      className="hidden"
+                      className="sr-only"
                       onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         handleFile(e.target.files?.[0] ?? null)
                       }

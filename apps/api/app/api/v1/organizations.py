@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import RequirePartners
+from app.api.deps import RequireAdmin, RequirePartners
 from app.db.session import SessionDep
 from app.models.enums import OrganizationKind
 from app.schemas.common import Paginated
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/organizations", tags=["organizations"])
 @router.get("", response_model=Paginated[OrganizationRead])
 async def list_organizations(
     db: SessionDep,
-    _: RequirePartners,
+    _: RequireAdmin,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
     search: str | None = Query(None, min_length=1, max_length=100),
@@ -42,7 +42,7 @@ async def list_organizations(
 
 
 @router.get("/{id_}", response_model=OrganizationRead)
-async def get_organization(id_: UUID, db: SessionDep, _: RequirePartners) -> OrganizationRead:
+async def get_organization(id_: UUID, db: SessionDep, _: RequireAdmin) -> OrganizationRead:
     return OrganizationRead.model_validate(await svc.get_organization(db, id_))
 
 

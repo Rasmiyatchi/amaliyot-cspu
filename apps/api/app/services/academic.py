@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,7 +79,18 @@ async def update_faculty(db: AsyncSession, id_: UUID, data: BaseModel) -> Facult
 
 
 async def delete_faculty(db: AsyncSession, id_: UUID) -> None:
+    from app.models.user import User
+
     f = await _get_or_404(db, Faculty, id_, "Fakultet")
+    # users.faculty_id ON DELETE SET NULL: fakultet o'chsa, unga cheklangan admin jim ravishda
+    # BUTUN universitet admini bo'lib qolardi.
+    scoped_admin = (
+        await db.execute(select(User.id).where(User.faculty_id == id_).limit(1))
+    ).scalar_one_or_none()
+    if scoped_admin:
+        raise _409(
+            "Fakultetga biriktirilgan adminlar bor — avval ularning fakultetini o'zgartiring"
+        )
     try:
         await db.delete(f)
         await db.commit()
@@ -90,13 +101,22 @@ async def delete_faculty(db: AsyncSession, id_: UUID) -> None:
 
 # ─── Direction ────────────────────────────────────────────
 async def list_directions(
-    db: AsyncSession, offset: int, limit: int, faculty_id: UUID | None = None
+    db: AsyncSession,
+    offset: int,
+    limit: int,
+    faculty_id: UUID | None = None,
+    search: str | None = None,
 ) -> tuple[list[Direction], int]:
     base = select(Direction)
     count_stmt = select(func.count(Direction.id))
     if faculty_id:
         base = base.where(Direction.faculty_id == faculty_id)
         count_stmt = count_stmt.where(Direction.faculty_id == faculty_id)
+    if search:
+        like = f"%{search.strip()}%"
+        cond = or_(Direction.name.ilike(like), Direction.code.ilike(like))
+        base = base.where(cond)
+        count_stmt = count_stmt.where(cond)
     total = (await db.execute(count_stmt)).scalar_one()
     items = (
         (await db.execute(base.order_by(Direction.code).offset(offset).limit(limit)))
@@ -225,6 +245,13 @@ async def create_academic_year(db: AsyncSession, data: BaseModel) -> AcademicYea
 async def update_academic_year(db: AsyncSession, id_: UUID, data: BaseModel) -> AcademicYear:
     ay = await _get_or_404(db, AcademicYear, id_, "Akademik yil")
     payload = data.model_dump(exclude_unset=True)
+    new_start = payload.get("start_date", ay.start_date)
+    new_end = payload.get("end_date", ay.end_date)
+    if new_start and new_end and new_end < new_start:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas",
+        )
     if payload.get("is_active") is True:
         await db.execute(update(AcademicYear).where(AcademicYear.id != id_).values(is_active=False))
     for key, value in payload.items():
@@ -257,9 +284,13 @@ async def list_groups(
     academic_year_id: UUID | None = None,
     course: int | None = None,
     faculty_id: UUID | None = None,
+    search: str | None = None,
 ) -> tuple[list[Group], int]:
     stmt = select(Group)
     count_stmt = select(func.count(Group.id))
+    if search:
+        stmt = stmt.where(Group.name.ilike(f"%{search.strip()}%"))
+        count_stmt = count_stmt.where(Group.name.ilike(f"%{search.strip()}%"))
     if faculty_id:
         stmt = stmt.join(Direction, Group.direction_id == Direction.id).where(Direction.faculty_id == faculty_id)
         count_stmt = count_stmt.join(Direction, Group.direction_id == Direction.id).where(Direction.faculty_id == faculty_id)

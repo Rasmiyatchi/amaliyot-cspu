@@ -1,4 +1,3 @@
-import { HTTPError } from "ky";
 import {
   AlertTriangle,
   Bell,
@@ -25,6 +24,9 @@ import {
 } from "@/lib/api/system-settings";
 import { useAuthStore } from "@/stores/auth";
 
+const MIN_FILE_MB = 1;
+const MAX_FILE_MB = 500;
+
 export function SystemSettingsPage() {
   const { t } = useTranslation();
   const me = useAuthStore((s) => s.user);
@@ -34,7 +36,8 @@ export function SystemSettingsPage() {
 
   const [siteName, setSiteName] = useState("");
   const [siteDesc, setSiteDesc] = useState("");
-  const [maxFileSize, setMaxFileSize] = useState(10);
+  // Matn sifatida saqlanadi — maydonni tozalab yangi son yozish mumkin bo'lsin
+  const [maxFileSize, setMaxFileSize] = useState("10");
   const [allowedTypes, setAllowedTypes] = useState("");
   const [emailNotif, setEmailNotif] = useState(true);
   const [maintenance, setMaintenance] = useState(false);
@@ -45,7 +48,7 @@ export function SystemSettingsPage() {
     if (data) {
       setSiteName(data.site_name);
       setSiteDesc(data.site_description ?? "");
-      setMaxFileSize(data.max_file_size_mb);
+      setMaxFileSize(String(data.max_file_size_mb));
       setAllowedTypes(data.allowed_file_types.join(", "));
       setEmailNotif(data.email_notifications_enabled);
       setMaintenance(data.maintenance_mode);
@@ -53,13 +56,25 @@ export function SystemSettingsPage() {
     }
   }, [data]);
 
+  const maxSizeNumber = Number(maxFileSize);
+  const maxSizeValid =
+    Number.isInteger(maxSizeNumber) && maxSizeNumber >= MIN_FILE_MB && maxSizeNumber <= MAX_FILE_MB;
+
   const handleSave = async () => {
     if (!isSuperAdmin) return;
+    if (!siteName.trim()) {
+      toast.error(t("adminSystemSettings.siteNameRequired"));
+      return;
+    }
+    if (!maxSizeValid) {
+      toast.error(t("adminSystemSettings.maxSizeRange", { min: MIN_FILE_MB, max: MAX_FILE_MB }));
+      return;
+    }
     try {
       await update.mutateAsync({
         site_name: siteName.trim(),
         site_description: siteDesc.trim() || null,
-        max_file_size_mb: maxFileSize,
+        max_file_size_mb: maxSizeNumber,
         allowed_file_types: allowedTypes
           .split(",")
           .map((s) => s.trim().toLowerCase())
@@ -68,7 +83,7 @@ export function SystemSettingsPage() {
       });
       toast.success(t("adminSystemSettings.settingsSaved"));
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -86,7 +101,7 @@ export function SystemSettingsPage() {
       );
       setConfirmMaintenance(null);
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(e instanceof Error ? e.message : t("common.error"));
     }
   };
 
@@ -234,11 +249,19 @@ export function SystemSettingsPage() {
                   <Input
                     id="max-size"
                     type="number"
-                    min={1}
-                    max={500}
+                    inputMode="numeric"
+                    min={MIN_FILE_MB}
+                    max={MAX_FILE_MB}
+                    step={1}
                     value={maxFileSize}
-                    onChange={(e) => setMaxFileSize(Number(e.target.value) || 10)}
+                    onChange={(e) => setMaxFileSize(e.target.value)}
+                    aria-invalid={!maxSizeValid}
                   />
+                  {!maxSizeValid && (
+                    <p className="mt-1 text-xs text-destructive">
+                      {t("adminSystemSettings.maxSizeRange", { min: MIN_FILE_MB, max: MAX_FILE_MB })}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="allowed-types">
@@ -284,7 +307,7 @@ export function SystemSettingsPage() {
           <Separator />
 
           <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={update.isPending}>
+            <Button onClick={handleSave} disabled={update.isPending || !maxSizeValid}>
               {update.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               <Save className="h-4 w-4" />
               {t("adminSystemSettings.saveButton")}

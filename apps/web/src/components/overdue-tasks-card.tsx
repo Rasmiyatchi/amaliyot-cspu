@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { formatTashkentDate } from "@/components/attendance/attendance-date-utils";
 import { dateLocale } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +41,7 @@ export function OverdueTasksCard() {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="text-xs text-muted-foreground">
-                  {new Date(task.due_date).toLocaleDateString(dateLocale())}
+                  {formatTashkentDate(task.due_date, dateLocale())}
                 </span>
                 <Badge variant="destructive">
                   {t("overdueTasksCard.daysOverdue", { count: task.days_overdue })}

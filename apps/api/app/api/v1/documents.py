@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
-from app.api.deps import CurrentUser, RequireAdmin
+from app.api.deps import CurrentUser, RequirePractice
 from app.db.session import SessionDep
 from app.models.enums import DocumentKind
 from app.schemas.document import DocumentCreate, DocumentRead, DocumentUpdate
@@ -48,7 +48,7 @@ async def get_document(
     summary="Admin: yangi hujjat (avval /uploads/file orqali fayl yuklang)",
 )
 async def create_document(
-    data: DocumentCreate, db: SessionDep, user: RequireAdmin
+    data: DocumentCreate, db: SessionDep, user: RequirePractice
 ) -> DocumentRead:
     return DocumentRead.model_validate(
         await svc.create_document(db, data, user.id)
@@ -60,7 +60,7 @@ async def update_document(
     doc_id: UUID,
     data: DocumentUpdate,
     db: SessionDep,
-    _: RequireAdmin,
+    _: RequirePractice,
 ) -> DocumentRead:
     return DocumentRead.model_validate(
         await svc.update_document(db, doc_id, data)
@@ -69,6 +69,6 @@ async def update_document(
 
 @router.delete("/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
-    doc_id: UUID, db: SessionDep, _: RequireAdmin
+    doc_id: UUID, db: SessionDep, _: RequirePractice
 ) -> None:
     await svc.delete_document(db, doc_id)

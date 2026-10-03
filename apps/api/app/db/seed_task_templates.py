@@ -542,6 +542,11 @@ async def ensure_task_templates(db: AsyncSession) -> None:
             )
         ).all()
     }
+    if existing_slots:
+        # Shablonlar bir marta seed qilinadi. Keyin admin o'chirgan/o'zgartirgan shablon
+        # har restartda qayta tiklanib qolmasin (ilgari bo'sh "slot" qayta yaratilardi).
+        logger.debug("Task template'lar allaqachon seed qilingan")
+        return
 
     created = 0
     for data in TEMPLATES_4PLUS2:

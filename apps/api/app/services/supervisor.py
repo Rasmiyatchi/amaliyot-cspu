@@ -9,12 +9,13 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 from app.models.academic import Department, Faculty
 from app.models.enums import UserRole
 from app.models.organization import Organization
 from app.models.supervisor import Supervisor, SupervisorOrganization
 from app.models.user import User
+from app.services.search_utils import like_pattern, normalized_col
 
 
 def _supervisor_base_select() -> Any:
@@ -92,9 +93,7 @@ async def _set_supervisor_organizations(
         )
     )
     for org_id in unique_ids:
-        db.add(
-            SupervisorOrganization(supervisor_id=supervisor_id, organization_id=org_id)
-        )
+        db.add(SupervisorOrganization(supervisor_id=supervisor_id, organization_id=org_id))
 
 
 async def list_supervisors(
@@ -141,11 +140,12 @@ async def list_supervisors(
         if is_active is not None:
             stmt = stmt.where(User.is_active.is_(is_active))
         if search:
-            like = f"%{search.lower()}%"
+            # Apostroflar farqsiz: "Ro'ziyev" = "Roʻziyev" = "Ro’ziyev"
+            pattern = like_pattern(search)
             stmt = stmt.where(
-                func.lower(User.first_name).like(like)
-                | func.lower(User.last_name).like(like)
-                | User.username.like(f"%{search}%")
+                normalized_col(User.last_name + " " + User.first_name).like(pattern, escape="\\")
+                | normalized_col(User.first_name + " " + User.last_name).like(pattern, escape="\\")
+                | normalized_col(User.username).like(pattern, escape="\\")
             )
         return stmt
 
@@ -185,7 +185,7 @@ async def create_supervisor(db: AsyncSession, data: BaseModel) -> dict[str, Any]
     # User yaratish
     user = User(
         username=payload["username"],
-        password_hash=hash_password(payload["password"]),
+        password_hash=await hash_password_async(payload["password"]),
         email=payload.get("email"),
         phone=payload.get("phone"),
         first_name=payload["first_name"],
@@ -271,9 +271,7 @@ async def update_supervisor(db: AsyncSession, id_: UUID, data: BaseModel) -> dic
     return await get_supervisor(db, supervisor.id)
 
 
-async def update_credentials(
-    db: AsyncSession, id_: UUID, data: BaseModel
-) -> dict[str, Any]:
+async def update_credentials(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[str, Any]:
     """Admin orqali supervizor login/parolini yangilash."""
     supervisor = await db.get(Supervisor, id_)
     if not supervisor:
@@ -295,24 +293,43 @@ async def update_credentials(
     if new_username and new_username != user.username:
         user.username = new_username
     if new_password:
-        user.password_hash = hash_password(new_password)
+        user.password_hash = await hash_password_async(new_password)
+        from app.services.auth import revoke_all_refresh_tokens
+
+        await revoke_all_refresh_tokens(db, user.id)
 
     try:
         await db.commit()
     except IntegrityError as e:
         await db.rollback()
-        raise HTTPException(
-            status.HTTP_409_CONFLICT, "Bu username allaqachon band"
-        ) from e
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bu username allaqachon band") from e
 
     return await get_supervisor(db, id_)
 
 
 async def delete_supervisor(db: AsyncSession, id_: UUID) -> None:
-    """Supervisor profile va bog'langan User'ni ham o'chiradi (CASCADE)."""
+    """Supervisor profile va bog'langan User'ni ham o'chiradi (CASCADE).
+
+    `practice_assignments.supervisor_id` ON DELETE SET NULL — o'chirilsa uning talabalari
+    rahbarsiz qolib, topshiriqlarni tasdiqlab bo'lmay qolardi va tarixda ism yo'qolardi.
+    Shuning uchun biriktirishi bor supervizor o'chirilmaydi (faolsizlantiriladi).
+    """
+    from app.models.practice_assignment import PracticeAssignment
+
     supervisor = await db.get(Supervisor, id_)
     if not supervisor:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Supervizor topilmadi: {id_}")
+    has_assignments = (
+        await db.execute(
+            select(PracticeAssignment.id).where(PracticeAssignment.supervisor_id == id_).limit(1)
+        )
+    ).scalar_one_or_none()
+    if has_assignments:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Supervizorga talabalar biriktirilgan — o'chirib bo'lmaydi. "
+            "O'rniga uni faolsizlantiring (is_active = false) yoki talabalarni boshqasiga o'tkazing.",
+        )
     user = await db.get(User, supervisor.user_id)
     try:
         if user:

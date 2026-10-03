@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import { assignmentKeys } from "@/lib/api/assignments";
+import { recordKeys } from "@/lib/api/records";
 import type { UUID } from "@/lib/api/types";
 
 export type CriterionScore = {
@@ -67,8 +68,9 @@ export function useFinalizeGrade(assignmentId: UUID) {
       api.post(`v1/grading/assignments/${assignmentId}/finalize`).json<GradeBreakdown>(),
     onSuccess: (data) => {
       qc.setQueryData(gradingKeys.breakdown(assignmentId), data);
-      // Yakunlash status va final_grade'ni o'zgartiradi — ro'yxatlar eskiradi
+      // Yakunlash status va final_grade'ni o'zgartiradi — ro'yxatlar va qaydnomalar eskiradi
       void qc.invalidateQueries({ queryKey: assignmentKeys.all });
+      void qc.invalidateQueries({ queryKey: recordKeys.all });
     },
   });
 }

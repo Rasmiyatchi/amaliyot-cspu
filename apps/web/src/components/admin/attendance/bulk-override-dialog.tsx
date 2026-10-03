@@ -1,9 +1,9 @@
-import { HTTPError } from "ky";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { describeRequestError } from "@/components/attendance/request-error";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,23 +27,17 @@ type Props = {
   onSuccess: () => void;
 };
 
-export function BulkOverrideDialog({
-  open,
-  onClose,
-  selectedIds,
-  targetStatus,
-  onSuccess,
-}: Props) {
+export function BulkOverrideDialog({ open, onClose, selectedIds, targetStatus, onSuccess }: Props) {
   const { t } = useTranslation();
   const [note, setNote] = useState("");
   const bulkUpdate = useBulkAttendanceUpdate();
 
-  useEffect(() => {
-    if (!open) {
-      setNote("");
-      bulkUpdate.reset();
-    }
-  }, [open]);
+  // Yopilganda forma tozalanadi (effect o'rniga — exhaustive-deps ogohlantirishisiz)
+  const handleClose = () => {
+    setNote("");
+    bulkUpdate.reset();
+    onClose();
+  };
 
   if (!targetStatus) return null;
 
@@ -51,7 +45,7 @@ export function BulkOverrideDialog({
 
   const handleSubmit = async () => {
     if (!isGreen && !note.trim()) {
-      toast.error(t("attendanceDayDetailDialog.reasonRequired", { defaultValue: "Rad etish sababini kiriting" }));
+      toast.error(t("attendanceDayDetailDialog.reasonRequired"));
       return;
     }
 
@@ -64,28 +58,18 @@ export function BulkOverrideDialog({
 
       toast.success(
         isGreen
-          ? t("adminAttendance.bulkGreenSuccess", {
-              defaultValue: "{{count}} ta davomat yozuvi tasdiqlandi (yashil)",
-              count: res.updated_count,
-            })
-          : t("adminAttendance.bulkRedSuccess", {
-              defaultValue: "{{count}} ta davomat yozuvi rad etildi (qizil)",
-              count: res.updated_count,
-            }),
+          ? t("adminAttendance.bulkGreenSuccess", { count: res.updated_count })
+          : t("adminAttendance.bulkRedSuccess", { count: res.updated_count }),
       );
       onSuccess();
-      onClose();
+      handleClose();
     } catch (e) {
-      toast.error(
-        e instanceof HTTPError
-          ? e.message
-          : t("common.error", { defaultValue: "Xatolik yuz berdi" }),
-      );
+      toast.error(describeRequestError(e, t));
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
@@ -96,19 +80,12 @@ export function BulkOverrideDialog({
             )}
             <DialogTitle>
               {isGreen
-                ? t("adminAttendance.bulkApproveTitle", {
-                    defaultValue: "Ommaviy tasdiqlash (Yashil)",
-                  })
-                : t("adminAttendance.bulkRejectTitle", {
-                    defaultValue: "Ommaviy rad etish (Qizil)",
-                  })}
+                ? t("adminAttendance.bulkApproveTitle")
+                : t("adminAttendance.bulkRejectTitle")}
             </DialogTitle>
           </div>
           <DialogDescription>
-            {t("adminAttendance.bulkDesc", {
-              count: selectedIds.length,
-              defaultValue: "Tanlangan {{count}} ta yozuv o'zgartiriladi.",
-            })}
+            {t("adminAttendance.bulkDesc", { count: selectedIds.length })}
           </DialogDescription>
         </DialogHeader>
 
@@ -116,34 +93,24 @@ export function BulkOverrideDialog({
           <Alert variant={isGreen ? "success" : "destructive"}>
             <AlertTitle className="text-sm font-medium">
               {isGreen
-                ? t("adminAttendance.bulkGreenAlert", {
-                    defaultValue: "Barcha {{count}} ta yozuv 'Kelgan / Tasdiqlangan' holatiga o'tadi.",
-                    count: selectedIds.length,
-                  })
-                : t("adminAttendance.bulkRedAlert", {
-                    defaultValue: "Barcha {{count}} ta yozuv 'Rad etilgan / Qizil' holatiga o'tadi.",
-                    count: selectedIds.length,
-                  })}
+                ? t("adminAttendance.bulkGreenAlert", { count: selectedIds.length })
+                : t("adminAttendance.bulkRedAlert", { count: selectedIds.length })}
             </AlertTitle>
           </Alert>
 
           <div>
             <Label htmlFor="bulk-note">
-              {t("common.note", { defaultValue: "Izoh / Sabab" })}{" "}
-              {!isGreen && <span className="text-destructive">*</span>}
+              {t("common.note")} {!isGreen && <span className="text-destructive">*</span>}
             </Label>
             <Input
               id="bulk-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
+              maxLength={2000}
               placeholder={
                 isGreen
-                  ? t("adminAttendance.bulkNotePlaceholderGreen", {
-                      defaultValue: "Ixtiyoriy izoh kiriting...",
-                    })
-                  : t("adminAttendance.bulkNotePlaceholderRed", {
-                      defaultValue: "Rad etish sababini yozing...",
-                    })
+                  ? t("adminAttendance.bulkNotePlaceholderGreen")
+                  : t("adminAttendance.bulkNotePlaceholderRed")
               }
               className="mt-1.5"
             />
@@ -151,8 +118,13 @@ export function BulkOverrideDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" type="button" onClick={onClose} disabled={bulkUpdate.isPending}>
-            {t("common.cancel", { defaultValue: "Bekor qilish" })}
+          <Button
+            variant="outline"
+            type="button"
+            onClick={handleClose}
+            disabled={bulkUpdate.isPending}
+          >
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -161,9 +133,7 @@ export function BulkOverrideDialog({
             disabled={bulkUpdate.isPending}
           >
             {bulkUpdate.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isGreen
-              ? t("adminAttendance.confirmApprove", { defaultValue: "Tasdiqlash" })
-              : t("adminAttendance.confirmReject", { defaultValue: "Rad etish" })}
+            {isGreen ? t("adminAttendance.confirmApprove") : t("adminAttendance.confirmReject")}
           </Button>
         </DialogFooter>
       </DialogContent>

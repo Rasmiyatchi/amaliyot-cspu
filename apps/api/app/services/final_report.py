@@ -15,6 +15,7 @@ from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
 from app.models.student import Student
 from app.models.user import User
+from app.services.uploads import clean_client_attachments
 
 
 def _row_to_dict(
@@ -109,42 +110,48 @@ async def list_reports(
     course: int | None = None,
     search: str | None = None,
 ) -> list[dict[str, Any]]:
+    """Bitta JOIN'li so'rov (ilgari har bir hisobot uchun ~5 ta alohida so'rov yuborilardi).
+
+    Guruh — biriktirish paytidagi guruh (talaba keyin boshqa guruhga o'tgan bo'lsa ham).
+    """
     from sqlalchemy import func, or_
+    from sqlalchemy.orm import aliased
 
     from app.models.academic import Direction
     from app.models.supervisor import Supervisor
-
-    stmt = select(FinalReport)
+    from app.services.search_utils import like_pattern, normalized_col
 
     sup_id: UUID | None = None
     if user and user.role == UserRole.SUPERVISOR:
-        sup = (
-            await db.execute(
-                select(Supervisor).where(Supervisor.user_id == user.id)
-            )
+        sup_id = (
+            await db.execute(select(Supervisor.id).where(Supervisor.user_id == user.id))
         ).scalar_one_or_none()
-        if not sup:
+        if not sup_id:
             return []
-        sup_id = sup.id
 
-    needs_join = any(
-        [academic_year_id, group_id, direction_id, faculty_id, course, search, sup_id]
-    )
-    if needs_join:
-        stmt = (
-            stmt.join(
-                PracticeAssignment,
-                PracticeAssignment.id == FinalReport.assignment_id,
-            )
-            .join(Student, Student.id == PracticeAssignment.student_id)
-            .outerjoin(Group, Group.id == PracticeAssignment.group_id)
+    stu_user = aliased(User)
+    reviewer = aliased(User)
+    stmt = (
+        select(
+            FinalReport,
+            stu_user.first_name.label("stu_first"),
+            stu_user.last_name.label("stu_last"),
+            Group.name.label("group_name"),
+            PracticeType.name.label("practice_type_name"),
+            PracticeAssignment.final_grade,
+            PracticeAssignment.credit_earned,
+            reviewer.first_name.label("rev_first"),
+            reviewer.last_name.label("rev_last"),
         )
-        if direction_id or faculty_id:
-            stmt = stmt.outerjoin(Direction, Direction.id == Group.direction_id)
-        if search:
-            stmt = stmt.outerjoin(User, User.id == Student.user_id)
-
-    stmt = stmt.order_by(FinalReport.created_at.desc())
+        .join(PracticeAssignment, PracticeAssignment.id == FinalReport.assignment_id)
+        .join(Student, Student.id == PracticeAssignment.student_id)
+        .join(stu_user, stu_user.id == Student.user_id)
+        .outerjoin(Group, Group.id == func.coalesce(PracticeAssignment.group_id, Student.group_id))
+        .outerjoin(Direction, Direction.id == Group.direction_id)
+        .outerjoin(PracticeType, PracticeType.id == PracticeAssignment.practice_type_id)
+        .outerjoin(reviewer, reviewer.id == FinalReport.reviewer_id)
+        .order_by(FinalReport.created_at.desc())
+    )
 
     if sup_id:
         stmt = stmt.where(PracticeAssignment.supervisor_id == sup_id)
@@ -155,7 +162,7 @@ async def list_reports(
     if assignment_id:
         stmt = stmt.where(FinalReport.assignment_id == assignment_id)
     if group_id:
-        stmt = stmt.where(PracticeAssignment.group_id == group_id)
+        stmt = stmt.where(Group.id == group_id)
     if direction_id:
         stmt = stmt.where(Group.direction_id == direction_id)
     if faculty_id:
@@ -163,17 +170,32 @@ async def list_reports(
     if course is not None:
         stmt = stmt.where(PracticeAssignment.course == course)
     if search:
-        like = f"%{search.lower()}%"
+        pattern = like_pattern(search)
         stmt = stmt.where(
             or_(
-                func.lower(User.first_name).like(like),
-                func.lower(User.last_name).like(like),
-                Student.hemis_id.like(f"%{search}%"),
+                normalized_col(stu_user.last_name + " " + stu_user.first_name).like(
+                    pattern, escape="\\"
+                ),
+                normalized_col(stu_user.first_name + " " + stu_user.last_name).like(
+                    pattern, escape="\\"
+                ),
+                Student.hemis_id.like(f"%{search.strip()}%"),
             )
         )
 
-    rows = (await db.execute(stmt)).scalars().all()
-    return [await _hydrate(db, r) for r in rows]
+    rows = (await db.execute(stmt)).all()
+    return [
+        _row_to_dict(
+            r.FinalReport,
+            _full_name(r.stu_first, r.stu_last),
+            r.practice_type_name,
+            _full_name(r.rev_first, r.rev_last),
+            group_name=r.group_name,
+            final_grade=r.final_grade,
+            credit_earned=r.credit_earned,
+        )
+        for r in rows
+    ]
 
 
 async def get_report_for_assignment(
@@ -219,6 +241,13 @@ async def submit_report(
             select(FinalReport).where(FinalReport.assignment_id == assignment_id)
         )
     ).scalar_one_or_none()
+
+    # Fayl talabaning o'zi yuklagani bo'lishi shart (begona yo'l biriktirilmasin)
+    existing = [fr.file_attachment] if fr and isinstance(fr.file_attachment, dict) else None
+    cleaned = clean_client_attachments([file_attachment], user_id=user.id, existing=existing)
+    if not cleaned:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Hisobot fayli biriktirilmagan")
+    file_attachment = cleaned[0]
 
     now = datetime.now(UTC)
     if fr:

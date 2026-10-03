@@ -1,44 +1,30 @@
-import { AlertCircle, LockKeyhole, SearchX } from "lucide-react";
+import { LayoutDashboard, LockKeyhole } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+
 import { Button } from "@/components/ui/button";
+import { landingPathFor } from "@/lib/routing";
+import { useAuthStore } from "@/stores/auth";
 
-export function PrivateState({
-  type,
-  onRetry,
-}: {
-  type: "login" | "empty" | "error";
-  onRetry?: () => void;
-}) {
-  if (type === "login") {
+/**
+ * Shaxsiy amaliyot ma'lumotlari ochiq sahifada ko'rsatilmaydi — mehmonga kirish,
+ * tizimga kirgan foydalanuvchiga esa o'z kabineti taklif qilinadi.
+ */
+export function PrivateState() {
+  const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
+
+  if (!user) {
     return (
       <div className="private-state">
         <div className="state-icon">
-          <LockKeyhole />
+          <LockKeyhole aria-hidden="true" />
         </div>
-        <h3>Tizimga kirish talab etiladi</h3>
-        <p>
-          Shaxsiy amaliyot yozuvlari va davomat ma’lumotlarini ko‘rish uchun avval platformadagi hisobingizga kiring.
-        </p>
+        <h3>{t("privateState.loginTitle")}</h3>
+        <p>{t("privateState.loginText")}</p>
         <Button asChild size="lg" className="mt-4">
-          <Link to="/login">Platformaga kirish</Link>
+          <Link to="/login">{t("siteChrome.login")}</Link>
         </Button>
-      </div>
-    );
-  }
-
-  if (type === "error") {
-    return (
-      <div className="private-state">
-        <div className="state-icon">
-          <AlertCircle />
-        </div>
-        <h3>Ma’lumotlarni yuklab bo‘lmadi</h3>
-        <p>Server bilan aloqa uzildi yoki so'rovda xatolik yuz berdi. Qayta urinib ko'ring.</p>
-        {onRetry && (
-          <Button onClick={onRetry} variant="outline" className="mt-4">
-            Qayta urinish
-          </Button>
-        )}
       </div>
     );
   }
@@ -46,10 +32,13 @@ export function PrivateState({
   return (
     <div className="private-state">
       <div className="state-icon">
-        <SearchX />
+        <LayoutDashboard aria-hidden="true" />
       </div>
-      <h3>Ma’lumot topilmadi</h3>
-      <p>Kiritilgan qidiruv mezonlariga mos keladigan amaliyot yozuvi topilmadi.</p>
+      <h3>{t("privateState.dashboardTitle")}</h3>
+      <p>{t("privateState.dashboardText")}</p>
+      <Button asChild size="lg" className="mt-4">
+        <Link to={landingPathFor(user.role)}>{t("siteChrome.myDashboard")}</Link>
+      </Button>
     </div>
   );
 }

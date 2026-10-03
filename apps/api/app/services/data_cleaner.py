@@ -1,8 +1,22 @@
-"""Data Cleaner Service — Baza ma'lumotlarini 0 dan tozalash va tizimni qayta tiklash."""
+"""Data Cleaner — sinov ma'lumotlarini tozalab, tizimni boshlang'ich holatga qaytarish.
 
+FAQAT CLI orqali ishga tushiriladi (`scripts/clean_and_reset_data.py`) — HTTP endpoint YO'Q:
+bitta POST so'rov bilan production bazasini o'chirib yuborish imkoniyati bo'lmasligi kerak.
+
+Xavfsizlik qoidalari:
+- production muhitida faqat `ALLOW_DATABASE_RESET=1` muhit o'zgaruvchisi bilan ishlaydi;
+- `TRUNCATE ... CASCADE` ishlatilmaydi: u `users.faculty_id` orqali BUTUN `users` jadvalini va
+  undan `contract_templates`, `documents` va boshqalarni ham o'chirib yuborardi. O'rniga bog'liqlik
+  tartibida `DELETE` qilinadi;
+- super admin(lar) va ularning paroli saqlanadi; audit jurnali saqlanadi (tozalash ham yoziladi);
+- shartnoma shablonlari saqlanadi va ularning statusi o'zgartirilmaydi.
+"""
+
+import os
 from pathlib import Path
+
 from loguru import logger
-from sqlalchemy import text, select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -10,11 +24,13 @@ from app.core.security import hash_password
 from app.db.seed import ensure_sample_academic
 from app.db.seed_practice_types import ensure_practice_types
 from app.db.seed_task_templates import ensure_task_templates
+from app.models.audit_log import AuditLog
 from app.models.enums import UserRole
-from app.models.user import User
 from app.models.system_settings import SystemSettings
+from app.models.user import User
 
-TABLES_TO_TRUNCATE = [
+# Bog'liqlik tartibida (avval bolalar) — har biri oddiy DELETE
+TABLES_IN_DELETE_ORDER = [
     "attendance_overrides",
     "attendance_events",
     "attendance_days",
@@ -22,18 +38,16 @@ TABLES_TO_TRUNCATE = [
     "lesson_analyses",
     "tasks",
     "final_reports",
-    "documents",
     "inquiry_messages",
     "inquiries",
     "notifications",
-    "audit_logs",
-    "refresh_tokens",
     "contracts",
     "practice_applications",
     "practice_assignments",
     "supervisor_organizations",
     "supervisors",
     "students",
+    "documents",
     "organizations",
     "areas",
     "groups",
@@ -44,94 +58,93 @@ TABLES_TO_TRUNCATE = [
 ]
 
 
+class ResetNotAllowedError(RuntimeError):
+    """Production muhitida ruxsatsiz tozalashga urinish."""
+
+
+def reset_allowed() -> bool:
+    return settings.APP_ENV != "production" or os.environ.get("ALLOW_DATABASE_RESET") == "1"
+
+
+def _remove_storage_files() -> None:
+    storage_root = Path(__file__).resolve().parent.parent.parent / "storage"
+    for sub in ("contracts", "uploads"):
+        folder = storage_root / sub
+        if not folder.exists():
+            continue
+        for f in folder.rglob("*"):
+            if f.is_file():
+                try:
+                    f.unlink()
+                except OSError as e:
+                    logger.warning(f"Faylni o'chirib bo'lmadi ({f}): {e}")
+
+
 async def reset_all_data(db: AsyncSession) -> dict[str, int]:
-    """Test va dinamik ma'lumotlarni tozalab, tizimni 0 holatiga qaytaradi."""
-    logger.info("🧹 Ma'lumotlar bazasini tozalash boshlandi...")
+    """Dinamik ma'lumotlarni o'chiradi; super admin, shablonlar va audit jurnali saqlanadi."""
+    if not reset_allowed():
+        raise ResetNotAllowedError(
+            "Production muhitida bazani tozalash taqiqlangan "
+            "(ataylab kerak bo'lsa ALLOW_DATABASE_RESET=1 bilan ishga tushiring)"
+        )
 
-    # 1. Truncate dynamic tables
-    for table in TABLES_TO_TRUNCATE:
-        try:
-            await db.execute(text(f'TRUNCATE TABLE "{table}" CASCADE;'))
-        except Exception as e:
-            logger.warning(f"  ⚠ {table} truncate xatosi (DELETE): {e}")
-            await db.execute(text(f'DELETE FROM "{table}";'))
+    logger.warning("🧹 Ma'lumotlar bazasini tozalash boshlandi...")
+    deleted: dict[str, int] = {}
 
-    # 2. Delete non-superadmin users
-    await db.execute(text("DELETE FROM users WHERE role != 'super_admin';"))
+    for table in TABLES_IN_DELETE_ORDER:
+        # Jadval nomi faqat yuqoridagi doimiy ro'yxatdan olinadi
+        result = await db.execute(text(f'DELETE FROM "{table}"'))  # noqa: S608
+        deleted[table] = int(getattr(result, "rowcount", 0) or 0)
 
-    # 3. Ensure superadmin exists with configured credentials
-    super_admin = (
-        await db.execute(select(User).where(User.role == UserRole.SUPER_ADMIN).limit(1))
+    # Super admin'dan boshqa barcha foydalanuvchilar (talaba/supervizor/admin)
+    result = await db.execute(text("DELETE FROM users WHERE role <> 'super_admin'"))
+    deleted["users"] = int(getattr(result, "rowcount", 0) or 0)
+
+    # Super admin bo'lmasa — .env dagi ma'lumotlar bilan yaratiladi (mavjudlariga TEGILMAYDI)
+    has_super_admin = (
+        await db.execute(select(User.id).where(User.role == UserRole.SUPER_ADMIN).limit(1))
     ).scalar_one_or_none()
-
-    if super_admin:
-        super_admin.username = settings.SUPERADMIN_USERNAME
-        super_admin.email = settings.SUPERADMIN_EMAIL
-        super_admin.password_hash = hash_password(settings.SUPERADMIN_PASSWORD)
-        super_admin.is_active = True
-        super_admin.first_name = "Super"
-        super_admin.last_name = "Admin"
-    else:
-        super_admin = User(
-            username=settings.SUPERADMIN_USERNAME,
-            email=settings.SUPERADMIN_EMAIL,
-            password_hash=hash_password(settings.SUPERADMIN_PASSWORD),
-            role=UserRole.SUPER_ADMIN,
-            is_active=True,
-            first_name="Super",
-            last_name="Admin",
+    if has_super_admin is None:
+        db.add(
+            User(
+                username=settings.SUPERADMIN_USERNAME,
+                email=settings.SUPERADMIN_EMAIL,
+                password_hash=hash_password(settings.SUPERADMIN_PASSWORD),
+                role=UserRole.SUPER_ADMIN,
+                is_active=True,
+                must_change_password=True,
+                first_name="Super",
+                last_name="Admin",
+            )
         )
-        db.add(super_admin)
 
-    # 4. Ensure SystemSettings exists and reset maintenance mode
     settings_row = (await db.execute(select(SystemSettings).limit(1))).scalar_one_or_none()
-    if not settings_row:
-        settings_row = SystemSettings(
-            site_name="CHDPU Amaliyot Platformasi",
-            max_file_size_mb=10,
-            allowed_file_types=["pdf", "jpg", "jpeg", "png", "doc", "docx"],
-            email_notifications_enabled=True,
-            maintenance_mode=False,
-        )
-        db.add(settings_row)
-    else:
+    if settings_row is not None:
         settings_row.maintenance_mode = False
 
+    db.add(
+        AuditLog(
+            actor_user_id=None,
+            actor_role="system",
+            actor_name="CLI: clean_and_reset_data",
+            action="delete",
+            entity_type="database",
+            entity_id=None,
+            summary="Baza sinov ma'lumotlaridan tozalandi",
+            metadata_json={"deleted": deleted},
+        )
+    )
     await db.commit()
 
-    # 5. Reseed reference data
+    # Ma'lumotnoma ma'lumotlar (idempotent)
     await ensure_practice_types(db)
     await ensure_task_templates(db)
-    await ensure_sample_academic(db)
-
-    # 6. Ensure active status for contract templates
-    await db.execute(text("UPDATE contract_templates SET status = 'active';"))
+    if settings.APP_ENV == "development":
+        await ensure_sample_academic(db)
     await db.commit()
 
-    # 7. Clean physical storage files (contracts and uploads)
-    storage_root = Path(__file__).parent.parent.parent / "storage"
-    if storage_root.exists():
-        for sub in ["contracts", "uploads"]:
-            folder = storage_root / sub
-            if folder.exists():
-                for f in folder.glob("*"):
-                    if f.is_file():
-                        try:
-                            f.unlink()
-                        except Exception as e:
-                            logger.warning(f"Storage clean error for {f.name}: {e}")
+    # Shartnoma PDF/skanlari va yuklangan fayllar (bazadagi yozuvlari o'chirildi)
+    _remove_storage_files()
 
-    # 8. Collect final table counts
-    counts: dict[str, int] = {}
-    tables_res = await db.execute(
-        text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;")
-    )
-    for row in tables_res.fetchall():
-        t_name = row[0]
-        if t_name == "alembic_version":
-            continue
-        cnt = (await db.execute(text(f'SELECT COUNT(*) FROM "{t_name}"'))).scalar() or 0
-        counts[t_name] = cnt
-
-    logger.success("✨ Baza muvaffaqiyatli tozalandi!")
-    return counts
+    logger.success(f"✨ Baza tozalandi: {deleted}")
+    return deleted

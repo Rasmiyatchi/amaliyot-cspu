@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # ─── Builder stage — build Vite SPA ──────────────────────────────
 FROM node:20-alpine AS builder
 

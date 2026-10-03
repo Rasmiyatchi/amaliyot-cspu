@@ -1,7 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import i18n from "@/i18n";
+import { useMutation } from "@tanstack/react-query";
 
-import { api } from "@/lib/api";
+import i18n from "@/i18n";
+import { api, authFetch, readErrorDetail } from "@/lib/api";
 import { useAuthStore, type User } from "@/stores/auth";
 
 export type ProfileUpdate = {
@@ -16,6 +16,9 @@ export type ChangePassword = {
   current_password: string;
   new_password: string;
 };
+
+/** Parol siyosati — backend `ChangePasswordRequest` / `ForceChangePasswordRequest` bilan bir xil. */
+export const PASSWORD_MIN_LENGTH = 6;
 
 export function useUpdateProfile() {
   const setUser = useAuthStore((s) => s.setUser);
@@ -33,37 +36,19 @@ export function useChangeMyPassword() {
   });
 }
 
-/** Avatar yuklash — multipart, manual fetch (ky avtomatik header qo'shmoqchi bo'ladi). */
+/** Avatar yuklash — multipart; `authFetch` tokenni va tilni qo'shadi, Content-Type'ni brauzer qo'yadi. */
 export function useUploadAvatar() {
-  const qc = useQueryClient();
   const setUser = useAuthStore((s) => s.setUser);
   return useMutation({
     mutationFn: async (file: File) => {
-      const token = useAuthStore.getState().accessToken;
-      if (!token) throw new Error(i18n.t("common.sessionExpired"));
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/v1/auth/me/avatar", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
+      const res = await authFetch("/api/v1/auth/me/avatar", { method: "POST", body: fd });
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        let msg = i18n.t("common.avatarUploadFailed");
-        try {
-          const j = JSON.parse(text);
-          if (j.detail) msg = j.detail;
-        } catch {
-          if (text) msg = text;
-        }
-        throw new Error(msg);
+        throw new Error(await readErrorDetail(res, i18n.t("common.avatarUploadFailed")));
       }
-      return res.json() as Promise<User>;
+      return (await res.json()) as User;
     },
-    onSuccess: (user) => {
-      setUser(user);
-      qc.invalidateQueries({ queryKey: ["auth", "me"] });
-    },
+    onSuccess: (user) => setUser(user),
   });
 }

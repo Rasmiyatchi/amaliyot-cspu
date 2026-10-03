@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile, status
 
-from app.api.deps import RequireAdmin
+from app.api.deps import RequireAdmin, RequireStructure
 from app.db.session import SessionDep
 from app.schemas.hemis import HemisCredentialsExportRequest, HemisImportResponse
 from app.services.hemis import import_students
@@ -10,6 +10,7 @@ from app.services.import_templates import (
     build_credentials_xlsx,
     build_students_template,
 )
+from app.services.scoping import effective_faculty_id
 
 router = APIRouter(prefix="/hemis", tags=["hemis"])
 
@@ -71,7 +72,8 @@ async def export_credentials(
 async def hemis_import(
     request: Request,
     db: SessionDep,
-    user: RequireAdmin,
+    # Talabalarni import qilish — "structure" moduli (ilgari har qanday admin)
+    user: RequireStructure,
     file: UploadFile = File(...),  # noqa: B008
 ) -> HemisImportResponse:
     filename_lower = (file.filename or "").lower()
@@ -93,7 +95,7 @@ async def hemis_import(
 
     from app.services import audit_log as audit
 
-    result = await import_students(db, content)
+    result = await import_students(db, content, scope_faculty_id=effective_faculty_id(user))
     await audit.log(
         db,
         actor=user,

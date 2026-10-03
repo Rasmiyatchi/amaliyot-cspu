@@ -61,11 +61,35 @@ class Settings(BaseSettings):
     # Excel import paytida talabalarga avtomatik login beriladi: "{prefix}{8 raqam}"
     # Masalan 2025-2026 o'quv yili uchun prefiks "2500" → "250012345678"
     LOGIN_YEAR_PREFIX: str = "2500"
+    # 15 daqiqadagi xato loginlar: har bir login uchun va bitta IP uchun (kampus NAT — yuqori)
+    LOGIN_MAX_FAILS_PER_USER: int = 10
+    LOGIN_MAX_FAILS_PER_IP: int = 300
+
+
+def _is_placeholder_secret(value: str) -> bool:
+    """Namuna (.env.example) yoki juda qisqa kalit — ommaviy repoda ko'rinib turadi."""
+    v = value.strip()
+    return len(v) < 16 or "change" in v.lower() or v in {"dev-only-change-me", "secret"}
 
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if s.APP_ENV == "production":
+        import warnings
+
+        # SECRET_KEY bilan JWT imzolanadi: namunadagi qiymat bo'lsa, istalgan kishi admin
+        # tokenini soxtalashtira oladi — bunday holatda ishga tushmaymiz (jim ogohlantirish emas).
+        if _is_placeholder_secret(s.SECRET_KEY):
+            raise RuntimeError(
+                "SECRET_KEY production'da namuna/standart qiymatda yoki juda qisqa. "
+                ".env.prod da yangilang: openssl rand -hex 32"
+            )
+        if s.SUPERADMIN_PASSWORD == "SuperSecret123!" or "change" in s.SUPERADMIN_PASSWORD.lower():  # noqa: S105
+            warnings.warn("SUPERADMIN_PASSWORD production'da standart qiymatda!", stacklevel=1)
+        if not s.WEB_URL.startswith("http"):
+            warnings.warn("WEB_URL bo'sh — shartnoma QR kodlari ishlamaydi!", stacklevel=1)
+    return s
 
 
 settings = get_settings()

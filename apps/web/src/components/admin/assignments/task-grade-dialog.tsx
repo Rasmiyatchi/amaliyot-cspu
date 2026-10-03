@@ -1,4 +1,4 @@
-import { HTTPError } from "ky";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, Undo2, XCircle } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,9 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { formatTashkentDateTime } from "@/components/attendance/attendance-date-utils";
 import { dateLocale } from "@/i18n";
+import { gradingKeys } from "@/lib/api/grading";
 import { useApproveTask, useRejectTask, useRevertTask } from "@/lib/api/tasks";
 import type { Task } from "@/lib/api/types";
+import { cn } from "@/lib/utils";
 
 type Props = {
   task: Task | null;
@@ -27,8 +30,18 @@ type Props = {
 };
 
 export function TaskGradeDialog({ task, onClose }: Props) {
+  if (!task) return null;
+  // `key` — har topshiriq uchun toza holat: oldingi topshiriqning bali yoki rad
+  // sababi keyingisiga o'tib ketmasin.
+  return <TaskGradeDialogBody key={task.id} task={task} onClose={onClose} />;
+}
+
+function TaskGradeDialogBody({ task, onClose }: { task: Task; onClose: () => void }) {
   const { t } = useTranslation();
-  const [points, setPoints] = useState<string>("");
+  const qc = useQueryClient();
+  const [points, setPoints] = useState<string>(
+    task.points_earned !== null ? String(task.points_earned) : "",
+  );
   const [reason, setReason] = useState<string>("");
 
   const approve = useApproveTask();
@@ -36,27 +49,43 @@ export function TaskGradeDialog({ task, onClose }: Props) {
   const revert = useRevertTask();
 
   const busy = approve.isPending || reject.isPending || revert.isPending;
+  const max = task.template_points;
 
-  if (!task) return null;
+  // Ma'naviy topshiriqlar ballsiz tasdiqlanadi (backend shablon balini oladi);
+  // qolganlarida ball majburiy — bo'sh qoldirilsa backend 400 qaytaradi.
+  const pointsRequired = task.template_category !== "spiritual";
+  const trimmedPoints = points.trim();
+  const parsedPoints = trimmedPoints === "" ? null : Number(trimmedPoints);
+  const pointsInRange =
+    parsedPoints !== null &&
+    Number.isInteger(parsedPoints) &&
+    parsedPoints >= 0 &&
+    parsedPoints <= max;
+  const pointsValid = parsedPoints === null ? !pointsRequired : pointsInRange;
+  const showPointsError = trimmedPoints !== "" && !pointsInRange;
+
+  // Topshiriq bali yakuniy bahoning "O'quv topshiriqlar" mezoniga kiradi
+  const refreshGrade = () =>
+    qc.invalidateQueries({ queryKey: gradingKeys.breakdown(task.assignment_id) });
+
+  // ky HTTPError'ning message'iga server `detail`i yoziladi (lib/api.ts)
+  const errorMessage = (e: unknown) => (e instanceof Error ? e.message : t("common.error"));
 
   const handleApprove = async () => {
-    const parsed = points === "" ? null : Number(points);
-    if (parsed !== null) {
-      if (!Number.isFinite(parsed) || parsed < 0 || parsed > task.template_points) {
-        toast.error(t("assignmentsTaskGradeDialog.pointsRange", { max: task.template_points }));
-        return;
-      }
+    if (!pointsValid) {
+      toast.error(t("assignmentsTaskGradeDialog.pointsRange", { max }));
+      return;
     }
     try {
       await approve.mutateAsync({
         id: task.id,
-        data: { points_earned: parsed },
+        data: { points_earned: parsedPoints },
       });
+      void refreshGrade();
       toast.success(t("assignmentsTaskGradeDialog.approvedToast"));
-      setPoints("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(errorMessage(e));
     }
   };
 
@@ -70,26 +99,27 @@ export function TaskGradeDialog({ task, onClose }: Props) {
         id: task.id,
         data: { rejection_reason: reason.trim() },
       });
+      void refreshGrade();
       toast.success(t("assignmentsTaskGradeDialog.rejectedToast"));
-      setReason("");
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(errorMessage(e));
     }
   };
 
   const handleRevert = async () => {
     try {
       await revert.mutateAsync(task.id);
-      toast.success("Tasdiq bekor qilindi va topshiriq tahrirga qaytarildi");
+      void refreshGrade();
+      toast.success(t("assignmentsTaskGradeDialog.revertedToast"));
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(errorMessage(e));
     }
   };
 
   return (
-    <Dialog open={!!task} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{task.template_title}</DialogTitle>
@@ -99,7 +129,7 @@ export function TaskGradeDialog({ task, onClose }: Props) {
               ? t("common.semesterFall")
               : t("common.semesterSpring")}
             {" · "}
-            {t("assignmentsTaskGradeDialog.maxPoints", { points: task.template_points })}
+            {t("assignmentsTaskGradeDialog.maxPoints", { points: max })}
             {task.template_quantity > 1 &&
               t("assignmentsTaskGradeDialog.quantityTimes", { count: task.template_quantity })}
           </DialogDescription>
@@ -118,7 +148,7 @@ export function TaskGradeDialog({ task, onClose }: Props) {
             {t("assignmentsTaskGradeDialog.studentAnswer")}
           </div>
           {task.submission_md ? (
-            <div className="whitespace-pre-wrap rounded-md border border-border p-3 text-sm">
+            <div className="whitespace-pre-wrap break-words rounded-md border border-border p-3 text-sm">
               {task.submission_md}
             </div>
           ) : (
@@ -130,7 +160,7 @@ export function TaskGradeDialog({ task, onClose }: Props) {
           {task.submitted_at && (
             <div className="mt-2 text-xs text-muted-foreground">
               {t("assignmentsTaskGradeDialog.submittedAt", {
-                date: new Date(task.submitted_at).toLocaleString(dateLocale()),
+                date: formatTashkentDateTime(task.submitted_at, dateLocale()),
               })}
             </div>
           )}
@@ -139,7 +169,7 @@ export function TaskGradeDialog({ task, onClose }: Props) {
             <AttachmentsSection
               kind="task"
               entityId={task.id}
-              attachments={(task.attachments ?? []) as never}
+              attachments={task.attachments ?? []}
               canEdit={false}
             />
           </div>
@@ -162,7 +192,7 @@ export function TaskGradeDialog({ task, onClose }: Props) {
                 <span className="font-mono">
                   {t("assignmentsTaskGradeDialog.pointsEarned", {
                     earned: task.points_earned,
-                    max: task.template_points,
+                    max,
                   })}
                 </span>
               )}
@@ -171,30 +201,56 @@ export function TaskGradeDialog({ task, onClose }: Props) {
               <div className="mt-1 text-xs text-muted-foreground">
                 {t("assignmentsTaskGradeDialog.gradedBy", { name: task.graded_by_name })}
                 {task.graded_at &&
-                  ` · ${new Date(task.graded_at).toLocaleString(dateLocale())}`}
+                  ` · ${formatTashkentDateTime(task.graded_at, dateLocale())}`}
               </div>
             )}
           </div>
         )}
 
-        {/* Grading — agar submit qilingan yoki approved/rejected bo'lsa */}
+        {/* Baholash — topshiriq yuborilgan, tasdiqlangan yoki rad etilgan bo'lsa */}
         {task.status !== "not_started" && (
           <>
             <Separator />
             <div className="space-y-3">
               <div>
                 <Label htmlFor="grade-points">
-                  {t("assignmentsTaskGradeDialog.pointsLabel", { max: task.template_points })}
+                  {pointsRequired
+                    ? t("assignmentsTaskGradeDialog.pointsLabelRequired", { max })
+                    : t("assignmentsTaskGradeDialog.pointsLabelOptional", { max })}
                 </Label>
-                <Input
-                  id="grade-points"
-                  type="number"
-                  min={0}
-                  max={task.template_points}
-                  value={points}
-                  onChange={(e) => setPoints(e.target.value)}
-                  placeholder={String(task.points_earned ?? "")}
-                />
+                <div className="mt-1 flex items-center gap-2">
+                  <Input
+                    id="grade-points"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={max}
+                    step={1}
+                    value={points}
+                    onChange={(e) => setPoints(e.target.value)}
+                    aria-invalid={showPointsError}
+                    aria-describedby="grade-points-hint"
+                    className={cn(
+                      "w-28 text-right tabular-nums",
+                      showPointsError && "border-destructive focus-visible:ring-destructive",
+                    )}
+                    placeholder="—"
+                  />
+                  <span className="text-sm tabular-nums text-muted-foreground">/ {max}</span>
+                </div>
+                <p
+                  id="grade-points-hint"
+                  className={cn(
+                    "mt-1 text-xs",
+                    showPointsError ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  {showPointsError
+                    ? t("assignmentsTaskGradeDialog.pointsRange", { max })
+                    : pointsRequired
+                      ? t("assignmentsTaskGradeDialog.pointsRequiredHint")
+                      : t("assignmentsTaskGradeDialog.pointsOptionalHint")}
+                </p>
               </div>
 
               <div>
@@ -215,15 +271,18 @@ export function TaskGradeDialog({ task, onClose }: Props) {
         )}
 
         <DialogFooter className="flex-wrap gap-2">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
             {t("common.close")}
           </Button>
 
           {task.status === "approved" && (
             <Button variant="outline" onClick={handleRevert} disabled={busy}>
-              {revert.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              <Undo2 className="h-4 w-4" />
-              Tasdiqni bekor qilish
+              {revert.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Undo2 className="h-4 w-4" />
+              )}
+              {t("assignmentsTaskGradeDialog.revert")}
             </Button>
           )}
 
@@ -234,14 +293,25 @@ export function TaskGradeDialog({ task, onClose }: Props) {
                 onClick={handleReject}
                 disabled={busy || reason.trim().length < 3}
               >
-                {reject.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                <XCircle className="h-4 w-4" />
+                {reject.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <XCircle className="h-4 w-4" />
+                )}
                 {t("common.reject")}
               </Button>
-              <Button onClick={handleApprove} disabled={busy}>
-                {approve.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                <CheckCircle2 className="h-4 w-4" />
-                {t("common.approve")}
+              <Button onClick={handleApprove} disabled={busy || !pointsValid}>
+                {approve.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                {parsedPoints !== null && pointsInRange
+                  ? t("assignmentsTaskGradeDialog.approveWithPoints", {
+                      points: parsedPoints,
+                      max,
+                    })
+                  : t("common.approve")}
               </Button>
             </>
           )}

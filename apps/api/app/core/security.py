@@ -1,5 +1,6 @@
 """Parol hash, JWT encode/decode — auth uchun past darajali yordamchilar."""
 
+import asyncio
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -19,6 +20,10 @@ class TokenType(StrEnum):
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
+# Import paytida yaratiladigan VAQTINCHALIK parollar (login = parol, birinchi kirishda
+# almashtiriladi) uchun yengilroq narx: 1000 qatorli Excel 4 baravar tezroq import bo'ladi.
+# Tekshirish (verify) ikkala narxni ham taniydi.
+_temp_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=10)
 
 
 # ─── Parol ────────────────────────────────────────────────
@@ -30,6 +35,20 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain: str, hashed: str) -> bool:
     return cast(bool, pwd_context.verify(plain, hashed))
+
+
+# bcrypt ~0.25 s CPU oladi. API bitta uvicorn worker'da ishlaydi — sinxron chaqiruv butun
+# event loop'ni to'xtatardi (ertalab yuzlab talaba bir vaqtda kirganda login timeout bo'lardi).
+# Shuning uchun so'rov ichida faqat quyidagi async variantlar ishlatiladi (bcrypt GIL'ni bo'shatadi).
+
+
+async def hash_password_async(password: str, *, temporary: bool = False) -> str:
+    ctx = _temp_pwd_context if temporary else pwd_context
+    return cast(str, await asyncio.to_thread(ctx.hash, password))
+
+
+async def verify_password_async(plain: str, hashed: str) -> bool:
+    return cast(bool, await asyncio.to_thread(pwd_context.verify, plain, hashed))
 
 
 # ─── JWT ──────────────────────────────────────────────────

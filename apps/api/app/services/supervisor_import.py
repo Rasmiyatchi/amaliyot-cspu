@@ -20,7 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings as app_settings
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 from app.models.academic import Department, Faculty
 from app.models.enums import UserRole
 from app.models.organization import Organization
@@ -255,7 +255,15 @@ async def _resolve_organizations(
     return org_ids
 
 
-async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorImportResponse:
+class _RowError(Exception):
+    """Qator darajasidagi tushunarli xato — matni adminga ko'rsatiladi."""
+
+
+async def import_supervisors(
+    db: AsyncSession, file_bytes: bytes, *, scope_faculty_id: Any = None
+) -> SupervisorImportResponse:
+    """`scope_faculty_id` — fakultet admini: faqat o'z fakulteti qatorlari (fakultetsiz qator
+    shu fakultetga yoziladi), boshqa fakultet qatorlari xato sifatida qaytariladi."""
     rows, parse_errors = _parse_excel(file_bytes)
     errors = list(parse_errors)
     credentials: list[SupervisorImportCredentials] = []
@@ -312,6 +320,8 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                 skipped += 1
                 continue
 
+        new_faculties: list[tuple[str, Any]] = []
+        new_departments: list[tuple[tuple[Any, str], Any]] = []
         try:
             # Har bir qator alohida SAVEPOINT'da — xato qator boshqalarni buzmaydi
             async with db.begin_nested():
@@ -321,12 +331,15 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                 if faculty_name:
                     faculty = await _find_faculty(db, str(faculty_name), faculty_cache)
                     if not faculty:
-                        faculty = Faculty(name=str(faculty_name).strip())
-                        db.add(faculty)
-                        await db.flush()
-                        search_name = str(faculty_name).strip().lower()
-                        faculty_cache[search_name] = faculty
+                        # Fakultet yaratilmaydi: imlo xatosi ("Tabiiy fanlar f-ti") yangi
+                        # soxta fakultet yaratib yuborardi
+                        raise _RowError(f"Fakultet topilmadi: {str(faculty_name).strip()}")
                     faculty_id = faculty.id
+                elif scope_faculty_id is not None:
+                    faculty_id = scope_faculty_id
+                if scope_faculty_id is not None and faculty_id != scope_faculty_id:
+                    raise _RowError("Bu amal faqat o'z fakultetingiz doirasida mumkin")
+                if faculty_id is not None:
                     dept_name = rec.get("department_name")
                     if dept_name:
                         dept = await _find_department(
@@ -336,8 +349,9 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                             dept = Department(faculty_id=faculty_id, name=str(dept_name).strip())
                             db.add(dept)
                             await db.flush()
-                            search_name_dept = str(dept_name).strip().lower()
-                            department_cache[(faculty_id, search_name_dept)] = dept
+                            new_departments.append(
+                                ((faculty_id, str(dept_name).strip().lower()), dept)
+                            )
                         department_id = dept.id
 
                 login = username
@@ -363,7 +377,7 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
 
                 user = User(
                     username=login,
-                    password_hash=hash_password(password),
+                    password_hash=await hash_password_async(password, temporary=True),
                     role=UserRole.SUPERVISOR,
                     is_active=True,
                     first_name=str(first_name),
@@ -403,14 +417,24 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                             )
                         )
 
+            # Savepoint muvaffaqiyatli — yangi fakultet/kafedralar endi keshga olinadi
+            for key, fac in new_faculties:
+                faculty_cache[key] = fac
+            for dkey, dep in new_departments:
+                department_cache[dkey] = dep
             credentials.append(
                 SupervisorImportCredentials(full_name=full_name, username=login, password=password)
             )
             created += 1
+        except _RowError as e:
+            errors.append(SupervisorImportError(row=row_idx, name=full_name, message=str(e)))
         except Exception as e:  # noqa: BLE001
+            # Xom xato (SQL, parametrlar) adminga ko'rsatilmaydi — logga yoziladi
             logger.warning(f"Supervisor import xato (qator {row_idx}): {e}")
             errors.append(
-                SupervisorImportError(row=row_idx, name=full_name, message=f"Xatolik: {e}")
+                SupervisorImportError(
+                    row=row_idx, name=full_name, message="Qatorni saqlab bo'lmadi"
+                )
             )
 
     await db.commit()

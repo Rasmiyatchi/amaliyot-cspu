@@ -1,9 +1,10 @@
-import { HTTPError } from "ky";
 import { FileText, Loader2, Save, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { toTashkentDateStr, todayStr } from "@/components/attendance/attendance-date-utils";
+import { describeRequestError } from "@/components/attendance/request-error";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,12 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { uploadStandaloneFile } from "@/lib/api/documents";
-import {
-  useCreateLessonAnalysis,
-  useUpdateLessonAnalysis,
-} from "@/lib/api/tasks";
+import { useCreateLessonAnalysis, useUpdateLessonAnalysis } from "@/lib/api/tasks";
 import type { Attachment } from "@/lib/api/uploads";
 import type { LessonAnalysis, UUID } from "@/lib/api/types";
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 type Props = {
   open: boolean;
@@ -38,18 +38,10 @@ type Props = {
   onClose: () => void;
 };
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-export function LessonAnalysisFormDialog({
-  open,
-  assignmentId,
-  analysis,
-  onClose,
-}: Props) {
+export function LessonAnalysisFormDialog({ open, assignmentId, analysis, onClose }: Props) {
   const { t } = useTranslation();
-  const [date, setDate] = useState(today());
+  // Toshkent sanasi: 00:00–05:00 oralig'ida UTC sanasi hali kecha bo'ladi
+  const [date, setDate] = useState<string>(todayStr);
   const [subject, setSubject] = useState("");
   const [teacher, setTeacher] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
@@ -67,14 +59,14 @@ export function LessonAnalysisFormDialog({
   useEffect(() => {
     if (!open) return;
     if (analysis) {
-      setDate(analysis.date.slice(0, 10));
+      setDate(toTashkentDateStr(analysis.date));
       setSubject(analysis.subject);
       setTeacher(analysis.teacher_name);
       setGradeLevel(analysis.grade_level ?? "");
       setQuarter(String(analysis.quarter));
       setAttachments((analysis.attachments ?? []) as Attachment[]);
     } else {
-      setDate(today());
+      setDate(todayStr());
       setSubject("");
       setTeacher("");
       setGradeLevel("");
@@ -90,9 +82,7 @@ export function LessonAnalysisFormDialog({
       setAttachments((prev) => [...prev, att]);
       toast.success(t("studentAnalysisFormDialog.pdfUploaded"));
     } catch (e) {
-      toast.error(
-        e instanceof Error ? e.message : t("studentAnalysisFormDialog.uploadError"),
-      );
+      toast.error(describeRequestError(e, t, "studentAnalysisFormDialog.uploadError"));
     } finally {
       setUploading(false);
     }
@@ -109,6 +99,11 @@ export function LessonAnalysisFormDialog({
     }
     if (attachments.length === 0) {
       toast.error(t("studentAnalysisFormDialog.pdfRequired"));
+      return;
+    }
+    // Bo'sh sana `new Date(...)`ni yaroqsiz qiladi (toISOString xato tashlaydi)
+    if (!DATE_RE.test(date)) {
+      toast.error(t("studentAnalysisFormDialog.dateRequired"));
       return;
     }
 
@@ -131,7 +126,7 @@ export function LessonAnalysisFormDialog({
       }
       onClose();
     } catch (e) {
-      toast.error(e instanceof HTTPError ? e.message : t("common.error"));
+      toast.error(describeRequestError(e, t));
     }
   };
 
@@ -154,7 +149,9 @@ export function LessonAnalysisFormDialog({
         {analysis?.status === "rejected" && analysis.rejection_reason && (
           <Alert variant="destructive" className="py-2.5 px-3">
             <AlertDescription>
-              <div className="font-medium text-xs sm:text-sm">{t("studentAnalysisFormDialog.rejected")}</div>
+              <div className="font-medium text-xs sm:text-sm">
+                {t("studentAnalysisFormDialog.rejected")}
+              </div>
               <div className="mt-1 text-xs sm:text-sm break-words">{analysis.rejection_reason}</div>
             </AlertDescription>
           </Alert>
@@ -176,8 +173,7 @@ export function LessonAnalysisFormDialog({
           </div>
           <div>
             <Label htmlFor="analysis-quarter" className="text-xs sm:text-sm">
-              {t("studentAnalysisFormDialog.quarter")}{" "}
-              <span className="text-destructive">*</span>
+              {t("studentAnalysisFormDialog.quarter")} <span className="text-destructive">*</span>
             </Label>
             <Select value={quarter} onValueChange={setQuarter} disabled={isApproved}>
               <SelectTrigger id="analysis-quarter" className="mt-1 text-xs sm:text-sm">
@@ -201,8 +197,7 @@ export function LessonAnalysisFormDialog({
           </div>
           <div>
             <Label htmlFor="analysis-grade" className="text-xs sm:text-sm">
-              {t("studentAnalysisFormDialog.gradeLevel")}{" "}
-              <span className="text-destructive">*</span>
+              {t("studentAnalysisFormDialog.gradeLevel")}
             </Label>
             <Input
               id="analysis-grade"
@@ -215,8 +210,7 @@ export function LessonAnalysisFormDialog({
           </div>
           <div>
             <Label htmlFor="analysis-subject" className="text-xs sm:text-sm">
-              {t("studentAnalysisFormDialog.subject")}{" "}
-              <span className="text-destructive">*</span>
+              {t("studentAnalysisFormDialog.subject")} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="analysis-subject"
@@ -229,8 +223,7 @@ export function LessonAnalysisFormDialog({
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="analysis-teacher" className="text-xs sm:text-sm">
-              {t("studentAnalysisFormDialog.teacher")}{" "}
-              <span className="text-destructive">*</span>
+              {t("studentAnalysisFormDialog.teacher")} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="analysis-teacher"
@@ -245,8 +238,7 @@ export function LessonAnalysisFormDialog({
 
         <div>
           <Label className="text-xs sm:text-sm">
-            {t("studentAnalysisFormDialog.fileLabel")}{" "}
-            <span className="text-destructive">*</span>
+            {t("studentAnalysisFormDialog.fileLabel")} <span className="text-destructive">*</span>
           </Label>
           <input
             ref={fileInputRef}

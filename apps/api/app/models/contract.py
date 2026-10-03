@@ -86,5 +86,12 @@ class Contract(UUIDMixin, TimestampMixin, Base):
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Qaysi HTML shablon va qanday qiymatlar bilan yaratilgan — qayta generatsiyada matn/taraflar
+    # o'zgarib ketmasligi uchun saqlanadi (ilgari "eng yangi faol shablon"ga tushib qolardi).
+    contract_template_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("contract_templates.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    variable_values: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+
     def __repr__(self) -> str:
         return f"<Contract {self.number} status={self.status}>"

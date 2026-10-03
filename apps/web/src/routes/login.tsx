@@ -5,68 +5,125 @@ import {
   Eye,
   EyeOff,
   LockKeyhole,
+  ShieldAlert,
   User,
 } from "lucide-react";
+import type { TFunction } from "i18next";
 import { useState, type FormEvent } from "react";
-import { useTranslation } from "react-i18next";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Trans, useTranslation } from "react-i18next";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { MaintenanceScreen } from "@/components/maintenance-screen";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { usePublicSettings } from "@/lib/api/system-settings";
 import { login } from "@/lib/auth-api";
-import { landingPathFor } from "@/lib/routing";
+import { postLoginPath } from "@/lib/routing";
 import { useAuthStore } from "@/stores/auth";
+
+type LoginErrorKind = "inline" | "blocked";
+
+type LoginError = {
+  kind: LoginErrorKind;
+  message: string;
+  /** Qo'shimcha yo'riqnoma (403 — qurilma/hisob bloklangan) */
+  help?: string;
+};
+
+/** ky `beforeError` detail'ni `message`ga yozadi; yozmagan bo'lsa ky'ning standart matni qoladi. */
+function serverDetail(err: HTTPError): string | null {
+  const msg = err.message?.trim();
+  if (!msg || /^Request failed with status/i.test(msg)) return null;
+  return msg;
+}
+
+function mapLoginError(err: unknown, t: TFunction): LoginError {
+  if (!(err instanceof HTTPError)) {
+    return { kind: "inline", message: t("auth.login.networkError") };
+  }
+
+  const status = err.response.status;
+  const detail = serverDetail(err);
+
+  if (status === 401) {
+    return {
+      kind: "inline",
+      message: detail ?? t("auth.login.invalidCredentials"),
+    };
+  }
+
+  if (status === 403) {
+    const isDeviceIssue = detail ? /qurilma|устройств|device/i.test(detail) : true;
+    return {
+      kind: "blocked",
+      message: detail ?? t("auth.login.forbidden"),
+      help: isDeviceIssue ? t("auth.login.deviceHelp") : t("auth.login.blockedHelp"),
+    };
+  }
+
+  if (status === 422) {
+    return {
+      kind: "inline",
+      message: `${t("auth.login.validation")} ${t("auth.login.validationHints")}`,
+    };
+  }
+
+  if (status === 429) {
+    return {
+      kind: "inline",
+      message: detail ?? t("auth.login.tooManyAttempts"),
+    };
+  }
+
+  if (status >= 500) {
+    return {
+      kind: "inline",
+      message: t("auth.login.serverError"),
+    };
+  }
+
+  return { kind: "inline", message: detail ?? t("common.unexpectedError") };
+}
 
 export function Login() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
-  const { data: settings } = usePublicSettings();
+  const location = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [error, setError] = useState<LoginError | null>(null);
 
+  // Profilaktika rejimi: RootLayout'dagi MaintenanceGuard bu sahifani ham yopadi;
+  // Super Admin uchun MaintenanceScreen'da /rescue havolasi bor.
   if (user) {
     if (user.must_change_password) {
       return <Navigate to="/change-password" replace />;
     }
-    return <Navigate to={landingPathFor(user.role)} replace />;
-  }
-
-  if (settings?.maintenance_mode) {
-    return (
-      <MaintenanceScreen
-        message={settings.maintenance_message}
-        siteName={settings.site_name}
-      />
-    );
+    // Sessiya tugab login'ga yo'naltirilgan bo'lsa — o'sha sahifaga qaytaramiz
+    return <Navigate to={postLoginPath(user.role, location.state)} replace />;
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
-    setErrorMsg("");
+    setError(null);
     try {
       const u = await login(username.trim(), password);
       toast.success(t("auth.login.welcome", { name: u.full_name }));
       if (u.must_change_password) {
         navigate("/change-password", { replace: true });
       } else {
-        navigate(landingPathFor(u.role), { replace: true });
+        navigate(postLoginPath(u.role, location.state), { replace: true });
       }
     } catch (err) {
-      const msg =
-        err instanceof HTTPError
-          ? "Login yoki parol noto‘g‘ri."
-          : t("common.unexpectedError", "Kirishda xatolik yuz berdi.");
-      setErrorMsg(msg);
-      toast.error(msg);
+      const mapped = mapLoginError(err, t);
+      setError(mapped);
+      toast.error(mapped.message);
     } finally {
       setLoading(false);
     }
@@ -79,7 +136,7 @@ export function Login() {
         <div className="login-grid" />
         <div className="flex items-center justify-between">
           <Link to="/" className="back-link">
-            <ArrowLeft /> Bosh sahifaga
+            <ArrowLeft /> {t("auth.login.backHome")}
           </Link>
           <div className="flex items-center gap-2 lg:hidden">
             <LanguageSwitcher />
@@ -89,23 +146,22 @@ export function Login() {
 
         <div className="login-brand-copy">
           <img src="/chdpu-logo.png" alt="CHDPU" />
-          <span className="login-kicker">4+2 RAQAMLI AMALIYOT</span>
+          <span className="login-kicker">{t("auth.login.brand.kicker")}</span>
           <h1>
-            Ta’limni tajriba
-            <br />
-            bilan <em>bog‘laymiz.</em>
+            <Trans
+              i18nKey="auth.login.brand.headline"
+              components={{ br: <br />, em: <em /> }}
+            />
           </h1>
-          <p>
-            Chirchiq davlat pedagogika universiteti talabalari, rahbarlari va
-            fakultetlari uchun yagona professional akademik muhit.
-          </p>
+          <p>{t("auth.login.brand.description")}</p>
         </div>
 
         <div className="login-metric">
-          <strong>4+2</strong>
+          <strong>{t("auth.login.brand.metricValue")}</strong>
           <span>
-            NAZARIYA
-            <br />+ AMALIYOT
+            {t("auth.login.brand.metricTheory")}
+            <br />
+            {t("auth.login.brand.metricPractice")}
           </span>
         </div>
       </section>
@@ -118,63 +174,86 @@ export function Login() {
         </div>
 
         <div className="login-box">
-          <span className="section-index">XAVFSIZ KIRISH</span>
-          <h2>Platformaga kirish</h2>
-          <p>Shaxsiy kabinetingizga davom etish uchun ma'lumotlarni kiriting.</p>
+          <span className="section-index">{t("auth.login.secureIndex")}</span>
+          <h2>{t("auth.login.title")}</h2>
+          <p>{t("auth.login.subtitle")}</p>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <label>
-              Logik / Elektron manzil / Telefon
+              {t("auth.login.username")}
               <div>
                 <User />
                 <input
                   type="text"
+                  name="username"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="masalan, talaba123 yoki email"
+                  onBlur={() => setUsername((v) => v.trim())}
+                  placeholder={t("auth.login.usernamePlaceholder")}
                   autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="text"
+                  disabled={loading}
                 />
               </div>
             </label>
 
             <label>
-              Parol
+              {t("auth.login.password")}
               <div>
                 <LockKeyhole />
                 <input
                   type={showPassword ? "text" : "password"}
+                  name="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Parolingiz"
+                  placeholder={t("auth.login.passwordPlaceholder")}
                   autoComplete="current-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  disabled={loading}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={
-                    showPassword ? "Parolni yashirish" : "Parolni ko‘rsatish"
-                  }
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? t("auth.login.hide") : t("auth.login.show")}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? <EyeOff /> : <Eye />}
                 </button>
               </div>
             </label>
 
-            {errorMsg && (
-              <p className="form-message" role="status">
-                {errorMsg}
+            {error?.kind === "blocked" && (
+              <Alert variant="destructive" className="text-left">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>{t("auth.login.blockedTitle")}</AlertTitle>
+                {/* Alert'ning o'zi role="alert" — ichkarida takrorlansa ekran o'qigich ikki marta o'qiydi */}
+                <AlertDescription className="space-y-1">
+                  <p>{error.message}</p>
+                  {error.help && <p className="text-xs opacity-90">{error.help}</p>}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {error?.kind === "inline" && (
+              <p className="form-message" role="alert">
+                {error.message}
               </p>
             )}
 
             <Button type="submit" size="lg" disabled={loading} className="w-full">
-              {loading ? "Tekshirilmoqda…" : "Kirish"} <ArrowRight />
+              {loading ? t("auth.login.submitting") : t("auth.login.submit")} <ArrowRight />
             </Button>
           </form>
 
           <small className="secure-note">
-            <LockKeyhole /> Ma’lumotlaringiz maxfiy va xavfsiz himoyalangan
+            <LockKeyhole aria-hidden="true" /> {t("auth.login.secureNote")}
           </small>
         </div>
       </section>

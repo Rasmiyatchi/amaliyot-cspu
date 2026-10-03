@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  PASSWORD_MIN_LENGTH,
   useChangeMyPassword,
   useUpdateProfile,
   useUploadAvatar,
@@ -50,22 +51,28 @@ export function ProfileDialog({ open, onClose }: Props) {
 
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Faqat dialog ochilganda formani to'ldiramiz. `user` o'zgarishiga (masalan, avatar
+  // yuklangach) bog'lansa, saqlanmagan tahrirlar o'chib ketardi.
   useEffect(() => {
-    if (open && user) {
-      setFirstName(user.first_name);
-      setLastName(user.last_name);
-      setMiddleName(user.middle_name ?? "");
-      setEmail(user.email ?? "");
-      setPhone(user.phone ?? "");
-      setCurrentPwd("");
-      setNewPwd("");
-      setNewPwd2("");
-    }
-  }, [open, user]);
+    if (!open) return;
+    const u = useAuthStore.getState().user;
+    if (!u) return;
+    setFirstName(u.first_name);
+    setLastName(u.last_name);
+    setMiddleName(u.middle_name ?? "");
+    setEmail(u.email ?? "");
+    setPhone(u.phone ?? "");
+    setCurrentPwd("");
+    setNewPwd("");
+    setNewPwd2("");
+    setShowPwd(false);
+  }, [open]);
 
   if (!user) return null;
 
   const isStudent = user.role === "student";
+  const pwdValid =
+    currentPwd.length > 0 && newPwd.length >= PASSWORD_MIN_LENGTH && newPwd === newPwd2;
 
   const handleSaveProfile = async () => {
     try {
@@ -94,12 +101,16 @@ export function ProfileDialog({ open, onClose }: Props) {
   };
 
   const handleChangePwd = async () => {
-    if (newPwd.length < 4) {
-      toast.error(t("profileDialog.pwdTooShort"));
+    if (newPwd.length < PASSWORD_MIN_LENGTH) {
+      toast.error(t("profileDialog.pwdMinLength", { min: PASSWORD_MIN_LENGTH }));
       return;
     }
     if (newPwd !== newPwd2) {
       toast.error(t("profileDialog.pwdMismatch"));
+      return;
+    }
+    if (newPwd === currentPwd) {
+      toast.error(t("profileDialog.pwdSameAsCurrent"));
       return;
     }
     try {
@@ -126,8 +137,8 @@ export function ProfileDialog({ open, onClose }: Props) {
     }
   };
 
-  const initials =
-    (lastName[0] ?? "") + (firstName[0] ?? "");
+  const initials = (lastName[0] ?? "") + (firstName[0] ?? "");
+  const togglePwdLabel = showPwd ? t("auth.login.hide") : t("auth.login.show");
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -138,21 +149,24 @@ export function ProfileDialog({ open, onClose }: Props) {
             {t("profileDialog.title")}
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            {user.username} · {user.role}
+            {user.username} · {t(`userRoles.${user.role}`)}
           </DialogDescription>
         </DialogHeader>
 
         {/* Avatar */}
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <button
+            type="button"
             onClick={() => fileRef.current?.click()}
-            className="group relative h-16 w-16 sm:h-20 sm:w-20 shrink-0"
+            className="group relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             title={t("profileDialog.changeAvatar")}
+            aria-label={t("profileDialog.changeAvatar")}
+            disabled={uploadAvatar.isPending}
           >
             {user.avatar_url ? (
               <img
                 src={user.avatar_url}
-                alt="Avatar"
+                alt={t("profileDialog.avatarAlt")}
                 className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover"
               />
             ) : (
@@ -160,7 +174,13 @@ export function ProfileDialog({ open, onClose }: Props) {
                 {initials.toUpperCase()}
               </div>
             )}
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+            <div
+              className={
+                uploadAvatar.isPending
+                  ? "absolute inset-0 flex items-center justify-center rounded-full bg-black/40"
+                  : "absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+              }
+            >
               {uploadAvatar.isPending ? (
                 <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-white" />
               ) : (
@@ -173,7 +193,13 @@ export function ProfileDialog({ open, onClose }: Props) {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => handleAvatarSelect(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              const input = e.currentTarget;
+              void handleAvatarSelect(input.files?.[0] ?? null).finally(() => {
+                // Xuddi shu rasmni qayta tanlash ham `change` chiqarsin
+                input.value = "";
+              });
+            }}
           />
           <div className="flex-1 min-w-0">
             <div className="text-sm sm:text-base font-semibold truncate">{user.full_name}</div>
@@ -200,6 +226,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   disabled={isStudent}
+                  maxLength={100}
                   className="mt-1 text-xs sm:text-sm"
                 />
               </div>
@@ -210,6 +237,7 @@ export function ProfileDialog({ open, onClose }: Props) {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   disabled={isStudent}
+                  maxLength={100}
                   className="mt-1 text-xs sm:text-sm"
                 />
               </div>
@@ -220,23 +248,23 @@ export function ProfileDialog({ open, onClose }: Props) {
                   value={middleName}
                   onChange={(e) => setMiddleName(e.target.value)}
                   disabled={isStudent}
+                  maxLength={100}
                   className="mt-1 text-xs sm:text-sm"
                 />
                 {isStudent && (
                   <p className="mt-1.5 text-xs text-muted-foreground">
-                    {t("profileDialog.studentNameReadonlyHint", {
-                      defaultValue: "Familiya, ism va otasining ismini faqat administrator o'zgartira oladi.",
-                    })}
+                    {t("profileDialog.studentNameReadonlyHint")}
                   </p>
                 )}
               </div>
               <div>
-                <Label htmlFor="prof-email" className="text-xs sm:text-sm">Email</Label>
+                <Label htmlFor="prof-email" className="text-xs sm:text-sm">{t("profileDialog.email")}</Label>
                 <Input
                   id="prof-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   className="mt-1 text-xs sm:text-sm"
                 />
               </div>
@@ -244,9 +272,12 @@ export function ProfileDialog({ open, onClose }: Props) {
                 <Label htmlFor="prof-phone" className="text-xs sm:text-sm">{t("profileDialog.phone")}</Label>
                 <Input
                   id="prof-phone"
+                  type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+998 90 123 45 67"
+                  autoComplete="tel"
+                  maxLength={32}
                   className="mt-1 text-xs sm:text-sm"
                 />
               </div>
@@ -263,7 +294,7 @@ export function ProfileDialog({ open, onClose }: Props) {
           <TabsContent value="password" className="space-y-3 pt-2">
             <Alert className="py-2.5 px-3">
               <AlertDescription className="text-xs">
-                {t("profileDialog.pwdHint")}
+                {t("profileDialog.pwdRules", { min: PASSWORD_MIN_LENGTH })}
               </AlertDescription>
             </Alert>
             <div className="space-y-3">
@@ -281,6 +312,9 @@ export function ProfileDialog({ open, onClose }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowPwd(!showPwd)}
+                    aria-label={togglePwdLabel}
+                    aria-pressed={showPwd}
+                    title={togglePwdLabel}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     {showPwd ? (
@@ -299,6 +333,8 @@ export function ProfileDialog({ open, onClose }: Props) {
                   value={newPwd}
                   onChange={(e) => setNewPwd(e.target.value)}
                   autoComplete="new-password"
+                  minLength={PASSWORD_MIN_LENGTH}
+                  maxLength={128}
                   className="mt-1 text-xs sm:text-sm"
                 />
               </div>
@@ -310,6 +346,8 @@ export function ProfileDialog({ open, onClose }: Props) {
                   value={newPwd2}
                   onChange={(e) => setNewPwd2(e.target.value)}
                   autoComplete="new-password"
+                  minLength={PASSWORD_MIN_LENGTH}
+                  maxLength={128}
                   className="mt-1 text-xs sm:text-sm"
                 />
               </div>
@@ -317,9 +355,7 @@ export function ProfileDialog({ open, onClose }: Props) {
             <div className="flex justify-end pt-2">
               <Button
                 onClick={handleChangePwd}
-                disabled={
-                  changePwd.isPending || !currentPwd || newPwd.length < 4 || newPwd !== newPwd2
-                }
+                disabled={changePwd.isPending || !pwdValid}
                 className="w-full sm:w-auto"
               >
                 {changePwd.isPending && <Loader2 className="h-4 w-4 animate-spin" />}

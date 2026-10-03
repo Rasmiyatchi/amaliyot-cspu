@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-chdpu}
       POSTGRES_USER: ${POSTGRES_USER:-chdpu}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env.prod da kiritilmagan}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -37,17 +37,24 @@ services:
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
-      APP_URL: ${APP_URL}
-      WEB_URL: ${WEB_URL}
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-chdpu}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-chdpu}
+      APP_URL: ${APP_URL:?APP_URL .env.prod da kiritilmagan (masalan https://amaliyot.cspu.uz)}
+      # QR kodlardagi tekshiruv havolasi shu manzildan yasaladi — bo'sh bo'lsa QR ishlamaydi
+      WEB_URL: ${WEB_URL:?WEB_URL .env.prod da kiritilmagan (masalan https://amaliyot.cspu.uz)}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-chdpu}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-chdpu}
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY .env.prod da kiritilmagan (openssl rand -hex 32)}
       JWT_ACCESS_TTL_MIN: ${JWT_ACCESS_TTL_MIN:-15}
       JWT_REFRESH_TTL_DAYS: ${JWT_REFRESH_TTL_DAYS:-7}
       CORS_ORIGINS: ${CORS_ORIGINS}
       SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
-      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:?SUPERADMIN_PASSWORD .env.prod da kiritilmagan}
       SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-admin@chdpu.uz}
+      # X-Forwarded-For faqat shu proksilardan qabul qilinadi (aaPanel/host nginx, docker tarmog'i).
+      # Mijoz o'zi yozgan XFF endi IP sifatida olinmaydi (login cheklovi va audit uchun).
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      # Bitta IP'dan 15 daqiqada xato loginlar chegarasi — universitet Wi-Fi'da yuzlab talaba
+      # bitta tashqi IP ortida bo'ladi, shuning uchun yuqori (har bir login uchun alohida 10 ta).
+      LOGIN_MAX_FAILS_PER_IP: ${LOGIN_MAX_FAILS_PER_IP:-300}
     volumes:
       - apistorage:/app/storage
     depends_on:
@@ -55,8 +62,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Faqat shu server ichidan (aaPanel / host Nginx 127.0.0.1 ga proksi qiladi). Lokal tarmoqdan
+    # to'g'ridan-to'g'ri kirish kerak bo'lsa .env.prod da API_BIND=0.0.0.0 qo'ying — lekin u holda
+    # API TLS'siz ochiq bo'ladi va X-Forwarded-For soxtalashtirilishi mumkin.
     ports:
-      - "8000:8000"
+      - "${API_BIND:-127.0.0.1}:8000:8000"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/v1/health"]
       interval: 30s
@@ -74,7 +84,7 @@ services:
     depends_on:
       - api
     ports:
-      - "8080:80"
+      - "${WEB_BIND:-127.0.0.1}:8080:80"
 
 volumes:
   pgdata:

@@ -1,15 +1,18 @@
 import { ChevronLeft, ChevronRight, ClipboardList, Download, Loader2, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
+import { formatTashkentDate } from "@/components/attendance/attendance-date-utils";
 import { dateLocale } from "@/i18n";
-import { downloadExport } from "@/lib/api/exports";
 import { useDebounce } from "@/hooks/use-debounce";
 
 import { AssignmentDetailDialog } from "@/components/admin/assignments/assignment-detail-dialog";
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
 import { AssignmentWizard } from "@/components/admin/assignments/assignment-wizard";
+import { GroupSearchSelect } from "@/components/admin/assignments/group-search-select";
+import { OrganizationSearchSelect } from "@/components/admin/assignments/organization-search-select";
 import { SupervisorSearchSelect } from "@/components/admin/assignments/supervisor-search-select";
 import { OverdueTasksCard } from "@/components/overdue-tasks-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -35,11 +38,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  downloadAssignmentsCsv,
   useAssignments,
   type AssignmentFilters,
 } from "@/lib/api/assignments";
-import { useAcademicYears, useDirections, useGroups } from "@/lib/api/academic";
-import { useOrganizations } from "@/lib/api/organizations";
+import { useAcademicYears, useDirections } from "@/lib/api/academic";
 import { usePracticeTypes } from "@/lib/api/practice-types";
 import type { AssignmentStatus, PracticeAssignment, Semester, UUID } from "@/lib/api/types";
 
@@ -57,6 +60,7 @@ const COURSES = [1, 2, 3, 4, 5];
 
 export function AssignmentsPage() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<AssignmentFilters>({});
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -64,27 +68,45 @@ export function AssignmentsPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [selected, setSelected] = useState<PracticeAssignment | null>(null);
   const pageSize = 20;
-  const orgs = useOrganizations({}, 1, 200);
   const academicYearsQ = useAcademicYears();
   const directionsQ = useDirections(undefined, 1, 200);
-  const groupsQ = useGroups(
-    { directionId: filters.direction_id, course: filters.course },
-    1,
-    200,
-  );
 
   useEffect(() => {
     setFilters((f) => ({ ...f, search: debouncedSearch || undefined }));
     setPage(1);
   }, [debouncedSearch]);
 
+  // Tashqi havolalar: ⌘K / monitoring "Yangi biriktirish" — ?new=1, holat filtri — ?status=active.
+  // Bir marta o'qiladi va URL'dan olib tashlanadi (keyingi tab almashinuvi bilan to'qnashmasin).
+  useEffect(() => {
+    const openWizard = searchParams.get("new") === "1";
+    const statusParam = searchParams.get("status");
+    const status = STATUS_TABS.some((tab) => tab.value === statusParam && tab.value !== ALL)
+      ? (statusParam as AssignmentStatus)
+      : undefined;
+    if (!openWizard && !statusParam) return;
+    if (openWizard) setWizardOpen(true);
+    if (status) {
+      setFilters((f) => ({ ...f, status }));
+      setPage(1);
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("new");
+        next.delete("status");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams]);
+
   const [exporting, setExporting] = useState(false);
   const handleExport = async () => {
     setExporting(true);
     try {
-      await downloadExport("assignments", {
-        academic_year_id: filters.academic_year_id,
-      });
+      // Jadvaldagi barcha faol filtrlar (holat, qidiruv, guruh, supervizor...) bilan
+      await downloadAssignmentsCsv(filters);
       toast.success(t("common.csvDownloaded"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.error"));
@@ -99,7 +121,25 @@ export function AssignmentsPage() {
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / pageSize));
 
   const setFilter = (patch: Partial<AssignmentFilters>) => {
-    setFilters({ ...filters, ...patch });
+    setFilters((f) => ({ ...f, ...patch }));
+    setPage(1);
+  };
+
+  // "Tozalash" — istalgan filtr (qidiruv ham) faol bo'lsa ko'rinadi; holat tabi saqlanadi
+  const hasActiveFilters =
+    !!searchInput.trim() ||
+    !!filters.practice_type_id ||
+    !!filters.organization_id ||
+    !!filters.supervisor_id ||
+    !!filters.academic_year_id ||
+    !!filters.semester ||
+    !!filters.direction_id ||
+    filters.course !== undefined ||
+    !!filters.group_id;
+
+  const clearFilters = () => {
+    setSearchInput("");
+    setFilters((f) => ({ status: f.status }));
     setPage(1);
   };
 
@@ -117,7 +157,7 @@ export function AssignmentsPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleExport} disabled={exporting}>
             {exporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -146,7 +186,7 @@ export function AssignmentsPage() {
         }
         className="mb-4"
       >
-        <TabsList className="flex-wrap">
+        <TabsList className="h-auto flex-wrap">
           {STATUS_TABS.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               {t(tab.labelKey)}
@@ -159,15 +199,16 @@ export function AssignmentsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
           placeholder={t("adminAssignments.searchPlaceholder")}
+          aria-label={t("adminAssignments.searchPlaceholder")}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="min-w-[240px] flex-1 max-w-xs"
+          className="w-full sm:w-auto sm:min-w-[240px] sm:max-w-xs sm:flex-1"
         />
         <Select
           value={filters.practice_type_id ?? ALL}
           onValueChange={(v) => setFilter({ practice_type_id: v === ALL ? undefined : v })}
         >
-          <SelectTrigger className="w-[220px]">
+          <SelectTrigger className="w-full sm:w-[220px]" aria-label={t("common.practiceType")}>
             <SelectValue placeholder={t("common.practiceType")} />
           </SelectTrigger>
           <SelectContent>
@@ -179,29 +220,22 @@ export function AssignmentsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select
-          value={filters.organization_id ?? ALL}
-          onValueChange={(v) =>
-            setFilter({ organization_id: v === ALL ? undefined : (v as UUID) })
-          }
-        >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder={t("common.organization")} />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>{t("adminAssignments.allOrganizations")}</SelectItem>
-            {(orgs.data?.items ?? []).map((o) => (
-              <SelectItem key={o.id} value={o.id}>
-                {o.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="w-[220px]">
+        <div className="w-full sm:w-[220px]">
+          <OrganizationSearchSelect
+            value={filters.organization_id ?? ""}
+            onValueChange={(v) => setFilter({ organization_id: v ? (v as UUID) : undefined })}
+            placeholder={t("adminAssignments.allOrganizations")}
+            noneLabel={t("adminAssignments.allOrganizations")}
+            includeInactive
+          />
+        </div>
+        <div className="w-full sm:w-[220px]">
           <SupervisorSearchSelect
             value={filters.supervisor_id ?? ""}
             onValueChange={(v) => setFilter({ supervisor_id: v ? (v as UUID) : undefined })}
             placeholder={t("adminAssignments.allSupervisors")}
+            noneLabel={t("adminAssignments.allSupervisors")}
+            includeInactive
           />
         </div>
         <Select
@@ -210,7 +244,7 @@ export function AssignmentsPage() {
             setFilter({ academic_year_id: v === ALL ? undefined : (v as UUID) })
           }
         >
-          <SelectTrigger className="w-[170px]">
+          <SelectTrigger className="w-full sm:w-[170px]" aria-label={t("common.academicYear")}>
             <SelectValue placeholder={t("common.academicYear")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
@@ -228,13 +262,13 @@ export function AssignmentsPage() {
             setFilter({ semester: v === ALL ? undefined : (v as Semester) })
           }
         >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder={t("common.semester", { defaultValue: "Semestr" })} />
+          <SelectTrigger className="w-full sm:w-[180px]" aria-label={t("common.semester")}>
+            <SelectValue placeholder={t("common.semester")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>{t("supervisorStudents.semesters.all", { defaultValue: "Barcha semestrlar" })}</SelectItem>
-            <SelectItem value="fall">{t("common.semesterFall", { defaultValue: "1-semestr (Kuzgi)" })}</SelectItem>
-            <SelectItem value="spring">{t("common.semesterSpring", { defaultValue: "2-semestr (Bahorgi)" })}</SelectItem>
+            <SelectItem value={ALL}>{t("supervisorStudents.semesters.all")}</SelectItem>
+            <SelectItem value="fall">{t("supervisorStudents.semesters.fall")}</SelectItem>
+            <SelectItem value="spring">{t("supervisorStudents.semesters.spring")}</SelectItem>
           </SelectContent>
         </Select>
         <Select
@@ -246,7 +280,10 @@ export function AssignmentsPage() {
             })
           }
         >
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger
+            className="w-full sm:w-[200px]"
+            aria-label={t("adminAssignments.directionPlaceholder")}
+          >
             <SelectValue placeholder={t("adminAssignments.directionPlaceholder")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
@@ -267,7 +304,7 @@ export function AssignmentsPage() {
             })
           }
         >
-          <SelectTrigger className="w-[130px]">
+          <SelectTrigger className="w-full sm:w-[130px]" aria-label={t("common.course")}>
             <SelectValue placeholder={t("common.course")} />
           </SelectTrigger>
           <SelectContent>
@@ -279,36 +316,18 @@ export function AssignmentsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select
-          value={filters.group_id ?? ALL}
-          onValueChange={(v) => setFilter({ group_id: v === ALL ? undefined : (v as UUID) })}
-        >
-          <SelectTrigger className="w-[170px]">
-            <SelectValue placeholder={t("common.group")} />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            <SelectItem value={ALL}>{t("adminAssignments.allGroups")}</SelectItem>
-            {(groupsQ.data?.items ?? []).map((g) => (
-              <SelectItem key={g.id} value={g.id}>
-                {t("adminAssignments.groupWithCourse", { name: g.name, course: g.course })}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {(filters.practice_type_id ||
-          filters.organization_id ||
-          filters.supervisor_id ||
-          filters.academic_year_id ||
-          filters.direction_id ||
-          filters.course !== undefined ||
-          filters.group_id) && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setFilters({ search: filters.search });
-              setPage(1);
-            }}
-          >
+        <div className="w-full sm:w-[200px]">
+          <GroupSearchSelect
+            value={filters.group_id ?? ""}
+            onValueChange={(v) => setFilter({ group_id: v ? (v as UUID) : undefined })}
+            directionId={filters.direction_id}
+            course={filters.course}
+            placeholder={t("adminAssignments.allGroups")}
+            noneLabel={t("adminAssignments.allGroups")}
+          />
+        </div>
+        {hasActiveFilters && (
+          <Button variant="ghost" onClick={clearFilters}>
             {t("common.clear")}
           </Button>
         )}
@@ -353,7 +372,14 @@ export function AssignmentsPage() {
                   <TableRow
                     key={a.id}
                     onClick={() => setSelected(a)}
-                    className="cursor-pointer"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelected(a);
+                      }
+                    }}
+                    tabIndex={0}
+                    className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <TableCell>
                       <div className="font-medium">{a.student_full_name}</div>
@@ -379,9 +405,9 @@ export function AssignmentsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-xs">
-                      <div>{new Date(a.start_date).toLocaleDateString(dateLocale())}</div>
+                      <div>{formatTashkentDate(a.start_date, dateLocale())}</div>
                       <div className="text-muted-foreground">
-                        {new Date(a.end_date).toLocaleDateString(dateLocale())}
+                        {formatTashkentDate(a.end_date, dateLocale())}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -394,7 +420,7 @@ export function AssignmentsPage() {
           </div>
 
           {data.total > 0 && (
-            <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
               <div>
                 {t("common.total")}: <span className="font-medium text-foreground">{data.total}</span>
               </div>

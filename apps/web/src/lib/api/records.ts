@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import i18n from "@/i18n";
 
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth";
+import i18n from "@/i18n";
+import { api, downloadFile } from "@/lib/api";
+import { assignmentKeys } from "@/lib/api/assignments";
 import type { UUID } from "@/lib/api/types";
 
 export type RecordRow = {
@@ -23,6 +23,8 @@ export type RecordRow = {
   korxona_grade_max: number | null;
   qaydnoma_grade: number | null;
   credit_earned: boolean | null;
+  /** draft | active | completed — o'chirish faqat draft uchun (backend qoidasi) */
+  status?: "draft" | "active" | "completed" | null;
   is_archived?: boolean;
 };
 
@@ -38,6 +40,11 @@ export type RecordFilters = {
   end_to?: string;
   search?: string;
   is_archived?: boolean;
+};
+
+export const recordKeys = {
+  all: ["records"] as const,
+  list: (filters: RecordFilters) => [...recordKeys.all, filters] as const,
 };
 
 export function recordsQs(filters: RecordFilters): string {
@@ -58,7 +65,7 @@ export function recordsQs(filters: RecordFilters): string {
 
 export function useRecords(filters: RecordFilters = {}) {
   return useQuery({
-    queryKey: ["records", filters],
+    queryKey: recordKeys.list(filters),
     queryFn: () => api.get(`v1/records?${recordsQs(filters)}`).json<RecordRow[]>(),
     placeholderData: (prev) => prev,
   });
@@ -68,9 +75,7 @@ export function useArchiveRecord() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (assignmentId: UUID) => api.post(`v1/records/${assignmentId}/archive`).json(),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["records"] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: recordKeys.all }),
   });
 }
 
@@ -78,46 +83,39 @@ export function useUnarchiveRecord() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (assignmentId: UUID) => api.post(`v1/records/${assignmentId}/unarchive`).json(),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["records"] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: recordKeys.all }),
   });
 }
 
+/**
+ * Qaydnomani (biriktirishni) butunlay o'chirish — faqat qoralama/bekor qilingan
+ * biriktirishlar uchun; faol/yakunlanganlarida server 409 qaytaradi (arxivlash kerak).
+ */
 export function useDeleteRecord() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (assignmentId: UUID) => api.delete(`v1/records/${assignmentId}`).json(),
+    mutationFn: async (assignmentId: UUID) => {
+      await api.delete(`v1/records/${assignmentId}`);
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["records"] });
+      void qc.invalidateQueries({ queryKey: recordKeys.all });
+      void qc.invalidateQueries({ queryKey: assignmentKeys.all });
     },
   });
 }
 
-async function downloadFile(path: string, fallbackName: string): Promise<void> {
-  const token = useAuthStore.getState().accessToken;
-  if (!token) throw new Error(i18n.t("common.sessionExpired"));
-  const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`Yuklab bo'lmadi (${res.status})`);
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fallbackName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
 export function downloadRecordsXlsx(filters: RecordFilters): Promise<void> {
-  return downloadFile(`/api/v1/records/export.xlsx?${recordsQs(filters)}`, "qaydnomalar.xlsx");
+  return downloadFile(
+    `/api/v1/records/export.xlsx?${recordsQs(filters)}`,
+    "qaydnomalar.xlsx",
+    i18n.t("common.downloadFailed"),
+  );
 }
 
 export function downloadRecordsPdf(filters: RecordFilters): Promise<void> {
   return downloadFile(
     `/api/v1/records/baholash-qaydnomasi.pdf?${recordsQs(filters)}`,
     "baholash_qaydnomasi.pdf",
+    i18n.t("common.downloadFailed"),
   );
 }
-
