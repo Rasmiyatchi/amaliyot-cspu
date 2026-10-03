@@ -41,7 +41,10 @@ echo "   Migrations successfully applied."
 # 3. Start application server
 echo "3. Starting Uvicorn server..."
 if [ "$#" -eq 0 ]; then
-    exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
+    # X-Forwarded-For/Proto faqat ishonchli proksilardan (aaPanel, docker tarmog'i) qabul qilinadi:
+    # '*' bilan mijozning o'zi yuborgan birinchi XFF qiymati IP deb olinardi (soxtalashtirish)
+    exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers \
+        --forwarded-allow-ips="${FORWARDED_ALLOW_IPS:-127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
 else
     exec "$@"
 fi

@@ -9,7 +9,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.clock import today_uzb
@@ -90,9 +90,13 @@ async def list_records(
             PracticeAssignment.is_archived == is_archived,
             PracticeAssignment.status != AssignmentStatus.CANCELLED,
             # Bitirgan / akademik ta'tildagi talabaning bahosi rasmiy qaydnomadan YO'QOLMASLIGI
-            # kerak (bitiruvchilar qaydnomasi aynan shu payt chiqariladi) — faqat haydalganlar
-            # faol ro'yxatdan chiqariladi. Hisob bloklangani bahoni o'chirmaydi.
-            Student.status != StudentStatus.EXPELLED,
+            # kerak (bitiruvchilar qaydnomasi aynan shu payt chiqariladi). Haydalgan talaba
+            # faqat baholanmagan bo'lsa chiqariladi — qo'yilgan rasmiy baho qaydnomada qoladi.
+            # Hisob bloklangani bahoni o'chirmaydi.
+            or_(
+                Student.status != StudentStatus.EXPELLED,
+                PracticeAssignment.final_grade.is_not(None),
+            ),
         )
     )
 

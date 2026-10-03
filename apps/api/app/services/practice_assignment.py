@@ -397,7 +397,7 @@ async def sync_assignments_to_contracts(db: AsyncSession, assignment_ids: list[U
     from app.models.enums import ApplicationStatus, ContractStatus
     from app.models.practice_application import PracticeApplication
     from app.services import practice_application as pa_svc
-    from app.services.contract import _snapshot_students
+    from app.services.contract import refresh_contract_students
 
     str_ids = {str(aid) for aid in assignment_ids}
 
@@ -427,25 +427,12 @@ async def sync_assignments_to_contracts(db: AsyncSession, assignment_ids: list[U
                 for st in c_students
             )
             if has_match:
-                all_c_assign_ids = []
-                for st in c_students:
-                    if isinstance(st, dict) and st.get("assignment_id"):
-                        try:
-                            all_c_assign_ids.append(UUID(str(st["assignment_id"])))
-                        except (ValueError, TypeError):
-                            pass
-                if all_c_assign_ids:
-                    try:
-                        refreshed = await _snapshot_students(
-                            db, all_c_assign_ids, contract.organization_id
-                        )
-                        contract.students = refreshed
-                        if contract.pdf_path or contract.status == ContractStatus.GENERATED:
-                            await pa_svc.generate_official_contract_pdf(db, contract.id)
-                    except Exception as e:
-                        logger.warning(
-                            f"Shartnoma {contract.id} snapshotini yangilashda xatolik: {e}"
-                        )
+                try:
+                    contract.students = await refresh_contract_students(db, contract)
+                    if contract.pdf_path or contract.status == ContractStatus.GENERATED:
+                        await pa_svc.generate_official_contract_pdf(db, contract.id)
+                except Exception as e:
+                    logger.warning(f"Shartnoma {contract.id} snapshotini yangilashda xatolik: {e}")
     except Exception as e:
         logger.warning(f"Official contracts sync xatoligi: {e}")
 

@@ -4,6 +4,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
+from loguru import logger
 
 from app.api.deps import RequireAdmin, RequireStructure
 from app.db.session import SessionDep
@@ -18,6 +19,7 @@ from app.schemas.student import (
     StudentUpdate,
 )
 from app.services import audit_log as audit
+from app.services.scoping import assert_faculty_scope, group_faculty_id, is_faculty_scoped
 from app.services.student import create_student as svc_create_student
 from app.services.student import delete_student as svc_delete_student
 from app.services.student import get_student as svc_get_student
@@ -32,12 +34,12 @@ router = APIRouter(prefix="/students", tags=["students"])
 
 
 def _check_faculty_access(user: Any, student: dict[str, Any], action: str = "ko'rish") -> None:
-    if user.role == UserRole.ADMIN and user.faculty_id:
-        if student.get("faculty_id") and student.get("faculty_id") != user.faculty_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Sizda boshqa fakultet talabasini {action} huquqi yo'q",
-            )
+    # Guruhsiz talaba ham fakultet admini doirasidan tashqarida (ilgari har kim tahrirlay olardi)
+    if is_faculty_scoped(user) and student.get("faculty_id") != user.faculty_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Sizda boshqa fakultet talabasini {action} huquqi yo'q",
+        )
 
 
 @router.get("", response_model=Paginated[StudentRead])
@@ -98,6 +100,8 @@ async def create_student(
     db: SessionDep,
     user: RequireStructure,
 ) -> StudentRead:
+    # Fakultet admini faqat o'z fakulteti guruhiga talaba qo'sha oladi
+    assert_faculty_scope(user, await group_faculty_id(db, data.group_id))
     result = await svc_create_student(db, data)
     full_name = f"{data.last_name} {data.first_name}".strip()
     await audit.log(
@@ -130,6 +134,9 @@ async def update_student(
     # Guruh o'zgarishi tarixga ta'sir qiladi — oldingi qiymatni auditga yozib qo'yamiz,
     # keyin "qachon qaysi guruhdan qaysi guruhga o'tgan"ni tiklab bo'lsin.
     payload = data.model_dump(exclude_unset=True)
+    if payload.get("group_id"):
+        # Boshqa fakultet guruhiga ko'chirib yuborish ham taqiqlanadi
+        assert_faculty_scope(user, await group_faculty_id(db, payload["group_id"]))
     old_group_id = before.get("group_id") if "group_id" in payload else None
 
     result = await svc_update_student(db, id_, data)
@@ -191,9 +198,13 @@ async def bulk_delete_students(
         except HTTPException as e:
             await db.rollback()
             failed.append(StudentBulkDeleteError(id=sid, full_name=full_name, error=str(e.detail)))
-        except Exception as e:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             await db.rollback()
-            failed.append(StudentBulkDeleteError(id=sid, full_name=full_name, error=str(e)))
+            # Xom xato (SQL, parametrlar) foydalanuvchiga ko'rsatilmaydi — logga yoziladi
+            logger.exception(f"Talabani o'chirishda kutilmagan xato: {sid}")
+            failed.append(
+                StudentBulkDeleteError(id=sid, full_name=full_name, error="Kutilmagan xatolik")
+            )
 
     return StudentBulkDeleteResult(requested=len(payload.ids), deleted=deleted, failed=failed)
 

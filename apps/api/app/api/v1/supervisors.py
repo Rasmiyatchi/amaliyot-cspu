@@ -13,6 +13,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from loguru import logger
 
 from app.api.deps import RequireAdmin, RequireSupervisor, RequireSupervisors
 from app.db.session import SessionDep
@@ -32,7 +33,12 @@ from app.services import supervisor as svc
 from app.services import supervisor_import as import_svc
 from app.services import supervisor_report as report_svc
 from app.services.import_templates import build_supervisors_template
-from app.services.scoping import assert_supervisor_in_scope
+from app.services.scoping import (
+    assert_faculty_scope,
+    assert_supervisor_in_scope,
+    effective_faculty_id,
+    is_faculty_scoped,
+)
 
 router = APIRouter(prefix="/supervisors", tags=["supervisors"])
 
@@ -90,7 +96,9 @@ async def import_supervisors(
         )
     if not content:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fayl bo'sh")
-    result = await import_svc.import_supervisors(db, content)
+    result = await import_svc.import_supervisors(
+        db, content, scope_faculty_id=effective_faculty_id(user)
+    )
     await audit.log(
         db,
         actor=user,
@@ -190,6 +198,11 @@ async def get_supervisor(id_: UUID, db: SessionDep, user: RequireAdmin) -> Super
 async def create_supervisor(
     data: SupervisorCreate, request: Request, db: SessionDep, user: RequireSupervisors
 ) -> SupervisorRead:
+    # Fakultet admini: fakultet ko'rsatilmasa — o'z fakulteti; boshqa fakultet — taqiqlanadi
+    if is_faculty_scoped(user):
+        if data.faculty_id is None:
+            data.faculty_id = user.faculty_id
+        assert_faculty_scope(user, data.faculty_id)
     result = await svc.create_supervisor(db, data)
     await audit.log(
         db,
@@ -213,6 +226,8 @@ async def update_supervisor(
     user: RequireSupervisors,
 ) -> SupervisorRead:
     await assert_supervisor_in_scope(db, user, id_)
+    if data.faculty_id is not None:
+        assert_faculty_scope(user, data.faculty_id)
     result = await svc.update_supervisor(db, id_, data)
     await audit.log(
         db,
@@ -272,6 +287,7 @@ async def bulk_delete_supervisors(
     for sid in payload.ids:
         full_name: str | None = None
         try:
+            await assert_supervisor_in_scope(db, user, sid)
             supervisor = await svc.get_supervisor(db, sid)
             full_name = supervisor.get("full_name")
             await svc.delete_supervisor(db, sid)
@@ -291,9 +307,12 @@ async def bulk_delete_supervisors(
             failed.append(
                 SupervisorBulkDeleteError(id=sid, full_name=full_name, error=str(e.detail))
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             await db.rollback()
-            failed.append(SupervisorBulkDeleteError(id=sid, full_name=full_name, error=str(e)))
+            logger.exception(f"Supervizorni o'chirishda kutilmagan xato: {sid}")
+            failed.append(
+                SupervisorBulkDeleteError(id=sid, full_name=full_name, error="Kutilmagan xatolik")
+            )
 
     return SupervisorBulkDeleteResult(requested=len(payload.ids), deleted=deleted, failed=failed)
 

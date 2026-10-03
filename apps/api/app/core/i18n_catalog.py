@@ -40,11 +40,19 @@ EXACT: dict[str, str] = {
     ),
     "Baholashga ruxsat yo'q": "Нет разрешения на оценивание",
     "Bekor qilingan amaliyotni baholab bo'lmaydi": "Нельзя оценивать отменённую практику",
-    "Biriktirish holatini bunday o'zgartirib bo'lmaydi": "Невозможно так изменить статус назначения",
+    "Biriktirish holatini bunday o'zgartirib bo'lmaydi": (
+        "Невозможно так изменить статус назначения"
+    ),
     "Amaliyotni yakunlash uchun avval baholang (Baholash → Yakunlash)": (
         "Чтобы завершить практику, сначала выставьте оценку (Оценивание → Завершить)"
     ),
     "academic_year_id noto'g'ri": "Некорректный academic_year_id",
+    "Bu amal faqat o'z fakultetingiz doirasida mumkin": (
+        "Это действие доступно только в пределах вашего факультета"
+    ),
+    "Bu amal faqat universitet darajasidagi admin uchun": (
+        "Это действие доступно только администратору уровня университета"
+    ),
     "Biriktirish sizga tegishli emas": "Прикрепление не принадлежит вам",
     "Biriktirish topilmadi": "Прикрепление не найдено",
     "Biriktirish topilmadi yoki siz supervizor emassiz": (
@@ -354,6 +362,24 @@ EXACT: dict[str, str] = {
     "Topshiriqni tasdiqlash uchun ball kiriting": "Чтобы подтвердить задание, укажите балл",
     "Biriktirma fayli topilmadi": "Файл вложения не найден",
     "Biriktirma sizga tegishli emas": "Вложение вам не принадлежит",
+    "Hisobot fayli biriktirilmagan": "Файл отчёта не прикреплён",
+    "Kutilmagan xatolik": "Непредвиденная ошибка",
+    "Shablon shartnomalarda ishlatilgan — o'chirib bo'lmaydi. Uni arxivlang.": (
+        "Шаблон используется в договорах — удалить нельзя. Переведите его в архив."
+    ),
+    "Shartnomani oldindan ko'rishda xatolik": "Ошибка при предпросмотре договора",
+    "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas": (
+        "Дата окончания не может быть раньше даты начала"
+    ),
+    "Tizimga kirish talab qilinadi": "Требуется вход в систему",
+    "Sahifa yoki manba topilmadi": "Страница или ресурс не найдены",
+    "Bu so'rov usuli qo'llab-quvvatlanmaydi": "Этот метод запроса не поддерживается",
+    "Bu holatdagi arizani tuzatishga qaytarib bo'lmaydi": (
+        "Заявку в этом статусе нельзя вернуть на доработку"
+    ),
+    "Davomat faqat hisobingiz bog'langan qurilmadan belgilanadi": (
+        "Посещаемость можно отмечать только с устройства, к которому привязан аккаунт"
+    ),
     "Noto'g'ri biriktirma": "Неверное вложение",
     "Sizda boshqa fakultet talabasini ko'rish huquqi yo'q": (
         "У вас нет права просматривать студентов другого факультета"
@@ -404,7 +430,7 @@ EXACT: dict[str, str] = {
 PATTERNS: list[tuple[str, str]] = [
     # ── 2026-10 audit ────────────────────────────────────────────────────────
     (
-        r"Sizda ushbu modulga kirish huquqi yo'q \((?P<perm>[a-z_]+)\)",
+        r"Sizda ushbu modulga kirish huquqi yo'q \((?P<perm>[a-z_/]+)\)",
         "У вас нет доступа к этому модулю ({perm})",
     ),
     (

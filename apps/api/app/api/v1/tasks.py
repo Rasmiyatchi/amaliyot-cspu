@@ -7,9 +7,10 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from app.api.deps import CurrentUser, RequireAdmin
+from app.api.deps import CurrentUser, RequirePractice
 from app.db.session import SessionDep
 from app.models.enums import Semester, UserRole
+from app.models.task import JournalEntry, LessonAnalysis, Task
 from app.schemas.task import (
     JournalCreateRequest,
     JournalRead,
@@ -29,6 +30,7 @@ from app.schemas.task import (
     TaskTemplateUpdate,
 )
 from app.services import task as svc
+from app.services.scoping import assert_assignment_access, assert_child_assignment_access
 
 router = APIRouter(tags=["tasks"])
 
@@ -82,7 +84,7 @@ async def list_templates(
     summary="Admin: yangi topshiriq shabloni",
 )
 async def create_template(
-    data: TaskTemplateCreate, db: SessionDep, _: RequireAdmin
+    data: TaskTemplateCreate, db: SessionDep, _: RequirePractice
 ) -> TaskTemplateRead:
     return TaskTemplateRead.model_validate(await svc.create_template(db, data))
 
@@ -96,7 +98,7 @@ async def update_template(
     template_id: UUID,
     data: TaskTemplateUpdate,
     db: SessionDep,
-    _: RequireAdmin,
+    _: RequirePractice,
 ) -> TaskTemplateRead:
     return TaskTemplateRead.model_validate(
         await svc.update_template(db, template_id, data)
@@ -109,7 +111,7 @@ async def update_template(
     summary="Admin: topshiriq shablonini o'chirish",
 )
 async def delete_template(
-    template_id: UUID, db: SessionDep, _: RequireAdmin
+    template_id: UUID, db: SessionDep, _: RequirePractice
 ) -> None:
     await svc.delete_template(db, template_id)
 
@@ -144,8 +146,9 @@ async def list_overdue_tasks(
     summary="Admin: barcha mos templatelarni qo'shish",
 )
 async def ensure_tasks(
-    assignment_id: UUID, db: SessionDep, _: RequireAdmin
+    assignment_id: UUID, db: SessionDep, user: RequirePractice
 ) -> dict[str, Any]:
+    await assert_assignment_access(db, user, assignment_id)
     created = await svc.ensure_tasks_for_assignment(db, assignment_id)
     return {"assignment_id": str(assignment_id), "created": created}
 
@@ -159,8 +162,9 @@ async def add_tasks(
     assignment_id: UUID,
     payload: AddTasksRequest,
     db: SessionDep,
-    _: RequireAdmin,
+    user: RequirePractice,
 ) -> dict[str, Any]:
+    await assert_assignment_access(db, user, assignment_id)
     created_ids = await svc.add_tasks_by_template_ids(
         db, assignment_id, payload.items
     )
@@ -177,8 +181,9 @@ async def add_tasks(
     summary="Assignment uchun qo'shish mumkin bo'lgan templatelar (hali qo'shilmaganlar)",
 )
 async def available_templates(
-    assignment_id: UUID, db: SessionDep, _: RequireAdmin
+    assignment_id: UUID, db: SessionDep, user: RequirePractice
 ) -> list[TaskTemplateRead]:
+    await assert_assignment_access(db, user, assignment_id)
     items = await svc.list_available_templates_for_assignment(db, assignment_id)
     return [TaskTemplateRead.model_validate(i) for i in items]
 
@@ -189,8 +194,9 @@ async def available_templates(
     summary="Admin: taskni o'chirish (tasdiqlangandan tashqari)",
 )
 async def delete_task(
-    task_id: UUID, db: SessionDep, _: RequireAdmin
+    task_id: UUID, db: SessionDep, user: RequirePractice
 ) -> None:
+    await assert_child_assignment_access(db, user, Task, task_id, "Topshiriq topilmadi")
     await svc.delete_task(db, task_id)
 
 
@@ -419,8 +425,9 @@ async def reject_analysis(
     summary="Admin: topshiriq tasdiqini bekor qilish",
 )
 async def revert_task(
-    task_id: UUID, db: SessionDep, user: RequireAdmin
+    task_id: UUID, db: SessionDep, user: RequirePractice
 ) -> TaskRead:
+    await assert_child_assignment_access(db, user, Task, task_id, "Topshiriq topilmadi")
     return TaskRead.model_validate(await svc.admin_revert_task(db, task_id, user))
 
 
@@ -430,8 +437,9 @@ async def revert_task(
     summary="Admin: kundalik tasdiqini bekor qilish",
 )
 async def revert_journal(
-    entry_id: UUID, db: SessionDep, user: RequireAdmin
+    entry_id: UUID, db: SessionDep, user: RequirePractice
 ) -> JournalRead:
+    await assert_child_assignment_access(db, user, JournalEntry, entry_id, "Yozuv topilmadi")
     return JournalRead.model_validate(await svc.admin_revert_journal(db, entry_id, user))
 
 
@@ -441,8 +449,9 @@ async def revert_journal(
     summary="Admin: dars tahlili tasdiqini bekor qilish",
 )
 async def revert_analysis(
-    analysis_id: UUID, db: SessionDep, user: RequireAdmin
+    analysis_id: UUID, db: SessionDep, user: RequirePractice
 ) -> LessonAnalysisRead:
+    await assert_child_assignment_access(db, user, LessonAnalysis, analysis_id, "Yozuv topilmadi")
     return LessonAnalysisRead.model_validate(
         await svc.admin_revert_lesson_analysis(db, analysis_id, user)
     )

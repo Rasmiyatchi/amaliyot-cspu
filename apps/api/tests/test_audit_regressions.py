@@ -74,7 +74,7 @@ class TestAttachmentSanitizing:
                 [{"id": "x", "path": "contracts/26000001.pdf", "uploaded_by_id": str(uid)}],
                 user_id=uid,
             )
-        assert exc.value.status_code == 404
+        assert exc.value.status_code == 400  # o'z papkasidan tashqari — rad etiladi
 
     def test_someone_elses_upload_rejected(self):
         with pytest.raises(HTTPException) as exc:
@@ -90,6 +90,32 @@ class TestAttachmentSanitizing:
             [{"id": "keep", "path": "contracts/evil.pdf"}], user_id=uuid4(), existing=existing
         )
         assert out == existing
+
+    def test_only_own_namespace_accepted(self, tmp_path, monkeypatch):
+        """Talaba begona (masalan admin hujjati) faylini uploaded_by_id ni soxtalab biriktira olmaydi."""
+        root = tmp_path / "uploads"
+        monkeypatch.setattr(uploads_svc, "STORAGE_ROOT", root)
+        me, other = uuid4(), uuid4()
+        mine = root / "u" / str(me) / "2026" / "10" / "a.pdf"
+        theirs = root / "u" / str(other) / "2026" / "10" / "b.pdf"
+        legacy = root / "2026" / "10" / "doc.pdf"
+        for f in (mine, theirs, legacy):
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_bytes(b"%PDF-1.4")
+
+        out = uploads_svc.clean_client_attachments(
+            [{"id": "m", "name": "a.pdf", "path": f"uploads/u/{me}/2026/10/a.pdf",
+              "uploaded_by_id": str(other), "size": 999999}],
+            user_id=me,
+        )
+        assert out[0]["uploaded_by_id"] == str(me) and out[0]["size"] == 8
+
+        for path in (f"uploads/u/{other}/2026/10/b.pdf", "uploads/2026/10/doc.pdf"):
+            with pytest.raises(HTTPException) as exc:
+                uploads_svc.clean_client_attachments(
+                    [{"id": "x", "path": path, "uploaded_by_id": str(me)}], user_id=me
+                )
+            assert exc.value.status_code == 400
 
     def test_traversal_rejected(self):
         with pytest.raises(HTTPException):
@@ -179,3 +205,42 @@ class TestSearchNormalization:
         variants = ["Ro'ziyev", "Ro’ziyev", "Roʻziyev", "RO`ZIYEV", " ro‘ziyev "]
         assert {normalize_term(v) for v in variants} == {"roziyev"}
         assert like_pattern("50%_o'g'li") == "%50\\%\\_ogli%"
+
+
+class TestFacultyScope:
+    @staticmethod
+    def _user(role, faculty_id=None):
+        from app.models.user import User
+
+        return User(role=role, faculty_id=faculty_id)
+
+    def test_scoped_admin_limited_to_own_faculty(self):
+        from app.models.enums import UserRole
+        from app.services.scoping import assert_faculty_scope, require_university_admin
+
+        own, other = uuid4(), uuid4()
+        scoped = self._user(UserRole.ADMIN, own)
+        assert_faculty_scope(scoped, own)
+        for target in (other, None):  # boshqa fakultet ham, fakultetsiz obyekt ham
+            with pytest.raises(HTTPException) as e:
+                assert_faculty_scope(scoped, target)
+            assert e.value.status_code == 403
+        with pytest.raises(HTTPException):
+            require_university_admin(scoped)
+
+    def test_unscoped_admins_pass(self):
+        from app.models.enums import UserRole
+        from app.services.scoping import assert_faculty_scope, require_university_admin
+
+        for user in (self._user(UserRole.ADMIN), self._user(UserRole.SUPER_ADMIN)):
+            assert_faculty_scope(user, uuid4())
+            require_university_admin(user)
+
+
+class TestProductionSecrets:
+    def test_placeholder_secrets_detected(self):
+        from app.core.config import _is_placeholder_secret
+
+        for bad in ("CHANGE_ME_to_64_hex_chars_min", "dev-only-change-me", "short", " "):
+            assert _is_placeholder_secret(bad)
+        assert not _is_placeholder_secret("9f2c" * 16)

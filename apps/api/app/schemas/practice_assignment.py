@@ -63,8 +63,8 @@ class PracticeAssignmentUpdate(BaseModel):
     semester: Semester | None = None
     required_weekdays: RequiredWeekdays = None
     status: AssignmentStatus | None = None
-    final_grade: int | None = Field(None, ge=0, le=100)
-    credit_earned: bool | None = None
+    # Yakuniy baho va kredit faqat baholash (grading finalize) orqali qo'yiladi. Ilgari tahrirlash
+    # so'rovi bilan baho qo'yib, amaliyotni "yakunlangan" qilish mumkin edi.
     cancelled_reason: str | None = None
     notes: str | None = None
 

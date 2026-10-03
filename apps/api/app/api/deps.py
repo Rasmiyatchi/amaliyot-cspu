@@ -142,9 +142,38 @@ def require_permission(
     return _checker
 
 
+def require_any_permission(
+    *permissions: str,
+) -> Callable[[User], Coroutine[Any, Any, User]]:
+    """Bir nechta moduldan birortasi yetarli.
+
+    Masalan, shartnoma formasi biriktirishlar ro'yxatini o'qiydi.
+    """
+
+    async def _checker(user: CurrentUser) -> User:
+        if user.role == UserRole.SUPER_ADMIN:
+            return user
+        if user.role != UserRole.ADMIN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Ushbu amal faqat administratorlar uchun",
+            )
+        if set(user.permissions or []) & set(permissions):
+            return user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Sizda ushbu modulga kirish huquqi yo'q ({'/'.join(permissions)})",
+        )
+
+    return _checker
+
+
 RequireStructure = Annotated[User, Depends(require_permission("structure"))]
 RequirePractice = Annotated[User, Depends(require_permission("practice"))]
 RequireContracts = Annotated[User, Depends(require_permission("contracts"))]
+RequirePracticeOrContracts = Annotated[
+    User, Depends(require_any_permission("practice", "contracts"))
+]
 RequireSupervisors = Annotated[User, Depends(require_permission("supervisors"))]
 RequirePartners = Annotated[User, Depends(require_permission("partners"))]
 RequireMonitoring = Annotated[User, Depends(require_permission("monitoring"))]

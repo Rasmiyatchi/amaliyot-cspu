@@ -19,6 +19,7 @@ from sqlalchemy import ColumnElement, and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.request_meta import client_ip
 from app.core.security import (
     TokenType,
     create_access_token,
@@ -47,18 +48,13 @@ WEBVIEW_HINT = (
 
 # Brute-force himoyasi (jarayon ichida; ko'p worker bo'lsa har biri alohida hisoblaydi)
 LOGIN_FAIL_WINDOW = timedelta(minutes=15)
-LOGIN_MAX_FAILS_PER_USER = 10
-LOGIN_MAX_FAILS_PER_IP = 60
+LOGIN_MAX_FAILS_PER_USER = settings.LOGIN_MAX_FAILS_PER_USER
+LOGIN_MAX_FAILS_PER_IP = settings.LOGIN_MAX_FAILS_PER_IP
 _failed_attempts: dict[str, deque[datetime]] = defaultdict(deque)
 
 
 def _client_meta(request: Request) -> tuple[str | None, str | None]:
-    ua = request.headers.get("user-agent")
-    forwarded = request.headers.get("x-forwarded-for", "")
-    ip = forwarded.split(",")[0].strip() if forwarded else None
-    if not ip:
-        ip = request.client.host if request.client else None
-    return ua, ip
+    return request.headers.get("user-agent"), client_ip(request)
 
 
 # ─── User-Agent tahlili ───────────────────────────────────

@@ -26,6 +26,7 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import Select, func, or_, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -211,9 +212,27 @@ async def _get_or_create_day(db: AsyncSession, assignment_id: UUID, day: date) -
         date=day,
         status=AttendanceDayStatus.PENDING,
     )
-    db.add(attendance_day)
-    await db.flush()
+    try:
+        async with db.begin_nested():
+            db.add(attendance_day)
+            await db.flush()
+    except IntegrityError:
+        # Ikki parallel "Keldim" (yoki sinxronizatsiya) shu kunni bir vaqtda yaratdi —
+        # unique (assignment_id, date) buzilishi 500 emas, mavjud yozuvni qaytaramiz.
+        return (await db.execute(stmt)).scalar_one()
     return attendance_day
+
+
+async def _verify_bound_device(db: AsyncSession, user_id: UUID, device_id: str | None) -> None:
+    """Davomat faqat hisob bog'langan qurilmadan: login kabi check-in/out ham tekshiriladi."""
+    bound = (
+        await db.execute(select(User.device_id).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if bound and device_id != bound:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Davomat faqat hisobingiz bog'langan qurilmadan belgilanadi",
+        )
 
 
 def _verify_day_in_range(assignment: PracticeAssignment, day: date) -> None:
@@ -373,6 +392,7 @@ async def student_check_in(
 ) -> dict[str, Any]:
     assignment = await _get_assignment_for_student(db, assignment_id, student_user_id)
     _verify_assignment_open(assignment)
+    await _verify_bound_device(db, student_user_id, getattr(payload, "device_id", None))
     now = datetime.now(UTC)
     today = today_uzb()
     _verify_day_in_range(assignment, today)
@@ -466,6 +486,7 @@ async def student_check_out(
 ) -> dict[str, Any]:
     assignment = await _get_assignment_for_student(db, assignment_id, student_user_id)
     _verify_assignment_open(assignment)
+    await _verify_bound_device(db, student_user_id, getattr(payload, "device_id", None))
     now = datetime.now(UTC)
     today = today_uzb()
 
@@ -551,10 +572,20 @@ async def admin_approve(
     if attendance_day.status == AttendanceDayStatus.GREEN:
         raise HTTPException(status.HTTP_409_CONFLICT, "Allaqachon yashil")
 
+    data = payload.model_dump(exclude_unset=True)
+    # Holat o'zgarishi kunning o'zgarishlar tarixida ham ko'rinsin (audit jurnalidan tashqari)
+    db.add(
+        AttendanceOverride(
+            attendance_day_id=attendance_day.id,
+            super_admin_id=admin_user_id,
+            previous_status=attendance_day.status,
+            new_status=AttendanceDayStatus.GREEN,
+            reason=(data.get("note") or "").strip() or "Tasdiqlandi",
+        )
+    )
     attendance_day.status = AttendanceDayStatus.GREEN
     attendance_day.approved_by_id = admin_user_id
     attendance_day.approved_at = datetime.now(UTC)
-    data = payload.model_dump(exclude_unset=True)
     if data.get("note") is not None:
         attendance_day.note = data["note"]
 
@@ -573,6 +604,16 @@ async def admin_reject(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kun topilmadi")
 
     data = payload.model_dump()
+    if attendance_day.status != AttendanceDayStatus.RED:
+        db.add(
+            AttendanceOverride(
+                attendance_day_id=attendance_day.id,
+                super_admin_id=admin_user_id,
+                previous_status=attendance_day.status,
+                new_status=AttendanceDayStatus.RED,
+                reason=data["note"],
+            )
+        )
     attendance_day.status = AttendanceDayStatus.RED
     attendance_day.approved_by_id = admin_user_id
     attendance_day.approved_at = datetime.now(UTC)
@@ -605,7 +646,7 @@ supervisor_reject = admin_reject
 
 
 async def admin_mark_red(
-    db: AsyncSession, assignment_id: UUID, payload: BaseModel
+    db: AsyncSession, assignment_id: UUID, payload: BaseModel, admin_user_id: UUID | None = None
 ) -> dict[str, Any]:
     """Check-in qilmagan kunni qizilga belgilash."""
     assignment = await db.get(PracticeAssignment, assignment_id)
@@ -623,9 +664,32 @@ async def admin_mark_red(
         )
 
     attendance_day = await _get_or_create_day(db, assignment_id, day)
+    previous = attendance_day.status
+    if previous != AttendanceDayStatus.RED and admin_user_id is not None:
+        db.add(
+            AttendanceOverride(
+                attendance_day_id=attendance_day.id,
+                super_admin_id=admin_user_id,
+                previous_status=previous,
+                new_status=AttendanceDayStatus.RED,
+                reason=(data.get("note") or "").strip() or "Qizilga belgilandi",
+            )
+        )
     attendance_day.status = AttendanceDayStatus.RED
     if data.get("note") is not None:
         attendance_day.note = data["note"]
+    # Yashil kun qizilga o'tsa — talaba bilsin
+    if previous == AttendanceDayStatus.GREEN:
+        student_uid = await _student_user_id_for_assignment(db, assignment_id)
+        if student_uid:
+            await notification_svc.create(
+                db,
+                user_id=student_uid,
+                type=NotificationType.ATTENDANCE_REJECTED,
+                title="Davomat rad etildi",
+                body=f"{day}: {data.get('note') or 'Qizilga belgilandi'}",
+                data={"assignment_id": str(assignment_id), "day_id": str(attendance_day.id)},
+            )
 
     await db.commit()
     return await get_day(db, attendance_day.id)

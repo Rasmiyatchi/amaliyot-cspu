@@ -28,6 +28,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("👋 Shutting down")
 
 
+_FRAMEWORK_DETAILS = {
+    "Not authenticated": "Tizimga kirish talab qilinadi",
+    "Not Found": "Sahifa yoki manba topilmadi",
+    "Method Not Allowed": "Bu so'rov usuli qo'llab-quvvatlanmaydi",
+}
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
@@ -68,6 +75,8 @@ def create_app() -> FastAPI:
         lang = pick_lang(request.headers.get("accept-language"))
         detail = exc.detail
         if isinstance(detail, str):
+            # FastAPI/Starlette'ning inglizcha standart xabarlari — avval o'zbekchaga
+            detail = _FRAMEWORK_DETAILS.get(detail, detail)
             detail = translate_detail(detail, lang)
         return JSONResponse(
             status_code=exc.status_code,

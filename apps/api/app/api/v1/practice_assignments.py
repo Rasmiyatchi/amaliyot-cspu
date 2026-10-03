@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import CurrentUser, RequirePractice
+from app.api.deps import CurrentUser, RequirePractice, RequirePracticeOrContracts
 from app.db.session import SessionDep
 from app.models.enums import AssignmentStatus, Semester, UserRole
 from app.schemas.common import Paginated
@@ -16,7 +16,7 @@ from app.schemas.practice_assignment import (
     PracticeAssignmentUpdate,
 )
 from app.services import practice_assignment as svc
-from app.services.scoping import assert_assignment_access
+from app.services.scoping import assert_assignment_access, assert_students_in_scope
 
 router = APIRouter(prefix="/practice-assignments", tags=["practice-assignments"])
 
@@ -24,7 +24,8 @@ router = APIRouter(prefix="/practice-assignments", tags=["practice-assignments"]
 @router.get("", response_model=Paginated[PracticeAssignmentRead])
 async def list_assignments(
     db: SessionDep,
-    user: RequirePractice,
+    # Shartnoma formasi ("biriktirishlar" rejimi) ham shu ro'yxatni o'qiydi
+    user: RequirePracticeOrContracts,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     student_id: UUID | None = None,
@@ -100,8 +101,9 @@ async def get_assignment(id_: UUID, db: SessionDep, user: RequirePractice) -> Pr
     summary="Yangi biriktirish (bitta talaba)",
 )
 async def create_assignment(
-    data: PracticeAssignmentCreate, db: SessionDep, _: RequirePractice
+    data: PracticeAssignmentCreate, db: SessionDep, user: RequirePractice
 ) -> PracticeAssignmentRead:
+    await assert_students_in_scope(db, user, [data.student_id])
     return PracticeAssignmentRead.model_validate(await svc.create_assignment(db, data))
 
 
@@ -112,8 +114,9 @@ async def create_assignment(
     summary="Ko'p talabani bir amaliyotga biriktirish (guruh)",
 )
 async def bulk_create(
-    data: PracticeAssignmentBulkCreate, db: SessionDep, _: RequirePractice
+    data: PracticeAssignmentBulkCreate, db: SessionDep, user: RequirePractice
 ) -> BulkAssignmentResult:
+    await assert_students_in_scope(db, user, list(data.student_ids))
     return await svc.bulk_create_assignments(db, data)
 
 

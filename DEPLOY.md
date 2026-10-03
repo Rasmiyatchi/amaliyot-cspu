@@ -18,8 +18,23 @@ to'g'ridan-to'g'ri kirish kerak bo'lsa, `.env.prod` ga qo'shing:
 WEB_BIND=0.0.0.0
 API_BIND=0.0.0.0
 ```
-**Majburiy env:** `POSTGRES_PASSWORD`, `SECRET_KEY`, `SUPERADMIN_PASSWORD` bo'sh bo'lsa compose
-endi aniq xato bilan to'xtaydi (avval jimgina bo'sh qiymat bilan ishga tushib ketardi).
+**Majburiy env:** `POSTGRES_PASSWORD`, `SECRET_KEY`, `SUPERADMIN_PASSWORD`, `APP_URL`, `WEB_URL`
+bo'sh bo'lsa compose endi aniq xato bilan to'xtaydi (avval jimgina bo'sh qiymat bilan ishga
+tushib ketardi; bo'sh `WEB_URL` QR kodlarni ishlamaydigan qilardi).
+
+**SECRET_KEY:** production'da namuna qiymat (`CHANGE_ME...`, `dev-only-change-me`) yoki 16 belgidan
+qisqa kalit bo'lsa API **ishga tushmaydi** — bunday kalit bilan istalgan kishi admin tokenini
+soxtalashtira olardi. Yangilash: `openssl rand -hex 32` (barcha foydalanuvchilar qayta kiradi).
+
+**Proksi va IP:** API mijoz IP manzilini faqat ishonchli proksilar (aaPanel/host nginx, docker
+tarmog'i) yozgan `X-Forwarded-For` dan oladi — mijozning o'zi yuborgan qiymat endi ishlatilmaydi
+(login cheklovi va audit jurnali uchun). Standart: `FORWARDED_ALLOW_IPS=127.0.0.1,10.0.0.0/8,
+172.16.0.0/12,192.168.0.0/16`. Universitet Wi-Fi'da yuzlab talaba bitta tashqi IP ortida
+bo'lgani uchun bitta IP'dan 15 daqiqadagi xato loginlar chegarasi 300 (`LOGIN_MAX_FAILS_PER_IP`);
+har bir login uchun alohida 10 ta.
+
+**Yuklangan fayllar** endi `storage/uploads/u/<user_id>/...` ga saqlanadi (fayl egasi yo'lda).
+Eski fayllar joyida qoladi, ko'chirish shart emas.
 
 **Bazani tozalash** HTTP orqali endi YO'Q (`POST /system-settings/reset-database` olib tashlandi).
 Kerak bo'lsa faqat terminaldan, tasdiqlash so'zi bilan:

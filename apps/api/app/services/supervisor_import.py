@@ -255,7 +255,15 @@ async def _resolve_organizations(
     return org_ids
 
 
-async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorImportResponse:
+class _RowError(Exception):
+    """Qator darajasidagi tushunarli xato — matni adminga ko'rsatiladi."""
+
+
+async def import_supervisors(
+    db: AsyncSession, file_bytes: bytes, *, scope_faculty_id: Any = None
+) -> SupervisorImportResponse:
+    """`scope_faculty_id` — fakultet admini: faqat o'z fakulteti qatorlari (fakultetsiz qator
+    shu fakultetga yoziladi), boshqa fakultet qatorlari xato sifatida qaytariladi."""
     rows, parse_errors = _parse_excel(file_bytes)
     errors = list(parse_errors)
     credentials: list[SupervisorImportCredentials] = []
@@ -323,13 +331,15 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                 if faculty_name:
                     faculty = await _find_faculty(db, str(faculty_name), faculty_cache)
                     if not faculty:
-                        faculty = Faculty(name=str(faculty_name).strip())
-                        db.add(faculty)
-                        await db.flush()
-                        # Keshga FAQAT savepoint muvaffaqiyatli tugagach qo'shiladi (pastda):
-                        # qator xato bo'lsa fakultet ham bekor bo'ladi, keshda "o'lik" id qolmasin
-                        new_faculties.append((str(faculty_name).strip().lower(), faculty))
+                        # Fakultet yaratilmaydi: imlo xatosi ("Tabiiy fanlar f-ti") yangi
+                        # soxta fakultet yaratib yuborardi
+                        raise _RowError(f"Fakultet topilmadi: {str(faculty_name).strip()}")
                     faculty_id = faculty.id
+                elif scope_faculty_id is not None:
+                    faculty_id = scope_faculty_id
+                if scope_faculty_id is not None and faculty_id != scope_faculty_id:
+                    raise _RowError("Bu amal faqat o'z fakultetingiz doirasida mumkin")
+                if faculty_id is not None:
                     dept_name = rec.get("department_name")
                     if dept_name:
                         dept = await _find_department(
@@ -416,10 +426,15 @@ async def import_supervisors(db: AsyncSession, file_bytes: bytes) -> SupervisorI
                 SupervisorImportCredentials(full_name=full_name, username=login, password=password)
             )
             created += 1
+        except _RowError as e:
+            errors.append(SupervisorImportError(row=row_idx, name=full_name, message=str(e)))
         except Exception as e:  # noqa: BLE001
+            # Xom xato (SQL, parametrlar) adminga ko'rsatilmaydi — logga yoziladi
             logger.warning(f"Supervisor import xato (qator {row_idx}): {e}")
             errors.append(
-                SupervisorImportError(row=row_idx, name=full_name, message=f"Xatolik: {e}")
+                SupervisorImportError(
+                    row=row_idx, name=full_name, message="Qatorni saqlab bo'lmadi"
+                )
             )
 
     await db.commit()

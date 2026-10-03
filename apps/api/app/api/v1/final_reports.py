@@ -4,9 +4,10 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, status
 
-from app.api.deps import CurrentUser, RequireAdmin, RequireSupervisorOrAdmin
+from app.api.deps import CurrentUser, RequirePractice, RequireSupervisorOrAdmin
 from app.db.session import SessionDep
 from app.models.enums import FinalReportStatus
+from app.models.final_report import FinalReport
 from app.schemas.final_report import (
     FinalReportRead,
     FinalReportReviewRequest,
@@ -14,7 +15,11 @@ from app.schemas.final_report import (
 )
 from app.services import audit_log as audit
 from app.services import final_report as svc
-from app.services.scoping import assert_assignment_access, effective_faculty_id
+from app.services.scoping import (
+    assert_assignment_access,
+    assert_child_assignment_access,
+    effective_faculty_id,
+)
 
 router = APIRouter(prefix="/final-reports", tags=["final-reports"])
 
@@ -114,8 +119,9 @@ async def revert(
     report_id: UUID,
     request: Request,
     db: SessionDep,
-    user: RequireAdmin,
+    user: RequirePractice,
 ) -> FinalReportRead:
+    await assert_child_assignment_access(db, user, FinalReport, report_id, "Hisobot topilmadi")
     item = await svc.revert_report(db, user, report_id)
     await audit.log(
         db,

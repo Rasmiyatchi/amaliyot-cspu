@@ -288,7 +288,7 @@ async def admin_mark_red(
     db: SessionDep,
     user: RequireSuperAdmin,
 ) -> AttendanceDayDetail:
-    result = await svc.admin_mark_red(db, assignment_id, payload)
+    result = await svc.admin_mark_red(db, assignment_id, payload, user.id)
     await audit.log(
         db,
         actor=user,

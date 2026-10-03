@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 
-from app.api.deps import CurrentUser, RequireAdmin, RequireStudent, RequireSuperAdmin
+from app.api.deps import CurrentUser, RequireContracts, RequireStudent, RequireSuperAdmin
 from app.db.session import SessionDep
 from app.models.enums import ApplicationStatus
 from app.schemas.practice_application import (
@@ -41,7 +41,7 @@ async def contract_types(db: SessionDep, _: CurrentUser) -> list[dict]:
 
 
 @router.get("/{id_}/preview-pdf")
-async def preview_contract_pdf(id_: UUID, db: SessionDep, _: RequireAdmin):
+async def preview_contract_pdf(id_: UUID, db: SessionDep, _: RequireContracts):
     """Shartnomani tasdiqlashdan oldin PDF ko'rinishda ko'rish (saqlashsiz)."""
     from fastapi.responses import Response
 
@@ -133,7 +133,7 @@ async def download_scan(id_: UUID, db: SessionDep, user: CurrentUser) -> FileRes
 @router.get("/approved-contracts", response_model=list[ApplicationRead])
 async def list_approved_contracts(
     db: SessionDep,
-    _: RequireAdmin,
+    _: RequireContracts,
     status_filter: list[ApplicationStatus] | None = Query(None, alias="status"),
     search: str | None = Query(None, min_length=1, max_length=100),
 ) -> list[ApplicationRead]:
@@ -161,7 +161,7 @@ async def list_approved_contracts(
 @router.get("", response_model=list[ApplicationRead])
 async def list_applications(
     db: SessionDep,
-    _: RequireAdmin,
+    _: RequireContracts,
     status_filter: list[ApplicationStatus] | None = Query(None, alias="status"),
     region: str | None = None,
     search: str | None = Query(None, min_length=1, max_length=100),
@@ -178,13 +178,13 @@ async def list_applications(
 
 
 @router.get("/appendix")
-async def appendix(db: SessionDep, _: RequireAdmin) -> list[dict]:
+async def appendix(db: SessionDep, _: RequireContracts) -> list[dict]:
     """Ilova — hudud bo'yicha 2+ talabali guruhlar."""
     return await svc.appendix_by_region(db)
 
 
 @router.get("/{id_}", response_model=ApplicationRead)
-async def get_application(id_: UUID, db: SessionDep, _: RequireAdmin) -> ApplicationRead:
+async def get_application(id_: UUID, db: SessionDep, _: RequireContracts) -> ApplicationRead:
     return ApplicationRead.model_validate(await svc.get_one(db, id_))
 
 
@@ -214,14 +214,14 @@ async def resubmit_application(
 
 
 @router.post("/{id_}/confirm-scan", response_model=ApplicationRead)
-async def confirm_scan(id_: UUID, db: SessionDep, user: RequireAdmin) -> ApplicationRead:
+async def confirm_scan(id_: UUID, db: SessionDep, user: RequireContracts) -> ApplicationRead:
     """Admin: imzolangan skanni tasdiqlash — shartnoma yopiladi (ACTIVE)."""
     return ApplicationRead.model_validate(await svc.confirm_scan(db, id_, user))
 
 
 @router.post("/{id_}/archive", response_model=ApplicationRead)
 async def archive_application(
-    id_: UUID, db: SessionDep, user: RequireAdmin
+    id_: UUID, db: SessionDep, user: RequireContracts
 ) -> ApplicationRead:
     """Arizani arxivga o'tkazish (status -> ARCHIVED)."""
     return ApplicationRead.model_validate(await svc.archive_application(db, id_, user))
@@ -229,7 +229,7 @@ async def archive_application(
 
 @router.post("/{id_}/unarchive", response_model=ApplicationRead)
 async def unarchive_application(
-    id_: UUID, db: SessionDep, user: RequireAdmin
+    id_: UUID, db: SessionDep, user: RequireContracts
 ) -> ApplicationRead:
     """Arizani arxivdan chiqarish (status -> APPROVED/ACTIVE)."""
     return ApplicationRead.model_validate(await svc.unarchive_application(db, id_, user))
@@ -251,7 +251,7 @@ async def return_application(
 
 @router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_application(
-    id_: UUID, db: SessionDep, _: RequireAdmin
+    id_: UUID, db: SessionDep, _: RequireContracts
 ) -> None:
     """Arxivlangan arizani (shartnomani) butunlay o'chirish (faqat Admin)."""
     await svc.delete_application(db, id_)

@@ -13,7 +13,7 @@ from uuid import UUID
 import qrcode
 from fastapi import HTTPException, status
 from loguru import logger
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -34,6 +34,7 @@ from app.models.supervisor import Supervisor
 from app.models.user import User
 from app.schemas.practice_application import ApplicationCreate
 from app.services import contract_template as ct_svc
+from app.services.search_utils import like_pattern, normalized_col
 
 _EDU_FORM_LABEL = {
     EducationForm.DAYTIME: "Kunduzgi",
@@ -316,17 +317,23 @@ async def list_all(
     if region:
         stmt = stmt.where(PracticeApplication.region == region)
     if search:
-        like = f"%{search.lower()}%"
+        # Apostroflar farqsiz ("Bog'ot" = "Bogʻot")
+        pattern = like_pattern(search)
         stmt = stmt.where(
-            func.lower(User.last_name).like(like)
-            | func.lower(User.first_name).like(like)
-            | func.lower(func.coalesce(User.middle_name, "")).like(like)
-            | func.lower(User.last_name + " " + User.first_name).like(like)
-            | func.lower(User.first_name + " " + User.last_name).like(like)
-            | func.lower(PracticeApplication.organization_name).like(like)
-            | func.lower(func.coalesce(PracticeApplication.contract_number, "")).like(like)
-            | func.lower(func.coalesce(Direction.name, "")).like(like)
-            | func.lower(func.coalesce(Group.name, "")).like(like)
+            or_(
+                *(
+                    normalized_col(func.coalesce(col, "")).like(pattern, escape="\\")
+                    for col in (
+                        User.last_name + " " + User.first_name,
+                        User.first_name + " " + User.last_name,
+                        User.middle_name,
+                        PracticeApplication.organization_name,
+                        PracticeApplication.contract_number,
+                        Direction.name,
+                        Group.name,
+                    )
+                )
+            )
         )
     rows = (await db.execute(stmt.order_by(PracticeApplication.created_at.desc()))).all()
     return [_to_read(r) for r in rows]
@@ -336,6 +343,12 @@ async def return_application(
     db: AsyncSession, id_: UUID, user: User, reason: str
 ) -> dict[str, Any]:
     obj = await _get_obj(db, id_)
+    # Faqat ko'rib chiqilayotgan arizani qaytarish mumkin: tasdiqlangan (raqamli, imzolangan)
+    # shartnomani qaytarib, uni shu raqam bilan qayta generatsiya qilib bo'lmasin
+    if obj.status not in _REVIEWABLE:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Bu holatdagi arizani tuzatishga qaytarib bo'lmaydi"
+        )
     obj.status = ApplicationStatus.REVISION_REQUIRED
     obj.reviewed_by_id = user.id
     obj.reviewed_at = datetime.now(UTC)
@@ -1167,19 +1180,12 @@ async def generate_official_contract_pdf(
     }
 
     students = contract.students or []
-    # Eng so'nggi biriktirish (rahbar va muddat) ma'lumotlarini olish uchun snapshot'ni yangilaymiz
-    assignment_ids = []
-    for s in students:
-        if isinstance(s, dict) and s.get("assignment_id"):
-            try:
-                assignment_ids.append(UUID(str(s["assignment_id"])))
-            except (ValueError, TypeError):
-                pass
+    # Eng so'nggi biriktirish (rahbar va muddat) ma'lumotlari — biriktirishlarga tegilmaydi
+    if any(isinstance(s, dict) and s.get("assignment_id") for s in students):
+        from app.services.contract import refresh_contract_students
 
-    if assignment_ids:
-        from app.services.contract import _snapshot_students
         try:
-            refreshed = await _snapshot_students(db, assignment_ids, contract.organization_id)
+            refreshed = await refresh_contract_students(db, contract)
             contract.students = refreshed
             students = refreshed
         except Exception as e:

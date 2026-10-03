@@ -7,6 +7,7 @@ from fastapi import Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.request_meta import client_ip
 from app.models.audit_log import AuditLog
 from app.models.user import User
 
@@ -37,9 +38,7 @@ async def log(
         ip = None
         ua = None
         if request:
-            ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-            if not ip:
-                ip = request.client.host if request.client else None
+            ip = client_ip(request)
             ua = request.headers.get("user-agent")
 
         entry = AuditLog(

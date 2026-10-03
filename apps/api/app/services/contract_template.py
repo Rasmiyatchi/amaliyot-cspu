@@ -19,7 +19,7 @@ from uuid import UUID
 from docx.shared import Mm
 from docxtpl import DocxTemplate, InlineImage
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.contract_template import ContractTemplateDoc
@@ -340,6 +340,27 @@ async def update_template(db: AsyncSession, id_: UUID, data: dict[str, Any]) -> 
 
 async def delete_template(db: AsyncSession, id_: UUID) -> None:
     tpl = await get_template(db, id_)
+    # Ishlatilayotgan shablon o'chirilsa, shartnomalar qayta generatsiyada boshqa shablonga
+    # o'tib ketardi (FK SET NULL) — matn o'zgarib qolardi. Bunday shablon faqat arxivlanadi.
+    from app.models.contract import Contract
+    from app.models.practice_application import PracticeApplication
+
+    used = (
+        await db.execute(
+            select(func.count()).select_from(Contract).where(Contract.contract_template_id == id_)
+        )
+    ).scalar_one() + (
+        await db.execute(
+            select(func.count())
+            .select_from(PracticeApplication)
+            .where(PracticeApplication.contract_template_id == id_)
+        )
+    ).scalar_one()
+    if used:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Shablon shartnomalarda ishlatilgan — o'chirib bo'lmaydi. Uni arxivlang.",
+        )
     path = (tpl.file_attachment or {}).get("path")
     await db.delete(tpl)
     await db.commit()

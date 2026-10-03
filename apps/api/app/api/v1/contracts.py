@@ -91,17 +91,56 @@ async def create_contract(
     return ContractRead.model_validate(result)
 
 
+async def _audit(
+    db: SessionDep,
+    user: CurrentUser,
+    request: Request,
+    action: str,
+    contract_id: UUID,
+    summary: str,
+    metadata: dict | None = None,
+) -> None:
+    """Shartnoma amallari audit jurnaliga (kim, qachon, qaysi shartnoma)."""
+    from app.services import audit_log as audit
+
+    await audit.log(
+        db,
+        actor=user,
+        action=action,
+        entity_type="contract",
+        entity_id=contract_id,
+        summary=summary,
+        metadata=metadata,
+        request=request,
+    )
+    await db.commit()
+
+
 @router.patch("/{id_}", response_model=ContractRead)
 async def update_contract(
-    id_: UUID, data: ContractUpdate, db: SessionDep, _: RequireContracts
+    id_: UUID, data: ContractUpdate, request: Request, db: SessionDep, user: RequireContracts
 ) -> ContractRead:
-    return ContractRead.model_validate(await svc.update_contract(db, id_, data))
+    result = ContractRead.model_validate(await svc.update_contract(db, id_, data))
+    await _audit(
+        db,
+        user,
+        request,
+        "update",
+        id_,
+        f"Shartnoma tahrirlandi: {result.number}",
+        data.model_dump(exclude_unset=True, mode="json"),
+    )
+    return result
 
 
 @router.post("/{id_}/generate", response_model=ContractRead)
-async def generate_pdf(id_: UUID, db: SessionDep, _: RequireContracts) -> ContractRead:
+async def generate_pdf(
+    id_: UUID, request: Request, db: SessionDep, user: RequireContracts
+) -> ContractRead:
     """PDF + QR generatsiya. Status DRAFT → GENERATED."""
-    return ContractRead.model_validate(await svc.generate_pdf(db, id_))
+    result = ContractRead.model_validate(await svc.generate_pdf(db, id_))
+    await _audit(db, user, request, "update", id_, f"Shartnoma PDF yaratildi: {result.number}")
+    return result
 
 
 async def _check_contract_access(db: SessionDep, contract_id: UUID, user: CurrentUser) -> None:
@@ -203,8 +242,9 @@ async def download_pdf(id_: UUID, db: SessionDep, user: CurrentUser) -> FileResp
 @router.post("/{id_}/upload-scan", response_model=ContractRead)
 async def upload_scan(
     id_: UUID,
+    request: Request,
     db: SessionDep,
-    _: RequireContracts,
+    user: RequireContracts,
     file: UploadFile = File(...),  # noqa: B008
 ) -> ContractRead:
     """Imzolangan skan yuklash. Status GENERATED → ACTIVE."""
@@ -224,9 +264,11 @@ async def upload_scan(
             status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             f"Fayl juda katta (max {MAX_SCAN_SIZE // 1024 // 1024} MB)",
         )
-    return ContractRead.model_validate(
+    result = ContractRead.model_validate(
         await svc.upload_scan(db, id_, content, file.filename or "scan.pdf")
     )
+    await _audit(db, user, request, "approve", id_, f"Imzolangan skan yuklandi: {result.number}")
+    return result
 
 
 @router.get("/{id_}/scan")
@@ -256,30 +298,48 @@ async def download_scan(id_: UUID, db: SessionDep, user: CurrentUser) -> FileRes
 
 @router.post("/{id_}/revoke", response_model=ContractRead)
 async def revoke_contract(
-    id_: UUID, data: ContractRevoke, db: SessionDep, _: RequireContracts
+    id_: UUID, data: ContractRevoke, request: Request, db: SessionDep, user: RequireContracts
 ) -> ContractRead:
-    return ContractRead.model_validate(await svc.revoke_contract(db, id_, data))
+    result = ContractRead.model_validate(await svc.revoke_contract(db, id_, data))
+    await _audit(
+        db,
+        user,
+        request,
+        "reject",
+        id_,
+        f"Shartnoma bekor qilindi: {result.number}",
+        data.model_dump(mode="json"),
+    )
+    return result
 
 
 @router.post("/{id_}/archive", response_model=ContractRead)
 async def archive_contract(
-    id_: UUID, db: SessionDep, _: RequireContracts
+    id_: UUID, request: Request, db: SessionDep, user: RequireContracts
 ) -> ContractRead:
     """Shartnomani arxivga o'tkazish (status -> EXPIRED)."""
-    return ContractRead.model_validate(await svc.archive_contract(db, id_))
+    result = ContractRead.model_validate(await svc.archive_contract(db, id_))
+    await _audit(db, user, request, "update", id_, f"Shartnoma arxivlandi: {result.number}")
+    return result
 
 
 @router.post("/{id_}/unarchive", response_model=ContractRead)
 async def unarchive_contract(
-    id_: UUID, db: SessionDep, _: RequireContracts
+    id_: UUID, request: Request, db: SessionDep, user: RequireContracts
 ) -> ContractRead:
     """Shartnomani arxivdan chiqarish (status -> ACTIVE/GENERATED/DRAFT)."""
-    return ContractRead.model_validate(await svc.unarchive_contract(db, id_))
+    result = ContractRead.model_validate(await svc.unarchive_contract(db, id_))
+    await _audit(db, user, request, "update", id_, f"Shartnoma arxivdan tiklandi: {result.number}")
+    return result
 
 
 @router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_contract(id_: UUID, db: SessionDep, _: RequireContracts) -> None:
+async def delete_contract(
+    id_: UUID, request: Request, db: SessionDep, user: RequireContracts
+) -> None:
+    number = (await svc.get_contract(db, id_))["number"]
     await svc.delete_contract(db, id_)
+    await _audit(db, user, request, "delete", id_, f"Shartnoma o'chirildi: {number}")
 
 
 # ─── Public verification (NO AUTH) ────────────────────────
@@ -296,10 +356,15 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
 
         status_ = data["status"]
 
-        # Shartnoma bekor qilingan (revoked) bo'lsa yoki revoked_at bo'lsa yaroqsiz (is_valid = False).
-        # Barcha imzolangan/faol shartnomalar rasmiy va yaroqli (is_valid = True).
+        # Yaroqli = universitet chiqargan (PDF+QR) yoki imzolangan, bekor qilinmagan va muddati
+        # tugamagan. Ilgari qoralama va muddati o'tgan shartnomalar ham "yaroqli" ko'rinardi.
         is_revoked = status_ == ContractStatus.REVOKED or data.get("revoked_at") is not None
-        is_valid = not is_revoked
+        is_expired = status_ == ContractStatus.EXPIRED or data["end_date"] < today_uzb()
+        is_valid = (
+            status_ in (ContractStatus.GENERATED, ContractStatus.ACTIVE)
+            and not is_revoked
+            and not is_expired
+        )
 
         return ContractVerifyResponse(
             number=data["number"],
@@ -312,10 +377,12 @@ async def verify_contract(qr_token: str, db: SessionDep) -> ContractVerifyRespon
             students_count=len(data["students"] or []),
             generated_at=data["generated_at"],
             signed_at_org=data["signed_at_org"],
-            revoked_reason=data["revoked_reason"],
+            # Bekor qilish sababi ichki izoh (talabaning shaxsiy holati bo'lishi mumkin) —
+            # ommaviy sahifada ko'rsatilmaydi, faqat "bekor qilingan" holati
+            revoked_reason=None,
             revoked_at=data["revoked_at"],
             is_valid=is_valid,
-            is_expired=data["end_date"] < today_uzb(),
+            is_expired=is_expired,
             pdf_url=pdf_url,
         )
     except HTTPException:
@@ -361,5 +428,3 @@ async def get_verified_contract_pdf(qr_token: str, db: SessionDep) -> FileRespon
         raise
     except Exception as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi") from e
-
-

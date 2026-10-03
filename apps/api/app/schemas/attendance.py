@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.enums import (
     AssignmentStatus,
@@ -141,6 +141,14 @@ class BulkAttendanceActionRequest(BaseModel):
     )
     status: AttendanceDayStatus = Field(..., description="Yangi status (green/red)")
     note: str | None = Field(None, max_length=2000)
+
+    @field_validator("status")
+    @classmethod
+    def _only_final_statuses(cls, v: AttendanceDayStatus) -> AttendanceDayStatus:
+        # "pending" ga qaytarilgan o'tgan kun keyingi sinxronizatsiyada jimgina qizil bo'lardi
+        if v == AttendanceDayStatus.PENDING:
+            raise ValueError("Faqat green yoki red")
+        return v
 
 
 class BulkAttendanceActionResult(BaseModel):

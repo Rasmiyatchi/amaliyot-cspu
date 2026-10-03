@@ -37,8 +37,9 @@ services:
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
-      APP_URL: ${APP_URL}
-      WEB_URL: ${WEB_URL}
+      APP_URL: ${APP_URL:?APP_URL .env.prod da kiritilmagan (masalan https://amaliyot.cspu.uz)}
+      # QR kodlardagi tekshiruv havolasi shu manzildan yasaladi — bo'sh bo'lsa QR ishlamaydi
+      WEB_URL: ${WEB_URL:?WEB_URL .env.prod da kiritilmagan (masalan https://amaliyot.cspu.uz)}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-chdpu}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-chdpu}
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY .env.prod da kiritilmagan (openssl rand -hex 32)}
@@ -48,6 +49,12 @@ services:
       SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME:-superadmin}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:?SUPERADMIN_PASSWORD .env.prod da kiritilmagan}
       SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL:-admin@chdpu.uz}
+      # X-Forwarded-For faqat shu proksilardan qabul qilinadi (aaPanel/host nginx, docker tarmog'i).
+      # Mijoz o'zi yozgan XFF endi IP sifatida olinmaydi (login cheklovi va audit uchun).
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      # Bitta IP'dan 15 daqiqada xato loginlar chegarasi — universitet Wi-Fi'da yuzlab talaba
+      # bitta tashqi IP ortida bo'ladi, shuning uchun yuqori (har bir login uchun alohida 10 ta).
+      LOGIN_MAX_FAILS_PER_IP: ${LOGIN_MAX_FAILS_PER_IP:-300}
     volumes:
       - apistorage:/app/storage
     depends_on:
