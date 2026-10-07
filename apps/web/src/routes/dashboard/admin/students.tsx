@@ -17,7 +17,7 @@ import { StudentsTable } from "@/components/admin/students/students-table";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { downloadCredentialsExport, downloadExport } from "@/lib/api/exports";
-import { useBulkDeleteStudents, type StudentFilters } from "@/lib/api/students";
+import { useBulkDeleteStudents, useStudents, type StudentFilters } from "@/lib/api/students";
 import type { Student, UUID } from "@/lib/api/types";
 
 /** `?has_assignment=true|false` (dashboard havolalari) → filtr qiymati. */
@@ -42,6 +42,26 @@ export function StudentsPage() {
   const [selected, setSelected] = useState<Student | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+
+  // ?open=<login> (xabarlar sahifasidan) — mos talabaning kartasi o'zi ochiladi
+  const openUsername = searchParams.get("open")?.trim() || null;
+  const openLookup = useStudents({ search: openUsername ?? undefined }, 1, 5);
+  useEffect(() => {
+    if (!openUsername || !openLookup.data) return;
+    const match =
+      openLookup.data.items.find((s) => s.username === openUsername) ??
+      (openLookup.data.items.length === 1 ? openLookup.data.items[0] : undefined);
+    if (match) setSelected(match);
+    else toast.error(t("adminStudents.openNotFound", { login: openUsername }));
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("open");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [openUsername, openLookup.data, setSearchParams, t]);
 
   // ⌘K tezkor amali — ?new=1: yaratish oynasi ochiladi, parametr URL'dan olib tashlanadi
   useEffect(() => {

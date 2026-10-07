@@ -11,10 +11,11 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from app.core.clock import UZB_TZ
 from app.models.academic import Direction, Group
 from app.models.access_restriction import AccessRestriction
 from app.models.enums import RestrictionMode, RestrictionTarget, UserRole
@@ -43,6 +44,8 @@ DETAIL_BY_MODE = {
 
 
 def invalidate_cache() -> None:
+    """Kesh tozalash. Router tranzaksiya COMMIT'idan keyin ham chaqiradi: flush va commit orasida
+    kelgan so'rov eski (hali commit bo'lmagan) holatni o'qib, uni yana keshga yozishi mumkin."""
     _cache.clear()
 
 
@@ -219,10 +222,25 @@ async def create_restriction(db: AsyncSession, data: dict[str, Any], actor: User
         data["user_id"] = None
 
     ends_at = data.get("ends_at")
+    if ends_at is not None and ends_at.tzinfo is None:
+        ends_at = ends_at.replace(tzinfo=UZB_TZ)
     if ends_at is not None and ends_at <= datetime.now(UTC):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Tugash vaqti hozirgi vaqtdan keyin bo'lishi kerak"
         )
+
+    # Shu nishon uchun bitta faol cheklov: yangisi eskisini almashtiradi. Aks holda ikkita faol
+    # qator paydo bo'lib, eng yangisini olib tashlaganda eskisi foydalanuvchini bloklab turardi.
+    same_target = (
+        AccessRestriction.user_id == data["user_id"]
+        if target_type == RestrictionTarget.USER
+        else AccessRestriction.group_id == data["group_id"]
+    )
+    await db.execute(
+        update(AccessRestriction)
+        .where(same_target, AccessRestriction.is_active.is_(True))
+        .values(is_active=False)
+    )
 
     r = AccessRestriction(
         target_type=target_type,

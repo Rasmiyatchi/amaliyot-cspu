@@ -787,7 +787,8 @@
     "newStudent": "Новый студент",
     "selectedCount": "Выбрано студентов: <0>{{n}}</0>",
     "subtitle": "Импорт из Excel, список и подробности",
-    "bulkDeleteTitle": "Удаление студентов"
+    "bulkDeleteTitle": "Удаление студентов",
+    "openNotFound": "Студент с логином {{login}} не найден"
   },
   "adminSupervisors": {
     "active": "Активен",
@@ -2189,7 +2190,10 @@
     "accessUntil": "до {{date}}",
     "restrictAccess": "Ограничить доступ",
     "liftRestriction": "Снять ограничение",
-    "restrictionLifted": "Ограничение снято"
+    "restrictionLifted": "Ограничение снято",
+    "accessRestrictedGroup": "Ограничение группы ({{group}}): {{mode}}",
+    "liftGroupRestriction": "Снять ограничение группы",
+    "liftGroupHint": "Откроется для всей группы ({{count}} студентов)"
   },
   "studentsStudentFormDialog": {
     "autoCredentialsInfo": "Логин и пароль генерируются автоматически (12 цифр, начинается с \"2500\"). Студент меняет пароль при первом входе.",
