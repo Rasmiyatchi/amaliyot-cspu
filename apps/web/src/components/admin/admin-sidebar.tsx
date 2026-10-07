@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Award,
   BarChart3,
+  Bell,
   BookOpen,
   Building,
   Building2,
@@ -96,6 +97,13 @@ const ADMIN_NAV_CONFIG: NavItemConfig[] = [
     to: "/admin",
     labelKey: "adminAdminSidebar.nav.dashboard",
     icon: LayoutDashboard,
+    end: true,
+  },
+  {
+    id: "notifications",
+    to: "/admin/notifications",
+    labelKey: "adminAdminSidebar.nav.notifications",
+    icon: Bell,
     end: true,
   },
 

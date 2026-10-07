@@ -172,7 +172,8 @@
       "structure": "Структура",
       "supervisors": "Руководители",
       "system": "Система",
-      "taskTemplates": "Задания"
+      "taskTemplates": "Задания",
+      "notifications": "Уведомления"
     },
     "searchHint": "Поиск...",
     "brandTitle": "CHDPU ПРАКТИКА",
@@ -1556,7 +1557,8 @@
     "empty": "Уведомлений нет",
     "markAllRead": "Отметить все прочитанными",
     "newCount": "({{n}} новых)",
-    "title": "Уведомления"
+    "title": "Уведомления",
+    "viewAll": "Посмотреть все"
   },
   "objectsAreaFormDialog": {
     "areaCreated": "Территория создана",
@@ -1978,8 +1980,8 @@
     "submitted": "Заявка отправлена — ожидайте подтверждения супер-админа",
     "templateRequired": "Выберите шаблон договора",
     "title": "Мои договоры",
-    "scanFile": "Файл скана",
-    "scanUploadedBadge": "Скан загружен"
+    "scanUploadedBadge": "Скан загружен",
+    "scanView": "Просмотреть скан"
   },
   "studentCheckInButton": {
     "checkIn": "Приход (Check-in)",
@@ -2384,7 +2386,8 @@
       "programs": "Программы практики",
       "regulations": "Нормативные документы",
       "tasks": "Задания",
-      "reports": "Итоговые отчёты"
+      "reports": "Итоговые отчёты",
+      "notifications": "Уведомления"
     },
     "sections": {
       "practices": "Практики"
@@ -3172,5 +3175,51 @@
     "subtitle": "Просматривайте итоговые отчёты своих студентов: утверждайте или возвращайте с указанием причины",
     "returnForRevision": "Вернуть",
     "statusShort": "Отчёт: {{status}}"
+  },
+  "notificationsPage": {
+    "title": "Уведомления",
+    "subtitle": "Все уведомления системы",
+    "summary": "{{unread}} непрочитанных · всего {{total}}",
+    "searchPlaceholder": "Поиск по заголовку, тексту, логину или устройству",
+    "readFilter": "По статусу прочтения",
+    "all": "Все",
+    "unreadOnly": "Непрочитанные",
+    "typeLabel": "Тип",
+    "typeAll": "Все типы",
+    "dateFrom": "С даты",
+    "dateTo": "По дату",
+    "dateInvalid": "Дата окончания не может быть раньше даты начала",
+    "empty": "Уведомлений не найдено",
+    "emptyHint": "Здесь появляются события системы (посещаемость, задания, договоры, попытки входа с других устройств)",
+    "emptyFiltered": "Попробуйте изменить фильтры или поисковый запрос",
+    "selectHint": "Выберите уведомление из списка, чтобы увидеть подробности",
+    "detailTitle": "Подробности уведомления",
+    "unread": "Не прочитано",
+    "readAt": "Прочитано: {{date}}",
+    "markAllRead": "Отметить все как прочитанные",
+    "allReadToast": "Все уведомления отмечены как прочитанные",
+    "openStudent": "Открыть карточку студента",
+    "openAssignment": "Открыть страницу студента",
+    "openDashboard": "Открыть страницу практики",
+    "fields": {
+      "username": "Логин",
+      "attemptedDevice": "Устройство попытки",
+      "attemptedIp": "IP-адрес",
+      "boundDevice": "Привязанное устройство",
+      "userAgent": "Браузер (user-agent)"
+    },
+    "types": {
+      "generic": "Системное уведомление",
+      "attendance_rejected": "Посещаемость отклонена",
+      "attendance_override": "Посещаемость изменена",
+      "task_approved": "Задание подтверждено",
+      "task_rejected": "Задание отклонено",
+      "journal_approved": "Дневник подтверждён",
+      "journal_rejected": "Дневник отклонён",
+      "analysis_approved": "Анализ урока подтверждён",
+      "analysis_rejected": "Анализ урока отклонён",
+      "contract_generated": "Договор создан",
+      "contract_activated": "Договор подписан"
+    }
   }
 }

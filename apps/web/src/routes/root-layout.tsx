@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { InAppBrowserWarning } from "@/components/in-app-browser-warning";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { ProfileDialog } from "@/components/profile-dialog";
 import { NavigationProgress } from "@/components/route-loading";
 import { RouteTransition } from "@/components/route-transition";
@@ -62,6 +63,7 @@ export function RootLayout() {
               <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
                 {user && (
                   <>
+                    <NotificationsBell />
                     <button
                       type="button"
                       onClick={() => setProfileOpen(true)}

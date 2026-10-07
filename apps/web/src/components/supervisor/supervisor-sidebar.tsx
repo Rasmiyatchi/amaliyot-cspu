@@ -1,4 +1,5 @@
 import {
+  Bell,
   BookOpen,
   CalendarCheck,
   ChevronLeft,
@@ -46,6 +47,7 @@ const navSections: NavSection[] = [
   {
     items: [
       { to: "/supervisor", labelKey: "supervisorSupervisorSidebar.nav.dashboard", icon: LayoutDashboard, end: true },
+      { to: "/supervisor/notifications", labelKey: "supervisorSupervisorSidebar.nav.notifications", icon: Bell, end: true },
     ],
   },
   {

@@ -503,6 +503,13 @@ export type Notification = {
 
 export type NotificationUnreadCount = { unread: number };
 
+export type NotificationSummary = {
+  total: number;
+  unread: number;
+  /** tur → soni */
+  by_type: Partial<Record<NotificationType, number>>;
+};
+
 // ─── Tasks / Journal / LessonAnalysis ────────────────────
 export type Semester = "fall" | "spring";
 

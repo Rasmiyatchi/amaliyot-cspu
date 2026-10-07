@@ -12,6 +12,11 @@ export function landingPathFor(role: UserRole): string {
   }
 }
 
+/** Rolning "Xabarlar" sahifasi — har bo'lim o'z layout'ida (sidebar saqlanadi). */
+export function notificationsPathFor(role: UserRole): string {
+  return `${landingPathFor(role)}/notifications`;
+}
+
 /** Yo'l shu rolning o'z bo'limiga tegishlimi (qayta kirishdan keyin qaytarish uchun). */
 function isPathInRoleArea(pathname: string, role: UserRole): boolean {
   const area = landingPathFor(role);

@@ -1,16 +1,11 @@
-import {
-  Bell,
-  BookOpen,
-  CalendarCheck,
-  CheckCircle2,
-  FileCheck2,
-  ShieldCheck,
-  Sparkles,
-  XCircle,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { ArrowRight, Bell, BookOpen, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
+import {
+  NOTIFICATION_ACCENTS,
+  NOTIFICATION_ICONS,
+} from "@/components/notifications/notification-meta";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { formatTashkentDateTime } from "@/components/attendance/attendance-date-utils";
 import { dateLocale } from "@/i18n";
 import {
   useMarkAllRead,
@@ -27,36 +23,10 @@ import {
   useNotifications,
   useUnreadCount,
 } from "@/lib/api/notifications";
+import { notificationsPathFor } from "@/lib/routing";
 import { cn } from "@/lib/utils";
-import type { Notification, NotificationType } from "@/lib/api/types";
-
-const ICONS: Record<NotificationType, LucideIcon> = {
-  task_approved: CheckCircle2,
-  task_rejected: XCircle,
-  journal_approved: CheckCircle2,
-  journal_rejected: XCircle,
-  analysis_approved: CheckCircle2,
-  analysis_rejected: XCircle,
-  attendance_rejected: CalendarCheck,
-  attendance_override: ShieldCheck,
-  contract_generated: FileCheck2,
-  contract_activated: FileCheck2,
-  generic: BookOpen,
-};
-
-const ACCENTS: Record<NotificationType, string> = {
-  task_approved: "text-success",
-  task_rejected: "text-destructive",
-  journal_approved: "text-success",
-  journal_rejected: "text-destructive",
-  analysis_approved: "text-success",
-  analysis_rejected: "text-destructive",
-  attendance_rejected: "text-destructive",
-  attendance_override: "text-primary",
-  contract_generated: "text-info",
-  contract_activated: "text-success",
-  generic: "text-muted-foreground",
-};
+import type { Notification } from "@/lib/api/types";
+import { useAuthStore } from "@/stores/auth";
 
 /** Menyu elementi — strelka tugmalari bilan ham tanlanadi; tanlash menyuni yopmaydi. */
 function NotificationItem({
@@ -66,21 +36,18 @@ function NotificationItem({
   n: Notification;
   onSelect: (n: Notification) => void;
 }) {
-  const Icon = ICONS[n.type] ?? BookOpen;
+  const Icon = NOTIFICATION_ICONS[n.type] ?? BookOpen;
   const isRead = !!n.read_at;
 
   return (
     <DropdownMenuItem
-      onSelect={(e) => {
-        e.preventDefault();
-        onSelect(n);
-      }}
+      onSelect={() => onSelect(n)}
       className={cn(
         "flex w-full cursor-pointer items-start gap-3 rounded-none border-b border-border px-3 py-2.5 text-left last:border-0 focus:bg-muted/40",
         !isRead && "bg-primary/5",
       )}
     >
-      <div className={cn("mt-0.5 shrink-0", ACCENTS[n.type])}>
+      <div className={cn("mt-0.5 shrink-0", NOTIFICATION_ACCENTS[n.type])}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">
@@ -101,7 +68,7 @@ function NotificationItem({
           </div>
         )}
         <div className="mt-0.5 text-xs text-muted-foreground">
-          {new Date(n.created_at).toLocaleString(dateLocale())}
+          {formatTashkentDateTime(n.created_at, dateLocale())}
         </div>
       </div>
     </DropdownMenuItem>
@@ -110,12 +77,21 @@ function NotificationItem({
 
 export function NotificationsBell() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const role = useAuthStore((s) => s.user?.role);
   const { data: count } = useUnreadCount();
-  const { data: list } = useNotifications(false, 1, 15);
+  const { data: list } = useNotifications({}, 1, 15);
   const markRead = useMarkRead();
   const markAllRead = useMarkAllRead();
 
   const unread = count?.unread ?? 0;
+  const pagePath = role ? notificationsPathFor(role) : null;
+
+  // Element bosilganda — o'qildi + sahifada to'liq tafsilot (dropdown'da matn qisqartirilgan)
+  const openItem = (item: Notification) => {
+    if (!item.read_at) markRead.mutate(item.id);
+    if (pagePath) navigate(`${pagePath}?id=${item.id}`);
+  };
 
   return (
     <DropdownMenu>
@@ -168,15 +144,21 @@ export function NotificationsBell() {
         ) : (
           <div className="max-h-96 overflow-y-auto">
             {list.items.map((n) => (
-              <NotificationItem
-                key={n.id}
-                n={n}
-                onSelect={(item) => {
-                  if (!item.read_at) markRead.mutate(item.id);
-                }}
-              />
+              <NotificationItem key={n.id} n={n} onSelect={openItem} />
             ))}
           </div>
+        )}
+        {pagePath && (
+          <>
+            <DropdownMenuSeparator className="my-0" />
+            <DropdownMenuItem
+              onSelect={() => navigate(pagePath)}
+              className="cursor-pointer justify-center gap-1.5 py-2.5 text-sm font-medium text-primary focus:text-primary"
+            >
+              {t("notificationsBell.viewAll")}
+              <ArrowRight className="h-4 w-4" />
+            </DropdownMenuItem>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

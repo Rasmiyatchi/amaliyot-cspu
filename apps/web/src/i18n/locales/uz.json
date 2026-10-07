@@ -172,7 +172,8 @@
       "structure": "Tuzilma",
       "supervisors": "Rahbarlar",
       "system": "Tizim",
-      "taskTemplates": "Topshiriqlar"
+      "taskTemplates": "Topshiriqlar",
+      "notifications": "Xabarlar"
     },
     "searchHint": "Qidiruv...",
     "brandTitle": "CHDPU AMALIYOT",
@@ -1556,7 +1557,8 @@
     "empty": "Xabarlar yo'q",
     "markAllRead": "Barchasini o'qildi",
     "newCount": "({{n}} yangi)",
-    "title": "Xabarlar"
+    "title": "Xabarlar",
+    "viewAll": "Barchasini ko'rish"
   },
   "objectsAreaFormDialog": {
     "areaCreated": "Hudud yaratildi",
@@ -1978,8 +1980,8 @@
     "submitted": "Ariza yuborildi — super admin tasdiqini kuting",
     "templateRequired": "Shartnoma shablonini tanlang",
     "title": "Mening shartnomalarim",
-    "scanFile": "Skan fayli",
-    "scanUploadedBadge": "Skan yuklangan"
+    "scanUploadedBadge": "Skan yuklangan",
+    "scanView": "Skanni ko'rish"
   },
   "studentCheckInButton": {
     "checkIn": "Kelish (Check-in)",
@@ -2384,7 +2386,8 @@
       "programs": "Amaliyot dasturlari",
       "regulations": "Normativ hujjatlar",
       "tasks": "Topshiriqlar",
-      "reports": "Yakuniy hisobotlar"
+      "reports": "Yakuniy hisobotlar",
+      "notifications": "Xabarlar"
     },
     "sections": {
       "practices": "Amaliyotlar"
@@ -3172,5 +3175,51 @@
     "subtitle": "Talabalaringiz topshirgan yakuniy hisobotlarni ko'rib chiqing: tasdiqlang yoki sabab bilan qaytaring",
     "returnForRevision": "Qaytarish",
     "statusShort": "Hisobot: {{status}}"
+  },
+  "notificationsPage": {
+    "title": "Xabarlar",
+    "subtitle": "Tizimdan kelgan barcha bildirishnomalar",
+    "summary": "{{unread}} ta o'qilmagan · jami {{total}} ta",
+    "searchPlaceholder": "Sarlavha, matn, login yoki qurilma bo'yicha qidirish",
+    "readFilter": "O'qilganlik bo'yicha",
+    "all": "Hammasi",
+    "unreadOnly": "O'qilmaganlar",
+    "typeLabel": "Turi",
+    "typeAll": "Barcha turlar",
+    "dateFrom": "Sanadan",
+    "dateTo": "Sanagacha",
+    "dateInvalid": "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas",
+    "empty": "Xabarlar topilmadi",
+    "emptyHint": "Tizim hodisalari (davomat, topshiriqlar, shartnomalar, qurilma urinishlari) shu yerda ko'rinadi",
+    "emptyFiltered": "Filtrlar yoki qidiruv so'zini o'zgartirib ko'ring",
+    "selectHint": "Batafsil ko'rish uchun ro'yxatdan xabarni tanlang",
+    "detailTitle": "Xabar tafsiloti",
+    "unread": "O'qilmagan",
+    "readAt": "O'qilgan: {{date}}",
+    "markAllRead": "Barchasini o'qildi deb belgilash",
+    "allReadToast": "Barcha xabarlar o'qildi deb belgilandi",
+    "openStudent": "Talaba kartasini ochish",
+    "openAssignment": "Talaba sahifasini ochish",
+    "openDashboard": "Amaliyot sahifasini ochish",
+    "fields": {
+      "username": "Login",
+      "attemptedDevice": "Urinilgan qurilma",
+      "attemptedIp": "IP manzil",
+      "boundDevice": "Bog'langan qurilma",
+      "userAgent": "Brauzer (user-agent)"
+    },
+    "types": {
+      "generic": "Tizim xabari",
+      "attendance_rejected": "Davomat rad etildi",
+      "attendance_override": "Davomat o'zgartirildi",
+      "task_approved": "Topshiriq tasdiqlandi",
+      "task_rejected": "Topshiriq rad etildi",
+      "journal_approved": "Kundalik tasdiqlandi",
+      "journal_rejected": "Kundalik rad etildi",
+      "analysis_approved": "Dars tahlili tasdiqlandi",
+      "analysis_rejected": "Dars tahlili rad etildi",
+      "contract_generated": "Shartnoma yaratildi",
+      "contract_activated": "Shartnoma imzolandi"
+    }
   }
 }

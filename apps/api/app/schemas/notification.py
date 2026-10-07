@@ -24,3 +24,10 @@ class NotificationRead(BaseModel):
 
 class NotificationUnreadCount(BaseModel):
     unread: int
+
+
+class NotificationSummary(BaseModel):
+    total: int
+    unread: int
+    #: tur → soni (filtr chiplarida ko'rsatish uchun)
+    by_type: dict[str, int]

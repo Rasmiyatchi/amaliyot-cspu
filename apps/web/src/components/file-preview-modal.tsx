@@ -10,15 +10,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import i18n from "@/i18n";
+import { authFetch, downloadFile, readErrorDetail } from "@/lib/api";
 import { downloadAttachment, fetchAttachmentBlob } from "@/lib/api/uploads";
 
 /** Preview uchun minimal fayl ma'lumoti — eski yozuvlarda mime/size bo'lmasligi mumkin. */
 export type PreviewFile = {
   name: string;
+  /** `/uploads/file/` ostidagi biriktirma yo'li (url berilmasa) */
   path: string;
   mime?: string;
   size?: number;
+  /** Alohida endpoint orqali beriladigan fayl (masalan, shartnoma skani) — token bilan olinadi */
+  url?: string;
 };
+
+async function fetchPreviewBlob(file: PreviewFile): Promise<Blob> {
+  if (!file.url) return fetchAttachmentBlob(file);
+  const res = await authFetch(file.url);
+  if (!res.ok) throw new Error(await readErrorDetail(res, i18n.t("filePreviewModal.loadFailed")));
+  return res.blob();
+}
 
 type Props = {
   attachment: PreviewFile | null;
@@ -51,7 +63,7 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
     async function loadFile(file: PreviewFile) {
       setLoading(true);
       try {
-        const blob = await fetchAttachmentBlob(file);
+        const blob = await fetchPreviewBlob(file);
         if (!active) return;
 
         // iframe PDF'ni to'g'ri chizishi uchun turi aniq bo'lsin
@@ -96,7 +108,11 @@ export function FilePreviewModal({ attachment, onClose }: Props) {
 
   const handleDownload = async () => {
     try {
-      await downloadAttachment(attachment);
+      if (attachment.url) {
+        await downloadFile(attachment.url, attachment.name, i18n.t("common.downloadError"));
+      } else {
+        await downloadAttachment(attachment);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("common.downloadError"));
     }

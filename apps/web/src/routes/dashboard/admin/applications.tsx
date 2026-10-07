@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useDebounce } from "@/hooks/use-debounce";
 import { dateLocale } from "@/i18n";
 
+import { FilePreviewModal, type PreviewFile } from "@/components/file-preview-modal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,7 @@ import {
 } from "@/components/ui/select";
 import {
   downloadContract,
-  downloadApplicationScan,
+  applicationScanUrl,
   previewContractPdf,
   useAppendix,
   useApplications,
@@ -149,6 +150,7 @@ export function ApplicationsPage() {
   const [returnTarget, setReturnTarget] = useState<PracticeApplication | null>(null);
   const [rejectTarget, setRejectTarget] = useState<PracticeApplication | null>(null);
   const [scanTarget, setScanTarget] = useState<PracticeApplication | null>(null);
+  const [scanPreview, setScanPreview] = useState<PreviewFile | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<{
     action: "archive" | "unarchive" | "delete";
     app: PracticeApplication;
@@ -471,9 +473,13 @@ export function ApplicationsPage() {
                                 className="text-primary hover:underline ml-1"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  downloadApplicationScan(a.id).catch((err) =>
-                                    toast.error(err instanceof Error ? err.message : t("common.error")),
-                                  );
+                                  setScanPreview({
+                                    name: a.scan_file?.name || `${a.contract_number ?? "shartnoma"}_skan.pdf`,
+                                    path: a.scan_file?.path ?? "",
+                                    mime: a.scan_file?.mime,
+                                    size: a.scan_file?.size,
+                                    url: applicationScanUrl(a.id),
+                                  });
                                 }}
                               >
                                 <span className="text-[10px] font-medium border rounded px-1 ml-1 bg-primary/10">{t("adminApplications.scanBadge")}</span>
@@ -796,6 +802,7 @@ export function ApplicationsPage() {
         onConfirm={handleArchiveConfirm}
         onClose={() => setArchiveTarget(null)}
       />
+      <FilePreviewModal attachment={scanPreview} onClose={() => setScanPreview(null)} />
     </div>
   );
 }
@@ -839,6 +846,7 @@ function ApplicationDetailBody({
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(!!app.contract_template_id);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [scanPreview, setScanPreview] = useState<PreviewFile | null>(null);
 
   const handleArchive = async () => {
     try {
@@ -969,14 +977,19 @@ function ApplicationDetailBody({
                 size="sm"
                 variant="outline"
                 onClick={() =>
-                  downloadApplicationScan(app.id).catch((e) =>
-                    toast.error(e instanceof Error ? e.message : t("common.error")),
-                  )
+                  setScanPreview({
+                    name: app.scan_file?.name || `${app.contract_number ?? "shartnoma"}_skan.pdf`,
+                    path: app.scan_file?.path ?? "",
+                    mime: app.scan_file?.mime,
+                    size: app.scan_file?.size,
+                    url: applicationScanUrl(app.id),
+                  })
                 }
               >
                 <Eye className="mr-1 h-4 w-4" />
                 {t("adminApplications.viewScan")}
               </Button>
+              <FilePreviewModal attachment={scanPreview} onClose={() => setScanPreview(null)} />
             </div>
           )}
 

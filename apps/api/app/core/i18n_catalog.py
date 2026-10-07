@@ -364,6 +364,8 @@ EXACT: dict[str, str] = {
     "Biriktirma sizga tegishli emas": "Вложение вам не принадлежит",
     "Hisobot fayli biriktirilmagan": "Файл отчёта не прикреплён",
     "Kutilmagan xatolik": "Непредвиденная ошибка",
+    "Xabar topilmadi": "Уведомление не найдено",
+    "Sana oralig'i noto'g'ri": "Неверный диапазон дат",
     "Shablon shartnomalarda ishlatilgan — o'chirib bo'lmaydi. Uni arxivlang.": (
         "Шаблон используется в договорах — удалить нельзя. Переведите его в архив."
     ),

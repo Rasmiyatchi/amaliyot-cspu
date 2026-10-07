@@ -159,10 +159,15 @@ export function downloadContract(id: UUID, number: string | null): Promise<void>
   );
 }
 
+/** Imzolangan skan manzili — ilova ichida ko'rish (FilePreviewModal) va yuklab olish uchun. */
+export function applicationScanUrl(id: UUID): string {
+  return `/api/v1/practice-applications/${id}/scan`;
+}
+
 /** Ariza bo'yicha yuklangan imzolangan skan nusxani yuklab oladi. */
 export function downloadApplicationScan(id: UUID, fileName?: string): Promise<void> {
   return downloadFile(
-    `/api/v1/practice-applications/${id}/scan`,
+    applicationScanUrl(id),
     fileName || `shartnoma_skan_${id}.pdf`,
     i18n.t("common.downloadFailed"),
   );
