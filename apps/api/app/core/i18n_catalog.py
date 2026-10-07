@@ -113,6 +113,12 @@ EXACT: dict[str, str] = {
     ),
     "Fayl bo'sh": "Файл пуст",
     "Fayl hajmi katta": "Файл слишком большой",
+    "Fayl bo'sh — qayta tanlang": "Файл пустой — выберите заново",
+    'iPhone HEIC rasmi qabul qilinmaydi. Sozlamalar → Kamera → Formatlar → "Eng mos" '
+    "(Most Compatible) ni tanlang yoki rasmni JPEG/PDF qilib yuboring": (
+        "Фото iPhone в формате HEIC не принимается. Настройки → Камера → Форматы → "
+        "«Наиболее совместимый» или отправьте фото как JPEG/PDF"
+    ),
     "Fayl mazmuni kengaytmaga mos emas": "Содержимое файла не соответствует расширению",
     "Fayl topilmadi": "Файл не найден",
     "Foydalanuvchi topilmadi": "Пользователь не найден",
@@ -576,6 +582,19 @@ PATTERNS: list[tuple[str, str]] = [
     (r"Ruxsat etilmagan fayl turi: (?P<ext>.+)", "Недопустимый тип файла: {ext}"),
     (r"Noto'g'ri turi: (?P<kind>.+)", "Неверный тип: {kind}"),
     (r"DOCX o'qib bo'lmadi: (?P<error>.+)", "Не удалось прочитать DOCX: {error}"),
+    # ── practice_application.py (skan yuklash) ───────────────────────────────
+    (
+        r"Fayl hajmi (?P<size>[\d.]+ MB) — ruxsat etilgan maksimum (?P<max>[\d.]+ MB)\. "
+        r"Rasmni kichikroq sifatda saqlang yoki PDF'ni siqing",
+        "Размер файла {size} — допустимый максимум {max}. "
+        "Сохраните фото в меньшем качестве или сожмите PDF",
+    ),
+    (
+        r"Fayl turi qabul qilinmaydi: (?P<ext>\S+)\. Faqat PDF, JPG yoki PNG yuklang "
+        r"\(fayl buzilgan bo'lsa, qayta skan qiling\)",
+        "Тип файла не принимается: {ext}. Загрузите PDF, JPG или PNG "
+        "(если файл повреждён — отсканируйте заново)",
+    ),
     # ── attendance.py ────────────────────────────────────────────────────────
     (
         r"Sana amaliyot diapazonidan tashqarida \((?P<start>.+) – (?P<end>.+)\)",

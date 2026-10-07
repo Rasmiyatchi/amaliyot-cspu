@@ -87,16 +87,13 @@ async def download_contract_pdf(id_: UUID, db: SessionDep, user: CurrentUser) ->
     return FileResponse(path, media_type=_DOCX_MIME, filename=f"{number or 'shartnoma'}.docx")
 
 
-
 @router.post("/{id_}/upload-scan", response_model=ApplicationRead)
 async def upload_scan(
     id_: UUID, db: SessionDep, user: CurrentUser, file: UploadFile = File(...)
 ) -> ApplicationRead:
+    # Hajm avval tekshiriladi (butun faylni o'qib bo'lgach ham aniq xabar: "14.2 MB — maks 20 MB")
     content = await file.read()
-    if len(content) > 10 * 1024 * 1024:
-        from fastapi import HTTPException
-
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Fayl hajmi katta")
+    svc.check_scan_size(len(content))
     return ApplicationRead.model_validate(
         await svc.upload_scan(db, id_, user, content, file.filename or "scan.pdf")
     )
@@ -208,9 +205,7 @@ async def resubmit_application(
     id_: UUID, data: ApplicationResubmit, db: SessionDep, user: RequireStudent
 ) -> ApplicationRead:
     """Talaba: tuzatishga qaytarilgan arizani to'g'irlab qayta yuborish."""
-    return ApplicationRead.model_validate(
-        await svc.resubmit(db, id_, user, data.variable_values)
-    )
+    return ApplicationRead.model_validate(await svc.resubmit(db, id_, user, data.variable_values))
 
 
 @router.post("/{id_}/confirm-scan", response_model=ApplicationRead)
@@ -220,9 +215,7 @@ async def confirm_scan(id_: UUID, db: SessionDep, user: RequireContracts) -> App
 
 
 @router.post("/{id_}/archive", response_model=ApplicationRead)
-async def archive_application(
-    id_: UUID, db: SessionDep, user: RequireContracts
-) -> ApplicationRead:
+async def archive_application(id_: UUID, db: SessionDep, user: RequireContracts) -> ApplicationRead:
     """Arizani arxivga o'tkazish (status -> ARCHIVED)."""
     return ApplicationRead.model_validate(await svc.archive_application(db, id_, user))
 
@@ -250,8 +243,6 @@ async def return_application(
 
 
 @router.delete("/{id_}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_application(
-    id_: UUID, db: SessionDep, _: RequireContracts
-) -> None:
+async def delete_application(id_: UUID, db: SessionDep, _: RequireContracts) -> None:
     """Arxivlangan arizani (shartnomani) butunlay o'chirish (faqat Admin)."""
     await svc.delete_application(db, id_)

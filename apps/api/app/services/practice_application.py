@@ -103,9 +103,7 @@ async def get_next_shared_contract_number(db: AsyncSession, year: int | None = N
 
     from app.models.contract import Contract
 
-    stmt_contract = select(Contract.number).where(
-        Contract.number.is_not(None)
-    )
+    stmt_contract = select(Contract.number).where(Contract.number.is_not(None))
     contract_numbers = (await db.execute(stmt_contract)).scalars().all()
 
     all_numbers = list(app_numbers) + list(contract_numbers)
@@ -120,7 +118,7 @@ async def get_next_shared_contract_number(db: AsyncSession, year: int | None = N
 
         # Prefiks mosligini tekshiramiz
         if str_num.startswith(prefix) and len(str_num) > len(prefix):
-            seq_part = str_num[len(prefix):]
+            seq_part = str_num[len(prefix) :]
             clean_seq = "".join(filter(str.isdigit, seq_part))
             if clean_seq:
                 try:
@@ -134,7 +132,7 @@ async def get_next_shared_contract_number(db: AsyncSession, year: int | None = N
             # Prefiksiz to'g'ridan-to'g'ri raqam bo'lsa
             clean_digits = "".join(filter(str.isdigit, str_num))
             if clean_digits and clean_digits.startswith(prefix) and len(clean_digits) > len(prefix):
-                seq_part = clean_digits[len(prefix):]
+                seq_part = clean_digits[len(prefix) :]
                 try:
                     val = int(seq_part)
                     if max_seq is None or val > max_seq:
@@ -227,18 +225,24 @@ async def create_for_student(
     # Bir talabada bir vaqtda faqat bitta faol/yangilangan ariza bo'lsin.
     # Eskirgan/qaytarilgan arizalarni avtomatik arxivga o'tkazamiz, toki dublyaj bo'lib qolmasin.
     stale_unapproved = (
-        await db.execute(
-            select(PracticeApplication).where(
-                PracticeApplication.student_id == student.id,
-                PracticeApplication.status.in_([
-                    ApplicationStatus.REVISION_REQUIRED,
-                    ApplicationStatus.SUBMITTED,
-                    ApplicationStatus.RESUBMITTED,
-                    ApplicationStatus.REJECTED,
-                ]),
+        (
+            await db.execute(
+                select(PracticeApplication).where(
+                    PracticeApplication.student_id == student.id,
+                    PracticeApplication.status.in_(
+                        [
+                            ApplicationStatus.REVISION_REQUIRED,
+                            ApplicationStatus.SUBMITTED,
+                            ApplicationStatus.RESUBMITTED,
+                            ApplicationStatus.REJECTED,
+                        ]
+                    ),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for s_app in stale_unapproved:
         s_app.status = ApplicationStatus.ARCHIVED
 
@@ -378,18 +382,24 @@ async def resubmit(
 
     # Ushbu talabaning boshqa barcha eskirgan/dublyat arizalarini yopamiz
     other_stale = (
-        await db.execute(
-            select(PracticeApplication).where(
-                PracticeApplication.student_id == student.id,
-                PracticeApplication.id != id_,
-                PracticeApplication.status.in_([
-                    ApplicationStatus.SUBMITTED,
-                    ApplicationStatus.REVISION_REQUIRED,
-                    ApplicationStatus.REJECTED,
-                ]),
+        (
+            await db.execute(
+                select(PracticeApplication).where(
+                    PracticeApplication.student_id == student.id,
+                    PracticeApplication.id != id_,
+                    PracticeApplication.status.in_(
+                        [
+                            ApplicationStatus.SUBMITTED,
+                            ApplicationStatus.REVISION_REQUIRED,
+                            ApplicationStatus.REJECTED,
+                        ]
+                    ),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for s_app in other_stale:
         s_app.status = ApplicationStatus.ARCHIVED
 
@@ -469,7 +479,11 @@ def _remove_application_files(app_obj: PracticeApplication) -> None:
 async def delete_application(db: AsyncSession, id_: UUID) -> None:
     """Arxivlangan arizani o'chirish va biriktirilgan fayllarni tozalash."""
     obj = await _get_obj(db, id_)
-    if obj.status not in (ApplicationStatus.ARCHIVED, ApplicationStatus.EXPIRED, ApplicationStatus.DRAFT):
+    if obj.status not in (
+        ApplicationStatus.ARCHIVED,
+        ApplicationStatus.EXPIRED,
+        ApplicationStatus.DRAFT,
+    ):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "Faqat arxivlangan (ARCHIVED/EXPIRED) arizalarni o'chirish mumkin.",
@@ -585,7 +599,11 @@ async def _build_contract_context(
             PracticeAssignment.start_date,
             PracticeAssignment.end_date,
             (
-                sup_user.last_name + " " + sup_user.first_name + " " + func.coalesce(sup_user.middle_name, "")
+                sup_user.last_name
+                + " "
+                + sup_user.first_name
+                + " "
+                + func.coalesce(sup_user.middle_name, "")
             ).label("supervisor_name"),
         )
         .outerjoin(Supervisor, Supervisor.id == PracticeAssignment.supervisor_id)
@@ -768,19 +786,25 @@ async def approve(db: AsyncSession, id_: UUID, user: User) -> dict[str, Any]:
 
     # Ushbu talabaning boshqa barcha eskirgan/dublyat arizalarini arxivga o'tkazamiz
     stale_apps = (
-        await db.execute(
-            select(PracticeApplication).where(
-                PracticeApplication.student_id == obj.student_id,
-                PracticeApplication.id != id_,
-                PracticeApplication.status.in_([
-                    ApplicationStatus.SUBMITTED,
-                    ApplicationStatus.RESUBMITTED,
-                    ApplicationStatus.REVISION_REQUIRED,
-                    ApplicationStatus.UNDER_REVIEW,
-                ]),
+        (
+            await db.execute(
+                select(PracticeApplication).where(
+                    PracticeApplication.student_id == obj.student_id,
+                    PracticeApplication.id != id_,
+                    PracticeApplication.status.in_(
+                        [
+                            ApplicationStatus.SUBMITTED,
+                            ApplicationStatus.RESUBMITTED,
+                            ApplicationStatus.REVISION_REQUIRED,
+                            ApplicationStatus.UNDER_REVIEW,
+                        ]
+                    ),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for s_app in stale_apps:
         s_app.status = ApplicationStatus.ARCHIVED
 
@@ -851,7 +875,10 @@ async def contract_file_path(db: AsyncSession, user: User, id_: UUID):
         if obj.student_id != student.id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Ruxsat yo'q")
 
-    if not obj.contract_file and obj.status in (ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE):
+    if not obj.contract_file and obj.status in (
+        ApplicationStatus.APPROVED,
+        ApplicationStatus.ACTIVE,
+    ):
         if not obj.contract_template_id:
             stmt = (
                 select(ContractTemplateDoc)
@@ -917,7 +944,6 @@ async def contract_file_path(db: AsyncSession, user: User, id_: UUID):
     return file_path, obj.contract_number
 
 
-
 async def upload_scan(
     db: AsyncSession, id_: UUID, user: User, content: bytes, filename: str
 ) -> dict[str, Any]:
@@ -936,41 +962,94 @@ async def upload_scan(
     if obj.status != ApplicationStatus.APPROVED:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ariza tasdiqlanmagan")
 
-    import secrets
+    ext, mime = detect_scan_type(filename, content)
 
     from app.services.pdf import STORAGE_DIR as PDF_STORAGE_DIR
-
-    ext = Path(filename).suffix.lower()
-    if ext not in [".pdf", ".jpg", ".jpeg", ".png"]:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, "Faqat PDF va rasm (JPG, PNG) qabul qilinadi"
-        )
-    # Magic-byte tekshiruvi — kengaytmani almashtirib exe/html yuklashning oldini oladi
-    magic_by_ext = {
-        ".pdf": (b"%PDF",),
-        ".jpg": (b"\xff\xd8\xff",),
-        ".jpeg": (b"\xff\xd8\xff",),
-        ".png": (b"\x89PNG",),
-    }
-    if not any(content.startswith(m) for m in magic_by_ext[ext]):
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, "Fayl mazmuni kengaytmaga mos emas"
-        )
 
     file_name = f"{obj.contract_number or 'shartnoma'}_scan_{secrets.token_hex(4)}{ext}"
     path = PDF_STORAGE_DIR / file_name
     path.write_bytes(content)
 
+    # Oldingi skan fayli diskda qolib ketmasin (qayta yuklashda almashtiriladi)
+    previous = obj.scan_file if isinstance(obj.scan_file, dict) else None
     obj.scan_file = {
-        "name": filename,
+        "name": filename or f"skan{ext}",
         "path": str(path.relative_to(PDF_STORAGE_DIR.parent.parent)),
-        "mime": "application/pdf" if ext == ".pdf" else f"image/{ext.strip('.')}",
+        "mime": mime,
         "size": len(content),
         "uploaded_at": datetime.now(UTC).isoformat(),
     }
-
     await db.commit()
+    if previous and previous.get("path"):
+        _remove_scan_file(previous["path"])
     return await get_one(db, id_)
+
+
+# ─── Skan fayli tekshiruvi ──────────────────────────────────────────────────
+
+SCAN_MAX_BYTES = 20 * 1024 * 1024
+_SCAN_MAGIC: tuple[tuple[bytes, str, str], ...] = (
+    (b"%PDF", ".pdf", "application/pdf"),
+    (b"\xff\xd8\xff", ".jpg", "image/jpeg"),
+    (b"\x89PNG", ".png", "image/png"),
+)
+_HEIC_EXTS = {".heic", ".heif", ".hif"}
+
+
+def _mb(size: int) -> str:
+    return f"{size / 1024 / 1024:.1f} MB"
+
+
+def check_scan_size(size: int) -> None:
+    """Hajm chegarasi — foydalanuvchiga aniq raqamlar bilan (nginx'dan oldin ham tekshiriladi)."""
+    if size <= 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fayl bo'sh — qayta tanlang")
+    if size > SCAN_MAX_BYTES:
+        raise HTTPException(
+            status.HTTP_413_CONTENT_TOO_LARGE,
+            f"Fayl hajmi {_mb(size)} — ruxsat etilgan maksimum {_mb(SCAN_MAX_BYTES)}. "
+            "Rasmni kichikroq sifatda saqlang yoki PDF'ni siqing",
+        )
+
+
+def detect_scan_type(filename: str, content: bytes) -> tuple[str, str]:
+    """Fayl turi MAZMUNI bo'yicha aniqlanadi (PDF, JPEG, PNG).
+
+    Kengaytma yo'q yoki noto'g'ri bo'lsa ham (Android kamerasi "image" deb beradi, "scan.pdf"
+    aslida JPEG bo'lishi mumkin) mazmun to'g'ri bo'lsa qabul qilinadi. iPhone HEIC rasmlari uchun
+    alohida tushuntirish — talabalar aynan shu joyda "yuklanmayapti" deb qolardi.
+    """
+    check_scan_size(len(content))
+    ext_given = Path(filename or "").suffix.lower()
+    for magic, ext, mime in _SCAN_MAGIC:
+        if content.startswith(magic):
+            return ext, mime
+    if ext_given in _HEIC_EXTS or content[4:12] in (b"ftypheic", b"ftypheix", b"ftypmif1"):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "iPhone HEIC rasmi qabul qilinmaydi. Sozlamalar → Kamera → Formatlar → "
+            '"Eng mos" (Most Compatible) ni tanlang yoki rasmni JPEG/PDF qilib yuboring',
+        )
+    shown = ext_given or "kengaytmasiz"
+    raise HTTPException(
+        status.HTTP_400_BAD_REQUEST,
+        f"Fayl turi qabul qilinmaydi: {shown}. Faqat PDF, JPG yoki PNG yuklang "
+        "(fayl buzilgan bo'lsa, qayta skan qiling)",
+    )
+
+
+def _remove_scan_file(rel_path: str) -> None:
+    """Eski skanni faqat storage/contracts ichida o'chiradi (best effort)."""
+    from app.services.pdf import STORAGE_DIR as PDF_STORAGE_DIR
+
+    try:
+        root = PDF_STORAGE_DIR.resolve()
+        candidate = (PDF_STORAGE_DIR.parent.parent / str(rel_path).lstrip("/\\")).resolve()
+        candidate.relative_to(root)
+        if candidate.is_file():
+            candidate.unlink()
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Eski skanni o'chirishda xatolik ({rel_path}): {e}")
 
 
 async def appendix_by_region(db: AsyncSession) -> list[dict[str, Any]]:
@@ -1109,40 +1188,48 @@ async def generate_official_contract_pdf(
     tpl = None
     if template_id:
         try:
-            valid_tpl_id = UUID(str(template_id)) if not isinstance(template_id, UUID) else template_id
+            valid_tpl_id = (
+                UUID(str(template_id)) if not isinstance(template_id, UUID) else template_id
+            )
             tpl = await db.get(ContractTemplateDoc, valid_tpl_id)
         except (ValueError, TypeError, AttributeError):
             tpl = None
 
     if not tpl and contract.practice_type_id:
         tpl = (
-            await db.execute(
-                select(ContractTemplateDoc)
-                .where(
-                    ContractTemplateDoc.practice_type_id == contract.practice_type_id,
-                    ContractTemplateDoc.status == ContractTemplateStatus.ACTIVE,
+            (
+                await db.execute(
+                    select(ContractTemplateDoc)
+                    .where(
+                        ContractTemplateDoc.practice_type_id == contract.practice_type_id,
+                        ContractTemplateDoc.status == ContractTemplateStatus.ACTIVE,
+                    )
+                    .order_by(ContractTemplateDoc.created_at.desc())
                 )
-                .order_by(ContractTemplateDoc.created_at.desc())
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
     if not tpl:
         tpl = (
-            await db.execute(
-                select(ContractTemplateDoc)
-                .where(ContractTemplateDoc.status == ContractTemplateStatus.ACTIVE)
-                .order_by(ContractTemplateDoc.created_at.desc())
+            (
+                await db.execute(
+                    select(ContractTemplateDoc)
+                    .where(ContractTemplateDoc.status == ContractTemplateStatus.ACTIVE)
+                    .order_by(ContractTemplateDoc.created_at.desc())
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
     now = datetime.now(UZB_TZ)  # hujjat sanasi — Toshkent vaqti
     start_d = contract.start_date or now.date()
     end_d = contract.end_date or now.date()
 
     org_address = ", ".join(
-        p
-        for p in [organization.region, organization.district, organization.address_line]
-        if p
+        p for p in [organization.region, organization.district, organization.address_line] if p
     )
     org_director = organization.director_full_name or ""
 
@@ -1193,23 +1280,25 @@ async def generate_official_contract_pdf(
 
     if students:
         s0 = students[0]
-        ctx.update({
-            "fish": s0.get("full_name", ""),
-            "ism": s0.get("full_name", ""),
-            "student_name": s0.get("full_name", ""),
-            "student_full_name": s0.get("full_name", ""),
-            "yonalish": s0.get("direction_name", ""),
-            "student_field": s0.get("direction_name", ""),
-            "specialty_name": s0.get("direction_name", ""),
-            "speciality_name": s0.get("direction_name", ""),
-            "shifr": s0.get("direction_code", ""),
-            "kurs": s0.get("course", ""),
-            "course": s0.get("course", ""),
-            "guruh": s0.get("group_name", ""),
-            "group_name": s0.get("group_name", ""),
-            "faculty_name": s0.get("faculty_name", ""),
-            "supervisor_name": s0.get("supervisor_name", ""),
-        })
+        ctx.update(
+            {
+                "fish": s0.get("full_name", ""),
+                "ism": s0.get("full_name", ""),
+                "student_name": s0.get("full_name", ""),
+                "student_full_name": s0.get("full_name", ""),
+                "yonalish": s0.get("direction_name", ""),
+                "student_field": s0.get("direction_name", ""),
+                "specialty_name": s0.get("direction_name", ""),
+                "speciality_name": s0.get("direction_name", ""),
+                "shifr": s0.get("direction_code", ""),
+                "kurs": s0.get("course", ""),
+                "course": s0.get("course", ""),
+                "guruh": s0.get("group_name", ""),
+                "group_name": s0.get("group_name", ""),
+                "faculty_name": s0.get("faculty_name", ""),
+                "supervisor_name": s0.get("supervisor_name", ""),
+            }
+        )
 
     if variable_values:
         for k, v in variable_values.items():
@@ -1294,7 +1383,10 @@ async def get_public_contract_pdf_path(db: AsyncSession, qr_token: str) -> tuple
             select(PracticeApplication).where(PracticeApplication.qr_token == qr_token)
         )
     ).scalar_one_or_none()
-    is_live = obj is not None and obj.status in (ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE)
+    is_live = obj is not None and obj.status in (
+        ApplicationStatus.APPROVED,
+        ApplicationStatus.ACTIVE,
+    )
     if obj and obj.contract_file and is_live:
         file_path = _resolve(str(obj.contract_file.get("path", "")))
         if file_path.exists() and file_path.suffix.lower() == ".pdf":
@@ -1309,4 +1401,3 @@ async def get_public_contract_pdf_path(db: AsyncSession, qr_token: str) -> tuple
             return file_path, contract.number or str(contract.id)
 
     raise HTTPException(status.HTTP_404_NOT_FOUND, "Hujjat PDF fayli topilmadi")
-

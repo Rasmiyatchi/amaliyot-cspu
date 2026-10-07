@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   CheckCircle2,
   ClipboardEdit,
   Download,
@@ -8,10 +9,12 @@ import {
   Plus,
   Upload,
 } from "lucide-react";
+import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { formatTashkentDateTime } from "@/components/attendance/attendance-date-utils";
 import { describeRequestError } from "@/components/attendance/request-error";
 import { FilePreviewModal, type PreviewFile } from "@/components/file-preview-modal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -36,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { dateLocale } from "@/i18n";
 import {
   applicationScanUrl,
   downloadContract,
@@ -70,6 +74,41 @@ const STATUS: Record<
 /** Dialog rejimi: yangi ariza yoki qaytarilgan arizani tuzatish. */
 type DialogMode = { kind: "new" } | { kind: "resubmit"; app: PracticeApplication };
 
+/** Server bilan bir xil: 20 MB; PDF / JPEG / PNG (iPhone HEIC — alohida tushuntirish) */
+const SCAN_MAX_BYTES = 20 * 1024 * 1024;
+const SCAN_ALLOWED_EXT = new Set(["pdf", "jpg", "jpeg", "png"]);
+const SCAN_ALLOWED_MIME = new Set(["application/pdf", "image/jpeg", "image/png"]);
+const HEIC_EXT = new Set(["heic", "heif", "hif"]);
+
+/** Yuklash holati — har bir ariza uchun alohida, toast yopilgandan keyin ham ko'rinib turadi */
+type ScanStatus =
+  | { kind: "uploading"; fileName: string; size: number }
+  | { kind: "success"; fileName: string; size: number; at: number }
+  | { kind: "error"; fileName: string; message: string };
+
+function fmtSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/** Yuklashdan OLDIN tekshiruv — serverga bormay turib aniq sabab (hajm, tur, HEIC). */
+function scanPrecheckError(file: File, t: TFunction): string | null {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (file.size === 0) return t("studentApplicationCard.scanEmpty");
+  if (file.size > SCAN_MAX_BYTES) {
+    return t("studentApplicationCard.scanTooLarge", {
+      size: fmtSize(file.size),
+      max: fmtSize(SCAN_MAX_BYTES),
+    });
+  }
+  if (HEIC_EXT.has(ext) || /hei[cf]/i.test(file.type)) return t("studentApplicationCard.scanHeic");
+  const typeOk = SCAN_ALLOWED_MIME.has(file.type) || SCAN_ALLOWED_EXT.has(ext);
+  if (!typeOk) {
+    return t("studentApplicationCard.scanBadType", { ext: ext ? `.${ext}` : file.type || "?" });
+  }
+  return null;
+}
+
 export function StudentApplicationCard() {
   const { t } = useTranslation();
   const { data, isPending } = useMyApplications();
@@ -81,6 +120,14 @@ export function StudentApplicationCard() {
 
   // Yuklanayotgan skan — faqat shu ariza kartasida spinner (umumiy isPending emas)
   const uploadingId = uploadScan.isPending ? (uploadScan.variables?.id ?? null) : null;
+  const [scanStatus, setScanStatus] = useState<Record<string, ScanStatus>>({});
+  const setStatus = (id: string, status: ScanStatus | null) =>
+    setScanStatus((prev) => {
+      const next = { ...prev };
+      if (status) next[id] = status;
+      else delete next[id];
+      return next;
+    });
 
   const handleDownloadContract = (a: PracticeApplication) =>
     downloadContract(a.id, a.contract_number).catch((e: unknown) =>
@@ -101,11 +148,30 @@ export function StudentApplicationCard() {
     // Xato bo'lsa xuddi shu faylni qayta tanlash mumkin bo'lsin (onChange yana ishlashi uchun)
     input.value = "";
     if (!file) return;
+    const precheck = scanPrecheckError(file, t);
+    if (precheck) {
+      setStatus(a.id, { kind: "error", fileName: file.name, message: precheck });
+      toast.error(precheck);
+      return;
+    }
+    setStatus(a.id, { kind: "uploading", fileName: file.name, size: file.size });
     uploadScan.mutate(
       { id: a.id, file },
       {
-        onSuccess: () => toast.success(t("studentApplicationCard.scanUploaded")),
-        onError: (err) => toast.error(describeRequestError(err, t)),
+        onSuccess: () => {
+          setStatus(a.id, {
+            kind: "success",
+            fileName: file.name,
+            size: file.size,
+            at: Date.now(),
+          });
+          toast.success(t("studentApplicationCard.scanUploaded"));
+        },
+        onError: (err) => {
+          const message = describeRequestError(err, t);
+          setStatus(a.id, { kind: "error", fileName: file.name, message });
+          toast.error(message, { duration: 10_000 });
+        },
       },
     );
   };
@@ -266,6 +332,8 @@ export function StudentApplicationCard() {
                         : t("studentApplicationCard.scanUpload")}
                     </Label>
                   </div>
+
+                  <ScanStatusLine app={a} status={scanStatus[a.id]} />
                 </div>
               )}
               {a.status === "approved" && !a.contract_number && a.qr_token && (
@@ -287,6 +355,67 @@ export function StudentApplicationCard() {
         />
       )}
     </Card>
+  );
+}
+
+/**
+ * Skan holati: yuklanmoqda / yuklandi (sana, nom, hajm) / xato (aniq sabab).
+ * Serverdagi `scan_file` — doimiy holat; `status` — shu sessiyadagi oxirgi urinish.
+ */
+function ScanStatusLine({
+  app,
+  status,
+}: {
+  app: PracticeApplication;
+  status: ScanStatus | undefined;
+}) {
+  const { t } = useTranslation();
+  if (status?.kind === "uploading") {
+    return (
+      <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+        {t("studentApplicationCard.scanUploading", {
+          name: status.fileName,
+          size: fmtSize(status.size),
+        })}
+      </div>
+    );
+  }
+  if (status?.kind === "error") {
+    return (
+      <Alert variant="destructive" className="px-3 py-2.5">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle className="text-xs">
+          {t("studentApplicationCard.scanFailed", { name: status.fileName })}
+        </AlertTitle>
+        <AlertDescription className="break-words text-xs">
+          {status.message}
+          <br />
+          {t("studentApplicationCard.scanRetryHint")}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  const file = app.scan_file;
+  if (app.has_scan_file && file) {
+    const when = file.uploaded_at ? formatTashkentDateTime(file.uploaded_at, dateLocale()) : null;
+    return (
+      <div className="flex items-start gap-2 rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
+        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <span className="min-w-0 break-words">
+          {when
+            ? t("studentApplicationCard.scanUploadedAt", { date: when })
+            : t("studentApplicationCard.scanUploadedBadge")}
+          {" · "}
+          {file.name} · {fmtSize(file.size)}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="text-xs text-muted-foreground">
+      {t("studentApplicationCard.scanNotUploaded")}
+    </div>
   );
 }
 

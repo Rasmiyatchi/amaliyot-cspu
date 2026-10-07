@@ -1985,7 +1985,16 @@
     "templateRequired": "Shartnoma shablonini tanlang",
     "title": "Mening shartnomalarim",
     "scanUploadedBadge": "Skan yuklangan",
-    "scanView": "Skanni ko'rish"
+    "scanView": "Skanni ko'rish",
+    "scanUploading": "Yuklanmoqda: {{name}} ({{size}})…",
+    "scanUploadedAt": "Yuklangan: {{date}}",
+    "scanNotUploaded": "Imzolangan skan hali yuklanmagan",
+    "scanFailed": "Yuklanmadi: {{name}}",
+    "scanRetryHint": "Faylni tekshirib, \"Skan yuklash\" tugmasini qayta bosing.",
+    "scanEmpty": "Fayl bo'sh — qayta tanlang",
+    "scanTooLarge": "Fayl hajmi {{size}} — ruxsat etilgan maksimum {{max}}. Rasmni kichikroq sifatda saqlang yoki PDF'ni siqing",
+    "scanBadType": "Fayl turi qabul qilinmaydi: {{ext}}. Faqat PDF, JPG yoki PNG yuklang",
+    "scanHeic": "iPhone HEIC rasmi qabul qilinmaydi. Sozlamalar → Kamera → Formatlar → \"Eng mos\" (Most Compatible) ni tanlang yoki rasmni JPEG/PDF qilib yuboring"
   },
   "studentCheckInButton": {
     "checkIn": "Kelish (Check-in)",
@@ -2712,7 +2721,8 @@
     "offline": "Internet aloqasi yo'q. Telefon internetga ulanganini tekshirib, qayta urinib ko'ring.",
     "network": "Server bilan aloqa o'rnatilmadi — internet uzilgan yoki juda sekin. Qayta urinib ko'ring.",
     "timeout": "Server javob bermadi (javob kelmadi). Internet sekin bo'lishi mumkin — birozdan so'ng qayta urinib ko'ring.",
-    "server": "Serverda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring."
+    "server": "Serverda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.",
+    "tooLarge": "Fayl juda katta — server qabul qilmadi. 20 MB dan kichik fayl yuklang"
   },
   "studentDashboard": {
     "kickerDefault": "Amaliyot platformasi",

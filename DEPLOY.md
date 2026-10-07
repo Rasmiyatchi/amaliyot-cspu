@@ -16,6 +16,11 @@ kirishni to'xtatadi (Tizim → Kirish cheklovlari yoki talaba kartasi). Cheklang
 login va har bir so'rovda `423` oladi, ekranida "Texnik ishlar" yoki "Kirish cheklangan" ko'rinadi;
 chiqish mumkin, muddati o'tgach ekran o'zi ochiladi. Super adminga cheklov qo'yilmaydi.
 
+**Skan yuklash (2026-10-07):** chegara 20 MB (avval 10). Fayl turi mazmuni bo'yicha aniqlanadi
+(PDF/JPEG/PNG), kengaytmasiz yoki noto'g'ri nomlangan fayl ham qabul qilinadi; HEIC, hajm va
+tur xatolari aniq matn bilan qaytadi. aaPanel proksisida `client_max_body_size 25M;` (§11.5)
+BO'LISHI SHART — aks holda nginx 1 MB dan katta faylni o'zi rad etadi.
+
 **Xabarlar sahifasi (2026-10-07):** har rol uchun `/…/notifications` — qidiruv, tur va sana
 filtrlari, to'liq tafsilot. Talabalar sarlavhada qo'ng'iroq olishdi.
 
