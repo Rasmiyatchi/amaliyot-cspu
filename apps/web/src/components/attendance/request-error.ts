@@ -42,6 +42,8 @@ export function describeRequestError(
       const err = e as HTTPError;
       const detail = serverDetail(err);
       if (detail) return detail;
+      // Proksi (nginx) faylni API'ga yetkazmay rad etdi — JSON `detail` yo'q
+      if (err.response.status === 413) return t("requestError.tooLarge");
       return err.response.status >= 500 ? t("requestError.server") : t(fallbackKey);
     }
     case "timeout":

@@ -275,3 +275,29 @@ class TestAccessRestrictions:
         ok = AccessRestrictionCreate(target_type="user", student_id=uuid4())
         assert ok.mode.value == "restricted"
         AccessRestrictionCreate(target_type="group", group_id=uuid4(), mode="maintenance")
+
+
+class TestScanUploadChecks:
+    def test_type_detected_by_content(self):
+        from app.services.practice_application import detect_scan_type
+
+        assert detect_scan_type("scan.pdf", b"%PDF-1.4 x") == (".pdf", "application/pdf")
+        assert detect_scan_type("IMG_1.JPG", b"\xff\xd8\xff\xe0 jpeg") == (".jpg", "image/jpeg")
+        # Kengaytmasiz (Android kamerasi) va noto'g'ri nomlangan fayl ham mazmuni bo'yicha o'tadi
+        assert detect_scan_type("image", b"\x89PNG\r\n png") == (".png", "image/png")
+        assert detect_scan_type("scan.pdf", b"\xff\xd8\xff\xe0 jpeg") == (".jpg", "image/jpeg")
+
+    def test_clear_errors(self):
+        from app.services.practice_application import SCAN_MAX_BYTES, detect_scan_type
+
+        for name, data, status_code, needle in [
+            ("IMG_2.HEIC", b"\x00\x00\x00\x18ftypheic", 400, "HEIC"),
+            ("photo.jpg", b"\x00\x00\x00\x18ftypheic", 400, "HEIC"),
+            ("doc.docx", b"PK\x03\x04", 400, ".docx"),
+            ("x.pdf", b"", 400, "bo'sh"),
+            ("big.pdf", b"%PDF" + b"0" * SCAN_MAX_BYTES, 413, "maksimum"),
+        ]:
+            with pytest.raises(HTTPException) as e:
+                detect_scan_type(name, data)
+            assert e.value.status_code == status_code
+            assert needle in str(e.value.detail)

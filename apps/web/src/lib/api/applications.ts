@@ -53,7 +53,14 @@ export type PracticeApplication = {
   has_contract_file: boolean;
   has_scan_file: boolean;
   contract_file: { name: string; path: string; mime: string; size: number } | null;
-  scan_file: { name: string; path: string; mime: string; size: number } | null;
+  scan_file: {
+    name: string;
+    path: string;
+    mime: string;
+    size: number;
+    /** Oxirgi yuklash vaqti (qayta yuklanganini ko'rsatish uchun) */
+    uploaded_at?: string;
+  } | null;
   organization_type: string;
   organization_name: string;
   region: string | null;
