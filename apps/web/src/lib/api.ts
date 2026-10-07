@@ -13,6 +13,30 @@ function skipsRefresh(pathname: string): boolean {
 }
 
 /**
+ * 423 Locked — super admin shu foydalanuvchi/guruh uchun kirishni to'xtatgan. Javobdagi rejim
+ * store'ga yoziladi; MaintenanceGuard butun ekranni yopadi ("texnik ishlar" yoki "cheklangan").
+ */
+async function captureRestriction(response: Response): Promise<void> {
+  if (response.status !== 423) return;
+  try {
+    const body = (await response.clone().json()) as {
+      code?: unknown;
+      mode?: unknown;
+      message?: unknown;
+      ends_at?: unknown;
+    };
+    if (body.code !== "access_restricted") return;
+    useAuthStore.getState().setRestriction({
+      mode: body.mode === "maintenance" ? "maintenance" : "restricted",
+      message: typeof body.message === "string" ? body.message : null,
+      ends_at: typeof body.ends_at === "string" ? body.ends_at : null,
+    });
+  } catch {
+    /* JSON emas */
+  }
+}
+
+/**
  * HTTP klient — Authorization header va 401 da avto-refresh bilan.
  *
  * Oqim:
@@ -68,6 +92,7 @@ export const api = ky.create({
     ],
     afterResponse: [
       async (request, options, response) => {
+        await captureRestriction(response);
         if (response.status !== 401) return;
         // login/refresh/logout'dan 401 kelsa — retry qilmaymiz (cycle oldini olish)
         if (skipsRefresh(new URL(request.url).pathname)) return;
@@ -132,6 +157,7 @@ export async function authFetch(input: string, init: RequestInit = {}): Promise<
   const doFetch = () =>
     fetch(input, { credentials: "include", ...init, headers: authHeaders(init.headers) });
   const res = await doFetch();
+  await captureRestriction(res);
   if (res.status !== 401 || skipsRefresh(new URL(input, window.location.origin).pathname)) {
     return res;
   }

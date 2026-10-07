@@ -59,14 +59,17 @@ export function notificationTypeKey(type: NotificationType): string {
 }
 
 /** `data` ichidagi odamga tushunarli maydonlar (tafsilot oynasida qatorlar). */
-export const NOTIFICATION_DATA_FIELDS: readonly { key: string; labelKey: string; mono?: boolean }[] =
-  [
-    { key: "username", labelKey: "notificationsPage.fields.username", mono: true },
-    { key: "attempted_device", labelKey: "notificationsPage.fields.attemptedDevice" },
-    { key: "attempted_ip", labelKey: "notificationsPage.fields.attemptedIp", mono: true },
-    { key: "bound_device", labelKey: "notificationsPage.fields.boundDevice" },
-    { key: "attempted_user_agent", labelKey: "notificationsPage.fields.userAgent", mono: true },
-  ];
+export const NOTIFICATION_DATA_FIELDS: readonly {
+  key: string;
+  labelKey: string;
+  mono?: boolean;
+}[] = [
+  { key: "username", labelKey: "notificationsPage.fields.username", mono: true },
+  { key: "attempted_device", labelKey: "notificationsPage.fields.attemptedDevice" },
+  { key: "attempted_ip", labelKey: "notificationsPage.fields.attemptedIp", mono: true },
+  { key: "bound_device", labelKey: "notificationsPage.fields.boundDevice" },
+  { key: "attempted_user_agent", labelKey: "notificationsPage.fields.userAgent", mono: true },
+];
 
 export type RelatedLink = { to: string; labelKey: string };
 
@@ -93,11 +96,12 @@ export function relatedLinkFor(role: UserRole, n: Notification): RelatedLink | n
       return null;
     case "supervisor":
       return assignmentId
-        ? { to: `/supervisor?student=${assignmentId}`, labelKey: "notificationsPage.openAssignment" }
+        ? {
+            to: `/supervisor?student=${assignmentId}`,
+            labelKey: "notificationsPage.openAssignment",
+          }
         : null;
     case "student":
-      return assignmentId
-        ? { to: "/student", labelKey: "notificationsPage.openDashboard" }
-        : null;
+      return assignmentId ? { to: "/student", labelKey: "notificationsPage.openDashboard" } : null;
   }
 }

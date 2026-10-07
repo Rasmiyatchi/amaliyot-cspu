@@ -106,6 +106,20 @@ class ContractTemplateStatus(StrEnum):
     ARCHIVED = "archived"
 
 
+class RestrictionTarget(StrEnum):
+    """Kirish cheklovi kimga: bitta foydalanuvchi yoki butun guruh."""
+
+    USER = "user"
+    GROUP = "group"
+
+
+class RestrictionMode(StrEnum):
+    """Cheklangan foydalanuvchi ekranida nima ko'rinadi."""
+
+    MAINTENANCE = "maintenance"  # "Texnik ishlar" — sabab oshkor qilinmaydi
+    RESTRICTED = "restricted"  # "Sizga kirish cheklangan" — izoh bilan
+
+
 class ApplicationStatus(StrEnum):
     """Talaba amaliyot arizasi statusi."""
 

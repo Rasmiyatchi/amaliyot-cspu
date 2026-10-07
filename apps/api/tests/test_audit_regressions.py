@@ -104,8 +104,15 @@ class TestAttachmentSanitizing:
             f.write_bytes(b"%PDF-1.4")
 
         out = uploads_svc.clean_client_attachments(
-            [{"id": "m", "name": "a.pdf", "path": f"uploads/u/{me}/2026/10/a.pdf",
-              "uploaded_by_id": str(other), "size": 999999}],
+            [
+                {
+                    "id": "m",
+                    "name": "a.pdf",
+                    "path": f"uploads/u/{me}/2026/10/a.pdf",
+                    "uploaded_by_id": str(other),
+                    "size": 999999,
+                }
+            ],
             user_id=me,
         )
         assert out[0]["uploaded_by_id"] == str(me) and out[0]["size"] == 8
@@ -244,3 +251,27 @@ class TestProductionSecrets:
         for bad in ("CHANGE_ME_to_64_hex_chars_min", "dev-only-change-me", "short", " "):
             assert _is_placeholder_secret(bad)
         assert not _is_placeholder_secret("9f2c" * 16)
+
+
+class TestAccessRestrictions:
+    def test_super_admin_is_never_restricted(self):
+        import asyncio
+
+        from app.models.enums import UserRole
+        from app.models.user import User
+        from app.services.access_restriction import find_active_for_user
+
+        user = User(id=uuid4(), role=UserRole.SUPER_ADMIN)
+        assert asyncio.run(find_active_for_user(None, user)) is None  # DB'ga murojaat yo'q
+
+    def test_create_schema_requires_a_target(self):
+        from app.schemas.access_restriction import AccessRestrictionCreate
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            AccessRestrictionCreate(target_type="user")
+        with pytest.raises(ValidationError):
+            AccessRestrictionCreate(target_type="group")
+        ok = AccessRestrictionCreate(target_type="user", student_id=uuid4())
+        assert ok.mode.value == "restricted"
+        AccessRestrictionCreate(target_type="group", group_id=uuid4(), mode="maintenance")

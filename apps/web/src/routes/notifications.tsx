@@ -1,13 +1,4 @@
-import {
-  ArrowUpRight,
-  Bell,
-  CheckCheck,
-  Inbox,
-  Loader2,
-  MailOpen,
-  Search,
-  X,
-} from "lucide-react";
+import { ArrowUpRight, Bell, CheckCheck, Inbox, Loader2, MailOpen, Search, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
@@ -180,9 +171,7 @@ function NotificationRow({
               />
             )}
           </div>
-          {n.body && (
-            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
-          )}
+          {n.body && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</p>}
           <div className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
             <span>{formatTashkentDateTime(n.created_at, dateLocale())}</span>
             <span aria-hidden="true">·</span>
@@ -418,7 +407,13 @@ export function NotificationsPage() {
               />
             </div>
             {hasFilters && (
-              <Button type="button" variant="ghost" size="sm" className="h-9" onClick={clearFilters}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-9"
+                onClick={clearFilters}
+              >
                 <X className="h-4 w-4" />
                 {t("common.clear")}
               </Button>
@@ -456,7 +451,9 @@ export function NotificationsPage() {
                 icon={Inbox}
                 title={t("notificationsPage.empty")}
                 description={
-                  hasFilters ? t("notificationsPage.emptyFiltered") : t("notificationsPage.emptyHint")
+                  hasFilters
+                    ? t("notificationsPage.emptyFiltered")
+                    : t("notificationsPage.emptyHint")
                 }
               />
             </CardContent>

@@ -78,6 +78,12 @@ export function bootstrap(): Promise<void> {
             /* quyida tozalanadi */
           }
         }
+        // 423 — kirish cheklangan: `captureRestriction` rejimni allaqachon yozgan, ekran
+        // ko'rsatiladi; sessiyani tozalasak ogohlantirish ham yo'qolardi
+        if (err instanceof HTTPError && err.response.status === 423) {
+          useAuthStore.getState().markBootstrapped();
+          return;
+        }
         useAuthStore.getState().clear();
       }
     })().finally(() => {

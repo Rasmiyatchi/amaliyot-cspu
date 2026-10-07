@@ -365,6 +365,18 @@ EXACT: dict[str, str] = {
     "Hisobot fayli biriktirilmagan": "Файл отчёта не прикреплён",
     "Kutilmagan xatolik": "Непредвиденная ошибка",
     "Xabar topilmadi": "Уведомление не найдено",
+    "Texnik ishlar olib borilmoqda. Birozdan so'ng qayta urinib ko'ring": (
+        "Ведутся технические работы. Попробуйте позже"
+    ),
+    "Sizga tizimga kirish vaqtincha cheklangan": "Доступ в систему для вас временно ограничен",
+    "Super admin uchun kirish cheklovi qo'yib bo'lmaydi": (
+        "Нельзя ограничить доступ супер-администратору"
+    ),
+    "O'zingizni cheklab bo'lmaydi": "Нельзя ограничить доступ самому себе",
+    "Cheklov topilmadi": "Ограничение не найдено",
+    "Tugash vaqti hozirgi vaqtdan keyin bo'lishi kerak": (
+        "Время окончания должно быть позже текущего"
+    ),
     "Sana oralig'i noto'g'ri": "Неверный диапазон дат",
     "Shablon shartnomalarda ishlatilgan — o'chirib bo'lmaydi. Uni arxivlang.": (
         "Шаблон используется в договорах — удалить нельзя. Переведите его в архив."

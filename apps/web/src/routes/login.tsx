@@ -69,6 +69,11 @@ function mapLoginError(err: unknown, t: TFunction): LoginError {
     };
   }
 
+  // Kirish cheklangan — MaintenanceGuard to'liq ekranni ko'rsatadi, bu matn zaxira
+  if (status === 423) {
+    return { kind: "blocked", message: detail ?? t("auth.login.restricted") };
+  }
+
   if (status === 429) {
     return {
       kind: "inline",

@@ -75,6 +75,10 @@ const admin = {
     "ContractTemplateEditorPage",
   ),
   admins: lazyPage(() => import("@/routes/dashboard/admin/admins"), "AdminsPage"),
+  accessRestrictions: lazyPage(
+    () => import("@/routes/dashboard/admin/access-restrictions"),
+    "AccessRestrictionsPage",
+  ),
   auditLog: lazyPage(() => import("@/routes/dashboard/admin/audit-log"), "AuditLogPage"),
   systemSettings: lazyPage(
     () => import("@/routes/dashboard/admin/system-settings"),
@@ -205,6 +209,7 @@ export const router = createBrowserRouter([
                   { path: "contract-templates", lazy: admin.contractTemplates },
                   { path: "contract-templates/:id/edit", lazy: admin.contractTemplateEditor },
                   { path: "admins", lazy: admin.admins },
+                  { path: "access-restrictions", lazy: admin.accessRestrictions },
                   { path: "audit-log", lazy: admin.auditLog },
                   { path: "system-settings", lazy: admin.systemSettings },
                 ],

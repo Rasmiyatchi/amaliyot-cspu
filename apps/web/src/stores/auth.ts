@@ -20,13 +20,23 @@ export type User = {
   permissions?: string[];
 };
 
+/** Super admin shu foydalanuvchi (yoki guruhi) uchun kirishni to'xtatgan — 423 javobdan. */
+export type AccessRestriction = {
+  mode: "maintenance" | "restricted";
+  message: string | null;
+  ends_at: string | null;
+};
+
 type AuthState = {
   user: User | null;
   accessToken: string | null;
   isBootstrapped: boolean; // birinchi refresh urinishi tugadi
+  /** Berilgan bo'lsa — butun ekran "texnik ishlar" / "kirish cheklangan" ko'rsatadi */
+  restriction: AccessRestriction | null;
   setAuth: (user: User, accessToken: string) => void;
   setToken: (accessToken: string) => void;
   setUser: (user: User) => void;
+  setRestriction: (restriction: AccessRestriction | null) => void;
   markBootstrapped: () => void;
   clear: () => void;
 };
@@ -41,9 +51,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: null,
   isBootstrapped: false,
+  restriction: null,
   setAuth: (user, accessToken) => set({ user, accessToken, isBootstrapped: true }),
   setToken: (accessToken) => set({ accessToken }),
   setUser: (user) => set({ user }),
+  setRestriction: (restriction) => set({ restriction }),
   markBootstrapped: () => set({ isBootstrapped: true }),
-  clear: () => set({ user: null, accessToken: null, isBootstrapped: true }),
+  clear: () => set({ user: null, accessToken: null, isBootstrapped: true, restriction: null }),
 }));

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { MaintenanceScreen } from "@/components/maintenance-screen";
+import { RestrictedScreen } from "@/components/restricted-screen";
 import { usePublicSettings } from "@/lib/api/system-settings";
 import { useAuthStore } from "@/stores/auth";
 
@@ -12,9 +13,15 @@ import { useAuthStore } from "@/stores/auth";
  */
 export function MaintenanceGuard({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
+  const restriction = useAuthStore((s) => s.restriction);
   const { data: settings } = usePublicSettings();
 
   const isSuperAdmin = user?.role === "super_admin";
+
+  // Super admin aynan shu foydalanuvchi/guruh uchun kirishni to'xtatgan (423 javob)
+  if (restriction) {
+    return <RestrictedScreen restriction={restriction} />;
+  }
 
   if (settings?.maintenance_mode && !isSuperAdmin) {
     return (

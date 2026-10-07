@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     academic,
+    access_restrictions,
     admins,
     archive,
     areas,
@@ -54,6 +55,7 @@ api_router.include_router(archive.router)
 api_router.include_router(stats.router)
 api_router.include_router(notifications.router)
 api_router.include_router(admins.router)
+api_router.include_router(access_restrictions.router)
 api_router.include_router(system_settings.router)
 api_router.include_router(uploads.router)
 api_router.include_router(exports.router)
