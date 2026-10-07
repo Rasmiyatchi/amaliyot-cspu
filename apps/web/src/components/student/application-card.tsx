@@ -2,7 +2,7 @@ import {
   CheckCircle2,
   ClipboardEdit,
   Download,
-  FileText,
+  Eye,
   Loader2,
   Pencil,
   Plus,
@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { describeRequestError } from "@/components/attendance/request-error";
+import { FilePreviewModal, type PreviewFile } from "@/components/file-preview-modal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  downloadApplicationScan,
+  applicationScanUrl,
   downloadContract,
   useContractTypes,
   useCreateApplication,
@@ -74,6 +75,9 @@ export function StudentApplicationCard() {
   const { data, isPending } = useMyApplications();
   const uploadScan = useUploadApplicationScan();
   const [mode, setMode] = useState<DialogMode | null>(null);
+  // Yuklangan skan ilova ichida ko'rsatiladi (telefonda "yuklab olish" faylni ko'rsatmasdi);
+  // yuklab olish tugmasi preview oynasining o'zida
+  const [scanPreview, setScanPreview] = useState<PreviewFile | null>(null);
 
   // Yuklanayotgan skan — faqat shu ariza kartasida spinner (umumiy isPending emas)
   const uploadingId = uploadScan.isPending ? (uploadScan.variables?.id ?? null) : null;
@@ -83,10 +87,14 @@ export function StudentApplicationCard() {
       toast.error(describeRequestError(e, t, "common.downloadError")),
     );
 
-  const handleDownloadScan = (a: PracticeApplication) =>
-    downloadApplicationScan(a.id).catch((e: unknown) =>
-      toast.error(describeRequestError(e, t, "common.downloadError")),
-    );
+  const openScan = (a: PracticeApplication) =>
+    setScanPreview({
+      name: a.scan_file?.name || `${a.contract_number ?? "shartnoma"}_skan.pdf`,
+      path: a.scan_file?.path ?? "",
+      mime: a.scan_file?.mime,
+      size: a.scan_file?.size,
+      url: applicationScanUrl(a.id),
+    });
 
   const handleScanSelected = (a: PracticeApplication, input: HTMLInputElement) => {
     const file = input.files?.[0];
@@ -187,13 +195,9 @@ export function StudentApplicationCard() {
                         {t("common.download")}
                       </Button>
                       {a.has_scan_file && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => void handleDownloadScan(a)}
-                        >
-                          <FileText className="h-4 w-4" />
-                          {t("studentApplicationCard.scanFile")}
+                        <Button size="sm" variant="secondary" onClick={() => openScan(a)}>
+                          <Eye className="h-4 w-4" />
+                          {t("studentApplicationCard.scanView")}
                         </Button>
                       )}
                     </div>
@@ -229,9 +233,9 @@ export function StudentApplicationCard() {
                     </Button>
 
                     {a.has_scan_file && (
-                      <Button size="sm" variant="ghost" onClick={() => void handleDownloadScan(a)}>
-                        <FileText className="h-4 w-4" />
-                        {t("studentApplicationCard.scanFile")}
+                      <Button size="sm" variant="ghost" onClick={() => openScan(a)}>
+                        <Eye className="h-4 w-4" />
+                        {t("studentApplicationCard.scanView")}
                       </Button>
                     )}
 
@@ -274,6 +278,7 @@ export function StudentApplicationCard() {
         })}
       </CardContent>
       {/* Har ochilishda (va rejim almashganda) forma noldan — eski qiymatlar o'tib ketmaydi */}
+      <FilePreviewModal attachment={scanPreview} onClose={() => setScanPreview(null)} />
       {mode && (
         <ApplicationDialog
           key={mode.kind === "resubmit" ? mode.app.id : "new"}

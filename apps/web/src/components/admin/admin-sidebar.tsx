@@ -2,7 +2,9 @@ import {
   Activity,
   AlertTriangle,
   Award,
+  Ban,
   BarChart3,
+  Bell,
   BookOpen,
   Building,
   Building2,
@@ -98,6 +100,13 @@ const ADMIN_NAV_CONFIG: NavItemConfig[] = [
     icon: LayoutDashboard,
     end: true,
   },
+  {
+    id: "notifications",
+    to: "/admin/notifications",
+    labelKey: "adminAdminSidebar.nav.notifications",
+    icon: Bell,
+    end: true,
+  },
 
   // 2. Tuzilma (akademik tuzilma)
   {
@@ -190,6 +199,7 @@ const ADMIN_NAV_CONFIG: NavItemConfig[] = [
     icon: Settings,
     children: [
       { to: "/admin/admins", labelKey: "adminAdminSidebar.nav.admins", icon: ShieldCheck, superAdminOnly: true },
+      { to: "/admin/access-restrictions", labelKey: "adminAdminSidebar.nav.accessRestrictions", icon: Ban, superAdminOnly: true },
       { to: "/admin/audit-log", labelKey: "adminAdminSidebar.nav.auditLog", icon: Shield, superAdminOnly: true },
       { to: "/admin/integrations", labelKey: "adminAdminSidebar.nav.integrations", icon: Database, permissions: ["system"] },
       { to: "/admin/contract-templates", labelKey: "adminAdminSidebar.nav.contractTemplates", icon: FileText, superAdminOnly: true },

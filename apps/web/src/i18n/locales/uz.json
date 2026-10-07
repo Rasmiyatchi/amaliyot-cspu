@@ -172,7 +172,9 @@
       "structure": "Tuzilma",
       "supervisors": "Rahbarlar",
       "system": "Tizim",
-      "taskTemplates": "Topshiriqlar"
+      "taskTemplates": "Topshiriqlar",
+      "notifications": "Xabarlar",
+      "accessRestrictions": "Kirish cheklovlari"
     },
     "searchHint": "Qidiruv...",
     "brandTitle": "CHDPU AMALIYOT",
@@ -391,7 +393,8 @@
       "studentCredentials": "Login/parol",
       "systemSettings": "Sozlama",
       "taskTemplate": "Topshiriq shabloni",
-      "database": "Ma'lumotlar bazasi"
+      "database": "Ma'lumotlar bazasi",
+      "accessRestriction": "Kirish cheklovi"
     },
     "entityColumn": "Entity",
     "entityFilter": "Entity turi",
@@ -1232,7 +1235,8 @@
       "validationHints": "Login kamida 3 belgi, parol kamida 4 belgi bo'lishi kerak.",
       "tooManyAttempts": "Juda ko'p urinish. Bir necha daqiqadan so'ng qayta urinib ko'ring.",
       "serverError": "Serverda xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring.",
-      "networkError": "Server bilan aloqa yo'q. Internet ulanishini tekshirib, qayta urinib ko'ring."
+      "networkError": "Server bilan aloqa yo'q. Internet ulanishini tekshirib, qayta urinib ko'ring.",
+      "restricted": "Sizga tizimga kirish vaqtincha cheklangan"
     }
   },
   "changePassword": {
@@ -1556,7 +1560,8 @@
     "empty": "Xabarlar yo'q",
     "markAllRead": "Barchasini o'qildi",
     "newCount": "({{n}} yangi)",
-    "title": "Xabarlar"
+    "title": "Xabarlar",
+    "viewAll": "Barchasini ko'rish"
   },
   "objectsAreaFormDialog": {
     "areaCreated": "Hudud yaratildi",
@@ -1978,8 +1983,8 @@
     "submitted": "Ariza yuborildi — super admin tasdiqini kuting",
     "templateRequired": "Shartnoma shablonini tanlang",
     "title": "Mening shartnomalarim",
-    "scanFile": "Skan fayli",
-    "scanUploadedBadge": "Skan yuklangan"
+    "scanUploadedBadge": "Skan yuklangan",
+    "scanView": "Skanni ko'rish"
   },
   "studentCheckInButton": {
     "checkIn": "Kelish (Check-in)",
@@ -2177,7 +2182,14 @@
       "timezone": "Vaqt mintaqasi",
       "language": "Til",
       "resetTitle": "Qurilmani o'chirish"
-    }
+    },
+    "accessTitle": "Tizimga kirish",
+    "accessOpen": "Kirish ochiq",
+    "accessRestricted": "Kirish cheklangan: {{mode}}",
+    "accessUntil": "{{date}} gacha",
+    "restrictAccess": "Kirishni cheklash",
+    "liftRestriction": "Cheklovni olib tashlash",
+    "restrictionLifted": "Cheklov olib tashlandi"
   },
   "studentsStudentFormDialog": {
     "autoCredentialsInfo": "Login va parol avtomatik generatsiya qilinadi (12 raqamli, \"2500\" bilan boshlanadi). Talaba birinchi kirishda parolni o'zgartiradi.",
@@ -2384,7 +2396,8 @@
       "programs": "Amaliyot dasturlari",
       "regulations": "Normativ hujjatlar",
       "tasks": "Topshiriqlar",
-      "reports": "Yakuniy hisobotlar"
+      "reports": "Yakuniy hisobotlar",
+      "notifications": "Xabarlar"
     },
     "sections": {
       "practices": "Amaliyotlar"
@@ -3172,5 +3185,128 @@
     "subtitle": "Talabalaringiz topshirgan yakuniy hisobotlarni ko'rib chiqing: tasdiqlang yoki sabab bilan qaytaring",
     "returnForRevision": "Qaytarish",
     "statusShort": "Hisobot: {{status}}"
+  },
+  "notificationsPage": {
+    "title": "Xabarlar",
+    "subtitle": "Tizimdan kelgan barcha bildirishnomalar",
+    "summary": "{{unread}} ta o'qilmagan · jami {{total}} ta",
+    "searchPlaceholder": "Sarlavha, matn, login yoki qurilma bo'yicha qidirish",
+    "readFilter": "O'qilganlik bo'yicha",
+    "all": "Hammasi",
+    "unreadOnly": "O'qilmaganlar",
+    "typeLabel": "Turi",
+    "typeAll": "Barcha turlar",
+    "dateFrom": "Sanadan",
+    "dateTo": "Sanagacha",
+    "dateInvalid": "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas",
+    "empty": "Xabarlar topilmadi",
+    "emptyHint": "Tizim hodisalari (davomat, topshiriqlar, shartnomalar, qurilma urinishlari) shu yerda ko'rinadi",
+    "emptyFiltered": "Filtrlar yoki qidiruv so'zini o'zgartirib ko'ring",
+    "selectHint": "Batafsil ko'rish uchun ro'yxatdan xabarni tanlang",
+    "detailTitle": "Xabar tafsiloti",
+    "unread": "O'qilmagan",
+    "readAt": "O'qilgan: {{date}}",
+    "markAllRead": "Barchasini o'qildi deb belgilash",
+    "allReadToast": "Barcha xabarlar o'qildi deb belgilandi",
+    "openStudent": "Talaba kartasini ochish",
+    "openAssignment": "Talaba sahifasini ochish",
+    "openDashboard": "Amaliyot sahifasini ochish",
+    "fields": {
+      "username": "Login",
+      "attemptedDevice": "Urinilgan qurilma",
+      "attemptedIp": "IP manzil",
+      "boundDevice": "Bog'langan qurilma",
+      "userAgent": "Brauzer (user-agent)"
+    },
+    "types": {
+      "generic": "Tizim xabari",
+      "attendance_rejected": "Davomat rad etildi",
+      "attendance_override": "Davomat o'zgartirildi",
+      "task_approved": "Topshiriq tasdiqlandi",
+      "task_rejected": "Topshiriq rad etildi",
+      "journal_approved": "Kundalik tasdiqlandi",
+      "journal_rejected": "Kundalik rad etildi",
+      "analysis_approved": "Dars tahlili tasdiqlandi",
+      "analysis_rejected": "Dars tahlili rad etildi",
+      "contract_generated": "Shartnoma yaratildi",
+      "contract_activated": "Shartnoma imzolandi"
+    }
+  },
+  "restrictedScreen": {
+    "title": "Sizga kirish cheklangan",
+    "defaultMessage": "Tizimga kirish administrator tomonidan vaqtincha to'xtatilgan.",
+    "until": "Cheklov {{date}} gacha amal qiladi",
+    "contact": "Savollar bo'yicha amaliyot bo'limi yoki administratorga murojaat qiling.",
+    "retry": "Qayta tekshirish",
+    "logout": "Chiqish"
+  },
+  "adminAccessRestrictions": {
+    "title": "Kirish cheklovlari",
+    "subtitle": "Bitta foydalanuvchi yoki butun guruh uchun tizimga kirishni vaqtincha to'xtatish",
+    "newButton": "Yangi cheklov",
+    "filterLabel": "Holat bo'yicha",
+    "tabEffective": "Amaldagilar",
+    "tabAll": "Barchasi",
+    "empty": "Cheklovlar yo'q",
+    "emptyEffective": "Hozir hech kimga cheklov qo'yilmagan",
+    "emptyHint": "Yangi cheklov tugmasi orqali talaba, guruh yoki supervizor uchun kirishni to'xtating",
+    "colTarget": "Kimga",
+    "colMode": "Rejim",
+    "colMessage": "Xabar",
+    "colUntil": "Muddati",
+    "colCreated": "Kim / qachon",
+    "colStatus": "Holati",
+    "targetUser": "Foydalanuvchi",
+    "targetGroup": "Guruh",
+    "affected": "{{count}} ta talaba",
+    "noEnd": "Olib tashlanguncha",
+    "notePrefix": "Ichki izoh:",
+    "mode": {
+      "maintenance": "Texnik ishlar",
+      "restricted": "Kirish cheklangan"
+    },
+    "modeHint": {
+      "maintenance": "Foydalanuvchi \"Texnik ishlar olib borilmoqda\" ekranini ko'radi, sabab ko'rsatilmaydi",
+      "restricted": "Foydalanuvchi \"Sizga kirish cheklangan\" ekranini va izohni ko'radi"
+    },
+    "status": {
+      "effective": "Amalda",
+      "ended": "Muddati tugagan",
+      "inactive": "Olib tashlangan"
+    },
+    "deactivate": "Olib tashlash",
+    "deactivateConfirmTitle": "Cheklovni olib tashlash",
+    "deactivateConfirmDesc": "{{name}} uchun kirish qayta ochiladi. Yozuv tarixda qoladi.",
+    "deleteConfirmTitle": "Cheklovni o'chirish",
+    "deleteConfirmDesc": "{{name}} uchun cheklov yozuvi butunlay o'chiriladi (audit jurnali saqlanadi).",
+    "toastCreated": "Kirish cheklandi",
+    "toastDeactivated": "Cheklov olib tashlandi",
+    "toastDeleted": "Cheklov o'chirildi"
+  },
+  "restrictionForm": {
+    "title": "Kirishni cheklash",
+    "titlePreset": "{{name}} uchun kirishni cheklash",
+    "description": "Cheklangan foydalanuvchi tizimga kira olmaydi; kirgan bo'lsa, keyingi so'rovdayoq tanlangan ekranni ko'radi.",
+    "targetType": "Kimga",
+    "target": "Tanlang",
+    "targetStudent": "Talaba",
+    "targetGroup": "Guruh",
+    "targetSupervisor": "Supervizor",
+    "pickStudent": "Talabani qidiring...",
+    "pickGroup": "Guruhni tanlang...",
+    "pickSupervisor": "Supervizorni qidiring...",
+    "targetRequired": "Kimga qo'llanishini tanlang",
+    "mode": "Ekran rejimi",
+    "message": "Foydalanuvchiga xabar",
+    "messagePlaceholder": "Masalan: Dekanatga murojaat qiling",
+    "messageHintMaintenance": "Ixtiyoriy. Berilsa, \"Texnik ishlar\" ekranida standart matn o'rniga chiqadi.",
+    "messageHintRestricted": "Ixtiyoriy. \"Kirish cheklangan\" ekranida sarlavha ostida ko'rinadi.",
+    "endsAt": "Qachongacha",
+    "endsAtHint": "Bo'sh qoldirilsa — olib tashlanguncha. Toshkent vaqti.",
+    "endsAtPast": "Tugash vaqti hozirgi vaqtdan keyin bo'lishi kerak",
+    "note": "Ichki sabab",
+    "notePlaceholder": "Faqat adminlar ko'radi",
+    "noteHint": "Foydalanuvchiga ko'rinmaydi",
+    "submit": "Cheklash"
   }
 }

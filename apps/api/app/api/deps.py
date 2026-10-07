@@ -13,6 +13,7 @@ from app.core.security import TokenType, decode_token
 from app.db.session import SessionDep
 from app.models.enums import UserRole
 from app.models.user import User
+from app.services.access_restriction import raise_if_restricted
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=True)
 
@@ -68,6 +69,10 @@ async def get_current_user(
             detail="Avval parolni o'zgartirishingiz kerak",
             headers={"X-Must-Change-Password": "1"},
         )
+
+    # Super admin qo'ygan shaxsiy/guruh cheklovi: 423 + ekran rejimi (frontend to'liq ekran
+    # ko'rsatadi). /auth/logout va /auth/refresh bu dependency'ni ishlatmaydi — chiqish mumkin.
+    await raise_if_restricted(db, user)
 
     return user
 

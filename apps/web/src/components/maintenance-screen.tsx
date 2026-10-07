@@ -1,4 +1,5 @@
 import { Cog, KeyRound, Settings2, Sparkles, Wrench } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
@@ -7,9 +8,18 @@ import { useAuthStore } from "@/stores/auth";
 type Props = {
   message?: string | null;
   siteName?: string;
+  /** Umumiy profilaktikada super admin uchun /rescue havolasi; shaxsiy cheklovda kerak emas */
+  showRescue?: boolean;
+  /** Qo'shimcha tugmalar (chiqish, qayta tekshirish) */
+  footer?: ReactNode;
 };
 
-export function MaintenanceScreen({ message, siteName = "CHDPU Amaliyot" }: Props) {
+export function MaintenanceScreen({
+  message,
+  siteName = "CHDPU Amaliyot",
+  showRescue = true,
+  footer,
+}: Props) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
 
@@ -125,6 +135,12 @@ export function MaintenanceScreen({ message, siteName = "CHDPU Amaliyot" }: Prop
           <span className="text-white/80">{t("maintenanceScreen.progressHint")}</span>
         </div>
 
+        {footer && (
+          <div className="fade-up mt-6" style={{ animationDelay: "0.7s" }}>
+            {footer}
+          </div>
+        )}
+
         {user && (
           <div
             className="fade-up mt-6 text-xs text-white/60"
@@ -139,13 +155,15 @@ export function MaintenanceScreen({ message, siteName = "CHDPU Amaliyot" }: Prop
       <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-2 px-4 text-center">
         {/* Profilaktikani faqat Super Admin o'chira oladi — u login qilolmay qolmasin.
             /rescue MaintenanceGuard'dan tashqarida, backend esa /auth/* ni ochiq qoldiradi. */}
-        <Link
-          to="/rescue"
-          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-        >
-          <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
-          {t("maintenanceScreen.adminLogin")}
-        </Link>
+        {showRescue && (
+          <Link
+            to="/rescue"
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          >
+            <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("maintenanceScreen.adminLogin")}
+          </Link>
+        )}
         <div className="text-[10px] uppercase tracking-widest text-white/40">
           {t("maintenanceScreen.universityName")}
         </div>

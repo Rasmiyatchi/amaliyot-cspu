@@ -7,8 +7,17 @@ Ubuntu 22.04+ VPS uchun bosqichma-bosqich qo'llanma.
 **Migratsiyalar:** `a1c3e5f7b9d1` (`users.device_info` JSONB) → `b2d4f6a8c0e3`
 (`contracts.contract_template_id` + `variable_values`) → `c3e5a7b9d1f4` (2026-09-27 dan oldin
 yaratilgan, ruxsatlari bo'sh adminlarga barcha modullar qaytariladi — ilgari ro'yxatda ular
-"Standart (barcha)" deb ko'rinib, aslida hech qayerga kira olmasdi). API konteyner ishga
-tushganda `alembic upgrade head` avtomatik bajaradi. HEAD = `c3e5a7b9d1f4`.
+"Standart (barcha)" deb ko'rinib, aslida hech qayerga kira olmasdi) → `d4f6b8c0e2a5`
+(`access_restrictions` — foydalanuvchi/guruh uchun kirishni vaqtincha to'xtatish). API konteyner
+ishga tushganda `alembic upgrade head` avtomatik bajaradi. HEAD = `d4f6b8c0e2a5`.
+
+**Kirish cheklovlari (2026-10-07):** super admin bitta talaba/supervizor yoki butun guruh uchun
+kirishni to'xtatadi (Tizim → Kirish cheklovlari yoki talaba kartasi). Cheklangan foydalanuvchi
+login va har bir so'rovda `423` oladi, ekranida "Texnik ishlar" yoki "Kirish cheklangan" ko'rinadi;
+chiqish mumkin, muddati o'tgach ekran o'zi ochiladi. Super adminga cheklov qo'yilmaydi.
+
+**Xabarlar sahifasi (2026-10-07):** har rol uchun `/…/notifications` — qidiruv, tur va sana
+filtrlari, to'liq tafsilot. Talabalar sarlavhada qo'ng'iroq olishdi.
 
 **Diqqat — portlar:** `docker-compose.prod.yml` yana faqat **127.0.0.1** ga bog'lanadi
 (API `127.0.0.1:8000`, web `127.0.0.1:8080`). aaPanel / host Nginx shu serverning o'zida bo'lsa

@@ -31,6 +31,7 @@ from app.core.security import (
 from app.models.enums import NotificationType, UserRole
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+from app.services.access_restriction import raise_if_restricted
 
 # Parallel refresh (bir nechta tab / bir vaqtda 401 olgan so'rovlar) uchun yengillik:
 # allaqachon almashtirilgan token shu oraliq ichida yana kelsa — xato o'rniga yangi juftlik.
@@ -467,6 +468,9 @@ async def authenticate(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Hisob bloklangan. Admin bilan bog'laning.",
         )
+    # Parol to'g'ri, lekin super admin kirishni vaqtincha to'xtatgan — login sahifasi
+    # "texnik ishlar" yoki "kirish cheklangan" ekranini ko'rsatadi (423)
+    await raise_if_restricted(db, user)
     _clear_failures(username)
     return user
 

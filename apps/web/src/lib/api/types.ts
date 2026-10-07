@@ -503,6 +503,47 @@ export type Notification = {
 
 export type NotificationUnreadCount = { unread: number };
 
+// ─── Kirish cheklovlari ───────────────────────────────────
+export type RestrictionTarget = "user" | "group";
+export type RestrictionMode = "maintenance" | "restricted";
+
+export type AccessRestriction = {
+  id: UUID;
+  target_type: RestrictionTarget;
+  user_id: UUID | null;
+  group_id: UUID | null;
+  target_name: string | null;
+  target_detail: string | null;
+  affected_count: number | null;
+  mode: RestrictionMode;
+  message: string | null;
+  note: string | null;
+  ends_at: ISODateTime | null;
+  is_active: boolean;
+  is_effective: boolean;
+  created_by_name: string | null;
+  created_at: ISODateTime;
+};
+
+export type AccessRestrictionCreate = {
+  target_type: RestrictionTarget;
+  user_id?: UUID;
+  student_id?: UUID;
+  supervisor_id?: UUID;
+  group_id?: UUID;
+  mode: RestrictionMode;
+  message?: string | null;
+  note?: string | null;
+  ends_at?: ISODateTime | null;
+};
+
+export type NotificationSummary = {
+  total: number;
+  unread: number;
+  /** tur → soni */
+  by_type: Partial<Record<NotificationType, number>>;
+};
+
 // ─── Tasks / Journal / LessonAnalysis ────────────────────
 export type Semester = "fall" | "spring";
 

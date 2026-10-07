@@ -1,11 +1,17 @@
 import { HTTPError } from "ky";
-import { Pencil, Smartphone, Trash2 } from "lucide-react";
+import { Ban, Pencil, ShieldOff, Smartphone, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import {
+  RestrictionFormDialog,
+  type RestrictionPreset,
+} from "@/components/admin/access-restrictions/restriction-form-dialog";
 import { CredentialsSection } from "@/components/admin/credentials-section";
+import { formatTashkentDateTime } from "@/components/attendance/attendance-date-utils";
+import { describeRequestError } from "@/components/attendance/request-error";
 import { StudentFormDialog } from "@/components/admin/students/student-form-dialog";
 import { StudentStatusBadge } from "@/components/admin/students/students-status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -26,8 +32,13 @@ import {
   useUpdateStudentCredentials,
 } from "@/lib/api/students";
 import { dateLocale } from "@/i18n";
+import {
+  useAccessRestrictions,
+  useDeactivateAccessRestriction,
+} from "@/lib/api/access-restrictions";
 import type { Student } from "@/lib/api/types";
 import type { DeviceInfo } from "@/lib/device-id";
+import { useAuthStore } from "@/stores/auth";
 
 const EDUCATION_FORM_LABEL = {
   daytime: "studentsStudentDetailDialog.educationForm.daytime",
@@ -206,6 +217,25 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
+  // Kirish cheklovi — faqat super admin ko'radi va boshqaradi
+  const isSuperAdmin = useAuthStore((s) => s.user?.role === "super_admin");
+  const restrictions = useAccessRestrictions(true, isSuperAdmin && !!student);
+  const liftRestriction = useDeactivateAccessRestriction();
+  const [restrictPreset, setRestrictPreset] = useState<RestrictionPreset | null>(null);
+  const activeRestriction = student
+    ? (restrictions.data ?? []).find((r) => r.user_id === student.user_id)
+    : undefined;
+
+  const handleLiftRestriction = async () => {
+    if (!activeRestriction) return;
+    try {
+      await liftRestriction.mutateAsync(activeRestriction.id);
+      toast.success(t("studentsStudentDetailDialog.restrictionLifted"));
+    } catch (e) {
+      toast.error(describeRequestError(e, t));
+    }
+  };
+
   const handleResetDevice = async () => {
     if (!student) return;
     try {
@@ -378,6 +408,69 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
               )}
             </div>
 
+            {isSuperAdmin && (
+              <>
+                <Separator />
+                {/* Tizimga kirish — shaxsiy cheklov */}
+                <div className="space-y-2 min-w-0">
+                  <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <ShieldOff className="h-3.5 w-3.5" />
+                    {t("studentsStudentDetailDialog.accessTitle")}
+                  </h3>
+                  {activeRestriction ? (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                      <div className="min-w-0">
+                        <div className="font-medium text-destructive">
+                          {t("studentsStudentDetailDialog.accessRestricted", {
+                            mode: t(`adminAccessRestrictions.mode.${activeRestriction.mode}`),
+                          })}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {activeRestriction.ends_at
+                            ? t("studentsStudentDetailDialog.accessUntil", {
+                                date: formatTashkentDateTime(
+                                  activeRestriction.ends_at,
+                                  dateLocale(),
+                                ),
+                              })
+                            : t("adminAccessRestrictions.noEnd")}
+                          {activeRestriction.message && ` · ${activeRestriction.message}`}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void handleLiftRestriction()}
+                        disabled={liftRestriction.isPending}
+                      >
+                        {t("studentsStudentDetailDialog.liftRestriction")}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-sm">
+                      <span className="text-muted-foreground">
+                        {t("studentsStudentDetailDialog.accessOpen")}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setRestrictPreset({
+                            kind: "student",
+                            id: student.id,
+                            label: student.full_name,
+                          })
+                        }
+                      >
+                        <Ban className="h-4 w-4 text-destructive" />
+                        {t("studentsStudentDetailDialog.restrictAccess")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
             <div className="text-xs text-muted-foreground">
               {t("studentsStudentDetailDialog.createdAt", {
                 date: new Date(student.created_at).toLocaleString(dateLocale()),
@@ -396,6 +489,11 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
       </DialogContent>
       {student && (
         <>
+          <RestrictionFormDialog
+            open={!!restrictPreset}
+            preset={restrictPreset}
+            onClose={() => setRestrictPreset(null)}
+          />
           <StudentFormDialog
             open={editOpen}
             student={student}

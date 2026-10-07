@@ -75,6 +75,10 @@ const admin = {
     "ContractTemplateEditorPage",
   ),
   admins: lazyPage(() => import("@/routes/dashboard/admin/admins"), "AdminsPage"),
+  accessRestrictions: lazyPage(
+    () => import("@/routes/dashboard/admin/access-restrictions"),
+    "AccessRestrictionsPage",
+  ),
   auditLog: lazyPage(() => import("@/routes/dashboard/admin/audit-log"), "AuditLogPage"),
   systemSettings: lazyPage(
     () => import("@/routes/dashboard/admin/system-settings"),
@@ -100,6 +104,9 @@ const supervisor = {
   reports: lazyPage(() => import("@/routes/dashboard/supervisor/reports"), "SupervisorReportsPage"),
 };
 
+// Xabarlar sahifasi — har rol o'z layout'ida (sidebar saqlanadi)
+const notificationsPage = lazyPage(() => import("@/routes/notifications"), "NotificationsPage");
+
 const publicPages = {
   amaliyot: lazyPage(() => import("@/routes/amaliyot"), "AmaliyotPage"),
   yoriqnoma: lazyPage(() => import("@/routes/yoriqnoma"), "YoriqnomaPage"),
@@ -123,6 +130,7 @@ export const router = createBrowserRouter([
             errorElement,
             children: [
               { index: true, lazy: admin.home },
+              { path: "notifications", lazy: notificationsPage },
 
               // Structure (Akademik tuzilma)
               {
@@ -201,6 +209,7 @@ export const router = createBrowserRouter([
                   { path: "contract-templates", lazy: admin.contractTemplates },
                   { path: "contract-templates/:id/edit", lazy: admin.contractTemplateEditor },
                   { path: "admins", lazy: admin.admins },
+                  { path: "access-restrictions", lazy: admin.accessRestrictions },
                   { path: "audit-log", lazy: admin.auditLog },
                   { path: "system-settings", lazy: admin.systemSettings },
                 ],
@@ -240,6 +249,7 @@ export const router = createBrowserRouter([
             errorElement,
             children: [
               { index: true, lazy: supervisor.dashboard },
+              { path: "notifications", lazy: notificationsPage },
               { path: "regulations", lazy: supervisor.regulations },
               { path: "programs", lazy: supervisor.programs },
               { path: "students", lazy: supervisor.students },
@@ -269,7 +279,10 @@ export const router = createBrowserRouter([
           { path: "login", Component: Login },
           {
             element: <Protected allowed={["student"]} />,
-            children: [{ path: "student", lazy: publicPages.student }],
+            children: [
+              { path: "student", lazy: publicPages.student },
+              { path: "student/notifications", lazy: notificationsPage },
+            ],
           },
           { path: "*", Component: NotFound },
         ],

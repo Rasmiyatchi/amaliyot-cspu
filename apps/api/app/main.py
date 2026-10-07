@@ -3,7 +3,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.logging import setup_logging
 from app.core.maintenance import MaintenanceMiddleware
 from app.db.seed import run_seeds
+from app.services.access_restriction import AccessRestrictedError
 
 
 @asynccontextmanager
@@ -82,6 +83,29 @@ def create_app() -> FastAPI:
             status_code=exc.status_code,
             content={"detail": detail},
             headers=getattr(exc, "headers", None),
+        )
+
+    @app.exception_handler(AccessRestrictedError)
+    async def access_restricted_handler(
+        request: Request, exc: AccessRestrictedError
+    ) -> JSONResponse:
+        """423 Locked — super admin shu foydalanuvchi/guruh uchun kirishni to'xtatgan.
+        Frontend `code` bo'yicha to'liq ekran ("texnik ishlar" yoki "kirish cheklangan")."""
+        from app.core.i18n import pick_lang, translate_detail
+        from app.services.access_restriction import DETAIL_BY_MODE
+
+        lang = pick_lang(request.headers.get("accept-language"))
+        r = exc.restriction
+        mode = r["mode"]
+        return JSONResponse(
+            status_code=status.HTTP_423_LOCKED,
+            content={
+                "detail": translate_detail(DETAIL_BY_MODE[mode], lang),
+                "code": "access_restricted",
+                "mode": mode.value,
+                "message": r.get("message"),
+                "ends_at": r["ends_at"].isoformat() if r.get("ends_at") else None,
+            },
         )
 
     @app.exception_handler(RequestValidationError)

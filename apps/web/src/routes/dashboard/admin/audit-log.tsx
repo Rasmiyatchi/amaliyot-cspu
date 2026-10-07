@@ -75,6 +75,7 @@ const ENTITY_LABEL_KEY: Record<string, string> = {
   organization: "common.organization",
   area: "common.area",
   admin: "adminAuditLog.entity.admin",
+  access_restriction: "adminAuditLog.entity.accessRestriction",
   system_settings: "adminAuditLog.entity.systemSettings",
   database: "adminAuditLog.entity.database",
 };

@@ -31,7 +31,12 @@ export function StudentsPage() {
   const hasAssignmentParam = searchParams.get("has_assignment");
   const [filters, setFilters] = useState<StudentFilters>(() => {
     const hasAssignment = hasAssignmentFromParam(hasAssignmentParam);
-    return hasAssignment === undefined ? {} : { has_assignment: hasAssignment };
+    // ?search= — xabarlar sahifasidan ("Boshqa qurilmadan kirishga urinish") talaba kartasiga
+    const search = searchParams.get("search")?.trim() || undefined;
+    return {
+      ...(hasAssignment === undefined ? {} : { has_assignment: hasAssignment }),
+      ...(search ? { search } : {}),
+    };
   });
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Student | null>(null);

@@ -1,6 +1,7 @@
 """Barcha ORM modellari — Alembic autogenerate ko'rishi uchun shu yerda import qilinadi."""
 
 from app.models.academic import AcademicYear, Department, Direction, Faculty, Group
+from app.models.access_restriction import AccessRestriction
 from app.models.area import Area
 from app.models.attendance import AttendanceDay, AttendanceEvent, AttendanceOverride
 from app.models.audit_log import AuditLog
@@ -23,6 +24,8 @@ from app.models.enums import (
     NotificationType,
     ObjectKind,
     OrganizationKind,
+    RestrictionMode,
+    RestrictionTarget,
     Semester,
     StudentStatus,
     TaskCategory,
@@ -45,6 +48,9 @@ from app.models.task import JournalEntry, LessonAnalysis, Task, TaskTemplate
 from app.models.user import User
 
 __all__ = [
+    "AccessRestriction",
+    "RestrictionMode",
+    "RestrictionTarget",
     "AcademicYear",
     "ApplicationStatus",
     "Area",
