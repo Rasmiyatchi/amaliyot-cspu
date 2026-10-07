@@ -62,7 +62,9 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-[130px_1fr] gap-1 sm:gap-2 text-sm min-w-0">
       <dt className="text-muted-foreground min-w-0 shrink-0">{label}</dt>
-      <dd className="min-w-0 break-words [overflow-wrap:anywhere]">{value ?? <span className="text-muted-foreground">—</span>}</dd>
+      <dd className="min-w-0 break-words [overflow-wrap:anywhere]">
+        {value ?? <span className="text-muted-foreground">—</span>}
+      </dd>
     </div>
   );
 }
@@ -92,7 +94,10 @@ function joinParts(...parts: Array<string | null>): string | null {
 
 type DeviceFact = { key: string; label: string; value: string };
 
-function deviceFacts(info: Partial<DeviceInfo>, t: (key: string, opts?: Record<string, unknown>) => string): DeviceFact[] {
+function deviceFacts(
+  info: Partial<DeviceInfo>,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): DeviceFact[] {
   const facts: Array<[string, string, string | null]> = [
     [
       "platform",
@@ -222,9 +227,14 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
   const restrictions = useAccessRestrictions(true, isSuperAdmin && !!student);
   const liftRestriction = useDeactivateAccessRestriction();
   const [restrictPreset, setRestrictPreset] = useState<RestrictionPreset | null>(null);
+  // Shaxsiy cheklov ustun; bo'lmasa — talaba guruhiga qo'yilgan cheklov (serverdagi tartib bilan bir xil)
   const activeRestriction = student
-    ? (restrictions.data ?? []).find((r) => r.user_id === student.user_id)
+    ? ((restrictions.data ?? []).find((r) => r.user_id === student.user_id) ??
+      (restrictions.data ?? []).find(
+        (r) => r.target_type === "group" && !!student.group_id && r.group_id === student.group_id,
+      ))
     : undefined;
+  const isGroupRestriction = activeRestriction?.target_type === "group";
 
   const handleLiftRestriction = async () => {
     if (!activeRestriction) return;
@@ -278,7 +288,9 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
                   {student.first_name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="truncate font-semibold text-base sm:text-lg">{student.full_name}</div>
+                  <div className="truncate font-semibold text-base sm:text-lg">
+                    {student.full_name}
+                  </div>
                   <div className="mt-0.5 text-xs font-normal text-muted-foreground break-all">
                     ID: {student.hemis_id} · {student.username}
                   </div>
@@ -287,7 +299,9 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
                   <StudentStatusBadge status={student.status} />
                 </div>
               </DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm">{t("studentsStudentDetailDialog.description")}</DialogDescription>
+              <DialogDescription className="text-xs sm:text-sm">
+                {t("studentsStudentDetailDialog.description")}
+              </DialogDescription>
               <div className="flex flex-wrap gap-2 pt-2">
                 <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
                   <Pencil className="h-4 w-4" />
@@ -382,9 +396,7 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
               key={student.id}
               currentUsername={student.username}
               isPending={updateCreds.isPending}
-              onSave={(payload) =>
-                updateCreds.mutateAsync({ id: student.id, data: payload })
-              }
+              onSave={(payload) => updateCreds.mutateAsync({ id: student.id, data: payload })}
             />
 
             <Separator />
@@ -421,9 +433,15 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
                     <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
                       <div className="min-w-0">
                         <div className="font-medium text-destructive">
-                          {t("studentsStudentDetailDialog.accessRestricted", {
-                            mode: t(`adminAccessRestrictions.mode.${activeRestriction.mode}`),
-                          })}
+                          {t(
+                            isGroupRestriction
+                              ? "studentsStudentDetailDialog.accessRestrictedGroup"
+                              : "studentsStudentDetailDialog.accessRestricted",
+                            {
+                              mode: t(`adminAccessRestrictions.mode.${activeRestriction.mode}`),
+                              group: activeRestriction.target_name ?? student.group_name ?? "",
+                            },
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {activeRestriction.ends_at
@@ -442,8 +460,19 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
                         variant="outline"
                         onClick={() => void handleLiftRestriction()}
                         disabled={liftRestriction.isPending}
+                        title={
+                          isGroupRestriction
+                            ? t("studentsStudentDetailDialog.liftGroupHint", {
+                                count: activeRestriction.affected_count ?? 0,
+                              })
+                            : undefined
+                        }
                       >
-                        {t("studentsStudentDetailDialog.liftRestriction")}
+                        {t(
+                          isGroupRestriction
+                            ? "studentsStudentDetailDialog.liftGroupRestriction"
+                            : "studentsStudentDetailDialog.liftRestriction",
+                        )}
                       </Button>
                     </div>
                   ) : (
@@ -494,11 +523,7 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
             preset={restrictPreset}
             onClose={() => setRestrictPreset(null)}
           />
-          <StudentFormDialog
-            open={editOpen}
-            student={student}
-            onClose={() => setEditOpen(false)}
-          />
+          <StudentFormDialog open={editOpen} student={student} onClose={() => setEditOpen(false)} />
           <ConfirmDialog
             open={confirmDelete}
             title={t("studentsStudentDetailDialog.deleteTitle")}

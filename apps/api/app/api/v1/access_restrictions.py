@@ -46,6 +46,7 @@ async def create_restriction(
         request=request,
     )
     await db.commit()
+    svc.invalidate_cache()  # commit'dan keyin — oraliqda keshga tushgan eski holat chiqib ketsin
     return AccessRestrictionRead.model_validate(row)
 
 
@@ -64,6 +65,7 @@ async def deactivate_restriction(
         request=request,
     )
     await db.commit()
+    svc.invalidate_cache()  # commit'dan keyin — oraliqda keshga tushgan eski holat chiqib ketsin
     return AccessRestrictionRead.model_validate(row)
 
 
@@ -83,3 +85,4 @@ async def delete_restriction(
         request=request,
     )
     await db.commit()
+    svc.invalidate_cache()  # commit'dan keyin — oraliqda keshga tushgan eski holat chiqib ketsin

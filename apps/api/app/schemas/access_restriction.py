@@ -3,8 +3,9 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.core.clock import UZB_TZ
 from app.models.enums import RestrictionMode, RestrictionTarget
 
 
@@ -21,6 +22,15 @@ class AccessRestrictionCreate(BaseModel):
     #: Ichki sabab (faqat adminlar)
     note: str | None = Field(None, max_length=1000)
     ends_at: datetime | None = None
+
+    @field_validator("ends_at")
+    @classmethod
+    def _ends_at_aware(cls, v: datetime | None) -> datetime | None:
+        # Vaqt zonasiz qiymat ("2026-10-10T18:00") — Toshkent devor soati deb olinadi;
+        # aks holda aware `now()` bilan solishtirishda TypeError (500) bo'lardi
+        if v is not None and v.tzinfo is None:
+            return v.replace(tzinfo=UZB_TZ)
+        return v
 
     @model_validator(mode="after")
     def _target_matches(self) -> "AccessRestrictionCreate":

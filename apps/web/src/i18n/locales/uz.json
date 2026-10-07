@@ -787,7 +787,8 @@
     "newStudent": "Yangi talaba",
     "selectedCount": "<0>{{n}}</0> ta talaba tanlandi",
     "subtitle": "Excel'dan import, ro'yxat va tafsilotlar",
-    "bulkDeleteTitle": "Talabalarni o'chirish"
+    "bulkDeleteTitle": "Talabalarni o'chirish",
+    "openNotFound": "{{login}} loginli talaba topilmadi"
   },
   "adminSupervisors": {
     "active": "Faol",
@@ -2189,7 +2190,10 @@
     "accessUntil": "{{date}} gacha",
     "restrictAccess": "Kirishni cheklash",
     "liftRestriction": "Cheklovni olib tashlash",
-    "restrictionLifted": "Cheklov olib tashlandi"
+    "restrictionLifted": "Cheklov olib tashlandi",
+    "accessRestrictedGroup": "Guruh cheklovi ({{group}}): {{mode}}",
+    "liftGroupRestriction": "Guruh cheklovini olib tashlash",
+    "liftGroupHint": "Butun guruh uchun ochiladi ({{count}} ta talaba)"
   },
   "studentsStudentFormDialog": {
     "autoCredentialsInfo": "Login va parol avtomatik generatsiya qilinadi (12 raqamli, \"2500\" bilan boshlanadi). Talaba birinchi kirishda parolni o'zgartiradi.",

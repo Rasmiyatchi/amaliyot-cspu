@@ -86,10 +86,12 @@ export function relatedLinkFor(role: UserRole, n: Notification): RelatedLink | n
   switch (role) {
     case "super_admin":
     case "admin":
-      // Boshqa qurilmadan kirish urinishi → talaba kartasi (u yerda qurilmani tozalash bor)
+      // Boshqa qurilmadan kirish urinishi → talaba kartasi (u yerda qurilmani tozalash bor).
+      // /admin/structure/students — StudentsPage'ning o'zi (sidebar yo'li); ?open= kartani ochadi.
       if (data.kind === "device_blocked" && username) {
+        const q = encodeURIComponent(username);
         return {
-          to: `/admin/structure/students?search=${encodeURIComponent(username)}`,
+          to: `/admin/structure/students?search=${q}&open=${q}`,
           labelKey: "notificationsPage.openStudent",
         };
       }
