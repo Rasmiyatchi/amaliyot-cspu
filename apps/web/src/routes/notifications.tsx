@@ -1,4 +1,14 @@
-import { ArrowUpRight, Bell, CheckCheck, Inbox, Loader2, MailOpen, Search, X } from "lucide-react";
+import {
+  ArrowUpRight,
+  Bell,
+  CheckCheck,
+  Inbox,
+  Loader2,
+  MailOpen,
+  Megaphone,
+  Search,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
@@ -220,6 +230,8 @@ export function NotificationsPage() {
   const { data: summary } = useNotificationSummary();
   const markRead = useMarkRead();
   const markAllRead = useMarkAllRead();
+  const role = useAuthStore((s) => s.user?.role);
+  const isAdmin = role === "admin" || role === "super_admin";
 
   const items = data?.items ?? [];
   const selectedId = searchParams.get(ID_PARAM);
@@ -305,18 +317,28 @@ export function NotificationsPage() {
               : t("notificationsPage.subtitle")}
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => void handleMarkAll()}
-          disabled={unread === 0 || markAllRead.isPending}
-        >
-          {markAllRead.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <CheckCheck className="h-4 w-4" />
+        <div className="flex flex-wrap gap-2">
+          {isAdmin && (
+            <Button asChild variant="outline">
+              <Link to="/admin/notifications/sent">
+                <Megaphone className="h-4 w-4" />
+                {t("notificationsPage.broadcastLink")}
+              </Link>
+            </Button>
           )}
-          {t("notificationsPage.markAllRead")}
-        </Button>
+          <Button
+            variant="outline"
+            onClick={() => void handleMarkAll()}
+            disabled={unread === 0 || markAllRead.isPending}
+          >
+            {markAllRead.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCheck className="h-4 w-4" />
+            )}
+            {t("notificationsPage.markAllRead")}
+          </Button>
+        </div>
       </div>
 
       {/* Filtrlar */}

@@ -1,11 +1,12 @@
 """Student service — list + get with filter/joins."""
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -84,6 +85,7 @@ async def list_students(
     status_filter: StudentStatus | None = None,
     search: str | None = None,
     has_assignment: bool | None = None,
+    has_device: bool | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     base = _student_base_select()
 
@@ -109,6 +111,10 @@ async def list_students(
             stmt = stmt.where(Group.academic_year_id == academic_year_id)
         if status_filter:
             stmt = stmt.where(Student.status == status_filter)
+        if has_device is not None:
+            stmt = stmt.where(
+                User.device_id.is_not(None) if has_device else User.device_id.is_(None)
+            )
         if has_assignment is not None:
             asn_subq = (
                 select(1)
@@ -447,3 +453,103 @@ async def delete_student(db: AsyncSession, id_: UUID) -> None:
             status.HTTP_409_CONFLICT,
             "Talabaning amaliyot/topshiriq yozuvlari bor — avval ularni o'chiring",
         ) from e
+
+
+# ─── Ommaviy qurilma uzish ────────────────────────────────
+
+
+def _device_scope_stmt(data: Any, user: User) -> Any:
+    """Qamrovdagi talabalarning `User.id` lari — fakultet admini doirasi bilan."""
+    from app.services.scoping import is_faculty_scoped
+
+    stmt = (
+        select(User.id)
+        .select_from(Student)
+        .join(User, User.id == Student.user_id)
+        .outerjoin(Group, Group.id == Student.group_id)
+        .outerjoin(Direction, Direction.id == Group.direction_id)
+    )
+    faculty_id = data.faculty_id if data.scope == "faculty" else None
+    if is_faculty_scoped(user):
+        # Fakultet admini: "barchasi" ham faqat o'z fakulteti
+        if faculty_id and faculty_id != user.faculty_id:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "Bu amal faqat o'z fakultetingiz doirasida mumkin"
+            )
+        faculty_id = user.faculty_id
+    if faculty_id:
+        stmt = stmt.where(Direction.faculty_id == faculty_id)
+    if data.scope == "group":
+        stmt = stmt.where(Student.group_id == data.group_id)
+    if data.scope == "students":
+        stmt = stmt.where(Student.id.in_(data.student_ids or []))
+    return stmt
+
+
+#: Audit yozuvida saqlanadigan uzilgan foydalanuvchi ID'lari soni
+DEVICE_RESET_SAMPLE = 300
+
+
+async def bulk_reset_devices(db: AsyncSession, data: Any, user: User) -> dict[str, Any]:
+    """Qamrovdagi talabalarning bog'langan qurilmalarini uzadi va sessiyalarini yopadi.
+
+    Minglab talaba bo'lishi mumkin — ID ro'yxatlari Python'ga olinmaydi (asyncpg parametr
+    chegarasi), hammasi subquery orqali bitta UPDATE bilan bajariladi.
+
+    Qaytaradi: {students_total, bound, reset, faculty_name, group_name, user_ids (namuna)}.
+    dry_run=True — faqat hisoblaydi. Commit qilmaydi — caller audit yozib commit qiladi.
+    """
+    from app.models.refresh_token import RefreshToken
+
+    scope_ids = _device_scope_stmt(data, user).subquery()
+    in_scope = User.id.in_(select(scope_ids.c.id))
+    bound_cond = (in_scope, User.device_id.is_not(None))
+
+    students_total = int(
+        (await db.execute(select(func.count()).select_from(scope_ids))).scalar_one()
+    )
+    bound = int((await db.execute(select(func.count(User.id)).where(*bound_cond))).scalar_one())
+    sample = list(
+        (await db.execute(select(User.id).where(*bound_cond).limit(DEVICE_RESET_SAMPLE)))
+        .scalars()
+        .all()
+    )
+
+    faculty_name = group_name = None
+    if data.scope == "faculty" and data.faculty_id:
+        faculty_name = (
+            await db.execute(select(Faculty.name).where(Faculty.id == data.faculty_id))
+        ).scalar_one_or_none()
+    if data.scope == "group" and data.group_id:
+        group_name = (
+            await db.execute(select(Group.name).where(Group.id == data.group_id))
+        ).scalar_one_or_none()
+
+    reset = 0
+    if not data.dry_run and bound:
+        now = datetime.now(UTC)
+        # Avval sessiyalar (shart device_id ga bog'liq — foydalanuvchilar yangilanishidan oldin)
+        await db.execute(
+            update(RefreshToken)
+            .where(
+                RefreshToken.user_id.in_(select(User.id).where(*bound_cond)),
+                RefreshToken.revoked_at.is_(None),
+            )
+            .values(revoked_at=now)
+        )
+        result = await db.execute(
+            update(User)
+            .where(*bound_cond)
+            .values(device_id=None, device_label=None, device_bound_at=None, device_info=None)
+            .execution_options(synchronize_session=False)
+        )
+        reset = int(getattr(result, "rowcount", 0) or 0)
+
+    return {
+        "students_total": students_total,
+        "bound": bound,
+        "reset": reset,
+        "faculty_name": faculty_name,
+        "group_name": group_name,
+        "user_ids": sample,
+    }

@@ -27,6 +27,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserMeResponse,
 )
+from app.services import audit_log as audit
 from app.services.auth import (
     authenticate,
     enforce_device_binding,
@@ -67,13 +68,45 @@ async def login(
     response: Response,
     db: SessionDep,
 ) -> TokenResponse:
-    user = await authenticate(db, data.username, data.password, request)
-    await enforce_device_binding(
+    try:
+        user = await authenticate(db, data.username, data.password, request)
+        await enforce_device_binding(
+            db,
+            user,
+            data.device_id,
+            request,
+            data.device_info.model_dump() if data.device_info else None,
+        )
+    except HTTPException as e:
+        # Muvaffaqiyatsiz urinish ham jurnalga tushadi (parol yozilmaydi). 429 (urinishlar
+        # limiti) yozilmaydi — brute-force paytida jurnalni to'ldirib yubormasin.
+        if e.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            raise
+        await audit.log_committed(
+            db,
+            actor=None,
+            action="login_failed",
+            entity_type="session",
+            entity_id=None,
+            summary=f"Kirish muvaffaqiyatsiz: {data.username.strip()[:64]} — {e.detail}",
+            metadata={
+                "username": data.username.strip()[:64],
+                "reason": str(e.detail),
+                "status": e.status_code,
+                "device_id": (data.device_id or "")[:16] or None,
+            },
+            request=request,
+        )
+        raise
+    await audit.log(
         db,
-        user,
-        data.device_id,
-        request,
-        data.device_info.model_dump() if data.device_info else None,
+        actor=user,
+        action="login",
+        entity_type="session",
+        entity_id=user.id,
+        summary=f"Tizimga kirdi: {user.username}",
+        metadata={"role": user.role.value, "device": user.device_label},
+        request=request,
     )
     access, refresh, ttl = await issue_tokens_for(db, user, request)
     _set_refresh_cookie(response, refresh)

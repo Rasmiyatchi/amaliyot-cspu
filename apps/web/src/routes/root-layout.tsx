@@ -1,5 +1,4 @@
 import { LogOut } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -7,15 +6,16 @@ import { toast } from "sonner";
 import { InAppBrowserWarning } from "@/components/in-app-browser-warning";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { NotificationsBell } from "@/components/notifications-bell";
-import { ProfileDialog } from "@/components/profile-dialog";
 import { NavigationProgress } from "@/components/route-loading";
 import { RouteTransition } from "@/components/route-transition";
+import { StudentMobileNav } from "@/components/student/student-mobile-nav";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useBootstrap } from "@/hooks/use-bootstrap";
 import { logout } from "@/lib/auth-api";
-import { landingPathFor } from "@/lib/routing";
+import { landingPathFor, profilePathFor } from "@/lib/routing";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
 
 export function RootLayout() {
@@ -24,7 +24,6 @@ export function RootLayout() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const location = useLocation();
-  const [profileOpen, setProfileOpen] = useState(false);
 
   async function handleLogout() {
     await logout();
@@ -37,10 +36,14 @@ export function RootLayout() {
     ["/", "/amaliyot", "/yoriqnoma", "/faq", "/login"].includes(
       location.pathname
     );
+  // Telefonda talaba bo'limi pastki navigatsiya bilan (Bosh sahifa · Xabarlar · Profil)
+  const showStudentNav =
+    user?.role === "student" &&
+    (location.pathname === "/student" || location.pathname.startsWith("/student/"));
 
   return (
     <MaintenanceGuard>
-      <div className="min-h-screen bg-background">
+      <div className={cn("min-h-screen bg-background", showStudentNav && "pb-16 md:pb-0")}>
         <NavigationProgress />
         {/* Telegram/Instagram ichidagi brauzer — GPS va qurilma bog'lash ishlamaydi */}
         <InAppBrowserWarning />
@@ -64,9 +67,8 @@ export function RootLayout() {
                 {user && (
                   <>
                     <NotificationsBell />
-                    <button
-                      type="button"
-                      onClick={() => setProfileOpen(true)}
+                    <Link
+                      to={profilePathFor(user.role)}
                       className="flex items-center gap-2 rounded-md px-1.5 sm:px-2 py-1 transition-colors hover:bg-muted"
                       title={t("rootLayout.myProfile")}
                       aria-label={t("rootLayout.myProfile")}
@@ -90,11 +92,12 @@ export function RootLayout() {
                           (user.first_name[0] ?? "?").toUpperCase()
                         )}
                       </div>
-                    </button>
+                    </Link>
+                    {/* Telefonda chiqish, til va mavzu "Profilim" sahifasida — sarlavha siqilmasin */}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 sm:h-9 sm:w-9"
+                      className="hidden h-8 w-8 sm:inline-flex sm:h-9 sm:w-9"
                       onClick={handleLogout}
                       aria-label={t("rootLayout.logout")}
                       title={t("rootLayout.logout")}
@@ -103,8 +106,10 @@ export function RootLayout() {
                     </Button>
                   </>
                 )}
-                <LanguageSwitcher />
-                <ThemeToggle />
+                <div className={cn("flex items-center gap-1 sm:gap-2.5", user && "hidden sm:flex")}>
+                  <LanguageSwitcher />
+                  <ThemeToggle />
+                </div>
               </div>
             </div>
           </header>
@@ -113,7 +118,7 @@ export function RootLayout() {
         <RouteTransition>
           <Outlet />
         </RouteTransition>
-        <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
+        {showStudentNav && <StudentMobileNav />}
       </div>
     </MaintenanceGuard>
   );

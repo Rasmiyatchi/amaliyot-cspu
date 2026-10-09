@@ -3,6 +3,7 @@ import {
   CalendarCheck,
   CheckCircle2,
   FileCheck2,
+  Megaphone,
   ShieldCheck,
   XCircle,
   type LucideIcon,
@@ -24,6 +25,7 @@ export const NOTIFICATION_TYPES: readonly NotificationType[] = [
   "analysis_rejected",
   "contract_generated",
   "contract_activated",
+  "broadcast",
 ];
 
 export const NOTIFICATION_ICONS: Record<NotificationType, LucideIcon> = {
@@ -37,6 +39,7 @@ export const NOTIFICATION_ICONS: Record<NotificationType, LucideIcon> = {
   attendance_override: ShieldCheck,
   contract_generated: FileCheck2,
   contract_activated: FileCheck2,
+  broadcast: Megaphone,
   generic: BookOpen,
 };
 
@@ -51,6 +54,7 @@ export const NOTIFICATION_ACCENTS: Record<NotificationType, string> = {
   attendance_override: "text-primary",
   contract_generated: "text-info",
   contract_activated: "text-success",
+  broadcast: "text-primary",
   generic: "text-muted-foreground",
 };
 
@@ -64,6 +68,7 @@ export const NOTIFICATION_DATA_FIELDS: readonly {
   labelKey: string;
   mono?: boolean;
 }[] = [
+  { key: "sender", labelKey: "notificationsPage.fields.sender" },
   { key: "username", labelKey: "notificationsPage.fields.username", mono: true },
   { key: "attempted_device", labelKey: "notificationsPage.fields.attemptedDevice" },
   { key: "attempted_ip", labelKey: "notificationsPage.fields.attemptedIp", mono: true },
@@ -82,10 +87,18 @@ export function relatedLinkFor(role: UserRole, n: Notification): RelatedLink | n
   const data = n.data ?? {};
   const username = str(data.username);
   const assignmentId = str(data.assignment_id);
+  const broadcastId = str(data.broadcast_id);
 
   switch (role) {
     case "super_admin":
     case "admin":
+      // Ommaviy xabar → yuborilganlar tarixidagi yozuv (kimga, nechta)
+      if (data.kind === "broadcast" && broadcastId) {
+        return {
+          to: `/admin/notifications/sent?id=${encodeURIComponent(broadcastId)}`,
+          labelKey: "notificationsPage.openBroadcast",
+        };
+      }
       // Boshqa qurilmadan kirish urinishi → talaba kartasi (u yerda qurilmani tozalash bor).
       // /admin/structure/students — StudentsPage'ning o'zi (sidebar yo'li); ?open= kartani ochadi.
       if (data.kind === "device_blocked" && username) {

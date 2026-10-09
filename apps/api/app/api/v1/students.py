@@ -11,6 +11,8 @@ from app.db.session import SessionDep
 from app.models.enums import StudentStatus, UserRole
 from app.schemas.common import CredentialsUpdate, Paginated
 from app.schemas.student import (
+    DeviceResetRequest,
+    DeviceResetResult,
     StudentBulkDeleteError,
     StudentBulkDeleteRequest,
     StudentBulkDeleteResult,
@@ -20,6 +22,7 @@ from app.schemas.student import (
 )
 from app.services import audit_log as audit
 from app.services.scoping import assert_faculty_scope, group_faculty_id, is_faculty_scoped
+from app.services.student import bulk_reset_devices as svc_bulk_reset_devices
 from app.services.student import create_student as svc_create_student
 from app.services.student import delete_student as svc_delete_student
 from app.services.student import get_student as svc_get_student
@@ -55,6 +58,7 @@ async def list_students(
     academic_year_id: UUID | None = None,
     status_filter: StudentStatus | None = Query(None, alias="status"),
     has_assignment: bool | None = Query(None),
+    has_device: bool | None = Query(None, description="Qurilmasi bog'langanlar"),
     search: str | None = Query(None, min_length=1, max_length=100),
 ) -> Paginated[StudentRead]:
     if user.role == UserRole.ADMIN and user.faculty_id:
@@ -72,6 +76,7 @@ async def list_students(
         status_filter,
         search,
         has_assignment,
+        has_device,
     )
     return Paginated(
         items=[StudentRead.model_validate(i) for i in items],
@@ -252,7 +257,81 @@ async def update_student_credentials(
     response_model=StudentRead,
     summary="Admin: talabaning bog'langan qurilmasini o'chirish",
 )
-async def reset_student_device(id_: UUID, db: SessionDep, user: RequireStructure) -> StudentRead:
+async def reset_student_device(
+    id_: UUID, request: Request, db: SessionDep, user: RequireStructure
+) -> StudentRead:
     student = await svc_get_student(db, id_)
     _check_faculty_access(user, student, "tahrirlash")
-    return StudentRead.model_validate(await svc_reset_device(db, id_))
+    updated = await svc_reset_device(db, id_)
+    await audit.log(
+        db,
+        actor=user,
+        action="device_reset",
+        entity_type="student",
+        entity_id=id_,
+        summary=f"Qurilma uzildi: {student.get('full_name') or id_}",
+        metadata={
+            "affected_count": 1,
+            "result": "ok",
+            "before": {"device_label": student.get("device_label")},
+            "username": student.get("username"),
+        },
+        request=request,
+    )
+    await db.commit()
+    return StudentRead.model_validate(updated)
+
+
+@router.post(
+    "/bulk-reset-device",
+    response_model=DeviceResetResult,
+    summary="Admin: qurilmalarni ommaviy uzish (barchasi / fakultet / guruh / tanlangan)",
+)
+async def bulk_reset_devices(
+    payload: DeviceResetRequest,
+    request: Request,
+    db: SessionDep,
+    user: RequireStructure,
+) -> DeviceResetResult:
+    """`dry_run=true` — faqat nechta talabada qurilma bog'langanini hisoblaydi.
+    Qo'llashda `confirm=true` shart. Uzilgan talabalar keyingi kirishda qayta
+    autentifikatsiya qiladi (sessiyalar yopiladi); amal audit jurnaliga yoziladi."""
+    if payload.scope == "group" and payload.group_id:
+        assert_faculty_scope(user, await group_faculty_id(db, payload.group_id))
+    res = await svc_bulk_reset_devices(db, payload, user)
+    if not payload.dry_run:
+        await audit.log(
+            db,
+            actor=user,
+            action="device_reset",
+            entity_type="student",
+            entity_id=None,
+            summary=(
+                f"Qurilmalar ommaviy uzildi: {res['reset']} ta "
+                f"({payload.scope}{' · ' + res['group_name'] if res.get('group_name') else ''}"
+                f"{' · ' + res['faculty_name'] if res.get('faculty_name') else ''})"
+            ),
+            metadata={
+                "affected_count": res["reset"],
+                "students_total": res["students_total"],
+                "bound": res["bound"],
+                "result": "ok",
+                "scope": payload.scope,
+                "faculty_id": payload.faculty_id,
+                "group_id": payload.group_id,
+                "student_ids": payload.student_ids,
+                "user_ids": res["user_ids"],
+                "truncated": res["bound"] > len(res["user_ids"]),
+            },
+            request=request,
+        )
+        await db.commit()
+    return DeviceResetResult(
+        dry_run=payload.dry_run,
+        scope=payload.scope,
+        students_total=res["students_total"],
+        bound=res["bound"],
+        reset=res["reset"],
+        faculty_name=res.get("faculty_name"),
+        group_name=res.get("group_name"),
+    )

@@ -5,6 +5,7 @@ from app.models.access_restriction import AccessRestriction
 from app.models.area import Area
 from app.models.attendance import AttendanceDay, AttendanceEvent, AttendanceOverride
 from app.models.audit_log import AuditLog
+from app.models.broadcast import Broadcast
 from app.models.contract import Contract
 from app.models.contract_template import ContractTemplateDoc
 from app.models.document import Document
@@ -61,6 +62,7 @@ __all__ = [
     "AttendanceEventKind",
     "AttendanceOverride",
     "AuditLog",
+    "Broadcast",
     "Contract",
     "ContractStatus",
     "ContractTemplate",

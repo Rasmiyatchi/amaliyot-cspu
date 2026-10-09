@@ -227,6 +227,7 @@ class NotificationType(StrEnum):
     ATTENDANCE_OVERRIDE = "attendance_override"
     CONTRACT_GENERATED = "contract_generated"
     CONTRACT_ACTIVATED = "contract_activated"
+    BROADCAST = "broadcast"  # admin ommaviy xabari
     GENERIC = "generic"
 
 

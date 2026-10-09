@@ -384,6 +384,23 @@ EXACT: dict[str, str] = {
         "Время окончания должно быть позже текущего"
     ),
     "Sana oralig'i noto'g'ri": "Неверный диапазон дат",
+    # ── TZ 08.10.2026: qayta biriktirish, ommaviy xabar, qurilma uzish ──────
+    "Qabul qiluvchi topilmadi — auditoriyani tekshiring": (
+        "Получатели не найдены — проверьте аудиторию"
+    ),
+    "Oldindan ko'rish uchun /preview": "Для предпросмотра используйте /preview",
+    "Yozishda xatolik — ma'lumotlar bazasi rad etdi": "Ошибка записи — база данных отклонила",
+    "Qamrov tanlanmagan: talaba, guruh yoki fakultet ko'rsating": (
+        "Область не выбрана: укажите студента, группу или факультет"
+    ),
+    "Qamrov tanlanmagan: biriktirishlar yoki guruh ko'rsating": (
+        "Область не выбрана: укажите прикрепления или группу"
+    ),
+    "O'zgartiriladigan maydon tanlanmagan": "Не выбрано поле для изменения",
+    "Fakultet tanlanmagan": "Факультет не выбран",
+    "Guruh tanlanmagan": "Группа не выбрана",
+    "Talabalar tanlanmagan": "Студенты не выбраны",
+    "Amalni tasdiqlang (confirm=true)": "Подтвердите действие (confirm=true)",
     "Shablon shartnomalarda ishlatilgan — o'chirib bo'lmaydi. Uni arxivlang.": (
         "Шаблон используется в договорах — удалить нельзя. Переведите его в архив."
     ),
@@ -632,4 +649,9 @@ PATTERNS: list[tuple[str, str]] = [
         "Недопустимое значение для «{label}»: {value}",
     ),
     (r"Tashqi URL'lar taqiqlangan: (?P<url>.+)", "Внешние URL запрещены: {url}"),
+    # ── TZ 08.10.2026 ──────────────────────────────────────────────────────
+    (
+        r"Bir so'rovda ko'pi bilan (?P<n>\d+) ta biriktirish — qamrovni toraytiring",
+        "Не более {n} прикреплений за один запрос — сузьте область",
+    ),
 ]

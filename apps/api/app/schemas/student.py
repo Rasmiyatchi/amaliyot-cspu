@@ -1,10 +1,10 @@
 """Student schemas — admin barcha maydonlarni ko'radi, hech narsa yashirilmaydi."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from app.models.enums import DegreeType, EducationForm, Gender, StudentStatus
 
@@ -136,3 +136,47 @@ class StudentUpdate(BaseModel):
     education_form: EducationForm | None = None
     degree_type: DegreeType | None = None
     status: StudentStatus | None = None
+
+
+# ─── Ommaviy qurilma uzish (TZ 08.10.2026, 4-bo'lim) ──────────
+
+DeviceResetScope = Literal["all", "faculty", "group", "students"]
+
+
+class DeviceResetRequest(BaseModel):
+    """Bog'langan qurilmalarni ommaviy uzish. `dry_run=true` — faqat sonini hisoblash.
+
+    Qo'llashda `confirm=true` majburiy — admin tasdig'isiz bajarilmaydi.
+    """
+
+    scope: DeviceResetScope
+    faculty_id: UUID | None = None
+    group_id: UUID | None = None
+    student_ids: list[UUID] | None = Field(None, max_length=1000)
+    confirm: bool = False
+    dry_run: bool = True
+
+    @model_validator(mode="after")
+    def _target(self) -> "DeviceResetRequest":
+        if self.scope == "faculty" and not self.faculty_id:
+            raise ValueError("Fakultet tanlanmagan")
+        if self.scope == "group" and not self.group_id:
+            raise ValueError("Guruh tanlanmagan")
+        if self.scope == "students" and not self.student_ids:
+            raise ValueError("Talabalar tanlanmagan")
+        if not self.dry_run and not self.confirm:
+            raise ValueError("Amalni tasdiqlang (confirm=true)")
+        return self
+
+
+class DeviceResetResult(BaseModel):
+    dry_run: bool
+    scope: DeviceResetScope
+    #: Qamrovdagi talabalar soni
+    students_total: int
+    #: Shulardan qurilmasi bog'langanlari (uziladiganlar)
+    bound: int
+    #: Haqiqatda uzilganlar (dry_run'da 0)
+    reset: int
+    faculty_name: str | None = None
+    group_name: str | None = None

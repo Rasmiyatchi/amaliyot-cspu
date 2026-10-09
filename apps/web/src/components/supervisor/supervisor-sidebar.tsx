@@ -102,8 +102,8 @@ export function SupervisorSidebar({ inSheet = false }: { inSheet?: boolean } = {
     <TooltipProvider delayDuration={150}>
       <aside
         className={cn(
-          "h-screen flex-col border-r border-slate-200 bg-white text-slate-800 transition-[width] duration-200 select-none dark:border-slate-800 dark:bg-[#0f172a] dark:text-slate-200",
-          inSheet ? "flex w-64 border-r-0" : "hidden md:flex",
+          "flex-col border-r border-slate-200 bg-white text-slate-800 transition-[width] duration-200 select-none dark:border-slate-800 dark:bg-[#0f172a] dark:text-slate-200",
+          inSheet ? "flex h-full w-64 border-r-0" : "hidden h-screen md:flex",
           !inSheet && (collapsed ? "w-16" : "w-64"),
         )}
       >

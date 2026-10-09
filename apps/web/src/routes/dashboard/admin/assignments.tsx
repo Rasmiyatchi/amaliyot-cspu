@@ -1,5 +1,14 @@
-import { ChevronLeft, ChevronRight, ClipboardList, Download, Loader2, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Download,
+  Loader2,
+  Pencil,
+  Plus,
+  Repeat,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,10 +18,15 @@ import { dateLocale } from "@/i18n";
 import { useDebounce } from "@/hooks/use-debounce";
 
 import { AssignmentDetailDialog } from "@/components/admin/assignments/assignment-detail-dialog";
+import {
+  BulkEditDialog,
+  type BulkEditScope,
+} from "@/components/admin/assignments/bulk-edit-dialog";
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
 import { AssignmentWizard } from "@/components/admin/assignments/assignment-wizard";
 import { GroupSearchSelect } from "@/components/admin/assignments/group-search-select";
 import { OrganizationSearchSelect } from "@/components/admin/assignments/organization-search-select";
+import { ReassignDialog } from "@/components/admin/assignments/reassign-dialog";
 import { SupervisorSearchSelect } from "@/components/admin/assignments/supervisor-search-select";
 import { OverdueTasksCard } from "@/components/overdue-tasks-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -68,6 +82,10 @@ export function AssignmentsPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [selected, setSelected] = useState<PracticeAssignment | null>(null);
   const pageSize = 20;
+  // Ommaviy amallar: tanlangan biriktirishlar (sahifalar bo'ylab saqlanadi, filtr o'zgarsa tozalanadi)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkScope, setBulkScope] = useState<BulkEditScope | null>(null);
+  const [reassignOpen, setReassignOpen] = useState(false);
   const academicYearsQ = useAcademicYears();
   const directionsQ = useDirections(undefined, 1, 200);
 
@@ -123,6 +141,43 @@ export function AssignmentsPage() {
   const setFilter = (patch: Partial<AssignmentFilters>) => {
     setFilters((f) => ({ ...f, ...patch }));
     setPage(1);
+    setSelectedIds(new Set());
+  };
+
+  const pageIds = useMemo(() => (data?.items ?? []).map((a) => a.id), [data]);
+  const selectedOnPage = pageIds.filter((id) => selectedIds.has(id)).length;
+  const allOnPageSelected = pageIds.length > 0 && selectedOnPage === pageIds.length;
+  const toggleOne = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const togglePage = (checked: boolean) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of pageIds) {
+        if (checked) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+
+  const openBulkForSelection = () =>
+    setBulkScope({
+      assignment_ids: [...selectedIds] as UUID[],
+      label: t("adminAssignments.bulk.selectedLabel", { n: selectedIds.size }),
+    });
+  const openBulkForGroup = () => {
+    if (!filters.group_id) return;
+    setBulkScope({
+      group_id: filters.group_id,
+      academic_year_id: filters.academic_year_id,
+      semester: filters.semester,
+      practice_type_id: filters.practice_type_id,
+      label: t("adminAssignments.bulk.groupLabel"),
+    });
   };
 
   // "Tozalash" — istalgan filtr (qidiruv ham) faol bo'lsa ko'rinadi; holat tabi saqlanadi
@@ -158,6 +213,16 @@ export function AssignmentsPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setReassignOpen(true)}>
+            <Repeat className="h-4 w-4" />
+            {t("adminAssignments.bulk.reassign")}
+          </Button>
+          {filters.group_id && (
+            <Button variant="outline" onClick={openBulkForGroup}>
+              <Pencil className="h-4 w-4" />
+              {t("adminAssignments.bulk.editGroup")}
+            </Button>
+          )}
           <Button variant="outline" onClick={handleExport} disabled={exporting}>
             {exporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -340,12 +405,46 @@ export function AssignmentsPage() {
         </Alert>
       )}
 
+      {selectedIds.size > 0 && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+          <span className="text-sm font-medium">
+            {t("adminAssignments.bulk.selected", { n: selectedIds.size })}
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setReassignOpen(true)}>
+              <Repeat className="h-4 w-4" />
+              {t("adminAssignments.bulk.reassign")}
+            </Button>
+            <Button size="sm" onClick={openBulkForSelection}>
+              <Pencil className="h-4 w-4" />
+              {t("adminAssignments.bulk.edit")}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {data && (
         <>
           <div className="rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[44px]">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 cursor-pointer accent-primary"
+                      aria-label={t("studentsStudentsTable.selectAllOnPage")}
+                      checked={allOnPageSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = selectedOnPage > 0 && !allOnPageSelected;
+                      }}
+                      disabled={pageIds.length === 0}
+                      onChange={(e) => togglePage(e.target.checked)}
+                    />
+                  </TableHead>
                   <TableHead>{t("common.student")}</TableHead>
                   <TableHead>{t("common.practiceType")}</TableHead>
                   <TableHead>{t("adminAssignments.columns.object")}</TableHead>
@@ -357,7 +456,7 @@ export function AssignmentsPage() {
               <TableBody>
                 {data.items.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="p-0">
+                    <TableCell colSpan={7} className="p-0">
                       <EmptyState
                         icon={ClipboardList}
                         title={t("adminAssignments.emptyTitle")}
@@ -381,6 +480,20 @@ export function AssignmentsPage() {
                     tabIndex={0}
                     className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
+                    <TableCell
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 cursor-pointer accent-primary"
+                        aria-label={t("studentsStudentsTable.selectRowNamed", {
+                          name: a.student_full_name,
+                        })}
+                        checked={selectedIds.has(a.id)}
+                        onChange={() => toggleOne(a.id)}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="font-medium">{a.student_full_name}</div>
                       <div className="text-xs text-muted-foreground">
@@ -453,6 +566,24 @@ export function AssignmentsPage() {
       )}
 
       <AssignmentWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
+      <BulkEditDialog
+        open={!!bulkScope}
+        scope={bulkScope}
+        onClose={() => setBulkScope(null)}
+        onApplied={() => setSelectedIds(new Set())}
+      />
+      <ReassignDialog
+        open={reassignOpen}
+        onClose={() => setReassignOpen(false)}
+        selectedIds={[...selectedIds] as UUID[]}
+        defaults={{
+          academic_year_id: filters.academic_year_id,
+          semester: filters.semester,
+          practice_type_id: filters.practice_type_id,
+          group_id: filters.group_id,
+        }}
+        onApplied={() => setSelectedIds(new Set())}
+      />
       <AssignmentDetailDialog
         assignment={selected}
         onClose={() => setSelected(null)}

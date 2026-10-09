@@ -1,20 +1,23 @@
 import { Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { CommandPalette } from "@/components/admin/command-palette";
 import { MaintenanceGuard } from "@/components/maintenance-guard";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { NavigationProgress } from "@/components/route-loading";
 import { RouteTransition } from "@/components/route-transition";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { useAuthStore } from "@/stores/auth";
 
 export function AdminLayout() {
   const { t } = useTranslation();
   const [navOpen, setNavOpen] = useState(false);
   const location = useLocation();
+  const user = useAuthStore((s) => s.user);
 
   // Sahifa almashganda drawer o'zi yopilsin
   useEffect(() => {
@@ -49,7 +52,22 @@ export function AdminLayout() {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="font-semibold">{t("adminAdminLayout.brand")}</span>
+            <span className="min-w-0 flex-1 truncate font-semibold">
+              {t("adminAdminLayout.brand")}
+            </span>
+            <NotificationsBell />
+            <Link
+              to="/admin/profile"
+              className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary"
+              aria-label={t("rootLayout.myProfile")}
+              title={t("rootLayout.myProfile")}
+            >
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                (user?.first_name?.[0] ?? "?").toUpperCase()
+              )}
+            </Link>
           </header>
 
           <main className="flex-1 overflow-auto">
