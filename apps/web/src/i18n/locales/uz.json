@@ -174,7 +174,9 @@
       "system": "Tizim",
       "taskTemplates": "Topshiriqlar",
       "notifications": "Xabarlar",
-      "accessRestrictions": "Kirish cheklovlari"
+      "accessRestrictions": "Kirish cheklovlari",
+      "broadcasts": "Ommaviy xabarlar",
+      "devices": "Bog'langan qurilmalar"
     },
     "searchHint": "Qidiruv...",
     "brandTitle": "CHDPU AMALIYOT",
@@ -295,7 +297,15 @@
       "completed": "Tugatilgan",
       "draft": "Yangi"
     },
-    "title": "Amaliyotlar Monitoringi"
+    "title": "Amaliyotlar Monitoringi",
+    "bulk": {
+      "selectedLabel": "{{n}} ta tanlangan biriktirish",
+      "groupLabel": "Tanlangan guruh (joriy filtrlar bilan)",
+      "reassign": "Qayta biriktirish",
+      "editGroup": "Guruhni tahrirlash",
+      "selected": "{{n}} ta tanlandi",
+      "edit": "Tahrirlash"
+    }
   },
   "adminAttendance": {
     "allDirections": "Barcha yo'nalishlar",
@@ -374,7 +384,12 @@
       "bulkUpdate": "Ommaviy o'zgartirdi",
       "revert": "Qaytardi",
       "grade": "Baholadi",
-      "finalize": "Yakunladi"
+      "finalize": "Yakunladi",
+      "reassign": "Qayta biriktirdi",
+      "broadcast": "Xabar yubordi",
+      "deviceReset": "Qurilmani uzdi",
+      "login": "Tizimga kirdi",
+      "loginFailed": "Kirish xatosi"
     },
     "actionColumn": "Amal",
     "actionFilter": "Amal turi",
@@ -394,14 +409,36 @@
       "systemSettings": "Sozlama",
       "taskTemplate": "Topshiriq shabloni",
       "database": "Ma'lumotlar bazasi",
-      "accessRestriction": "Kirish cheklovi"
+      "accessRestriction": "Kirish cheklovi",
+      "broadcast": "Ommaviy xabar",
+      "session": "Kirish (sessiya)",
+      "auditLog": "Audit jurnali"
     },
     "entityColumn": "Entity",
     "entityFilter": "Entity turi",
     "subtitle": "Adminlar va super adminlarning muhim amallari tarixi",
     "timeColumn": "Vaqt",
     "title": "Audit log",
-    "whoColumn": "Kim"
+    "whoColumn": "Kim",
+    "affected": "Ta'sir",
+    "affectedN": "Ta'sir: {{n}}",
+    "result": {
+      "ok": "muvaffaqiyatli",
+      "partial": "qisman (xatolar bor)"
+    },
+    "userAgent": "Brauzer",
+    "changesTitle": "O'zgarishlar (eski → yangi)",
+    "itemsTitle": "Elementlar ({{n}})",
+    "itemFailed": "Xato",
+    "rawData": "To'liq ma'lumot (JSON)",
+    "moreChanges": "yana {{n}} ta o'zgarish",
+    "exportExcel": "Excel'ga eksport",
+    "exported": "Excel fayl yuklab olindi",
+    "immutableNote": "Jurnal faqat o'qish uchun: yozuvlarni tahrirlash yoki o'chirish mumkin emas (ma'lumotlar bazasi darajasida himoyalangan).",
+    "searchPlaceholder": "Tafsilot yoki ism bo'yicha",
+    "from": "Dan",
+    "to": "Gacha",
+    "hideLogins": "Muvaffaqiyatli kirishlarni yashirish"
   },
   "adminCommandPalette": {
     "footerNavigate": "o'tish",
@@ -1001,7 +1038,8 @@
     "tasksCreated": "{{n}} ta topshiriq yaratildi",
     "toastCancelled": "Amaliyot bekor qilindi",
     "toastStarted": "Amaliyot boshlandi",
-    "startConfirmDescription": "Amaliyot faol holatga o'tadi — talaba davomatni (kelish/ketish) belgilay boshlaydi."
+    "startConfirmDescription": "Amaliyot faol holatga o'tadi — talaba davomatni (kelish/ketish) belgilay boshlaydi.",
+    "weekdaysLabel": "Majburiy kunlar"
   },
   "assignmentsAssignmentWizard": {
     "areaPlaceholder": "Hudud...",
@@ -3230,7 +3268,8 @@
       "attemptedDevice": "Urinilgan qurilma",
       "attemptedIp": "IP manzil",
       "boundDevice": "Bog'langan qurilma",
-      "userAgent": "Brauzer (user-agent)"
+      "userAgent": "Brauzer (user-agent)",
+      "sender": "Yuboruvchi"
     },
     "types": {
       "generic": "Tizim xabari",
@@ -3243,8 +3282,11 @@
       "analysis_approved": "Dars tahlili tasdiqlandi",
       "analysis_rejected": "Dars tahlili rad etildi",
       "contract_generated": "Shartnoma yaratildi",
-      "contract_activated": "Shartnoma imzolandi"
-    }
+      "contract_activated": "Shartnoma imzolandi",
+      "broadcast": "Ommaviy xabar"
+    },
+    "openBroadcast": "Yuborilgan xabarni ochish",
+    "broadcastLink": "Ommaviy xabar yuborish"
   },
   "restrictedScreen": {
     "title": "Sizga kirish cheklangan",
@@ -3322,5 +3364,182 @@
     "notePlaceholder": "Faqat adminlar ko'radi",
     "noteHint": "Foydalanuvchiga ko'rinmaydi",
     "submit": "Cheklash"
+  },
+  "studentMobileNav": {
+    "label": "Asosiy navigatsiya",
+    "home": "Bosh sahifa",
+    "notifications": "Xabarlar",
+    "profile": "Profilim"
+  },
+  "profilePage": {
+    "settings": "Sozlamalar",
+    "theme": "Ko'rinish (mavzu)"
+  },
+  "auditChanges": {
+    "fields": {
+      "requiredWeekdays": "Majburiy kunlar",
+      "supervisor": "Supervizor",
+      "startDate": "Boshlanish sanasi",
+      "endDate": "Tugash sanasi",
+      "semester": "Semestr",
+      "status": "Holat",
+      "organization": "Tashkilot",
+      "area": "Hudud",
+      "cancelledReason": "Bekor qilish sababi",
+      "notes": "Izoh",
+      "device": "Qurilma",
+      "practiceType": "Amaliyot turi",
+      "academicYear": "O'quv yili",
+      "student": "Talaba"
+    }
+  },
+  "bulkEdit": {
+    "title": "Biriktirishni tahrirlash",
+    "description": "o'zgartiriladigan maydonlarni belgilang",
+    "fields": {
+      "weekdays": "Majburiy kunlar",
+      "supervisor": "Supervizor",
+      "startDate": "Boshlanish sanasi",
+      "endDate": "Tugash sanasi"
+    },
+    "weekdaysRequired": "Kamida bitta kun tanlang",
+    "supervisorHint": "Bo'sh qoldirilsa supervizor olib tashlanadi",
+    "supervisorPlaceholder": "Yangi supervizorni tanlang",
+    "supervisorNone": "— Supervizorsiz",
+    "datesInvalid": "Tugash sanasi boshlanish sanasidan oldin bo'lmasin",
+    "safetyNote": "Faqat faol (qoralama va jarayondagi) biriktirishlar o'zgaradi. Davomat, topshiriq va hisobotlar saqlanib qoladi; har bir o'zgarish eski va yangi qiymati bilan audit jurnaliga yoziladi.",
+    "summary": {
+      "total": "Jami: {{n}}",
+      "willChange": "O'zgaradi: {{n}}",
+      "updated": "Saqlandi: {{n}}",
+      "unchanged": "O'zgarishsiz: {{n}}",
+      "failed": "Xato: {{n}}"
+    },
+    "nothingFound": "Mos faol biriktirish topilmadi",
+    "noDiff": "o'zgarishsiz",
+    "preview": "Oldindan ko'rish",
+    "apply": "Tasdiqlash va saqlash ({{n}})",
+    "toastApplied": "{{n}} ta biriktirish yangilandi",
+    "toastPartial": "{{n}} ta yangilandi, {{failed}} ta xato — ro'yxatni tekshiring"
+  },
+  "reassign": {
+    "title": "Qayta biriktirish",
+    "description": "Talabalarni yangi amaliyot davriga ko'chirish: tashkilot/hudud va supervizor avtomatik saqlanadi, faqat tur, semestr, sanalar va majburiy kunlar o'zgaradi.",
+    "step1": "1. Kimlar (manba biriktirishlar)",
+    "step2": "2. Yangi davr",
+    "scope": {
+      "selected": "Tanlanganlar ({{n}})",
+      "group": "Guruh",
+      "faculty": "Fakultet",
+      "student": "Bitta talaba"
+    },
+    "pickGroup": "Guruhni tanlang",
+    "pickFaculty": "Fakultetni tanlang",
+    "pickStudent": "Talabani tanlang",
+    "sourceYear": "Manba o'quv yili",
+    "sourceSemester": "Manba semestri",
+    "sourceType": "Manba amaliyot turi",
+    "anySemester": "Barcha semestrlar",
+    "sameAsSource": "Manbadagidek",
+    "noSemester": "Semestrsiz",
+    "keepWeekdays": "Manbadagi majburiy kunlar saqlansin",
+    "newWeekdays": "Yangi majburiy kunlar",
+    "activate": "Darhol faollashtirish",
+    "activateHint": "Belgilanmasa yangi biriktirishlar \"Qoralama\" holatida yaratiladi",
+    "safetyNote": "Eski (manba) biriktirishlar va ularning davomati, topshiriqlari, hisobotlari o'chirilmaydi. Avval oldindan ko'ring — tasdiqlamaguningizcha hech narsa saqlanmaydi.",
+    "summary": {
+      "total": "Jami: {{n}}",
+      "ready": "Tayyor: {{n}}",
+      "created": "Yaratildi: {{n}}",
+      "failed": "Xato: {{n}}"
+    },
+    "nothingFound": "Tanlangan qamrovda biriktirish topilmadi — o'quv yili va semestrni tekshiring",
+    "noSupervisor": "supervizorsiz",
+    "apply": "Tasdiqlash ({{n}})",
+    "toastApplied": "{{n}} ta talaba yangi davrga biriktirildi",
+    "toastPartial": "{{n}} ta biriktirildi, {{failed}} ta xato — ro'yxatni tekshiring"
+  },
+  "broadcasts": {
+    "title": "Ommaviy xabarlar",
+    "subtitle": "Talabalar va supervizorlarga e'lon, texnik ishlar yoki yangilik yuborish",
+    "composeTitle": "Yangi xabar",
+    "audienceLabel": "Kimga",
+    "audience": {
+      "all_students": "Barcha talabalar",
+      "faculty": "Fakultet talabalari",
+      "group": "Guruh talabalari",
+      "students": "Tanlangan talabalar",
+      "supervisors": "Supervizorlar",
+      "everyone": "Talabalar va supervizorlar"
+    },
+    "facultyScopedHint": "Siz fakultet adminisiz — xabar faqat o'z fakultetingizga yuboriladi",
+    "addStudent": "Talaba qo'shish",
+    "removeStudent": "Ro'yxatdan olib tashlash",
+    "targetRequired": "Qabul qiluvchini tanlang",
+    "templatesLabel": "Tayyor shablon:",
+    "templates": {
+      "maintenance": {
+        "label": "Texnik ishlar",
+        "subject": "Texnik ishlar",
+        "body": "Hurmatli foydalanuvchilar! Tizimda rejali texnik ishlar olib boriladi. Shu vaqt ichida platforma vaqtincha ishlamasligi mumkin. Noqulaylik uchun uzr so'raymiz."
+      },
+      "outage": {
+        "label": "Uzilish",
+        "subject": "Tizimdagi uzilish",
+        "body": "Hurmatli foydalanuvchilar! Hozirda tizim ishida uzilish kuzatilmoqda. Muammo bartaraf etilmoqda — iltimos, birozdan keyin qayta urinib ko'ring."
+      },
+      "news": {
+        "label": "Yangilik",
+        "subject": "Yangilik",
+        "body": "Hurmatli foydalanuvchilar! Platformada yangi imkoniyat qo'shildi."
+      }
+    },
+    "subject": "Mavzu",
+    "subjectRequired": "Mavzu kamida 3 ta belgidan iborat bo'lsin",
+    "body": "Matn",
+    "bodyRequired": "Matn kamida 3 ta belgidan iborat bo'lsin",
+    "review": "Ko'rib chiqish va yuborish",
+    "noRecipients": "Qabul qiluvchi topilmadi — auditoriyani tekshiring",
+    "confirmTitle": "Xabarni yuborishni tasdiqlang",
+    "confirmText": "Xabar {{n}} ta foydalanuvchiga yuboriladi. Yuborilgan xabarni qaytarib bo'lmaydi.",
+    "send": "Yuborish ({{n}})",
+    "sent": "Xabar {{n}} ta foydalanuvchiga yuborildi",
+    "recipients": "Qabul qiluvchilar: {{n}}",
+    "historyTitle": "Yuborilganlar tarixi",
+    "emptyTitle": "Hali xabar yuborilmagan",
+    "emptyDescription": "Yuborilgan ommaviy xabarlar shu yerda saqlanadi"
+  },
+  "devicesPage": {
+    "title": "Bog'langan qurilmalar",
+    "subtitle": "Talabalar kirgan qurilmalar va ularni uzish",
+    "subtitleCount": "Qurilmasi bog'langan talabalar: {{n}}",
+    "bulkTitle": "Ommaviy uzish",
+    "scopeLabel": "Qamrov",
+    "scope": {
+      "all": "Barcha talabalar",
+      "faculty": "Fakultet",
+      "group": "Guruh",
+      "students": "Tanlanganlar ({{n}})"
+    },
+    "selectHint": "Quyidagi ro'yxatdan talabalarni belgilang",
+    "count": "Hisoblash",
+    "previewText": "Qamrovdagi talabalar: {{total}}. Qurilmasi bog'langan va uziladigan: {{bound}}.",
+    "noneBound": "Bu qamrovda bog'langan qurilma yo'q",
+    "resetN": "Qurilmalarni uzish ({{n}})",
+    "confirmTitle": "Qurilmalarni uzishni tasdiqlang",
+    "confirmText": "{{n}} ta talabaning bog'langan qurilmasi uziladi va ochiq sessiyalari yopiladi.\nKeyingi kirishda ular qayta login qiladi va yangi qurilma bog'lanadi.",
+    "understood": "Tushunaman, amal audit jurnaliga yoziladi",
+    "toastReset": "{{n}} ta qurilma uzildi",
+    "toastSingle": "{{name}} qurilmasi uzildi",
+    "searchPlaceholder": "F.I.SH., login yoki ID",
+    "allFaculties": "Barcha fakultetlar",
+    "emptyTitle": "Bog'langan qurilma yo'q",
+    "emptyDescription": "Talaba birinchi marta kirganda qurilmasi shu yerda paydo bo'ladi",
+    "device": "Qurilma",
+    "boundAt": "Bog'langan vaqt",
+    "resetOne": "{{name}} — qurilmani uzish",
+    "singleTitle": "Qurilmani uzish",
+    "singleText": "{{name}} qurilmasi uziladi. Talaba keyingi kirishda qayta login qiladi.",
+    "resetConfirm": "Uzish"
   }
 }

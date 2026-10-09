@@ -17,6 +17,11 @@ export function notificationsPathFor(role: UserRole): string {
   return `${landingPathFor(role)}/notifications`;
 }
 
+/** Rolning "Profilim" sahifasi (mobilda asosiy kirish nuqtasi). */
+export function profilePathFor(role: UserRole): string {
+  return `${landingPathFor(role)}/profile`;
+}
+
 /** Yo'l shu rolning o'z bo'limiga tegishlimi (qayta kirishdan keyin qaytarish uchun). */
 function isPathInRoleArea(pathname: string, role: UserRole): boolean {
   const area = landingPathFor(role);

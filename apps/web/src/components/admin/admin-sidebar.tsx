@@ -26,6 +26,7 @@ import {
   LibraryBig,
   LogOut,
   MapPin,
+  Megaphone,
   MessageSquare,
   School,
   Search,
@@ -33,6 +34,7 @@ import {
   Shield,
   ShieldCheck,
   Sliders,
+  Smartphone,
   TrendingUp,
   UserCheck,
   UserCog,
@@ -107,6 +109,13 @@ const ADMIN_NAV_CONFIG: NavItemConfig[] = [
     icon: Bell,
     end: true,
   },
+  {
+    id: "broadcasts",
+    to: "/admin/notifications/sent",
+    labelKey: "adminAdminSidebar.nav.broadcasts",
+    icon: Megaphone,
+    end: true,
+  },
 
   // 2. Tuzilma (akademik tuzilma)
   {
@@ -121,6 +130,7 @@ const ADMIN_NAV_CONFIG: NavItemConfig[] = [
       { to: "/admin/structure/groups", labelKey: "adminAdminSidebar.nav.groups", icon: Users, end: true },
       { to: "/admin/structure/academic-years", labelKey: "adminAdminSidebar.nav.academicYears", icon: Calendar, end: true },
       { to: "/admin/structure/students", labelKey: "adminAdminSidebar.nav.students", icon: UserCheck, end: true },
+      { to: "/admin/structure/devices", labelKey: "adminAdminSidebar.nav.devices", icon: Smartphone, end: true },
     ],
   },
 
@@ -360,8 +370,10 @@ export function AdminSidebar({ inSheet = false }: { inSheet?: boolean } = {}) {
     <TooltipProvider delayDuration={150}>
       <aside
         className={cn(
-          "h-screen flex-col border-r border-slate-200 bg-white text-slate-800 transition-[width] duration-200 select-none dark:border-slate-800 dark:bg-[#0f172a] dark:text-slate-200",
-          inSheet ? "flex w-full border-r-0" : "hidden md:flex",
+          "flex-col border-r border-slate-200 bg-white text-slate-800 transition-[width] duration-200 select-none dark:border-slate-800 dark:bg-[#0f172a] dark:text-slate-200",
+          // Drawer ichida h-full: mobilda 100vh brauzer paneli ostiga tushib, pastdagi
+          // profil/chiqish tugmalari ko'rinmay qolardi
+          inSheet ? "flex h-full w-full border-r-0" : "hidden h-screen md:flex",
           !inSheet && (collapsed ? "w-16" : "w-[260px]"),
         )}
       >

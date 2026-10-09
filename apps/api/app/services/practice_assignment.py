@@ -66,6 +66,7 @@ def _base_read_select() -> Any:
             PracticeAssignment.cancelled_reason,
             PracticeAssignment.cancelled_at,
             PracticeAssignment.notes,
+            PracticeAssignment.source_assignment_id,
             PracticeAssignment.created_at,
             PracticeAssignment.updated_at,
         )
@@ -120,8 +121,14 @@ async def _validate_and_resolve(
     end_date: Any,
     semester: Semester | None = None,
     exclude_assignment_id: UUID | None = None,
+    exclude_capacity_ids: set[UUID] | None = None,
 ) -> dict[str, Any]:
     """Barcha validatsiyani bajaradi. Xato bo'lsa ValidationError raise qiladi.
+
+    `exclude_assignment_id` — tahrirlanayotgan biriktirishning o'zi (takror va sig'im
+    hisobidan chiqariladi). `exclude_capacity_ids` — qayta biriktirishda manba (eski semestr)
+    biriktirishlari: talaba o'rni yangi davrga ko'chadi, shuning uchun ular sig'imni band
+    qilmaydi (aks holda guruhni shu tashkilotga 2-semestrga ko'chirib bo'lmasdi).
 
     Qaytaradi: {student, practice_type, academic_year, organization, area, supervisor}
     """
@@ -239,6 +246,8 @@ async def _validate_and_resolve(
         )
         if exclude_assignment_id:
             stmt = stmt.where(PracticeAssignment.id != exclude_assignment_id)
+        if exclude_capacity_ids:
+            stmt = stmt.where(PracticeAssignment.id.not_in(list(exclude_capacity_ids)))
         return (await db.execute(stmt)).scalar_one()
 
     if organization and organization.capacity:
@@ -580,10 +589,35 @@ def _check_status_transition(assignment: PracticeAssignment, payload: dict[str, 
         )
 
 
-async def update_assignment(db: AsyncSession, id_: UUID, data: BaseModel) -> dict[str, Any]:
+#: Audit uchun kuzatiladigan maydonlar (eski → yangi)
+AUDIT_FIELDS = (
+    "organization_id",
+    "area_id",
+    "supervisor_id",
+    "start_date",
+    "end_date",
+    "semester",
+    "required_weekdays",
+    "status",
+    "cancelled_reason",
+    "notes",
+)
+
+
+def snapshot(assignment: PracticeAssignment) -> dict[str, Any]:
+    """Audit jurnali uchun biriktirishning kuzatiladigan maydonlari."""
+    return {k: getattr(assignment, k) for k in AUDIT_FIELDS}
+
+
+async def update_assignment(
+    db: AsyncSession, id_: UUID, data: BaseModel, *, before: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """`before` — berilsa, tahrirdan oldingi snapshot shu dict'ga yoziladi (audit uchun)."""
     assignment = await db.get(PracticeAssignment, id_)
     if not assignment:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Biriktirish topilmadi: {id_}")
+    if before is not None:
+        before.update(snapshot(assignment))
 
     payload = data.model_dump(exclude_unset=True)
     _check_status_transition(assignment, payload)
@@ -701,7 +735,7 @@ async def list_my_assignments(
     return await _hydrate_reads(db, items)
 
 
-async def delete_assignment(db: AsyncSession, id_: UUID) -> None:
+async def delete_assignment(db: AsyncSession, id_: UUID) -> dict[str, Any]:
     assignment = await db.get(PracticeAssignment, id_)
     if not assignment:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Biriktirish topilmadi: {id_}")
@@ -711,5 +745,12 @@ async def delete_assignment(db: AsyncSession, id_: UUID) -> None:
             status.HTTP_409_CONFLICT,
             "Aktiv yoki tugagan biriktirishni o'chirib bo'lmaydi — avval bekor qiling",
         )
+    snap = {
+        **snapshot(assignment),
+        "student_id": assignment.student_id,
+        "practice_type_id": assignment.practice_type_id,
+        "academic_year_id": assignment.academic_year_id,
+    }
     await db.delete(assignment)
     await db.commit()
+    return snap

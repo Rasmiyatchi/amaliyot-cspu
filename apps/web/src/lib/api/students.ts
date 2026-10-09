@@ -26,6 +26,8 @@ export type StudentFilters = {
   status?: StudentStatus;
   search?: string;
   has_assignment?: boolean;
+  /** Qurilmasi bog'langanlar (true) / bog'lanmaganlar (false) */
+  has_device?: boolean;
 };
 
 export const studentKeys = {
@@ -47,6 +49,7 @@ function toQueryString(filters: StudentFilters, page: number, pageSize: number):
   if (filters.academic_year_id) qs.set("academic_year_id", filters.academic_year_id);
   if (filters.status) qs.set("status", filters.status);
   if (filters.has_assignment !== undefined) qs.set("has_assignment", String(filters.has_assignment));
+  if (filters.has_device !== undefined) qs.set("has_device", String(filters.has_device));
   if (filters.search) qs.set("search", filters.search);
   return qs.toString();
 }
@@ -177,5 +180,43 @@ export function useBulkDeleteStudents() {
       ),
     // Qisman bajarilgan bo'lsa ham ro'yxat yangilansin
     onSettled: () => qc.invalidateQueries({ queryKey: studentKeys.all }),
+  });
+}
+
+// ─── Bog'langan qurilmalarni ommaviy uzish (TZ 08.10.2026) ────────────
+
+export type DeviceResetScope = "all" | "faculty" | "group" | "students";
+
+export type DeviceResetRequest = {
+  scope: DeviceResetScope;
+  faculty_id?: UUID | null;
+  group_id?: UUID | null;
+  student_ids?: UUID[];
+  /** Qo'llashda majburiy — admin tasdig'i */
+  confirm?: boolean;
+  dry_run: boolean;
+};
+
+export type DeviceResetResult = {
+  dry_run: boolean;
+  scope: DeviceResetScope;
+  students_total: number;
+  bound: number;
+  reset: number;
+  faculty_name: string | null;
+  group_name: string | null;
+};
+
+/** `dry_run: true` — faqat nechta qurilma uzilishini hisoblaydi. */
+export function useBulkResetDevices() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: DeviceResetRequest) =>
+      api
+        .post("v1/students/bulk-reset-device", { json: data, timeout: 120_000 })
+        .json<DeviceResetResult>(),
+    onSuccess: (res) => {
+      if (!res.dry_run) void qc.invalidateQueries({ queryKey: studentKeys.all });
+    },
   });
 }

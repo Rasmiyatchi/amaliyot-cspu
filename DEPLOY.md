@@ -8,8 +8,32 @@ Ubuntu 22.04+ VPS uchun bosqichma-bosqich qo'llanma.
 (`contracts.contract_template_id` + `variable_values`) → `c3e5a7b9d1f4` (2026-09-27 dan oldin
 yaratilgan, ruxsatlari bo'sh adminlarga barcha modullar qaytariladi — ilgari ro'yxatda ular
 "Standart (barcha)" deb ko'rinib, aslida hech qayerga kira olmasdi) → `d4f6b8c0e2a5`
-(`access_restrictions` — foydalanuvchi/guruh uchun kirishni vaqtincha to'xtatish). API konteyner
-ishga tushganda `alembic upgrade head` avtomatik bajaradi. HEAD = `d4f6b8c0e2a5`.
+(`access_restrictions` — foydalanuvchi/guruh uchun kirishni vaqtincha to'xtatish) →
+`e6b8d0f2a4c7` (TZ 08.10.2026: `broadcasts` jadvali, `notification_type` ga `broadcast`,
+`practice_assignments.source_assignment_id`, `audit_logs` uchun append-only trigger). API konteyner
+ishga tushganda `alembic upgrade head` avtomatik bajaradi. HEAD = `e6b8d0f2a4c7`.
+
+**TZ 08.10.2026 (2026-10-09):**
+- *Qayta biriktirish* — Amaliyot → Biriktirishlar → "Qayta biriktirish": tanlangan talabalar,
+  guruh, fakultet yoki bitta talabaning 1-semestr biriktirishlari yangi davrga ko'chiriladi.
+  Tashkilot/hudud va supervizor saqlanadi; tur, semestr, sanalar va majburiy kunlar o'zgaradi.
+  Avval oldindan ko'rish, keyin tasdiqlash. Eski biriktirishlar va ularning tarixi o'chirilmaydi
+  (yangi yozuv `source_assignment_id` bilan bog'lanadi). Bir so'rovda ko'pi bilan 1000 ta.
+- *Faol biriktirishni tahrirlash* — biriktirish kartasidagi "Tahrirlash" yoki jadvalda belgilab
+  "Tahrirlash"/"Guruhni tahrirlash": majburiy kunlar, supervizor, sanalar. Davomat va hisobotlarga
+  tegilmaydi; har o'zgarish audit jurnaliga eski → yangi qiymat bilan yoziladi.
+- *Ommaviy xabarlar* — `/admin/notifications/sent`: barcha talabalar, fakultet, guruh, tanlangan
+  talabalar, supervizorlar. Tarix (mavzu, matn, kimga, nechta, qachon) saqlanadi.
+- *Bog'langan qurilmalar* — Tuzilma → Bog'langan qurilmalar: bittalab yoki ommaviy (barchasi /
+  fakultet / guruh / tanlanganlar) uzish, tasdiq bilan. Sessiyalar yopiladi, talaba qayta kiradi.
+- *Audit jurnali* — sana, fakultet, amal, obyekt va matn bo'yicha filtr, Excel eksport, eski/yangi
+  qiymatlar, ommaviy amallarda ta'sir soni va natija. Kirishlar (`login`) va xato kirishlar
+  (`login_failed`, parolsiz) ham yoziladi. Jurnalni DB trigger himoya qiladi: `UPDATE`/`DELETE`
+  rad etiladi (faqat foydalanuvchi o'chirilganda `actor_user_id` NULL bo'ladi). Yozuvlarni
+  tozalash kerak bo'lsa, faqat DBA trigger'ni vaqtincha o'chirib bajaradi.
+- *Telefon* — talabada pastki navigatsiya (Bosh sahifa · Xabarlar · Profilim), barcha rollar uchun
+  `/…/profile` sahifasi (profil, parol, til, mavzu, chiqish); admin/supervizor mobil sarlavhasida
+  qo'ng'iroq va profil; yon menyu drawer'da pastki profil/chiqish tugmalari endi ko'rinadi.
 
 **Kirish cheklovlari (2026-10-07):** super admin bitta talaba/supervizor yoki butun guruh uchun
 kirishni to'xtatadi (Tizim → Kirish cheklovlari yoki talaba kartasi). Cheklangan foydalanuvchi

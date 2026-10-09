@@ -112,6 +112,20 @@ class PracticeAssignment(UUIDMixin, TimestampMixin, Base):
         comment="Biriktirish paytidagi kurs (snapshot)",
     )
 
+    # Qayta biriktirish izi: yangi semestr biriktirishi qaysi eski biriktirishdan ko'chirilgani.
+    # Manba o'chirilmaydi — tarix saqlanadi; o'chirilsa ham bu ustun faqat NULL bo'ladi.
+    source_assignment_id: Mapped[UUID | None] = mapped_column(
+        # Avto-nom 63 belgidan oshadi (PG limiti) — qisqa nom beriladi
+        ForeignKey(
+            "practice_assignments.id",
+            ondelete="SET NULL",
+            name="fk_practice_assignments_source_assignment_id",
+        ),
+        nullable=True,
+        index=True,
+        comment="Qayta biriktirishda manba (oldingi semestr) biriktirishi",
+    )
+
     # Holat
     status: Mapped[AssignmentStatus] = mapped_column(
         SAEnum(

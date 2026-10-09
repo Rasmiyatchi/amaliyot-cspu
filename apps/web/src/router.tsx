@@ -80,6 +80,8 @@ const admin = {
     "AccessRestrictionsPage",
   ),
   auditLog: lazyPage(() => import("@/routes/dashboard/admin/audit-log"), "AuditLogPage"),
+  broadcasts: lazyPage(() => import("@/routes/dashboard/admin/broadcasts"), "BroadcastsPage"),
+  devices: lazyPage(() => import("@/routes/dashboard/admin/devices"), "DevicesPage"),
   systemSettings: lazyPage(
     () => import("@/routes/dashboard/admin/system-settings"),
     "SystemSettingsPage",
@@ -106,6 +108,8 @@ const supervisor = {
 
 // Xabarlar sahifasi — har rol o'z layout'ida (sidebar saqlanadi)
 const notificationsPage = lazyPage(() => import("@/routes/notifications"), "NotificationsPage");
+// "Profilim" — telefonda asosiy kirish nuqtasi; har rol o'z layout'ida
+const profilePage = lazyPage(() => import("@/routes/profile"), "ProfilePage");
 
 const publicPages = {
   amaliyot: lazyPage(() => import("@/routes/amaliyot"), "AmaliyotPage"),
@@ -131,6 +135,9 @@ export const router = createBrowserRouter([
             children: [
               { index: true, lazy: admin.home },
               { path: "notifications", lazy: notificationsPage },
+              // Ommaviy xabarlar — har qanday admin (fakultet admini o'z fakulteti doirasida)
+              { path: "notifications/sent", lazy: admin.broadcasts },
+              { path: "profile", lazy: profilePage },
 
               // Structure (Akademik tuzilma)
               {
@@ -144,6 +151,7 @@ export const router = createBrowserRouter([
                   { path: "structure/groups", lazy: admin.groups },
                   { path: "structure/academic-years", lazy: admin.academicYears },
                   { path: "structure/students", lazy: admin.structureStudents },
+                  { path: "structure/devices", lazy: admin.devices },
                 ],
               },
 
@@ -250,6 +258,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, lazy: supervisor.dashboard },
               { path: "notifications", lazy: notificationsPage },
+              { path: "profile", lazy: profilePage },
               { path: "regulations", lazy: supervisor.regulations },
               { path: "programs", lazy: supervisor.programs },
               { path: "students", lazy: supervisor.students },
@@ -282,6 +291,7 @@ export const router = createBrowserRouter([
             children: [
               { path: "student", lazy: publicPages.student },
               { path: "student/notifications", lazy: notificationsPage },
+              { path: "student/profile", lazy: profilePage },
             ],
           },
           { path: "*", Component: NotFound },

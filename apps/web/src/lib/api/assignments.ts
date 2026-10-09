@@ -5,6 +5,7 @@ import { api, downloadFile } from "@/lib/api";
 import type {
   AssignmentStatus,
   BulkAssignmentResult,
+  ISODate,
   Paginated,
   PracticeAssignment,
   PracticeAssignmentBulkCreate,
@@ -147,4 +148,134 @@ export function downloadAssignmentsCsv(filters: AssignmentFilters): Promise<void
     "biriktirishlar.csv",
     i18n.t("common.downloadFailed"),
   );
+}
+
+// ─── Qayta biriktirish va ommaviy tahrirlash (TZ 08.10.2026) ──────────
+
+export type ReassignScope = {
+  academic_year_id: UUID;
+  semester?: Semester | null;
+  practice_type_id?: UUID | null;
+  assignment_ids?: UUID[];
+  student_ids?: UUID[];
+  group_id?: UUID | null;
+  faculty_id?: UUID | null;
+};
+
+export type ReassignTarget = {
+  practice_type_id?: UUID | null;
+  academic_year_id?: UUID | null;
+  semester?: Semester | null;
+  start_date: ISODate;
+  end_date: ISODate;
+  required_weekdays?: number[] | null;
+  keep_weekdays?: boolean;
+  activate?: boolean;
+  notes?: string | null;
+};
+
+export type ReassignItem = {
+  source_assignment_id: UUID;
+  student_id: UUID;
+  student_full_name: string;
+  student_hemis_id: string;
+  group_name: string | null;
+  object_name: string | null;
+  supervisor_full_name: string | null;
+  source_practice_type_name: string;
+  source_semester: Semester | null;
+  source_start_date: ISODate;
+  source_end_date: ISODate;
+  source_status: AssignmentStatus;
+  target_practice_type_name: string | null;
+  target_semester: Semester | null;
+  target_required_weekdays: number[] | null;
+  ok: boolean;
+  error: string | null;
+  new_assignment_id: UUID | null;
+};
+
+export type ReassignResult = {
+  dry_run: boolean;
+  total: number;
+  ok: number;
+  failed: number;
+  created: number;
+  items: ReassignItem[];
+  assignment_ids: UUID[];
+};
+
+/** `dry_run: true` — oldindan ko'rish (hech narsa yozilmaydi). */
+export function useReassignAssignments() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { source: ReassignScope; target: ReassignTarget; dry_run: boolean }) =>
+      api
+        .post("v1/practice-assignments/reassign", { json: data, timeout: 120_000 })
+        .json<ReassignResult>(),
+    onSuccess: (res) => {
+      if (!res.dry_run) void qc.invalidateQueries({ queryKey: assignmentKeys.all });
+    },
+  });
+}
+
+/** Yuborilgan maydonlargina o'zgaradi; `supervisor_id: null` — supervizorni olib tashlash. */
+export type AssignmentBulkChanges = {
+  required_weekdays?: number[];
+  supervisor_id?: UUID | null;
+  start_date?: ISODate;
+  end_date?: ISODate;
+};
+
+export type AssignmentBulkUpdateRequest = {
+  assignment_ids?: UUID[];
+  group_id?: UUID | null;
+  academic_year_id?: UUID | null;
+  semester?: Semester | null;
+  practice_type_id?: UUID | null;
+  changes: AssignmentBulkChanges;
+  dry_run: boolean;
+};
+
+export type BulkChange = {
+  field: string;
+  before: unknown;
+  after: unknown;
+  /** Odamga tushunarli qiymat (supervizor F.I.SH.) */
+  before_label?: string | null;
+  after_label?: string | null;
+};
+
+export type BulkUpdateItem = {
+  assignment_id: UUID;
+  student_full_name: string;
+  student_hemis_id: string;
+  group_name: string | null;
+  status: AssignmentStatus;
+  changes: BulkChange[];
+  ok: boolean;
+  error: string | null;
+};
+
+export type BulkUpdateResult = {
+  dry_run: boolean;
+  total: number;
+  ok: number;
+  failed: number;
+  updated: number;
+  unchanged: number;
+  items: BulkUpdateItem[];
+};
+
+export function useBulkUpdateAssignments() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: AssignmentBulkUpdateRequest) =>
+      api
+        .post("v1/practice-assignments/bulk-update", { json: data, timeout: 120_000 })
+        .json<BulkUpdateResult>(),
+    onSuccess: (res) => {
+      if (!res.dry_run) void qc.invalidateQueries({ queryKey: assignmentKeys.all });
+    },
+  });
 }

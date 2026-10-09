@@ -112,6 +112,8 @@ class PracticeAssignmentRead(BaseModel):
     cancelled_reason: str | None
     cancelled_at: datetime | None
     notes: str | None
+    #: Qayta biriktirishda manba (oldingi semestr) biriktirishi
+    source_assignment_id: UUID | None = None
 
     created_at: datetime
     updated_at: datetime

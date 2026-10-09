@@ -309,6 +309,8 @@ export type PracticeAssignment = {
   cancelled_reason: string | null;
   cancelled_at: ISODateTime | null;
   notes: string | null;
+  /** Qayta biriktirishda manba (oldingi semestr) biriktirishi */
+  source_assignment_id?: UUID | null;
   created_at: ISODateTime;
   updated_at: ISODateTime;
 };
@@ -488,6 +490,7 @@ export type NotificationType =
   | "attendance_override"
   | "contract_generated"
   | "contract_activated"
+  | "broadcast"
   | "generic";
 
 export type Notification = {

@@ -41,6 +41,7 @@ TABLES_IN_DELETE_ORDER = [
     "inquiry_messages",
     "inquiries",
     "notifications",
+    "broadcasts",
     "contracts",
     "practice_applications",
     "practice_assignments",

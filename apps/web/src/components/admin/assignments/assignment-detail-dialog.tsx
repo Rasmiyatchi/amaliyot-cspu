@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Loader2,
   NotebookPen,
+  Pencil,
   Play,
   Plus,
   Sparkles,
@@ -18,6 +19,8 @@ import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { AssignmentStatusBadge } from "@/components/admin/assignments/assignment-status-badge";
+import { BulkEditDialog } from "@/components/admin/assignments/bulk-edit-dialog";
+import { formatWeekdays } from "@/components/admin/assignments/weekday-picker";
 import { FinalizeGradeDialog } from "@/components/admin/assignments/finalize-grade-dialog";
 import { GradePanel } from "@/components/admin/assignments/grade-panel";
 import { TaskGradeDialog } from "@/components/admin/assignments/task-grade-dialog";
@@ -114,6 +117,7 @@ function AssignmentDetailBody({
   const [startOpen, setStartOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const tasksByGroup = useMemo(() => {
     const m = new Map<string, Task[]>();
@@ -248,11 +252,23 @@ function AssignmentDetailBody({
               {" · "}
               {formatTashkentDate(assignment.start_date, dateLocale())} —{" "}
               {formatTashkentDate(assignment.end_date, dateLocale())}
+              <span className="block pt-1">
+                {t("assignmentsAssignmentDetailDialog.weekdaysLabel")}:{" "}
+                {formatWeekdays(assignment.required_weekdays)}
+                {" · "}
+                {t("common.supervisor")}: {assignment.supervisor_full_name ?? "—"}
+              </span>
             </DialogDescription>
           </DialogHeader>
 
           {/* Lifecycle actions */}
           <div className="flex flex-wrap gap-2">
+            {(assignment.status === "draft" || assignment.status === "active") && (
+              <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+                {t("common.edit")}
+              </Button>
+            )}
             {assignment.status === "draft" && (
               <Button
                 size="sm"
@@ -707,6 +723,20 @@ function AssignmentDetailBody({
         isPending={updateAssignment.isPending}
         onConfirm={handleCancel}
         onClose={() => setCancelOpen(false)}
+      />
+      <BulkEditDialog
+        open={editOpen}
+        scope={{
+          assignment_ids: [assignment.id],
+          label: `${assignment.student_full_name} · ${assignment.practice_type_name}`,
+        }}
+        initial={{
+          required_weekdays: assignment.required_weekdays,
+          supervisor_id: assignment.supervisor_id,
+          start_date: assignment.start_date,
+          end_date: assignment.end_date,
+        }}
+        onClose={() => setEditOpen(false)}
       />
     </>
   );
