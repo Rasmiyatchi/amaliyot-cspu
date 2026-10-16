@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +11,13 @@ from app.models.enums import DegreeType, EducationForm, Gender, StudentStatus
 
 
 class Student(UUIDMixin, TimestampMixin, Base):
+    __table_args__ = (
+        CheckConstraint(
+            "min_practice_minutes IS NULL OR min_practice_minutes BETWEEN 0 AND 720",
+            name="min_practice_minutes_range",
+        ),
+    )
+
     user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         unique=True,
@@ -74,6 +81,15 @@ class Student(UUIDMixin, TimestampMixin, Base):
         default=StudentStatus.STUDYING,
         server_default=StudentStatus.STUDYING.value,
         index=True,
+    )
+
+    # ─── Davomat ───────────────────────────────────────────
+    # Individual kunlik majburiy vaqt (daqiqa): "ketish" shundan keyin ochiladi.
+    # NULL — umumiy sozlama (system_settings.min_practice_minutes).
+    min_practice_minutes: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Individual minimal amaliyot vaqti (daqiqa); NULL — umumiy sozlama",
     )
 
     def __repr__(self) -> str:

@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   Bell,
+  Clock,
   FileText,
   Loader2,
   Power,
@@ -11,6 +12,11 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import {
+  formatPracticeMinutes,
+  MAX_PRACTICE_MINUTES,
+  parsePracticeMinutes,
+} from "@/components/attendance/practice-duration";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +49,9 @@ export function SystemSettingsPage() {
   const [maintenance, setMaintenance] = useState(false);
   const [maintenanceMsg, setMaintenanceMsg] = useState("");
   const [confirmMaintenance, setConfirmMaintenance] = useState<boolean | null>(null);
+  // Kunlik majburiy amaliyot vaqti (soat + daqiqa maydonlari, matn sifatida)
+  const [practiceHours, setPracticeHours] = useState("4");
+  const [practiceMins, setPracticeMins] = useState("0");
 
   useEffect(() => {
     if (data) {
@@ -53,8 +62,13 @@ export function SystemSettingsPage() {
       setEmailNotif(data.email_notifications_enabled);
       setMaintenance(data.maintenance_mode);
       setMaintenanceMsg(data.maintenance_message ?? "");
+      setPracticeHours(String(Math.floor(data.min_practice_minutes / 60)));
+      setPracticeMins(String(data.min_practice_minutes % 60));
     }
   }, [data]);
+
+  const practiceMinutes = parsePracticeMinutes(practiceHours, practiceMins);
+  const practiceValid = practiceMinutes !== null;
 
   const maxSizeNumber = Number(maxFileSize);
   const maxSizeValid =
@@ -70,6 +84,10 @@ export function SystemSettingsPage() {
       toast.error(t("adminSystemSettings.maxSizeRange", { min: MIN_FILE_MB, max: MAX_FILE_MB }));
       return;
     }
+    if (practiceMinutes === null) {
+      toast.error(t("practiceHours.invalid", { max: MAX_PRACTICE_MINUTES / 60 }));
+      return;
+    }
     try {
       await update.mutateAsync({
         site_name: siteName.trim(),
@@ -80,6 +98,7 @@ export function SystemSettingsPage() {
           .map((s) => s.trim().toLowerCase())
           .filter(Boolean),
         email_notifications_enabled: emailNotif,
+        min_practice_minutes: practiceMinutes,
       });
       toast.success(t("adminSystemSettings.settingsSaved"));
     } catch (e) {
@@ -234,6 +253,60 @@ export function SystemSettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Davomat: kunlik majburiy amaliyot vaqti */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4" />
+                {t("practiceHours.settingsTitle")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">{t("practiceHours.settingsHint")}</p>
+              <div className="grid max-w-sm grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="practice-hours">{t("practiceHours.hoursLabel")}</Label>
+                  <Input
+                    id="practice-hours"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={MAX_PRACTICE_MINUTES / 60}
+                    step={1}
+                    value={practiceHours}
+                    onChange={(e) => setPracticeHours(e.target.value)}
+                    aria-invalid={!practiceValid}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="practice-mins">{t("practiceHours.minutesLabel")}</Label>
+                  <Input
+                    id="practice-mins"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={59}
+                    step={5}
+                    value={practiceMins}
+                    onChange={(e) => setPracticeMins(e.target.value)}
+                    aria-invalid={!practiceValid}
+                  />
+                </div>
+              </div>
+              {practiceValid ? (
+                <p className="text-xs text-muted-foreground">
+                  {t("practiceHours.preview", {
+                    duration: formatPracticeMinutes(practiceMinutes, t),
+                  })}
+                </p>
+              ) : (
+                <p className="text-xs text-destructive">
+                  {t("practiceHours.invalid", { max: MAX_PRACTICE_MINUTES / 60 })}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
           {/* File upload */}
           <Card>
             <CardHeader>
@@ -307,7 +380,7 @@ export function SystemSettingsPage() {
           <Separator />
 
           <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={update.isPending || !maxSizeValid}>
+            <Button onClick={handleSave} disabled={update.isPending || !maxSizeValid || !practiceValid}>
               {update.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               <Save className="h-4 w-4" />
               {t("adminSystemSettings.saveButton")}

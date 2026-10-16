@@ -487,10 +487,21 @@ PATTERNS: list[tuple[str, str]] = [
         "Вы находитесь вне территории организации: расстояние {d} м, допустимый радиус {r} м. "
         "Подойдите ближе к зданию и попробуйте снова.",
     ),
+    # Majburiy vaqt sozlamadan keladi: "4 soat", "4 soat 30 daqiqa" yoki "45 daqiqa"
     (
-        r"Ketishni qayd etish uchun kamida 6 soat amaliyot o'tgan bo'lishi shart\. "
+        r"Ketishni qayd etish uchun kamida (?P<h>\d+) soat (?P<m>\d+) daqiqa amaliyot o'tgan "
+        r"bo'lishi shart\. Qolgan vaqt: (?P<rem>\d+:\d{2}) \(soat:daqiqa\)",
+        "Для отметки ухода должно пройти не менее {h} ч {m} мин практики. Осталось: {rem} (ч:мин)",
+    ),
+    (
+        r"Ketishni qayd etish uchun kamida (?P<h>\d+) soat amaliyot o'tgan bo'lishi shart\. "
         r"Qolgan vaqt: (?P<rem>\d+:\d{2}) \(soat:daqiqa\)",
-        "Для отметки ухода должно пройти не менее 6 часов практики. Осталось: {rem} (ч:мин)",
+        "Для отметки ухода должно пройти не менее {h} ч практики. Осталось: {rem} (ч:мин)",
+    ),
+    (
+        r"Ketishni qayd etish uchun kamida (?P<m>\d+) daqiqa amaliyot o'tgan bo'lishi shart\. "
+        r"Qolgan vaqt: (?P<rem>\d+:\d{2}) \(soat:daqiqa\)",
+        "Для отметки ухода должно пройти не менее {m} мин практики. Осталось: {rem} (ч:мин)",
     ),
     (r"Qaydnoma topilmadi: (?P<id>.+)", "Ведомость не найдена: {id}"),
     # ── auth.py (brute-force himoyasi) ───────────────────────────────────────

@@ -20,6 +20,10 @@ import { toast } from "sonner";
 
 import { AttendanceStatusBadge } from "@/components/admin/attendance/attendance-status-badge";
 import { formatTashkentTime } from "@/components/attendance/attendance-date-utils";
+import {
+  DEFAULT_PRACTICE_MINUTES,
+  formatPracticeMinutes,
+} from "@/components/attendance/practice-duration";
 import { describeRequestError, requestErrorKind } from "@/components/attendance/request-error";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +52,6 @@ type Props = {
   locationOptional?: boolean;
 };
 
-const REQUIRED_DURATION_MS = 6 * 60 * 60 * 1000; // 6 soat = 21,600,000 ms
 /** Shundan yomon aniqlikda qayd yuboriladi, lekin ogohlantirish ko'rsatiladi */
 const LOW_ACCURACY_M = 150;
 
@@ -226,23 +229,29 @@ export function CheckInButton({ assignmentId, today, locationOptional = false }:
     return () => clearInterval(interval);
   }, [hasCheckIn, hasCheckOut]);
 
+  // Majburiy vaqt serverdan keladi: umumiy sozlama yoki talabaning individual qiymati
+  const requiredMinutes = today?.required_minutes ?? DEFAULT_PRACTICE_MINUTES;
+  const requiredText = formatPracticeMinutes(requiredMinutes, t);
+
   const timingInfo = useMemo(() => {
     if (!hasCheckIn || !today?.check_in_at) return null;
+    const requiredMs = requiredMinutes * 60 * 1000;
     const checkInMs = new Date(today.check_in_at).getTime();
-    const unlockMs = checkInMs + REQUIRED_DURATION_MS;
+    const unlockMs = checkInMs + requiredMs;
     const remainingMs = Math.max(0, unlockMs - currentTime);
-    const elapsedMs = Math.min(REQUIRED_DURATION_MS, Math.max(0, currentTime - checkInMs));
+    const elapsedMs = Math.min(requiredMs, Math.max(0, currentTime - checkInMs));
     const locale = dateLocale();
 
     return {
       checkInTimeStr: formatTashkentTime(today.check_in_at, locale),
       unlockTimeStr: formatTashkentTime(new Date(unlockMs).toISOString(), locale),
       isLocked: remainingMs > 0,
-      progressPercent: Math.min(100, Math.max(0, (elapsedMs / REQUIRED_DURATION_MS) * 100)),
+      progressPercent:
+        requiredMs > 0 ? Math.min(100, Math.max(0, (elapsedMs / requiredMs) * 100)) : 100,
       digitalTimer: formatDigitalTimer(remainingMs),
       durationText: formatDuration(remainingMs, t),
     };
-  }, [hasCheckIn, today?.check_in_at, currentTime, t]);
+  }, [hasCheckIn, today?.check_in_at, currentTime, t, requiredMinutes]);
 
   /** Har safar yangidan so'raydi — avvalgi rad brauzer ruxsat bersa qayta prompt bo'ladi. */
   const locate = async (): Promise<GeoFix | null> => {
@@ -358,7 +367,7 @@ export function CheckInButton({ assignmentId, today, locationOptional = false }:
     );
   }
 
-  // 2. Check-in qilingan, 6 soat kutilmoqda yoki check-out qilinmagan
+  // 2. Check-in qilingan, majburiy vaqt kutilmoqda yoki check-out qilinmagan
   if (hasCheckIn && timingInfo) {
     const isLocked = timingInfo.isLocked;
 
@@ -376,7 +385,7 @@ export function CheckInButton({ assignmentId, today, locationOptional = false }:
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-sm font-medium text-amber-900 dark:text-amber-300">
                 <Hourglass className="h-4 w-4 shrink-0 animate-spin text-amber-600" />
-                <span>{t("studentCheckInButton.lockedTitle")}</span>
+                <span>{t("studentCheckInButton.lockedTitle", { duration: requiredText })}</span>
               </div>
               <Badge
                 variant="outline"
@@ -389,7 +398,7 @@ export function CheckInButton({ assignmentId, today, locationOptional = false }:
             <Progress
               value={timingInfo.progressPercent}
               className="h-2 bg-amber-200/50 dark:bg-amber-950"
-              aria-label={t("studentCheckInButton.lockedTitle")}
+              aria-label={t("studentCheckInButton.lockedTitle", { duration: requiredText })}
             />
 
             <div className="grid grid-cols-2 gap-2 pt-1 text-xs text-muted-foreground">
@@ -406,7 +415,8 @@ export function CheckInButton({ assignmentId, today, locationOptional = false }:
             <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
               <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
               <span>
-                {t("studentCheckInButton.lockHint")}. {t("studentCheckInButton.remainingTime")}:{" "}
+                {t("studentCheckInButton.lockHint", { duration: requiredText })}.{" "}
+                {t("studentCheckInButton.remainingTime")}:{" "}
                 <strong>{timingInfo.durationText}</strong>
               </span>
             </div>
@@ -415,7 +425,7 @@ export function CheckInButton({ assignmentId, today, locationOptional = false }:
           <div className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-sm">
             <Sparkles className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <div className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-              {t("studentCheckInButton.readyForCheckOut")}
+              {t("studentCheckInButton.readyForCheckOut", { duration: requiredText })}
             </div>
           </div>
         )}

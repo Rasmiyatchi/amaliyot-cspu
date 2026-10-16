@@ -3,7 +3,8 @@
 Biznes mantiq:
 - check_in: agar shu kunda AttendanceDay bo'lmasa — yaratiladi (status=PENDING).
   Keyin bosilsa — yangi event, lekin kun bir marta. Oldindan YASHIL qilingan kun yashil qoladi.
-- check_out: shu kundagi mavjud AttendanceDay'ga qo'shiladi (6 soat qoidasi).
+- check_out: shu kundagi mavjud AttendanceDay'ga qo'shiladi (majburiy vaqt qoidasi —
+  umumiy sozlama yoki talabaning individual qiymati, standart 4 soat).
 - admin_approve / admin_reject: PENDING → GREEN / RED (super admin).
 - admin_mark_red: kun o'tgan, check-in yo'q → RED.
 - super_admin_override: istalgan status → istalgan status, sabab majburiy, audit yoziladi.
@@ -45,19 +46,22 @@ from app.models.practice_assignment import PracticeAssignment
 from app.models.practice_type import PracticeType
 from app.models.student import Student
 from app.models.supervisor import Supervisor
+from app.models.system_settings import SystemSettings
 from app.models.user import User
 from app.services import notification as notification_svc
 from app.services.attendance_stats import compute_percent, expected_days
 from app.services.search_utils import like_pattern, normalized_col
 
-MIN_PRACTICE_SECONDS = 6 * 3600  # 6 soat = 21600 soniya
+# Sozlama topilmasa ishlatiladigan standart: 4 soat. Asl qiymat — system_settings
+# (admin sozlamalari) yoki talabaning individual qiymati (students.min_practice_minutes).
+DEFAULT_MIN_PRACTICE_MINUTES = 240
 UZB_TZ = timezone(timedelta(hours=5))
 DEFAULT_WORK_WEEKDAYS: frozenset[int] = frozenset({1, 2, 3, 4, 5, 6})  # Du–Sha (ISO)
 
 NOTE_PENDING_EXPIRED = "Kun davomida to'liq davomat (kelish/ketish) yakunlanmadi"
 NOTE_MISSING_DAY = "Amaliyotga kelinmadi (qolib ketgan kun)"
 
-# Kech kelgan talaba (masalan 18:30) 6 soatdan keyin yarim tundan o'tib ketishni qayd etadi —
+# Kech kelgan talaba (masalan 18:30) majburiy vaqtdan keyin yarim tundan o'tib ketishni qayd etadi —
 # ochiq smena shu muddatgacha "kecha" kuniga yoziladi va avto-qizilga aylantirilmaydi.
 OPEN_SHIFT_MAX = timedelta(hours=20)
 # GPS aniqligi (±m) hisobiga radiusga qo'shiladigan maksimal yengillik
@@ -70,6 +74,42 @@ _last_global_sync: datetime | None = None
 
 def today_uzb() -> date:
     return datetime.now(UZB_TZ).date()
+
+
+# ─── Kunlik majburiy amaliyot vaqti ───────────────────────
+
+
+async def required_practice_minutes(db: AsyncSession, student_id: UUID) -> int:
+    """Talaba uchun "ketish" ochiladigan minimal vaqt (daqiqa).
+
+    Talabaning individual qiymati bo'lsa — o'sha, aks holda umumiy sozlama. Sozlama keshdan
+    emas, bazadan o'qiladi: bir nechta API worker bo'lsa ham o'zgarish darhol amal qiladi.
+    """
+    individual = (
+        await db.execute(select(Student.min_practice_minutes).where(Student.id == student_id))
+    ).scalar_one_or_none()
+    if individual is not None:
+        return int(individual)
+    common = (
+        await db.execute(select(SystemSettings.min_practice_minutes).limit(1))
+    ).scalar_one_or_none()
+    return int(common) if common is not None else DEFAULT_MIN_PRACTICE_MINUTES
+
+
+def format_practice_duration(minutes: int) -> str:
+    """240 → "4 soat", 270 → "4 soat 30 daqiqa", 45 → "45 daqiqa" (ru katalog orqali o'giriladi)."""
+    hours, mins = divmod(max(0, minutes), 60)
+    if hours and mins:
+        return f"{hours} soat {mins} daqiqa"
+    if hours:
+        return f"{hours} soat"
+    return f"{mins} daqiqa"
+
+
+async def _with_required(db: AsyncSession, day: dict[str, Any], student_id: UUID) -> dict[str, Any]:
+    """Talabaga qaytariladigan kunga majburiy vaqtni qo'shadi (taymer shu qiymat bo'yicha)."""
+    day["required_minutes"] = await required_practice_minutes(db, student_id)
+    return day
 
 
 # ─── Geo-fence ────────────────────────────────────────────
@@ -446,7 +486,7 @@ async def student_check_in(
         attendance_day.check_in_at = now
 
     await db.commit()
-    return await get_day(db, attendance_day.id)
+    return await _with_required(db, await get_day(db, attendance_day.id), assignment.student_id)
 
 
 async def _find_open_day(
@@ -503,18 +543,19 @@ async def student_check_out(
             "Bu kun qizil deb belgilangan — ketishni qayd etib bo'lmaydi",
         )
 
-    # 6 soatlik majburiy amaliyot vaqti qoidasi
+    # Majburiy amaliyot vaqti: umumiy sozlama yoki talabaning individual qiymati
+    required_minutes = await required_practice_minutes(db, assignment.student_id)
     check_in_time = _as_utc(attendance_day.check_in_at or now)
     elapsed_seconds = (now - check_in_time).total_seconds()
-    if elapsed_seconds < MIN_PRACTICE_SECONDS:
-        remaining_seconds = int(MIN_PRACTICE_SECONDS - elapsed_seconds)
+    if elapsed_seconds < required_minutes * 60:
+        remaining_seconds = int(required_minutes * 60 - elapsed_seconds)
         # Tilga bog'liq bo'lmagan format (rus tiliga katalog orqali o'giriladi)
         rem_minutes_total = max(1, -(-remaining_seconds // 60))
         rem_str = f"{rem_minutes_total // 60}:{rem_minutes_total % 60:02d}"
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Ketishni qayd etish uchun kamida 6 soat amaliyot o'tgan bo'lishi shart. "
-            f"Qolgan vaqt: {rem_str} (soat:daqiqa)",
+            f"Ketishni qayd etish uchun kamida {format_practice_duration(required_minutes)} "
+            f"amaliyot o'tgan bo'lishi shart. Qolgan vaqt: {rem_str} (soat:daqiqa)",
         )
 
     organization = None
@@ -553,7 +594,7 @@ async def student_check_out(
     attendance_day.status = AttendanceDayStatus.GREEN
 
     await db.commit()
-    return await get_day(db, attendance_day.id)
+    return await _with_required(db, await get_day(db, attendance_day.id), assignment.student_id)
 
 
 # ─── Admin actions (Approve / Reject) ────────────────────
@@ -1460,8 +1501,8 @@ async def summary(
 async def student_today_status(
     db: AsyncSession, assignment_id: UUID, student_user_id: UUID
 ) -> dict[str, Any] | None:
-    """Bugun uchun AttendanceDay (agar mavjud bo'lsa)."""
-    await _get_assignment_for_student(db, assignment_id, student_user_id)
+    """Bugun uchun AttendanceDay (agar mavjud bo'lsa) + talabaning majburiy vaqti."""
+    assignment = await _get_assignment_for_student(db, assignment_id, student_user_id)
     # Talabaning o'tgan qolib ketgan kunlarini ham avto-sinxr qilish
     await sync_missed_attendance_days(db, assignment_id=assignment_id)
 
@@ -1475,16 +1516,17 @@ async def student_today_status(
             )
         )
     ).scalar_one_or_none()
+    sid = assignment.student_id
     if today_day is not None and today_day.check_in_at is not None:
-        return await get_day(db, today_day.id)
+        return await _with_required(db, await get_day(db, today_day.id), sid)
     # Bugun hali kelinmagan bo'lsa-yu, kechagi smena ochiq qolgan bo'lsa (kech kelib yarim
     # tundan keyin ketayotgan talaba) — "ketish" tugmasi chiqishi uchun o'sha kun qaytariladi.
     open_day = await _find_open_day(db, assignment_id, today, datetime.now(UTC))
     if open_day is not None:
-        return await get_day(db, open_day.id)
+        return await _with_required(db, await get_day(db, open_day.id), sid)
     if today_day is None:
         return None
-    return await get_day(db, today_day.id)
+    return await _with_required(db, await get_day(db, today_day.id), sid)
 
 
 # ─── Bulk Action ─────────────────────────────────────────

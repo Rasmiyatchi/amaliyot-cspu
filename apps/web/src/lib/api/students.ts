@@ -91,6 +91,18 @@ export function useResetStudentDevice() {
   });
 }
 
+/** Individual kunlik majburiy vaqt (daqiqa); `null` — umumiy sozlamaga qaytarish. */
+export function useUpdateStudentPracticeHours() {
+  const onSaved = useStudentSaved();
+  return useMutation({
+    mutationFn: ({ id, minutes }: { id: UUID; minutes: number | null }) =>
+      api
+        .patch(`v1/students/${id}/practice-hours`, { json: { min_practice_minutes: minutes } })
+        .json<Student>(),
+    onSuccess: onSaved,
+  });
+}
+
 export function useUpdateStudentCredentials() {
   const onSaved = useStudentSaved();
   return useMutation({

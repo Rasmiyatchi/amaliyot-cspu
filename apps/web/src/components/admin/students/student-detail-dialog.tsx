@@ -10,6 +10,7 @@ import {
   type RestrictionPreset,
 } from "@/components/admin/access-restrictions/restriction-form-dialog";
 import { CredentialsSection } from "@/components/admin/credentials-section";
+import { PracticeHoursSection } from "@/components/admin/students/practice-hours-section";
 import { formatTashkentDateTime } from "@/components/attendance/attendance-date-utils";
 import { describeRequestError } from "@/components/attendance/request-error";
 import { StudentFormDialog } from "@/components/admin/students/student-form-dialog";
@@ -398,6 +399,11 @@ export function StudentDetailDialog({ student: row, onClose, onDeleted }: Props)
               isPending={updateCreds.isPending}
               onSave={(payload) => updateCreds.mutateAsync({ id: student.id, data: payload })}
             />
+
+            <Separator />
+
+            {/* Kunlik majburiy amaliyot vaqti (individual yoki umumiy) */}
+            <PracticeHoursSection key={`ph-${student.id}`} student={student} />
 
             <Separator />
 

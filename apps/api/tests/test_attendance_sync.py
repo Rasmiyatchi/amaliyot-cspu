@@ -1,4 +1,4 @@
-"""Attendance sync (avto-qizil), 6 soat qoidasi va schema testlari."""
+"""Attendance sync (avto-qizil), majburiy vaqt qoidasi va schema testlari."""
 
 from datetime import UTC, date, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
@@ -15,8 +15,9 @@ from app.schemas.attendance import (
 )
 from app.services import attendance as svc
 from app.services.attendance import (
-    MIN_PRACTICE_SECONDS,
+    DEFAULT_MIN_PRACTICE_MINUTES,
     UZB_TZ,
+    format_practice_duration,
     sync_missed_attendance_days,
 )
 
@@ -86,9 +87,28 @@ async def test_sync_global_is_throttled(monkeypatch):
     assert db.execute.await_count == 4
 
 
-def test_six_hour_duration_constant():
-    assert MIN_PRACTICE_SECONDS == 21600
-    assert MIN_PRACTICE_SECONDS / 3600 == 6.0
+def test_default_practice_duration_is_four_hours():
+    # Sozlama topilmasa: 4 soat (asl qiymat admin sozlamalaridan / talabaning o'zidan)
+    assert DEFAULT_MIN_PRACTICE_MINUTES == 240
+
+
+def test_practice_duration_text_and_russian_translation():
+    from app.core.i18n import translate_detail
+
+    assert format_practice_duration(240) == "4 soat"
+    assert format_practice_duration(270) == "4 soat 30 daqiqa"
+    assert format_practice_duration(45) == "45 daqiqa"
+    for minutes, ru in (
+        (240, "не менее 4 ч практики"),
+        (270, "не менее 4 ч 30 мин практики"),
+        (45, "не менее 45 мин практики"),
+    ):
+        uz = (
+            f"Ketishni qayd etish uchun kamida {format_practice_duration(minutes)} "
+            "amaliyot o'tgan bo'lishi shart. Qolgan vaqt: 1:05 (soat:daqiqa)"
+        )
+        out = translate_detail(uz, "ru")
+        assert ru in out and "Осталось: 1:05" in out, out
 
 
 def test_attendance_event_read_model_validation():

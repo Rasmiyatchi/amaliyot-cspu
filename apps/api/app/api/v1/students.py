@@ -1,14 +1,16 @@
 """Students endpoints — list/get/create/update/delete (admin-only)."""
 
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from loguru import logger
 
-from app.api.deps import RequireAdmin, RequireStructure
+from app.api.deps import RequireAdmin, RequireStructure, require_any_permission
 from app.db.session import SessionDep
 from app.models.enums import StudentStatus, UserRole
+from app.models.student import Student
+from app.models.user import User
 from app.schemas.common import CredentialsUpdate, Paginated
 from app.schemas.student import (
     DeviceResetRequest,
@@ -17,6 +19,7 @@ from app.schemas.student import (
     StudentBulkDeleteRequest,
     StudentBulkDeleteResult,
     StudentCreate,
+    StudentPracticeHoursUpdate,
     StudentRead,
     StudentUpdate,
 )
@@ -250,6 +253,47 @@ async def update_student_credentials(
     student = await svc_get_student(db, id_)
     _check_faculty_access(user, student, "tahrirlash")
     return StudentRead.model_validate(await svc_update_credentials(db, id_, data))
+
+
+# Davomat sozlamasi — tuzilma yoki amaliyot moduli adminlari (davomat bilan ishlaydiganlar)
+RequireStructureOrPractice = Annotated[
+    User, Depends(require_any_permission("structure", "practice"))
+]
+
+
+@router.patch(
+    "/{id_}/practice-hours",
+    response_model=StudentRead,
+    summary="Admin: talaba uchun individual kunlik majburiy amaliyot vaqti",
+)
+async def update_student_practice_hours(
+    id_: UUID,
+    payload: StudentPracticeHoursUpdate,
+    request: Request,
+    db: SessionDep,
+    user: RequireStructureOrPractice,
+) -> StudentRead:
+    """`min_practice_minutes`: daqiqa (0–720); `null` — umumiy sozlamaga qaytarish."""
+    student = await svc_get_student(db, id_)
+    _check_faculty_access(user, student, "tahrirlash")
+    old = student.get("min_practice_minutes")
+    new = payload.min_practice_minutes
+    if old != new:
+        row = await db.get(Student, id_)
+        assert row is not None  # svc_get_student 404 qaytargan bo'lardi
+        row.min_practice_minutes = new
+        await audit.log(
+            db,
+            actor=user,
+            action="update",
+            entity_type="student",
+            entity_id=id_,
+            summary=f"Kunlik majburiy vaqt o'zgartirildi: {student.get('full_name') or id_}",
+            metadata={"changes": [{"field": "min_practice_minutes", "before": old, "after": new}]},
+            request=request,
+        )
+        await db.commit()
+    return StudentRead.model_validate(await svc_get_student(db, id_))
 
 
 @router.post(

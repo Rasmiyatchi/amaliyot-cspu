@@ -16,6 +16,7 @@ class SystemSettingsRead(BaseModel):
     email_notifications_enabled: bool
     maintenance_mode: bool
     maintenance_message: str | None
+    min_practice_minutes: int
     extra: dict[str, Any]
     created_at: datetime
     updated_at: datetime
@@ -31,6 +32,14 @@ class SystemSettingsUpdate(BaseModel):
     email_notifications_enabled: bool | None = None
     maintenance_mode: bool | None = None
     maintenance_message: str | None = Field(None, max_length=2000)
+    #: Kunlik majburiy amaliyot vaqti (daqiqa): 0 — cheklovsiz, ko'pi bilan 12 soat
+    min_practice_minutes: int | None = Field(None, ge=0, le=720)
+
+
+class AttendanceSettingsRead(BaseModel):
+    """Davomat sozlamalari — har qanday admin o'qiydi (talaba kartasida umumiy qiymat)."""
+
+    min_practice_minutes: int
 
 
 class SystemSettingsPublic(BaseModel):

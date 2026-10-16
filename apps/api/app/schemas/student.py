@@ -58,6 +58,9 @@ class StudentRead(BaseModel):
     education_form: EducationForm | None
     degree_type: DegreeType | None
 
+    # Individual kunlik majburiy amaliyot vaqti (daqiqa); None — umumiy sozlama
+    min_practice_minutes: int | None = None
+
     # Status
     status: StudentStatus
     created_at: datetime
@@ -180,3 +183,9 @@ class DeviceResetResult(BaseModel):
     reset: int
     faculty_name: str | None = None
     group_name: str | None = None
+
+
+class StudentPracticeHoursUpdate(BaseModel):
+    """Talaba uchun individual kunlik majburiy vaqt. `null` — umumiy sozlamaga qaytarish."""
+
+    min_practice_minutes: int | None = Field(..., ge=0, le=720)
