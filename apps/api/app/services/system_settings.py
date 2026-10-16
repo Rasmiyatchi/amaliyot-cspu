@@ -29,6 +29,7 @@ def _to_dict(s: SystemSettings) -> dict[str, Any]:
         "email_notifications_enabled": s.email_notifications_enabled,
         "maintenance_mode": s.maintenance_mode,
         "maintenance_message": s.maintenance_message,
+        "min_practice_minutes": s.min_practice_minutes,
         "extra": s.extra or {},
         "created_at": s.created_at,
         "updated_at": s.updated_at,

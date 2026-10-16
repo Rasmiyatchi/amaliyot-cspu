@@ -171,6 +171,8 @@ export type Student = {
 
   status: StudentStatus;
   created_at: ISODateTime;
+  /** Individual kunlik majburiy amaliyot vaqti (daqiqa); null — umumiy sozlama */
+  min_practice_minutes?: number | null;
 };
 
 // ─── Organization ─────────────────────────────────────────
@@ -412,6 +414,8 @@ export type SystemSettings = {
   email_notifications_enabled: boolean;
   maintenance_mode: boolean;
   maintenance_message: string | null;
+  /** Kunlik majburiy amaliyot vaqti (daqiqa) — "ketish" shundan keyin ochiladi */
+  min_practice_minutes: number;
   extra: Record<string, unknown>;
   created_at: ISODateTime;
   updated_at: ISODateTime;
@@ -432,6 +436,7 @@ export type SystemSettingsUpdate = Partial<{
   email_notifications_enabled: boolean;
   maintenance_mode: boolean;
   maintenance_message: string | null;
+  min_practice_minutes: number;
 }>;
 
 // ─── Admins (admin + super_admin users) ──────────────────
@@ -753,6 +758,8 @@ export type AttendanceDay = {
 
 export type AttendanceDayDetail = AttendanceDay & {
   events: AttendanceEvent[];
+  /** Talaba javoblarida: "ketish" ochiladigan majburiy vaqt (daqiqa) */
+  required_minutes?: number | null;
 };
 
 export type AttendanceOverride = {

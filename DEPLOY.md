@@ -10,8 +10,16 @@ yaratilgan, ruxsatlari bo'sh adminlarga barcha modullar qaytariladi — ilgari r
 "Standart (barcha)" deb ko'rinib, aslida hech qayerga kira olmasdi) → `d4f6b8c0e2a5`
 (`access_restrictions` — foydalanuvchi/guruh uchun kirishni vaqtincha to'xtatish) →
 `e6b8d0f2a4c7` (TZ 08.10.2026: `broadcasts` jadvali, `notification_type` ga `broadcast`,
-`practice_assignments.source_assignment_id`, `audit_logs` uchun append-only trigger). API konteyner
-ishga tushganda `alembic upgrade head` avtomatik bajaradi. HEAD = `e6b8d0f2a4c7`.
+`practice_assignments.source_assignment_id`, `audit_logs` uchun append-only trigger) →
+`f8c0e2a4b6d9` (kunlik majburiy amaliyot vaqti: `system_settings.min_practice_minutes`,
+`students.min_practice_minutes`). API konteyner ishga tushganda `alembic upgrade head`
+avtomatik bajaradi. HEAD = `f8c0e2a4b6d9`.
+
+**Kunlik majburiy vaqt (2026-10-16):** "Ketdim" tugmasi endi kelgandan **4 soat** keyin
+ochiladi (avval kodda 6 soat qattiq yozilgan edi). Umumiy qiymat — Tizim → Sozlamalar →
+"Davomat: kunlik majburiy vaqt" (0–12 soat, super admin). Bitta talaba uchun — talaba
+kartasidagi "Kunlik majburiy vaqt" (individual qiymat yoki umumiyga qaytarish). Ikkala
+o'zgarish ham audit jurnaliga eski → yangi qiymat bilan yoziladi.
 
 **TZ 08.10.2026 (2026-10-09):**
 - *Qayta biriktirish* — Amaliyot → Biriktirishlar → "Qayta biriktirish": tanlangan talabalar,

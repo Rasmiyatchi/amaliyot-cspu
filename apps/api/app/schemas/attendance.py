@@ -85,6 +85,8 @@ class AttendanceDayDetail(AttendanceDayRead):
     """Kunlik ma'lumot + shu kundagi barcha event'lar."""
 
     events: list[AttendanceEventRead] = []
+    #: Talaba javoblarida: "ketish" ochiladigan majburiy vaqt (daqiqa) — taymer shu bo'yicha
+    required_minutes: int | None = None
 
 
 # ─── Supervizor actions ──────────────────────────────────

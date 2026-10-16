@@ -56,6 +56,7 @@ def _student_base_select() -> Any:
             Student.education_form,
             Student.degree_type,
             Student.status,
+            Student.min_practice_minutes,
             Student.created_at,
         )
         .join(User, User.id == Student.user_id)

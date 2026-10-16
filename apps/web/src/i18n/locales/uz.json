@@ -2042,9 +2042,9 @@
     "checkOutSuccess": "Ketish muvaffaqiyatli qayd etildi (Yashil)",
     "durationSpent": "Amaliyot davomiyligi",
     "gpsHint": "GPS avtomatik tekshiriladi. Tashkilot hududida bo'lishingiz shart.",
-    "lockHint": "Ketishni qayd etish uchun kamida 6 soat o'tishi shart",
-    "lockedTitle": "Majburiy 6 soatlik amaliyot vaqti ketmoqda",
-    "readyForCheckOut": "6 soatlik amaliyot vaqti to'ldi! Endi ketishni qayd etishingiz mumkin.",
+    "lockHint": "Ketishni qayd etish uchun kamida {{duration}} o'tishi shart",
+    "lockedTitle": "Majburiy amaliyot vaqti ketmoqda ({{duration}})",
+    "readyForCheckOut": "Majburiy amaliyot vaqti ({{duration}}) to'ldi! Endi ketishni qayd etishingiz mumkin.",
     "remainingTime": "Qolgan vaqt",
     "unlocksAt": "Ketish ochiladi",
     "acquiring": "Joylashuv aniqlanmoqda…",
@@ -3541,5 +3541,25 @@
     "singleTitle": "Qurilmani uzish",
     "singleText": "{{name}} qurilmasi uziladi. Talaba keyingi kirishda qayta login qiladi.",
     "resetConfirm": "Uzish"
+  },
+  "practiceHours": {
+    "none": "cheklovsiz",
+    "hours": "{{h}} soat",
+    "minutes": "{{m}} daqiqa",
+    "hoursMinutes": "{{h}} soat {{m}} daqiqa",
+    "hoursLabel": "Soat",
+    "minutesLabel": "Daqiqa",
+    "invalid": "0 dan {{max}} soatgacha kiriting (daqiqa 0–59)",
+    "settingsTitle": "Davomat: kunlik majburiy vaqt",
+    "settingsHint": "Talaba \"Keldim\" deganidan keyin shuncha vaqt o'tgach \"Ketdim\" tugmasi ochiladi. Individual vaqt belgilangan talabalarga bu qiymat ta'sir qilmaydi (talaba kartasida o'zgartiriladi).",
+    "preview": "Barcha talabalar uchun: kelgandan keyin {{duration}} o'tgach ketishni qayd etish mumkin.",
+    "studentTitle": "Kunlik majburiy vaqt",
+    "commonNote": "Umumiy sozlama (Tizim sozlamalari)",
+    "individualNote": "Individual — umumiy sozlama: {{common}}",
+    "individualBadge": "Individual",
+    "setIndividual": "Individual belgilash",
+    "resetToCommon": "Umumiyga qaytarish",
+    "toastSaved": "Talaba uchun individual vaqt: {{duration}}",
+    "toastReset": "Talaba umumiy sozlamaga qaytarildi"
   }
 }

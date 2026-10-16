@@ -6,7 +6,7 @@ Faqat 1 ta yozuv bo'ladi (id always = singleton row).
 
 from typing import Any
 
-from sqlalchemy import ARRAY, Boolean, Integer, String, Text
+from sqlalchemy import ARRAY, Boolean, CheckConstraint, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,6 +15,11 @@ from app.db.base import Base, TimestampMixin, UUIDMixin
 
 class SystemSettings(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "system_settings"
+    __table_args__ = (
+        CheckConstraint(
+            "min_practice_minutes BETWEEN 0 AND 720", name="min_practice_minutes_range"
+        ),
+    )
 
     site_name: Mapped[str] = mapped_column(
         String(200),
@@ -49,6 +54,15 @@ class SystemSettings(UUIDMixin, TimestampMixin, Base):
         Text,
         nullable=True,
         comment="Maintenance paytida ko'rsatish uchun xabar",
+    )
+
+    # Davomat: kelgandan keyin "ketish"ni qayd etish uchun o'tishi shart bo'lgan vaqt (daqiqa).
+    # Talabaning o'z qiymati (students.min_practice_minutes) bo'lsa — o'sha ustun.
+    min_practice_minutes: Mapped[int] = mapped_column(
+        Integer,
+        default=240,
+        server_default="240",
+        comment="Ketishni qayd etish uchun minimal amaliyot vaqti (daqiqa)",
     )
 
     # Kelajak sozlamalar uchun JSONB
