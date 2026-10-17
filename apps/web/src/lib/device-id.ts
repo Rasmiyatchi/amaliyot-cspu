@@ -8,6 +8,14 @@
  */
 const STORAGE_KEY = "chdpu_device_id";
 const COOKIE_NAME = "chdpu_device_id";
+let currentDeviceId: string | null = null;
+
+export class DeviceStorageError extends Error {
+  constructor() {
+    super("Browser storage is unavailable");
+    this.name = "DeviceStorageError";
+  }
+}
 
 export type DeviceInfo = {
   platform: string | null; // "Android" | "iOS" | "Windows" | "macOS" | "Linux" | null
@@ -70,25 +78,32 @@ function usableId(id: string | null): string | null {
 }
 
 export function getDeviceId(): string {
+  // Storage APIs can fail independently (e.g. localStorage denied but cookies allowed).
+  // Never bind an account to an ephemeral ID that disappears on the next page load.
+  let storedId: string | null = null;
   try {
-    let id = usableId(localStorage.getItem(STORAGE_KEY));
-    if (!id) {
-      id = usableId(getCookie(COOKIE_NAME));
-    }
-    if (!id) {
-      id =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    }
-    localStorage.setItem(STORAGE_KEY, id);
-    setCookie(COOKIE_NAME, id);
-    return id;
+    storedId = usableId(localStorage.getItem(STORAGE_KEY));
   } catch {
-    const cookieId = usableId(getCookie(COOKIE_NAME));
-    if (cookieId) return cookieId;
-    return `ephemeral-${Math.random().toString(36).slice(2)}`;
+    // Cookie can still restore the ID.
   }
+  const id =
+    storedId ??
+    usableId(getCookie(COOKIE_NAME)) ??
+    currentDeviceId ??
+    (typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+  try {
+    localStorage.setItem(STORAGE_KEY, id);
+    storedId = usableId(localStorage.getItem(STORAGE_KEY));
+  } catch {
+    // Always try the cookie, even when localStorage.setItem throws.
+  }
+  setCookie(COOKIE_NAME, id);
+  if (storedId !== id && getCookie(COOKIE_NAME) !== id) throw new DeviceStorageError();
+  currentDeviceId = id;
+  return id;
 }
 
 /* ─── UA parsing ─── */

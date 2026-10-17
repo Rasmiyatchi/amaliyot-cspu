@@ -32,7 +32,7 @@ import { Progress } from "@/components/ui/progress";
 import { dateLocale } from "@/i18n";
 import { useCheckIn, useCheckOut } from "@/lib/api/attendance";
 import type { AttendanceDayDetail, CheckInRequest, UUID } from "@/lib/api/types";
-import { getDeviceId } from "@/lib/device-id";
+import { DeviceStorageError, getDeviceId } from "@/lib/device-id";
 import {
   acquirePosition,
   geoErrorTexts,
@@ -292,7 +292,18 @@ export function CheckInButton({ assignmentId, today, locationOptional = false }:
     // GPS aniqlanmasa ham so'rov yuboriladi: hudud amaliyoti va geo-nuqtasi kiritilmagan
     // tashkilot uchun server koordinatasiz qabul qiladi; geo talab qilinsa o'zi rad etadi.
     const fix = await locate();
-    const data: CheckInRequest = { device_id: getDeviceId() };
+    let deviceId: string;
+    try {
+      deviceId = getDeviceId();
+    } catch (e) {
+      toast.error(
+        e instanceof DeviceStorageError
+          ? t("auth.login.storageUnavailable")
+          : t("common.unexpectedError"),
+      );
+      return;
+    }
+    const data: CheckInRequest = { device_id: deviceId };
     if (fix) {
       data.lat = fix.lat;
       data.lng = fix.lng;
