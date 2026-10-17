@@ -1,6 +1,6 @@
 import { HTTPError } from "ky";
 import { Camera, Eye, EyeOff, Loader2, Save } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -64,9 +64,6 @@ export function ProfilePanel({ active }: PanelProps) {
   if (!user) return null;
 
   const isStudent = user.role === "student";
-  const pwdValid =
-    currentPwd.length > 0 && newPwd.length >= PASSWORD_MIN_LENGTH && newPwd === newPwd2;
-
   const handleSaveProfile = async () => {
     try {
       if (isStudent) {
@@ -93,23 +90,29 @@ export function ProfilePanel({ active }: PanelProps) {
     }
   };
 
-  const handleChangePwd = async () => {
-    if (newPwd.length < PASSWORD_MIN_LENGTH) {
+  const handleChangePwd = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (changePwd.isPending) return;
+    const data = new FormData(e.currentTarget);
+    const currentPassword = String(data.get("current-password") ?? "");
+    const newPassword = String(data.get("new-password") ?? "");
+    const confirmedPassword = String(data.get("confirm-password") ?? "");
+    if (newPassword.length < PASSWORD_MIN_LENGTH) {
       toast.error(t("profileDialog.pwdMinLength", { min: PASSWORD_MIN_LENGTH }));
       return;
     }
-    if (newPwd !== newPwd2) {
+    if (newPassword !== confirmedPassword) {
       toast.error(t("profileDialog.pwdMismatch"));
       return;
     }
-    if (newPwd === currentPwd) {
+    if (newPassword === currentPassword) {
       toast.error(t("profileDialog.pwdSameAsCurrent"));
       return;
     }
     try {
       await changePwd.mutateAsync({
-        current_password: currentPwd,
-        new_password: newPwd,
+        current_password: currentPassword,
+        new_password: newPassword,
       });
       toast.success(t("profileDialog.pwdChanged"));
       setCurrentPwd("");
@@ -292,78 +295,104 @@ export function ProfilePanel({ active }: PanelProps) {
         </TabsContent>
 
         <TabsContent value="password" className="space-y-3 pt-2">
-          <Alert className="py-2.5 px-3">
-            <AlertDescription className="text-xs">
-              {t("profileDialog.pwdRules", { min: PASSWORD_MIN_LENGTH })}
-            </AlertDescription>
-          </Alert>
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="cur-pwd" className="text-xs sm:text-sm">
-                {t("profileDialog.currentPwd")}
-              </Label>
-              <div className="relative mt-1">
+          <form onSubmit={handleChangePwd} autoComplete="on" className="space-y-3">
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              value={user.username}
+              readOnly
+              className="sr-only"
+              tabIndex={-1}
+              aria-label={t("auth.login.username")}
+            />
+            <Alert className="py-2.5 px-3">
+              <AlertDescription className="text-xs">
+                {t("profileDialog.pwdRules", { min: PASSWORD_MIN_LENGTH })}
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="cur-pwd" className="text-xs sm:text-sm">
+                  {t("profileDialog.currentPwd")}
+                </Label>
+                <div className="relative mt-1">
+                  <Input
+                    id="cur-pwd"
+                    name="current-password"
+                    required
+                    type={showPwd ? "text" : "password"}
+                    value={currentPwd}
+                    onChange={(e) => setCurrentPwd(e.target.value)}
+                    autoComplete="current-password"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    readOnly={changePwd.isPending}
+                    className="pr-10 text-xs sm:text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(!showPwd)}
+                    aria-label={togglePwdLabel}
+                    aria-pressed={showPwd}
+                    title={togglePwdLabel}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="new-pwd" className="text-xs sm:text-sm">
+                  {t("profileDialog.newPwd")}
+                </Label>
                 <Input
-                  id="cur-pwd"
+                  id="new-pwd"
+                  name="new-password"
+                  required
                   type={showPwd ? "text" : "password"}
-                  value={currentPwd}
-                  onChange={(e) => setCurrentPwd(e.target.value)}
-                  autoComplete="current-password"
-                  className="pr-10 text-xs sm:text-sm"
+                  value={newPwd}
+                  onChange={(e) => setNewPwd(e.target.value)}
+                  autoComplete="new-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  readOnly={changePwd.isPending}
+                  minLength={PASSWORD_MIN_LENGTH}
+                  maxLength={128}
+                  className="mt-1 text-xs sm:text-sm"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd(!showPwd)}
-                  aria-label={togglePwdLabel}
-                  aria-pressed={showPwd}
-                  title={togglePwdLabel}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+              </div>
+              <div>
+                <Label htmlFor="new-pwd2" className="text-xs sm:text-sm">
+                  {t("profileDialog.repeatPwd")}
+                </Label>
+                <Input
+                  id="new-pwd2"
+                  name="confirm-password"
+                  required
+                  type={showPwd ? "text" : "password"}
+                  value={newPwd2}
+                  onChange={(e) => setNewPwd2(e.target.value)}
+                  autoComplete="new-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  readOnly={changePwd.isPending}
+                  minLength={PASSWORD_MIN_LENGTH}
+                  maxLength={128}
+                  className="mt-1 text-xs sm:text-sm"
+                />
               </div>
             </div>
-            <div>
-              <Label htmlFor="new-pwd" className="text-xs sm:text-sm">
-                {t("profileDialog.newPwd")}
-              </Label>
-              <Input
-                id="new-pwd"
-                type={showPwd ? "text" : "password"}
-                value={newPwd}
-                onChange={(e) => setNewPwd(e.target.value)}
-                autoComplete="new-password"
-                minLength={PASSWORD_MIN_LENGTH}
-                maxLength={128}
-                className="mt-1 text-xs sm:text-sm"
-              />
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={changePwd.isPending} className="w-full sm:w-auto">
+                {changePwd.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {t("profileDialog.changePwdBtn")}
+              </Button>
             </div>
-            <div>
-              <Label htmlFor="new-pwd2" className="text-xs sm:text-sm">
-                {t("profileDialog.repeatPwd")}
-              </Label>
-              <Input
-                id="new-pwd2"
-                type={showPwd ? "text" : "password"}
-                value={newPwd2}
-                onChange={(e) => setNewPwd2(e.target.value)}
-                autoComplete="new-password"
-                minLength={PASSWORD_MIN_LENGTH}
-                maxLength={128}
-                className="mt-1 text-xs sm:text-sm"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end pt-2">
-            <Button
-              onClick={handleChangePwd}
-              disabled={changePwd.isPending || !pwdValid}
-              className="w-full sm:w-auto"
-            >
-              {changePwd.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {t("profileDialog.changePwdBtn")}
-            </Button>
-          </div>
+          </form>
         </TabsContent>
       </Tabs>
     </div>

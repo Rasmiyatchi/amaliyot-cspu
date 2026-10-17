@@ -1,13 +1,5 @@
 import { HTTPError } from "ky";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Eye,
-  EyeOff,
-  LockKeyhole,
-  ShieldAlert,
-  User,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole, ShieldAlert, User } from "lucide-react";
 import type { TFunction } from "i18next";
 import { useState, type FormEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -18,7 +10,9 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useBootstrap } from "@/hooks/use-bootstrap";
 import { login } from "@/lib/auth-api";
+import { DeviceStorageError } from "@/lib/device-id";
 import { postLoginPath } from "@/lib/routing";
 import { useAuthStore } from "@/stores/auth";
 
@@ -39,6 +33,9 @@ function serverDetail(err: HTTPError): string | null {
 }
 
 function mapLoginError(err: unknown, t: TFunction): LoginError {
+  if (err instanceof DeviceStorageError) {
+    return { kind: "inline", message: t("auth.login.storageUnavailable") };
+  }
   if (!(err instanceof HTTPError)) {
     return { kind: "inline", message: t("auth.login.networkError") };
   }
@@ -50,6 +47,7 @@ function mapLoginError(err: unknown, t: TFunction): LoginError {
     return {
       kind: "inline",
       message: detail ?? t("auth.login.invalidCredentials"),
+      help: t("auth.login.passwordHelp"),
     };
   }
 
@@ -93,6 +91,7 @@ function mapLoginError(err: unknown, t: TFunction): LoginError {
 
 export function Login() {
   const { t } = useTranslation();
+  const { isReady } = useBootstrap();
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
   const location = useLocation();
@@ -112,13 +111,19 @@ export function Login() {
     return <Navigate to={postLoginPath(user.role, location.state)} replace />;
   }
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (loading) return;
+    if (loading || !isReady) return;
+    // Password managers can autofill without dispatching React change events.
+    const formData = new FormData(e.currentTarget);
+    const submittedUsername = String(formData.get("username") ?? "").trim();
+    const submittedPassword = String(formData.get("password") ?? "");
+    setUsername(submittedUsername);
+    setPassword(submittedPassword);
     setLoading(true);
     setError(null);
     try {
-      const u = await login(username.trim(), password);
+      const u = await login(submittedUsername, submittedPassword);
       toast.success(t("auth.login.welcome", { name: u.full_name }));
       if (u.must_change_password) {
         navigate("/change-password", { replace: true });
@@ -153,10 +158,7 @@ export function Login() {
           <img src="/chdpu-logo.png" alt="CHDPU" />
           <span className="login-kicker">{t("auth.login.brand.kicker")}</span>
           <h1>
-            <Trans
-              i18nKey="auth.login.brand.headline"
-              components={{ br: <br />, em: <em /> }}
-            />
+            <Trans i18nKey="auth.login.brand.headline" components={{ br: <br />, em: <em /> }} />
           </h1>
           <p>{t("auth.login.brand.description")}</p>
         </div>
@@ -183,7 +185,7 @@ export function Login() {
           <h2>{t("auth.login.title")}</h2>
           <p>{t("auth.login.subtitle")}</p>
 
-          <form onSubmit={handleSubmit} noValidate>
+          <form onSubmit={handleSubmit} autoComplete="on" noValidate>
             <label>
               {t("auth.login.username")}
               <div>
@@ -201,7 +203,7 @@ export function Login() {
                   autoCorrect="off"
                   spellCheck={false}
                   inputMode="text"
-                  disabled={loading}
+                  readOnly={loading}
                 />
               </div>
             </label>
@@ -221,7 +223,7 @@ export function Login() {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  disabled={loading}
+                  readOnly={loading}
                 />
                 <button
                   type="button"
@@ -247,12 +249,13 @@ export function Login() {
             )}
 
             {error?.kind === "inline" && (
-              <p className="form-message" role="alert">
-                {error.message}
-              </p>
+              <div className="form-message" role="alert">
+                <p>{error.message}</p>
+                {error.help && <p className="mt-1 text-xs">{error.help}</p>}
+              </div>
             )}
 
-            <Button type="submit" size="lg" disabled={loading} className="w-full">
+            <Button type="submit" size="lg" disabled={loading || !isReady} className="w-full">
               {loading ? t("auth.login.submitting") : t("auth.login.submit")} <ArrowRight />
             </Button>
           </form>
