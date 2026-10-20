@@ -41,28 +41,34 @@ export function ChangePasswordPage() {
   if (!user) return <Navigate to="/login" replace />;
   if (!user.must_change_password) return <Navigate to={landingPathFor(user.role)} replace />;
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (newPassword.length < PASSWORD_MIN_LENGTH) {
+    if (loading) return;
+    const formData = new FormData(e.currentTarget);
+    const submittedPassword = String(formData.get("new-password") ?? "");
+    const submittedConfirm = String(formData.get("confirm-password") ?? "");
+    setNewPassword(submittedPassword);
+    setConfirm(submittedConfirm);
+    if (submittedPassword.length < PASSWORD_MIN_LENGTH) {
       toast.error(t("changePassword.tooShort"));
       return;
     }
-    if (newPassword === user.username) {
+    if (submittedPassword === user.username) {
       toast.error(t("changePassword.sameAsLogin"));
       return;
     }
-    if (newPassword !== confirm) {
+    if (submittedPassword !== submittedConfirm) {
       toast.error(t("changePassword.mismatch"));
       return;
     }
     setLoading(true);
     try {
       await api.post("v1/auth/me/force-change-password", {
-        json: { new_password: newPassword },
+        json: { new_password: submittedPassword },
       });
       // Update store
       setUser({ ...user, must_change_password: false });
-      toast.success(t("changePassword.changed"));
+      toast.success(t("changePassword.changed"), { duration: 10_000 });
       navigate(landingPathFor(user.role), { replace: true });
     } catch (err) {
       const msg = err instanceof HTTPError ? err.message : t("common.unexpectedError");
@@ -74,9 +80,7 @@ export function ChangePasswordPage() {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-900 p-4">
-      <div
-        className="float-slow pointer-events-none absolute -left-20 top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl"
-      />
+      <div className="float-slow pointer-events-none absolute -left-20 top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
       <div
         className="float-slow pointer-events-none absolute -right-10 bottom-20 h-96 w-96 rounded-full bg-purple-300/20 blur-3xl"
         style={{ animationDelay: "5s" }}
@@ -94,9 +98,7 @@ export function ChangePasswordPage() {
             </div>
           </div>
           <h1 className="text-2xl font-bold tracking-tight">{t("changePassword.title")}</h1>
-          <p className="mt-2 text-sm text-slate-300">
-            {t("changePassword.subtitle")}
-          </p>
+          <p className="mt-2 text-sm text-slate-300">{t("changePassword.subtitle")}</p>
         </div>
 
         <Alert className="mb-4 border-amber-400/30 bg-amber-400/10 text-amber-100">
@@ -109,18 +111,17 @@ export function ChangePasswordPage() {
           </AlertDescription>
         </Alert>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Brauzer parol menejeri yangi parolni SHU login uchun saqlasin (eski, login bilan bir xil
-              parol ustiga yozilsin) — aks holda keyingi kirishda eski parol avto-to'ldirilardi */}
+        <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
+          {/* Associate the new password with this login in browser password managers. */}
           <input
             type="text"
             name="username"
             autoComplete="username"
             value={user.username}
             readOnly
+            className="sr-only"
             tabIndex={-1}
-            aria-hidden="true"
-            className="hidden"
+            aria-label={t("auth.login.username")}
           />
           <div className="space-y-2">
             <Label htmlFor="new-password" className="text-slate-200">
@@ -130,6 +131,7 @@ export function ChangePasswordPage() {
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 id="new-password"
+                name="new-password"
                 type={showPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -137,7 +139,10 @@ export function ChangePasswordPage() {
                 minLength={PASSWORD_MIN_LENGTH}
                 maxLength={128}
                 autoComplete="new-password"
-                disabled={loading}
+                readOnly={loading}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder={t("changePassword.newPasswordPlaceholder")}
                 className="h-11 border-white/10 bg-white/5 pl-10 pr-10 text-white placeholder:text-slate-500"
               />
@@ -161,6 +166,7 @@ export function ChangePasswordPage() {
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 id="confirm-password"
+                name="confirm-password"
                 type={showPassword ? "text" : "password"}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
@@ -168,7 +174,10 @@ export function ChangePasswordPage() {
                 minLength={PASSWORD_MIN_LENGTH}
                 maxLength={128}
                 autoComplete="new-password"
-                disabled={loading}
+                readOnly={loading}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder={t("changePassword.confirmPlaceholder")}
                 className="h-11 border-white/10 bg-white/5 pl-10 text-white placeholder:text-slate-500"
               />

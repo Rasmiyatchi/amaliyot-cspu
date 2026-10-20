@@ -1269,6 +1269,8 @@
       "forbidden": "Kirish taqiqlangan. Administratorga murojaat qiling.",
       "blockedTitle": "Kirish cheklangan",
       "deviceHelp": "Administratorga murojaat qiling — eski qurilma o'chirilgach qayta kirasiz.",
+      "storageUnavailable": "Brauzer qurilma ma'lumotini saqlay olmayapti. Cookie va sayt xotirasiga ruxsat bering, so'ng Chrome yoki Safari'da qayta urinib ko'ring.",
+      "passwordHelp": "Birinchi kirishda parolni almashtirgan bo'lsangiz, yangi parolingizni kiriting. Brauzerda eski parol saqlangan bo'lishi mumkin. Parolni unutgan bo'lsangiz, administratorga murojaat qiling.",
       "blockedHelp": "Hisobingiz holati bo'yicha fakultet administratoriga murojaat qiling.",
       "validation": "Ma'lumotlar noto'g'ri formatda.",
       "validationHints": "Login kamida 3 belgi, parol kamida 4 belgi bo'lishi kerak.",
@@ -1279,9 +1281,9 @@
     }
   },
   "changePassword": {
-    "changed": "Parol o'zgartirildi",
+    "changed": "Yangi parol saqlandi. Keyingi kirishda shu paroldan foydalaning va brauzer taklif qilsa saqlangan parolni yangilang.",
     "confirmPlaceholder": "Yangi parolni qaytadan kiriting",
-    "hint": "Login: <0>{{username}}</0> · Hozirgi parol login bilan bir xil. Endi xavfsiz yangi parolni o'rnating.",
+    "hint": "Login: <0>{{username}}</0> · Yangi parol o'rnating. Keyingi kirishda vaqtinchalik parol o'rniga shu yangi parol kerak bo'ladi. Brauzer taklif qilsa saqlangan parolni yangilang.",
     "mismatch": "Parollar mos kelmadi",
     "newPassword": "Yangi parol",
     "newPasswordPlaceholder": "Kamida 6 ta belgi",
