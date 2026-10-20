@@ -30,6 +30,8 @@ def _to_dict(s: SystemSettings) -> dict[str, Any]:
         "maintenance_mode": s.maintenance_mode,
         "maintenance_message": s.maintenance_message,
         "min_practice_minutes": s.min_practice_minutes,
+        "force_password_change_students": s.force_password_change_students,
+        "force_password_change_supervisors": s.force_password_change_supervisors,
         "extra": s.extra or {},
         "created_at": s.created_at,
         "updated_at": s.updated_at,

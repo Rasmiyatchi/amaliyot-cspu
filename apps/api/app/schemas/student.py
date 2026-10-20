@@ -60,6 +60,8 @@ class StudentRead(BaseModel):
 
     # Individual kunlik majburiy amaliyot vaqti (daqiqa); None — umumiy sozlama
     min_practice_minutes: int | None = None
+    # Shartnoma olgan (QR bilan tasdiqlangan ariza yoki rasmiy shartnoma ro'yxatida)
+    has_contract: bool = False
 
     # Status
     status: StudentStatus

@@ -2314,13 +2314,19 @@
     "assignmentAll": "Barcha talabalar",
     "assignmentAssigned": "Biriktirilgan",
     "assignmentLabel": "Amaliyot holati",
-    "assignmentUnassigned": "Biriktirilmagan"
+    "assignmentUnassigned": "Biriktirilmagan",
+    "contractLabel": "Shartnoma",
+    "contractAll": "Shartnoma: barchasi",
+    "contractWith": "Shartnoma olgan",
+    "contractWithout": "Shartnoma olmagan"
   },
   "studentsStudentsTable": {
     "empty": "Talabalar topilmadi",
     "region": "Viloyat",
     "selectAllOnPage": "Sahifadagi hammasini tanlash",
-    "selectRowNamed": "Tanlash: {{name}}"
+    "selectRowNamed": "Tanlash: {{name}}",
+    "hasContract": "Shartnoma olgan: QR bilan tasdiqlangan ariza yoki rasmiy shartnoma ro'yxatida",
+    "contractShort": "Shartnoma"
   },
   "supervisor": {
     "noStudentsDesc": "Sizga hali hech qanday talaba biriktirilmagan",
@@ -3563,5 +3569,28 @@
     "resetToCommon": "Umumiyga qaytarish",
     "toastSaved": "Talaba uchun individual vaqt: {{duration}}",
     "toastReset": "Talaba umumiy sozlamaga qaytarildi"
+  },
+  "loginPolicy": {
+    "title": "Kirish: birinchi kirishda parol",
+    "hint": "Yoqilgan bo'lsa, foydalanuvchi berilgan (login bilan bir xil) parol bilan birinchi marta kirganda yangi parol o'rnatishga majbur bo'ladi. O'chiq bo'lsa, u xohlasa \"Profilim\" sahifasidan o'zi o'zgartiradi — admin bergan parol ishlayveradi.",
+    "students": "Talabalar parolni majburiy almashtirsin",
+    "studentsHint": "O'chiq bo'lsa talabalar ro'yxatdagi login va parol bilan har safar kiraveradi.",
+    "supervisors": "Supervizorlar parolni majburiy almashtirsin",
+    "supervisorsHint": "O'chiq bo'lsa supervizorlar admin bergan parol bilan kiraveradi.",
+    "adminsNote": "Adminlar uchun birinchi kirishda parol almashtirish doim majburiy."
+  },
+  "practiceMap": {
+    "title": "Amaliyot joyi xaritada",
+    "radius": "Ruxsat etilgan radius: {{m}} m (binodan shu masofada \"Keldim\" ishlaydi)",
+    "inside": "Siz amaliyot hududidasiz — davomatni belgilash mumkin",
+    "outside": "Siz amaliyot hududidan tashqaridasiz",
+    "distance": "Binogacha masofa: {{d}} m · ruxsat etilgan: {{r}} m · GPS aniqligi: ±{{acc}} m",
+    "outsideHint": "Binoga yana kamida {{d}} m yaqinlashing va \"Mening joylashuvim\"ni qayta bosing.",
+    "locateMe": "Mening joylashuvim",
+    "refresh": "Joylashuvni yangilash",
+    "acquiring": "Aniqlanmoqda…",
+    "acquiringAcc": "Aniqlanmoqda… ±{{m}} m",
+    "directions": "Yo'lni ko'rsatish",
+    "tip": "GPS bino ichida sust ishlashi mumkin: oynaga yaqinroq boring, Wi-Fi va joylashuvni yoqing. Ko'k doira — tashkilot hududi, nuqta — siz."
   }
 }

@@ -18,6 +18,28 @@ from app.models.student import Student
 from app.models.user import User
 
 
+def has_contract_expr() -> Any:
+    """Talaba shartnoma olganmi: QR bilan tasdiqlangan ariza (approved/active) YOKI admin tuzgan
+    rasmiy shartnoma (generated/active) ro'yxatida borligi (snapshot'da hemis_id)."""
+    from sqlalchemy import cast, exists, or_
+    from sqlalchemy.dialects.postgresql import JSONB
+
+    from app.models.contract import Contract
+    from app.models.enums import ApplicationStatus, ContractStatus
+    from app.models.practice_application import PracticeApplication
+
+    app_ok = exists().where(
+        PracticeApplication.student_id == Student.id,
+        PracticeApplication.status.in_([ApplicationStatus.APPROVED, ApplicationStatus.ACTIVE]),
+    )
+    snapshot = func.jsonb_build_array(func.jsonb_build_object("hemis_id", Student.hemis_id))
+    contract_ok = exists().where(
+        Contract.status.in_([ContractStatus.GENERATED, ContractStatus.ACTIVE]),
+        Contract.students.op("@>")(cast(snapshot, JSONB)),
+    )
+    return or_(app_ok, contract_ok)
+
+
 def _student_base_select() -> Any:
     """Student + User + Group + Direction + Faculty columnlarini flat qaytaradi."""
     return (
@@ -57,6 +79,7 @@ def _student_base_select() -> Any:
             Student.degree_type,
             Student.status,
             Student.min_practice_minutes,
+            has_contract_expr().label("has_contract"),
             Student.created_at,
         )
         .join(User, User.id == Student.user_id)
@@ -87,6 +110,7 @@ async def list_students(
     search: str | None = None,
     has_assignment: bool | None = None,
     has_device: bool | None = None,
+    has_contract: bool | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     base = _student_base_select()
 
@@ -116,6 +140,9 @@ async def list_students(
             stmt = stmt.where(
                 User.device_id.is_not(None) if has_device else User.device_id.is_(None)
             )
+        if has_contract is not None:
+            expr = has_contract_expr()
+            stmt = stmt.where(expr if has_contract else ~expr)
         if has_assignment is not None:
             asn_subq = (
                 select(1)

@@ -17,6 +17,8 @@ class SystemSettingsRead(BaseModel):
     maintenance_mode: bool
     maintenance_message: str | None
     min_practice_minutes: int
+    force_password_change_students: bool
+    force_password_change_supervisors: bool
     extra: dict[str, Any]
     created_at: datetime
     updated_at: datetime
@@ -34,6 +36,8 @@ class SystemSettingsUpdate(BaseModel):
     maintenance_message: str | None = Field(None, max_length=2000)
     #: Kunlik majburiy amaliyot vaqti (daqiqa): 0 — cheklovsiz, ko'pi bilan 12 soat
     min_practice_minutes: int | None = Field(None, ge=0, le=720)
+    force_password_change_students: bool | None = None
+    force_password_change_supervisors: bool | None = None
 
 
 class AttendanceSettingsRead(BaseModel):

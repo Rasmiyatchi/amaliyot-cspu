@@ -5,7 +5,7 @@ Barcha ORM modellari `Base` dan meros oladi.
 `UUIDMixin` — UUID primary key (string'larga qaraganda tezroq va xavfsizroq).
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, MetaData, func
@@ -45,13 +45,13 @@ class UUIDMixin:
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,

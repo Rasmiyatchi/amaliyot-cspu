@@ -49,8 +49,14 @@ def _apply_student_filters(  # type: ignore[no-untyped-def]
     academic_year_id: UUID | None,
     status: StudentStatus | None,
     search: str | None,
+    has_contract: bool | None = None,
 ):
     """Talabalar ro'yxati/eksporti uchun umumiy filtrlar."""
+    if has_contract is not None:
+        from app.services.student import has_contract_expr
+
+        expr = has_contract_expr()
+        stmt = stmt.where(expr if has_contract else ~expr)
     if faculty_id:
         stmt = stmt.where(Direction.faculty_id == faculty_id)
     if direction_id:
@@ -87,6 +93,7 @@ async def export_student_credentials(
     academic_year_id: UUID | None = None,
     status: StudentStatus | None = None,
     search: str | None = None,
+    has_contract: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Talabalar login/parol jadvali uchun ma'lumot (DB'dan, istalgan vaqtda).
 
@@ -122,6 +129,7 @@ async def export_student_credentials(
         academic_year_id=academic_year_id,
         status=status,
         search=search,
+        has_contract=has_contract,
     )
     rows = (await db.execute(stmt)).all()
     return [
@@ -149,7 +157,10 @@ async def export_students(
     academic_year_id: UUID | None = None,
     status: StudentStatus | None = None,
     search: str | None = None,
+    has_contract: bool | None = None,
 ) -> bytes:
+    from app.services.student import has_contract_expr
+
     stmt = (
         select(
             Student.hemis_id,
@@ -169,6 +180,7 @@ async def export_students(
             Student.status,
             User.email,
             User.phone,
+            has_contract_expr().label("has_contract"),
         )
         .join(User, User.id == Student.user_id)
         .outerjoin(Group, Group.id == Student.group_id)
@@ -186,6 +198,7 @@ async def export_students(
         academic_year_id=academic_year_id,
         status=status,
         search=search,
+        has_contract=has_contract,
     )
 
     rows = (await db.execute(stmt)).all()
@@ -207,8 +220,9 @@ async def export_students(
         "Status",
         "Email",
         "Telefon",
+        "Shartnoma",
     ]
-    data = [list(r) for r in rows]
+    data = [[*list(r)[:-1], "Ha" if r[-1] else "Yo'q"] for r in rows]
     return _to_csv(headers, data)
 
 

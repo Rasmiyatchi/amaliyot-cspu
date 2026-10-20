@@ -14,6 +14,7 @@ from app.db.session import SessionDep
 from app.models.enums import UserRole
 from app.models.user import User
 from app.services.access_restriction import raise_if_restricted
+from app.services.auth import must_change_password_now
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=True)
 
@@ -63,6 +64,7 @@ async def get_current_user(
     if (
         user.must_change_password
         and request.url.path.rstrip("/") not in MUST_CHANGE_PASSWORD_ALLOWED_PATHS
+        and await must_change_password_now(db, user)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

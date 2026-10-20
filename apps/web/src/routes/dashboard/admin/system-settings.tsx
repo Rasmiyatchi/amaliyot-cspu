@@ -3,6 +3,7 @@ import {
   Bell,
   Clock,
   FileText,
+  KeyRound,
   Loader2,
   Power,
   Save,
@@ -52,6 +53,8 @@ export function SystemSettingsPage() {
   // Kunlik majburiy amaliyot vaqti (soat + daqiqa maydonlari, matn sifatida)
   const [practiceHours, setPracticeHours] = useState("4");
   const [practiceMins, setPracticeMins] = useState("0");
+  const [forceStudents, setForceStudents] = useState(false);
+  const [forceSupervisors, setForceSupervisors] = useState(false);
 
   useEffect(() => {
     if (data) {
@@ -64,6 +67,8 @@ export function SystemSettingsPage() {
       setMaintenanceMsg(data.maintenance_message ?? "");
       setPracticeHours(String(Math.floor(data.min_practice_minutes / 60)));
       setPracticeMins(String(data.min_practice_minutes % 60));
+      setForceStudents(data.force_password_change_students);
+      setForceSupervisors(data.force_password_change_supervisors);
     }
   }, [data]);
 
@@ -99,6 +104,8 @@ export function SystemSettingsPage() {
           .filter(Boolean),
         email_notifications_enabled: emailNotif,
         min_practice_minutes: practiceMinutes,
+        force_password_change_students: forceStudents,
+        force_password_change_supervisors: forceSupervisors,
       });
       toast.success(t("adminSystemSettings.settingsSaved"));
     } catch (e) {
@@ -304,6 +311,44 @@ export function SystemSettingsPage() {
                   {t("practiceHours.invalid", { max: MAX_PRACTICE_MINUTES / 60 })}
                 </p>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Kirish: birinchi kirishda parolni majburiy almashtirish */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <KeyRound className="h-4 w-4" />
+                {t("loginPolicy.title")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">{t("loginPolicy.hint")}</p>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={forceStudents}
+                  onChange={(e) => setForceStudents(e.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <div>
+                  <div className="text-sm font-medium">{t("loginPolicy.students")}</div>
+                  <div className="text-xs text-muted-foreground">{t("loginPolicy.studentsHint")}</div>
+                </div>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={forceSupervisors}
+                  onChange={(e) => setForceSupervisors(e.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <div>
+                  <div className="text-sm font-medium">{t("loginPolicy.supervisors")}</div>
+                  <div className="text-xs text-muted-foreground">{t("loginPolicy.supervisorsHint")}</div>
+                </div>
+              </label>
+              <p className="text-xs text-muted-foreground">{t("loginPolicy.adminsNote")}</p>
             </CardContent>
           </Card>
 
