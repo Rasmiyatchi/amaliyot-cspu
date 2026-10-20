@@ -173,6 +173,8 @@ export type Student = {
   created_at: ISODateTime;
   /** Individual kunlik majburiy amaliyot vaqti (daqiqa); null — umumiy sozlama */
   min_practice_minutes?: number | null;
+  /** Shartnoma olgan (QR bilan tasdiqlangan ariza yoki rasmiy shartnoma ro'yxatida) */
+  has_contract?: boolean;
 };
 
 // ─── Organization ─────────────────────────────────────────
@@ -293,6 +295,11 @@ export type PracticeAssignment = {
   academic_year_name: string;
   organization_id: UUID | null;
   organization_name: string | null;
+  /** Talaba kabinetidagi xarita uchun: manzil va geo-fence */
+  organization_address?: string | null;
+  organization_geo_lat?: number | null;
+  organization_geo_lng?: number | null;
+  organization_geo_radius_m?: number | null;
   area_id: UUID | null;
   area_name: string | null;
   supervisor_id: UUID | null;
@@ -416,6 +423,9 @@ export type SystemSettings = {
   maintenance_message: string | null;
   /** Kunlik majburiy amaliyot vaqti (daqiqa) — "ketish" shundan keyin ochiladi */
   min_practice_minutes: number;
+  /** Birinchi kirishda parolni majburiy almashtirish (rol bo'yicha); adminlar uchun doim */
+  force_password_change_students: boolean;
+  force_password_change_supervisors: boolean;
   extra: Record<string, unknown>;
   created_at: ISODateTime;
   updated_at: ISODateTime;
@@ -437,6 +447,8 @@ export type SystemSettingsUpdate = Partial<{
   maintenance_mode: boolean;
   maintenance_message: string | null;
   min_practice_minutes: number;
+  force_password_change_students: boolean;
+  force_password_change_supervisors: boolean;
 }>;
 
 // ─── Admins (admin + super_admin users) ──────────────────

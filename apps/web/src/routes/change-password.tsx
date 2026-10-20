@@ -110,6 +110,18 @@ export function ChangePasswordPage() {
         </Alert>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Brauzer parol menejeri yangi parolni SHU login uchun saqlasin (eski, login bilan bir xil
+              parol ustiga yozilsin) — aks holda keyingi kirishda eski parol avto-to'ldirilardi */}
+          <input
+            type="text"
+            name="username"
+            autoComplete="username"
+            value={user.username}
+            readOnly
+            tabIndex={-1}
+            aria-hidden="true"
+            className="hidden"
+          />
           <div className="space-y-2">
             <Label htmlFor="new-password" className="text-slate-200">
               {t("changePassword.newPassword")}

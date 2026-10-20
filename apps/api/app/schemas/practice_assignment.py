@@ -92,6 +92,11 @@ class PracticeAssignmentRead(BaseModel):
     # Obyekt (XOR)
     organization_id: UUID | None
     organization_name: str | None
+    # Talaba kabinetidagi xarita uchun: tashkilot manzili va geo-fence
+    organization_address: str | None = None
+    organization_geo_lat: float | None = None
+    organization_geo_lng: float | None = None
+    organization_geo_radius_m: int | None = None
     area_id: UUID | None
     area_name: str | None
 

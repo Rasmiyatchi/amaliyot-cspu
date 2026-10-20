@@ -1,3 +1,4 @@
+import { FileCheck2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { ListPagination } from "@/components/admin/students/list-pagination";
@@ -178,7 +179,19 @@ export function StudentsTable({
                   ) : null}
                 </TableCell>
                 <TableCell>
-                  <StudentStatusBadge status={s.status} />
+                  <div className="flex flex-wrap items-center gap-1">
+                    <StudentStatusBadge status={s.status} />
+                    {s.has_contract && (
+                      <Badge
+                        variant="outline"
+                        className="border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
+                        title={t("studentsStudentsTable.hasContract")}
+                      >
+                        <FileCheck2 className="mr-1 h-3 w-3" />
+                        {t("studentsStudentsTable.contractShort")}
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

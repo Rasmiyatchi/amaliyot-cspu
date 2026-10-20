@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.core.security import hash_password_async, verify_password_async
 from app.db.session import SessionDep
 from app.models.enums import UserRole
+from app.models.user import User
 from app.schemas.auth import (
     ChangePasswordRequest,
     ForceChangePasswordRequest,
@@ -32,6 +33,7 @@ from app.services.auth import (
     authenticate,
     enforce_device_binding,
     issue_tokens_for,
+    must_change_password_now,
     refresh_tokens,
     revoke_all_refresh_tokens,
 )
@@ -113,7 +115,7 @@ async def login(
     return TokenResponse(
         access_token=access,
         expires_in=ttl,
-        must_change_password=user.must_change_password,
+        must_change_password=await must_change_password_now(db, user),
     )
 
 
@@ -144,9 +146,16 @@ async def logout(
     _clear_refresh_cookie(response)
 
 
+async def _me_response(db: SessionDep, user: User) -> UserMeResponse:
+    """`must_change_password` — bayroq emas, hozir amal qiladigan talab (sozlamaga qarab)."""
+    out = UserMeResponse.model_validate(user)
+    out.must_change_password = await must_change_password_now(db, user)
+    return out
+
+
 @router.get("/me", response_model=UserMeResponse, summary="Current user info")
-async def me(user: CurrentUser) -> CurrentUser:
-    return user
+async def me(db: SessionDep, user: CurrentUser) -> UserMeResponse:
+    return await _me_response(db, user)
 
 
 @router.patch(
@@ -154,7 +163,9 @@ async def me(user: CurrentUser) -> CurrentUser:
     response_model=UserMeResponse,
     summary="O'z profilini tahrirlash (ism, email, telefon)",
 )
-async def update_me(data: ProfileUpdateRequest, db: SessionDep, user: CurrentUser) -> CurrentUser:
+async def update_me(
+    data: ProfileUpdateRequest, db: SessionDep, user: CurrentUser
+) -> UserMeResponse:
     payload = data.model_dump(exclude_unset=True)
     if user.role == UserRole.STUDENT:
         # Talaba familiya, ism va otasining ismini o'zgartira olmaydi — faqat email va telefon
@@ -168,7 +179,7 @@ async def update_me(data: ProfileUpdateRequest, db: SessionDep, user: CurrentUse
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Email allaqachon band") from e
     await db.refresh(user)
-    return user
+    return await _me_response(db, user)
 
 
 @router.post(
@@ -230,7 +241,7 @@ async def upload_avatar(
     db: SessionDep,
     user: CurrentUser,
     file: UploadFile = File(...),
-) -> CurrentUser:
+) -> UserMeResponse:
     from app.services import uploads as uploads_svc
 
     if not (file.content_type or "").startswith("image/"):
@@ -242,4 +253,4 @@ async def upload_avatar(
     user.avatar_url = f"/api/v1/uploads/file/{attachment['path']}"
     await db.commit()
     await db.refresh(user)
-    return user
+    return await _me_response(db, user)

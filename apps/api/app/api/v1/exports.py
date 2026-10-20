@@ -67,6 +67,7 @@ async def export_credentials(
     academic_year_id: UUID | None = None,
     status: StudentStatus | None = None,
     search: str | None = None,
+    has_contract: bool | None = Query(None),
 ) -> Response:
     from app.services import audit_log as audit
 
@@ -80,6 +81,7 @@ async def export_credentials(
         academic_year_id=academic_year_id,
         status=status,
         search=search,
+        has_contract=has_contract,
     )
     # Ommaviy login/parol eksporti — maxfiy amal, albatta loglanadi
     await audit.log(
@@ -118,6 +120,7 @@ async def export_students(
     academic_year_id: UUID | None = None,
     status: StudentStatus | None = None,
     search: str | None = None,
+    has_contract: bool | None = Query(None),
 ) -> Response:
     content = await svc.export_students(
         db,
@@ -128,6 +131,7 @@ async def export_students(
         academic_year_id=academic_year_id,
         status=status,
         search=search,
+        has_contract=has_contract,
     )
     return _csv_response(content, "talabalar")
 

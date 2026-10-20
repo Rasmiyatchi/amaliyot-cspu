@@ -62,6 +62,7 @@ async def list_students(
     status_filter: StudentStatus | None = Query(None, alias="status"),
     has_assignment: bool | None = Query(None),
     has_device: bool | None = Query(None, description="Qurilmasi bog'langanlar"),
+    has_contract: bool | None = Query(None, description="Shartnoma olganlar (ariza yoki rasmiy)"),
     search: str | None = Query(None, min_length=1, max_length=100),
 ) -> Paginated[StudentRead]:
     if user.role == UserRole.ADMIN and user.faculty_id:
@@ -80,6 +81,7 @@ async def list_students(
         search,
         has_assignment,
         has_device,
+        has_contract,
     )
     return Paginated(
         items=[StudentRead.model_validate(i) for i in items],

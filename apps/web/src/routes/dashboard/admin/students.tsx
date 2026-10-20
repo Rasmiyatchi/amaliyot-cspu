@@ -153,6 +153,7 @@ export function StudentsPage() {
     academic_year_id: filters.academic_year_id,
     status: filters.status,
     search: filters.search,
+    has_contract: filters.has_contract === undefined ? undefined : String(filters.has_contract),
   };
 
   const handleExport = async () => {

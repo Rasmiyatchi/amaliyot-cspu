@@ -27,6 +27,7 @@ type Props = {
 const ALL_VALUE = "__all__";
 
 type AssignmentFilter = typeof ALL_VALUE | "assigned" | "unassigned";
+type ContractFilter = typeof ALL_VALUE | "with" | "without";
 
 const STATUS_OPTIONS: { value: StudentStatus; labelKey: string }[] = [
   { value: "studying", labelKey: "studentsStudentsFilters.statusStudying" },
@@ -89,7 +90,8 @@ export function StudentsFilters({ filters, onChange }: Props) {
     filters.course !== undefined ||
     !!filters.academic_year_id ||
     !!filters.status ||
-    filters.has_assignment !== undefined;
+    filters.has_assignment !== undefined ||
+    filters.has_contract !== undefined;
 
   const set = (patch: Partial<StudentFilters>) => onChange({ ...filters, ...patch });
   const clear = () => {
@@ -103,6 +105,8 @@ export function StudentsFilters({ filters, onChange }: Props) {
       : filters.has_assignment
         ? "assigned"
         : "unassigned";
+  const contract: ContractFilter =
+    filters.has_contract === undefined ? ALL_VALUE : filters.has_contract ? "with" : "without";
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -250,6 +254,29 @@ export function StudentsFilters({ filters, onChange }: Props) {
           </SelectItem>
           <SelectItem value="assigned" className="text-emerald-600 dark:text-emerald-400">
             {t("studentsStudentsFilters.assignmentAssigned")}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={contract}
+        onValueChange={(v) =>
+          set({ has_contract: v === ALL_VALUE ? undefined : v === "with" })
+        }
+      >
+        <SelectTrigger
+          className="w-full sm:w-[180px]"
+          aria-label={t("studentsStudentsFilters.contractLabel")}
+        >
+          <SelectValue placeholder={t("studentsStudentsFilters.contractLabel")} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL_VALUE}>{t("studentsStudentsFilters.contractAll")}</SelectItem>
+          <SelectItem value="without" className="font-medium text-amber-600 dark:text-amber-400">
+            {t("studentsStudentsFilters.contractWithout")}
+          </SelectItem>
+          <SelectItem value="with" className="text-emerald-600 dark:text-emerald-400">
+            {t("studentsStudentsFilters.contractWith")}
           </SelectItem>
         </SelectContent>
       </Select>

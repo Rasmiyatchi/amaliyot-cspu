@@ -475,6 +475,28 @@ async def authenticate(
     return user
 
 
+async def must_change_password_now(db: AsyncSession, user: User) -> bool:
+    """Foydalanuvchi hozir parolni almashtirishga majburmi.
+
+    `users.must_change_password` bayrog'i saqlanadi, lekin talaba/supervizor uchun u faqat
+    tizim sozlamasi (force_password_change_*) yoqilgan bo'lsa amal qiladi. Adminlar uchun —
+    doim. Sozlama bazadan o'qiladi (bir nechta worker bo'lsa ham darhol amal qilsin).
+    """
+    if not user.must_change_password:
+        return False
+    if user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+        return True
+    from app.models.system_settings import SystemSettings
+
+    col = (
+        SystemSettings.force_password_change_students
+        if user.role == UserRole.STUDENT
+        else SystemSettings.force_password_change_supervisors
+    )
+    flag = (await db.execute(select(col).limit(1))).scalar_one_or_none()
+    return bool(flag)
+
+
 async def issue_tokens_for(db: AsyncSession, user: User, request: Request) -> tuple[str, str, int]:
     """Yangi access + refresh yaratib, refresh'ni DB'ga yozadi.
 

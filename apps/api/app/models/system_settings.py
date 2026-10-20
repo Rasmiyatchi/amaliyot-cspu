@@ -65,10 +65,24 @@ class SystemSettings(UUIDMixin, TimestampMixin, Base):
         comment="Ketishni qayd etish uchun minimal amaliyot vaqti (daqiqa)",
     )
 
-    # Kelajak sozlamalar uchun JSONB
-    extra: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, default=dict, server_default="{}"
+    # Kirish: birinchi kirishda parolni majburiy almashtirish (rol bo'yicha). Adminlar uchun
+    # doim majburiy; talaba/supervizor uchun standart o'chiq — ko'pchilik yangi parolni eslab
+    # qolmay, ikkinchi kirishda "parol noto'g'ri" olardi.
+    force_password_change_students: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        comment="Talabalar birinchi kirishda parolni almashtirishga majbur",
     )
+    force_password_change_supervisors: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        comment="Supervizorlar birinchi kirishda parolni almashtirishga majbur",
+    )
+
+    # Kelajak sozlamalar uchun JSONB
+    extra: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
 
     def __repr__(self) -> str:
         return f"<SystemSettings maintenance={self.maintenance_mode}>"

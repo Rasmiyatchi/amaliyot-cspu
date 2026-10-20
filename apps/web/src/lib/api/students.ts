@@ -28,6 +28,8 @@ export type StudentFilters = {
   has_assignment?: boolean;
   /** Qurilmasi bog'langanlar (true) / bog'lanmaganlar (false) */
   has_device?: boolean;
+  /** Shartnoma olganlar (true) / olmaganlar (false) */
+  has_contract?: boolean;
 };
 
 export const studentKeys = {
@@ -50,6 +52,7 @@ function toQueryString(filters: StudentFilters, page: number, pageSize: number):
   if (filters.status) qs.set("status", filters.status);
   if (filters.has_assignment !== undefined) qs.set("has_assignment", String(filters.has_assignment));
   if (filters.has_device !== undefined) qs.set("has_device", String(filters.has_device));
+  if (filters.has_contract !== undefined) qs.set("has_contract", String(filters.has_contract));
   if (filters.search) qs.set("search", filters.search);
   return qs.toString();
 }

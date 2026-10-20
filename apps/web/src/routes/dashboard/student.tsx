@@ -25,6 +25,7 @@ import { CheckInButton } from "@/components/student/check-in-button";
 import { StudentDocumentsCard } from "@/components/student/documents-card";
 import { FinalReportCard } from "@/components/student/final-report-card";
 import { StudentInquiryCard } from "@/components/student/inquiry-card";
+import { PracticeMapCard } from "@/components/student/practice-map-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -352,6 +353,9 @@ export function StudentDashboard() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Amaliyot joyi va talabaning joylashuvi xaritada — "Keldim" nega ishlamayotganini ko'rsatadi */}
+            {isOpen && <PracticeMapCard assignment={focus} />}
 
             {/* To'liq davomat va taqvim (kalendar + statistika + ro'yxat) */}
             <AttendanceCalendarCard assignment={focus} />

@@ -12,8 +12,29 @@ yaratilgan, ruxsatlari bo'sh adminlarga barcha modullar qaytariladi — ilgari r
 `e6b8d0f2a4c7` (TZ 08.10.2026: `broadcasts` jadvali, `notification_type` ga `broadcast`,
 `practice_assignments.source_assignment_id`, `audit_logs` uchun append-only trigger) →
 `f8c0e2a4b6d9` (kunlik majburiy amaliyot vaqti: `system_settings.min_practice_minutes`,
-`students.min_practice_minutes`). API konteyner ishga tushganda `alembic upgrade head`
-avtomatik bajaradi. HEAD = `f8c0e2a4b6d9`.
+`students.min_practice_minutes`) → `a1d3f5b7c9e1` (birinchi kirishda parolni majburiy
+almashtirish — rol bo'yicha sozlama). API konteyner ishga tushganda `alembic upgrade head`
+avtomatik bajaradi. HEAD = `a1d3f5b7c9e1`.
+
+**Login muammosi (2026-10-20):** "birinchi kirish ishlaydi, ikkinchisida parol noto'g'ri" —
+sababi majburiy parol almashtirish edi: talaba ro'yxatdagi parol (login bilan bir xil) bilan
+kirgach yangi parol o'rnatishga majbur bo'lar, keyin uni eslab qolmas yoki brauzer eski parolni
+avto-to'ldirar edi (bazada 3 245 talaba parolni almashtirgan). Endi talabalar va supervizorlar
+uchun bu talab **o'chiq** (Tizim → Sozlamalar → "Kirish: birinchi kirishda parol" dan yoqish
+mumkin); adminlar uchun doim majburiy. Ro'yxatdagi login/parol har safar ishlayveradi, xohlagan
+talaba "Profilim" sahifasidan o'zi almashtiradi. Hech kimning paroli o'zgartirilmagan —
+allaqachon almashtirgan talabalar yangi paroli bilan kiraveradi; unutganlar uchun admin talaba
+kartasidan parolni qayta beradi.
+
+**Talabalar → Shartnoma filtri (2026-10-20):** "Shartnoma olgan / olmagan" — QR bilan
+tasdiqlangan ariza (approved/active) yoki rasmiy shartnoma (generated/active) ro'yxatida borligi.
+Jadvalda "Shartnoma" belgisi, CSV eksportda "Shartnoma" ustuni, login/parol Excel'i ham
+filtrni qabul qiladi.
+
+**Talaba kabinetida xarita (2026-10-20):** amaliyot tashkiloti, ruxsat etilgan radius doirasi va
+talabaning hozirgi joylashuvi; binogacha masofa, hududda/tashqarida holati, yo'l ko'rsatish
+havolasi. Xarita plitkalari OpenStreetMap'dan (tile.openstreetmap.org) yuklanadi — proksi
+CSP'si tashqi rasm/plitkalarni to'smasligi kerak (admin tashkilot formasidagi xarita bilan bir xil).
 
 **Kunlik majburiy vaqt (2026-10-16):** "Ketdim" tugmasi endi kelgandan **4 soat** keyin
 ochiladi (avval kodda 6 soat qattiq yozilgan edi). Umumiy qiymat — Tizim → Sozlamalar →
